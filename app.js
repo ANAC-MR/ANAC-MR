@@ -173,6 +173,21 @@ function attachEventListeners() {
     elements.fCompany.addEventListener('change', updateFlightNumberPrefix);
     elements.fAuthNumber.addEventListener('input', handleAuthNumberInput);
     
+    // Uppercase transformation for all text inputs
+    const textInputs = [
+        elements.fAuthNumber,
+        elements.fImm,
+        elements.fVol,
+        elements.searchImm,
+        elements.searchVol
+    ];
+    
+    textInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            input.value = input.value.toUpperCase();
+        });
+    });
+    
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyboardShortcuts);
     
@@ -317,18 +332,14 @@ function validateForm() {
         isValid = false;
     }
     
-    // Validate registration format
-    if (elements.fImm.value.trim() && !isValidRegistration(elements.fImm.value.trim())) {
-        showFieldError(elements.fImm, 'Format d\'immatriculation invalide (ex: 5T-CLC)');
+    // Validate authorization number uniqueness
+    const authNumber = elements.fAuthNumber.value.trim();
+    if (authNumber && !isAuthNumberUnique(authNumber, editingFlightId)) {
+        showFieldError(elements.fAuthNumber, 'Ce numéro d\'autorisation existe déjà');
         isValid = false;
     }
     
     return isValid;
-}
-
-function isValidRegistration(registration) {
-    // Basic validation for registration format (e.g., 5T-CLC, F-GRNT, etc.)
-    return /^[A-Z0-9]+-[A-Z0-9]+$/i.test(registration.trim());
 }
 
 function showFieldError(field, message) {
@@ -401,6 +412,14 @@ function validateAuthNumber(authNumber) {
     // Format: SNA26-XXXX where XXXX is numeric
     const pattern = /^SNA26-\d{1,4}$/;
     return pattern.test(authNumber);
+}
+
+function isAuthNumberUnique(authNumber, excludeFlightId = null) {
+    // Check if authorization number already exists
+    const existingFlight = flights.find(flight => 
+        flight.authorizationNumber === authNumber && flight.id !== excludeFlightId
+    );
+    return !existingFlight;
 }
 
 // ============================================
@@ -587,8 +606,8 @@ function filterFlights() {
     const companyFilter = elements.companySelect.value;
     const dateFrom = elements.searchFrom.value;
     const dateTo = elements.searchTo.value;
-    const immFilter = elements.searchImm.value.toLowerCase().trim();
-    const volFilter = elements.searchVol.value.toLowerCase().trim();
+    const immFilter = elements.searchImm.value.toUpperCase().trim();
+    const volFilter = elements.searchVol.value.toUpperCase().trim();
     
     return flights.filter(flight => {
         const flightDate = new Date(flight.date);
@@ -617,13 +636,13 @@ function filterFlights() {
             return false;
         }
         
-        // Registration filter
-        if (immFilter && !flight.registration.toLowerCase().includes(immFilter)) {
+        // Registration filter (case-insensitive)
+        if (immFilter && !flight.registration.toUpperCase().includes(immFilter)) {
             return false;
         }
         
-        // Flight number filter
-        if (volFilter && !flight.flightNumber.toLowerCase().includes(volFilter)) {
+        // Flight number filter (case-insensitive)
+        if (volFilter && !flight.flightNumber.toUpperCase().includes(volFilter)) {
             return false;
         }
         
