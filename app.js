@@ -33,7 +33,7 @@ const AIRLINE_PREFIXES = {
 // ============================================
 // AUTHENTICATION
 // ============================================
-const ADMIN_PASSWORD = "admin";
+const ADMIN_PASSWORD = "ANACdady";
 let isAuthenticated = false;
 
 // ============================================
