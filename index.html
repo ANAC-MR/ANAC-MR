@@ -24,20 +24,17 @@
                             <select id="monthSelect">
                                 <option value="ALL">Tous les mois</option>
                             </select>
+                            <label>Destination :</label>
+<select id="destination" required>
+    <option value="">Sélectionner une destination</option>
+</select>
+
                         </div>
                         
                         <div class="filter-group">
                             <label for="companySelect">Compagnie</label>
                             <select id="companySelect">
                                 <option value="ALL">Toutes les compagnies</option>
-                            </select>
-                        </div>
-
-                        <!-- ✅ NOUVEAU FILTRE DESTINATION -->
-                        <div class="filter-group">
-                            <label for="destinationFilter">Destination</label>
-                            <select id="destinationFilter">
-                                <option value="ALL">Toutes les destinations</option>
                             </select>
                         </div>
                     </div>
@@ -77,8 +74,8 @@
             
             <section class="actions-section">
                 <div class="actions">
-                    <button class="btn-success" id="addFlightBtn">+ Ajouter un vol</button>
-                    <button class="btn-warning" id="undoBtn" style="display: none;">Annuler suppression</button>
+                    <button class="btn-success" id="addFlightBtn">? Ajouter un vol</button>
+                    <button class="btn-warning" id="undoBtn" style="display: none;">?? Annuler suppression</button>
                 </div>
             </section>
             
@@ -93,8 +90,6 @@
                                 <th>Immatriculation</th>
                                 <th>N° Vol</th>
                                 <th>Type</th>
-                                <!-- ✅ NOUVELLE COLONNE -->
-                                <th>Destination</th>
                                 <th>PAX</th>
                                 <th>Bébés</th>
                                 <th>Action</th>
@@ -104,8 +99,7 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <!-- ⚠️ colspan ajusté -->
-                                <td colspan="7">TOTAL</td>
+                                <td colspan="6">TOTAL</td>
                                 <td id="totalPassengers">0</td>
                                 <td id="totalBabies">0</td>
                                 <td></td>
@@ -117,7 +111,6 @@
         </main>
     </div>
     
-    <!-- MODAL -->
     <div class="modal" id="flightModal">
         <div class="modal-content">
             <h2>Ajouter un vol</h2>
@@ -126,6 +119,7 @@
                 <div class="form-group">
                     <label for="fAuthNumber">Numéro d'autorisation</label>
                     <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
+                    <small class="field-hint">Format: SNA26-XXXX (ex: SNA26-0001)</small>
                 </div>
                 
                 <div class="form-group">
@@ -135,17 +129,18 @@
                 
                 <div class="form-group">
                     <label for="fCompany">Compagnie</label>
-                    <select id="fCompany" required></select>
+                    <select id="fCompany" required>
+                    </select>
                 </div>
                 
                 <div class="form-group">
                     <label for="fImm">Immatriculation</label>
-                    <input type="text" id="fImm" required>
+                    <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
                 </div>
                 
                 <div class="form-group">
                     <label for="fVol">N° Vol</label>
-                    <input type="text" id="fVol" required>
+                    <input type="text" id="fVol" placeholder="Ex: L6-123" required>
                 </div>
                 
                 <div class="form-group">
@@ -155,17 +150,9 @@
                         <option value="ARR">Arrivée</option>
                     </select>
                 </div>
-
-                <!-- ✅ NOUVEAU CHAMP DESTINATION OBLIGATOIRE -->
-                <div class="form-group">
-                    <label for="fDestination">Destination (ICAO)</label>
-                    <select id="fDestination" required>
-                        <option value="">Sélectionner une destination</option>
-                    </select>
-                </div>
                 
                 <div class="form-group">
-                    <label for="fPassengers">PAX</label>
+                    <label for="fPassengers">PAX (Passagers)</label>
                     <input type="number" id="fPassengers" min="0" value="0" required>
                 </div>
                 
