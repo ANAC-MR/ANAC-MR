@@ -1,4 +1,26 @@
 // ============================================
+// DESTINATIONS - AEROPORTS (ICAO)
+// ============================================
+
+const DESTINATIONS = [
+    { name: "Nouakchott Oumtounsy", code: "GQNO" },
+    { name: "Nouadhibou International", code: "GQPP" },
+    { name: "Zoueratt International", code: "GQPZ" },
+    { name: "Néma Airport", code: "GQNI" },
+    { name: "Kiffa Airport", code: "GQPF" },
+    { name: "Casablanca Mohammed V", code: "GMMN" },
+    { name: "Tunis Carthage", code: "DTTA" },
+    { name: "Dakar Blaise Diagne", code: "GOBD" },
+    { name: "Las Palmas Gran Canaria", code: "GCLP" },
+    { name: "Bamako Modibo Keita", code: "GABS" },
+    { name: "Conakry Gbessia", code: "GUCY" },
+    { name: "Abidjan Félix Houphouët-Boigny", code: "DIAP" },
+    { name: "Istanbul Airport", code: "LTFM" },
+    { name: "Paris Charles de Gaulle", code: "LFPG" },
+    { name: "Alger Houari Boumediene", code: "DAAG" },
+    { name: "Madinah Prince Mohammad Bin Abdulaziz", code: "OEMA" }
+];
+// ============================================
 // CONFIGURATION & CONSTANTS
 // ============================================
 const MONTHS = [
