@@ -1,74 +1,72 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ANAC Mauritanie – Suivi Mensuel des Vols</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>ANAC Mauritanie – Suivi Mensuel des Vols</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+
 <div class="container">
 
 <header>
-    <div class="header-content">
-        <h1>ANAC Mauritanie – Suivi Mensuel des Vols</h1>
-    </div>
+    <h1>ANAC Mauritanie – Suivi Mensuel des Vols</h1>
 </header>
 
 <main>
 
-<!-- ================= FILTERS ================= -->
+<!-- ================= FILTRES ================= -->
 
 <section class="filters-section">
 <div class="filters">
 
 <div class="filter-row">
 
-<div class="filter-group">
-    <label for="monthSelect">Mois</label>
-    <select id="monthSelect">
-        <option value="ALL">Tous les mois</option>
-    </select>
-</div>
+    <div class="filter-group">
+        <label for="monthSelect">Mois</label>
+        <select id="monthSelect">
+            <option value="ALL">Tous les mois</option>
+        </select>
+    </div>
 
-<div class="filter-group">
-    <label for="companySelect">Compagnie</label>
-    <select id="companySelect">
-        <option value="ALL">Toutes les compagnies</option>
-    </select>
-</div>
+    <div class="filter-group">
+        <label for="companySelect">Compagnie</label>
+        <select id="companySelect">
+            <option value="ALL">Toutes les compagnies</option>
+        </select>
+    </div>
 
-<div class="filter-group">
-    <label for="destinationFilter">Destination</label>
-    <select id="destinationFilter">
-        <option value="ALL">Toutes les destinations</option>
-    </select>
-</div>
+    <div class="filter-group">
+        <label for="destinationFilter">Destination</label>
+        <select id="destinationFilter">
+            <option value="ALL">Toutes les destinations</option>
+        </select>
+    </div>
 
 </div>
 
 <div class="filter-row">
 
-<div class="filter-group">
-    <label for="searchFrom">Date début</label>
-    <input type="date" id="searchFrom">
-</div>
+    <div class="filter-group">
+        <label for="searchFrom">Date début</label>
+        <input type="date" id="searchFrom">
+    </div>
 
-<div class="filter-group">
-    <label for="searchTo">Date fin</label>
-    <input type="date" id="searchTo">
-</div>
+    <div class="filter-group">
+        <label for="searchTo">Date fin</label>
+        <input type="date" id="searchTo">
+    </div>
 
-<div class="filter-group">
-    <label for="searchImm">Immatriculation</label>
-    <input type="text" id="searchImm">
-</div>
+    <div class="filter-group">
+        <label for="searchImm">Immatriculation</label>
+        <input type="text" id="searchImm">
+    </div>
 
-<div class="filter-group">
-    <label for="searchVol">N° Vol</label>
-    <input type="text" id="searchVol">
-</div>
+    <div class="filter-group">
+        <label for="searchVol">N° Vol</label>
+        <input type="text" id="searchVol">
+    </div>
 
 </div>
 
@@ -99,16 +97,16 @@
 <table>
 <thead>
 <tr>
-<th>N° Autorisation</th>
-<th>Date</th>
-<th>Compagnie</th>
-<th>Immatriculation</th>
-<th>N° Vol</th>
-<th>Type</th>
-<th>Destination</th>
-<th>PAX</th>
-<th>Bébés</th>
-<th>Action</th>
+    <th>N° Autorisation</th>
+    <th>Date</th>
+    <th>Compagnie</th>
+    <th>Immatriculation</th>
+    <th>N° Vol</th>
+    <th>Type</th>
+    <th>Destination</th>
+    <th>PAX</th>
+    <th>Bébés</th>
+    <th>Action</th>
 </tr>
 </thead>
 
@@ -116,10 +114,10 @@
 
 <tfoot>
 <tr>
-<td colspan="7">TOTAL</td>
-<td id="totalPassengers">0</td>
-<td id="totalBabies">0</td>
-<td></td>
+    <td colspan="7">TOTAL</td>
+    <td id="totalPassengers">0</td>
+    <td id="totalBabies">0</td>
+    <td></td>
 </tr>
 </tfoot>
 
@@ -140,60 +138,60 @@
 
 <form id="flightForm">
 
-<div class="form-group">
-<label for="fAuthNumber">Numéro d'autorisation</label>
-<input type="text" id="fAuthNumber" required maxlength="10">
-</div>
+    <div class="form-group">
+        <label for="fAuthNumber">Numéro d'autorisation</label>
+        <input type="text" id="fAuthNumber" required maxlength="10">
+    </div>
 
-<div class="form-group">
-<label for="fDate">Date</label>
-<input type="date" id="fDate" required>
-</div>
+    <div class="form-group">
+        <label for="fDate">Date</label>
+        <input type="date" id="fDate" required>
+    </div>
 
-<div class="form-group">
-<label for="fCompany">Compagnie</label>
-<select id="fCompany" required></select>
-</div>
+    <div class="form-group">
+        <label for="fCompany">Compagnie</label>
+        <select id="fCompany" required></select>
+    </div>
 
-<div class="form-group">
-<label for="fImm">Immatriculation</label>
-<input type="text" id="fImm" required>
-</div>
+    <div class="form-group">
+        <label for="fImm">Immatriculation</label>
+        <input type="text" id="fImm" required>
+    </div>
 
-<div class="form-group">
-<label for="fVol">N° Vol</label>
-<input type="text" id="fVol" required>
-</div>
+    <div class="form-group">
+        <label for="fVol">N° Vol</label>
+        <input type="text" id="fVol" required>
+    </div>
 
-<div class="form-group">
-<label for="fType">Type</label>
-<select id="fType" required>
-<option value="DEP">Départ</option>
-<option value="ARR">Arrivée</option>
-</select>
-</div>
+    <div class="form-group">
+        <label for="fType">Type</label>
+        <select id="fType" required>
+            <option value="DEP">Départ</option>
+            <option value="ARR">Arrivée</option>
+        </select>
+    </div>
 
-<div class="form-group">
-<label for="fDestination">Destination (ICAO)</label>
-<select id="fDestination" required>
-<option value="">Sélectionner une destination</option>
-</select>
-</div>
+    <div class="form-group">
+        <label for="fDestination">Destination (ICAO)</label>
+        <select id="fDestination" required>
+            <option value="">Sélectionner une destination</option>
+        </select>
+    </div>
 
-<div class="form-group">
-<label for="fPassengers">PAX</label>
-<input type="number" id="fPassengers" min="0" value="0" required>
-</div>
+    <div class="form-group">
+        <label for="fPassengers">PAX</label>
+        <input type="number" id="fPassengers" min="0" value="0" required>
+    </div>
 
-<div class="form-group">
-<label for="fBabies">Bébés</label>
-<input type="number" id="fBabies" min="0" value="0" required>
-</div>
+    <div class="form-group">
+        <label for="fBabies">Bébés</label>
+        <input type="number" id="fBabies" min="0" value="0" required>
+    </div>
 
-<div class="modal-buttons">
-<button type="submit" class="btn-success">Enregistrer</button>
-<button type="button" id="cancelBtn" class="btn-secondary">Annuler</button>
-</div>
+    <div class="modal-buttons">
+        <button type="submit" class="btn-success">Enregistrer</button>
+        <button type="button" id="cancelBtn" class="btn-secondary">Annuler</button>
+    </div>
 
 </form>
 
