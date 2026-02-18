@@ -1,4 +1,3 @@
-
 // ============================================
 // CONFIGURATION & CONSTANTS
 // ============================================
@@ -709,15 +708,15 @@ function createFlightRow(flight) {
         <td class="actions-cell">
             <div class="actions-wrapper">
                 <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">
-                    ?
+                    ⋯
                 </button>
                 <div class="actions-menu" id="actions-${flight.id}">
                     <button onclick="app.editFlight('${flight.id}')" class="action-item">
-                        <span class="action-icon">??</span>
+                        <span class="action-icon">✏️</span>
                         <span>Modifier</span>
                     </button>
                     <button onclick="app.deleteFlight('${flight.id}')" class="action-item action-delete">
-                        <span class="action-icon">???</span>
+                        <span class="action-icon">🗑️</span>
                         <span>Supprimer</span>
                     </button>
                 </div>
@@ -1026,3 +1025,4 @@ const additionalStyles = `
 const styleSheet = document.createElement('style');
 styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
+
