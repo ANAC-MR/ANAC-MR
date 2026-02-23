@@ -36,6 +36,15 @@
                     
                     <div class="filter-row">
                         <div class="filter-group">
+                            <label for="destinationSelect">Destination</label>
+                            <select id="destinationSelect">
+                                <option value="ALL">Toutes les destinations</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="filter-row">
+                        <div class="filter-group">
                             <label for="searchFrom">Date début</label>
                             <input type="date" id="searchFrom">
                         </div>
@@ -84,6 +93,7 @@
                                 <th>Compagnie</th>
                                 <th>Immatriculation</th>
                                 <th>N° Vol</th>
+                                <th>Destination</th>
                                 <th>Type</th>
                                 <th>PAX</th>
                                 <th>Bébés</th>
@@ -94,7 +104,7 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="6">TOTAL</td>
+                                <td colspan="7">TOTAL</td>
                                 <td id="totalPassengers">0</td>
                                 <td id="totalBabies">0</td>
                                 <td></td>
@@ -139,6 +149,12 @@
                 </div>
                 
                 <div class="form-group">
+                    <label for="fDestination">Destination</label>
+                    <select id="fDestination" required>
+                    </select>
+                </div>
+                
+                <div class="form-group">
                     <label for="fType">Type du vol</label>
                     <select id="fType" required>
                         <option value="DEP">Départ</option>
@@ -170,3 +186,4 @@
     <script type="module" src="app.js"></script>
 </body>
 </html>
+
