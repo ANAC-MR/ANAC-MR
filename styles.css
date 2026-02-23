@@ -707,7 +707,9 @@ button:focus:not(:focus-visible) {
     font-size: 12px;
   }
   
-  .delete-btn {
+  .delete-btn,
+  .actions-cell,
+  th:last-child {
     display: none;
   }
 }
