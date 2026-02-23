@@ -57,7 +57,7 @@ body::after {
   transform: translate(-50%, -50%);
   width: 420px;
   height: 420px;
-  background-image: url('./assets/anac-logo.jpeg');
+  background-image: url('./assets/ANAC-logo.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
