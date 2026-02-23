@@ -43,8 +43,8 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg,
-    rgba(43, 90, 142, 0.92) 0%,
+  background: linear-gradient(135deg, 
+    rgba(43, 90, 142, 0.92) 0%, 
     rgba(30, 63, 99, 0.95) 100%);
   z-index: -1;
 }
@@ -775,7 +775,19 @@ button:focus:not(:focus-visible) {
     background: transparent !important;
     color: black !important;
     border: none !important;
-    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    border: none !important;
+  }
+
+  tr {
+    border: none !important;
+  }
+
+  * {
+    border-color: transparent !important;
   }
 
   tbody tr {
