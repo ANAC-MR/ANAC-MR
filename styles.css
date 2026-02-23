@@ -29,7 +29,7 @@ body {
   padding: 20px;
   line-height: 1.6;
   color: #2d3748;
-  background-image: url('./assets/ANAC-logo.png');
+  background-image: url('./assets/anac-logo.png');
   background-size: 400px auto;
   background-position: center center;
   background-repeat: no-repeat;
@@ -57,7 +57,7 @@ body::after {
   transform: translate(-50%, -50%);
   width: 420px;
   height: 420px;
-  background-image: url('./assets/ANAC-logo.png');
+  background-image: url('./assets/anac-logo.jpeg');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -705,8 +705,15 @@ button:focus:not(:focus-visible) {
    ============================================ */
 @media print {
   body {
-    background: white;
+    background: white !important;
+    background-image: none !important;
     padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body::before {
+    display: none !important;
   }
 
   body::after {
@@ -717,7 +724,7 @@ button:focus:not(:focus-visible) {
     transform: translate(-50%, -50%);
     width: 400px;
     height: 400px;
-    background-image: url('./assets/anac-logo.jpeg');
+    background-image: url('./assets/anac-logo.jpeg') !important;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -730,7 +737,7 @@ button:focus:not(:focus-visible) {
   
   .container {
     box-shadow: none;
-    background: transparent;
+    background: transparent !important;
     padding: 20px;
   }
   
@@ -742,15 +749,35 @@ button:focus:not(:focus-visible) {
   
   .table-wrapper {
     box-shadow: none;
-    background: transparent;
+    background: transparent !important;
   }
 
   table {
-    background: transparent;
+    background: transparent !important;
     font-size: 12px;
   }
 
+  thead {
+    background: transparent !important;
+    color: black !important;
+  }
+
+  tfoot {
+    background: transparent !important;
+    color: black !important;
+  }
+
+  thead tr, tfoot tr {
+    background: transparent !important;
+  }
+
   td, th {
+    background: transparent !important;
+    color: black !important;
+    border: 1px solid #ccc !important;
+  }
+
+  tbody tr {
     background: transparent !important;
   }
   
