@@ -67,23 +67,6 @@ body::before {
   position: relative;
 }
 
-.table-section::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 400px;
-  height: 400px;
-  background-image: url('./assets/anac-logo.jpeg');
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  opacity: 0.06;
-  pointer-events: none;
-  z-index: 0;
-}
-
 /* ============================================
    HEADER STYLES
    ============================================ */
@@ -278,6 +261,29 @@ button:disabled {
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
   background: white;
+  position: relative;
+}
+
+.table-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 400px;
+  background-image: url('./assets/anac-logo.jpeg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: 1;
+}
+
+table {
+  position: relative;
+  z-index: 2;
 }
 
 table {
@@ -866,3 +872,4 @@ button:focus:not(:focus-visible) {
 .delete-btn {
   display: none;
 }
+
