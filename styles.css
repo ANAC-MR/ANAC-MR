@@ -708,10 +708,29 @@ button:focus:not(:focus-visible) {
     background: white;
     padding: 0;
   }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 400px;
+    background-image: url('./assets/anac-logo.jpeg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.10;
+    pointer-events: none;
+    z-index: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   
   .container {
     box-shadow: none;
-    background: white;
+    background: transparent;
     padding: 20px;
   }
   
@@ -723,10 +742,16 @@ button:focus:not(:focus-visible) {
   
   .table-wrapper {
     box-shadow: none;
+    background: transparent;
   }
-  
+
   table {
+    background: transparent;
     font-size: 12px;
+  }
+
+  td, th {
+    background: transparent !important;
   }
   
   .delete-btn,
