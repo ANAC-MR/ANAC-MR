@@ -233,10 +233,9 @@ function attachEventListeners() {
         const deleteBtn = event.target.closest('.action-delete');
         
         if (actionsBtn) {
+            event.stopPropagation();
             const flightId = actionsBtn.dataset.flightId;
-            // Pass a synthetic event with currentTarget set to the button
-            const syntheticEvent = { ...event, currentTarget: actionsBtn, stopPropagation: () => event.stopPropagation() };
-            toggleActionsMenu(syntheticEvent, flightId);
+            toggleActionsMenu(actionsBtn, flightId);
             return;
         }
         
@@ -1037,30 +1036,19 @@ async function requireAuthentication(action) {
 // ============================================
 // ACTIONS MENU FUNCTIONS
 // ============================================
-function toggleActionsMenu(event, flightId) {
-    event.stopPropagation();
-    
+function toggleActionsMenu(btn, flightId) {
     const menuId = `actions-${flightId}`;
     const menu = document.getElementById(menuId);
     if (!menu) return;
     
     const isOpen = menu.classList.contains('active');
-    
-    // Close all open menus first
     closeAllActionsMenus();
     
-    // If it was closed, open it and position it
     if (!isOpen) {
-        const btn = event.currentTarget || event.target.closest('.actions-btn') || event.target;
         const rect = btn.getBoundingClientRect();
-        
-        // Position below the button, aligned to the right
-        const top = rect.bottom + 4;
-        let left = rect.right - 160; // 160 = min-width of menu
-        
-        // Ensure it doesn't go off-screen left
+        const top = rect.bottom + window.scrollY + 4;
+        let left = rect.right + window.scrollX - 160;
         if (left < 8) left = 8;
-        // Ensure it doesn't go off-screen right
         if (left + 160 > window.innerWidth - 8) left = window.innerWidth - 168;
         
         menu.style.top = `${top}px`;
@@ -1089,7 +1077,6 @@ window.app = {
     deleteFlight,
     updateFlightsData,
     showNotification,
-    toggleActionsMenu,
     editFlight
 };
 
