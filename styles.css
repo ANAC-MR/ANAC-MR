@@ -43,8 +43,8 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, 
-    rgba(43, 90, 142, 0.92) 0%, 
+  background: linear-gradient(135deg,
+    rgba(43, 90, 142, 0.92) 0%,
     rgba(30, 63, 99, 0.95) 100%);
   z-index: -1;
 }
@@ -724,7 +724,7 @@ button:focus:not(:focus-visible) {
     transform: translate(-50%, -50%);
     width: 400px;
     height: 400px;
-    background-image: url('./assets/anac-logo.jpeg') !important;
+    background-image: url('./assets/ANAC-logo.png') !important;
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -774,7 +774,8 @@ button:focus:not(:focus-visible) {
   td, th {
     background: transparent !important;
     color: black !important;
-    border: 1px solid #ccc !important;
+    border: none !important;
+    border-bottom: 1px solid #e2e8f0 !important;
   }
 
   tbody tr {
