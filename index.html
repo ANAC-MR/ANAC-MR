@@ -36,9 +36,15 @@
                     
                     <div class="filter-row">
                         <div class="filter-group">
-                            <label for="destinationSelect">Destination</label>
-                            <select id="destinationSelect">
-                                <option value="ALL">Toutes les destinations</option>
+                            <label for="fromSelect">Départ de</label>
+                            <select id="fromSelect">
+                                <option value="ALL">Tous les aéroports</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="toSelect">Arrivée à</label>
+                            <select id="toSelect">
+                                <option value="ALL">Tous les aéroports</option>
                             </select>
                         </div>
                     </div>
@@ -93,7 +99,8 @@
                                 <th>Compagnie</th>
                                 <th>Immatriculation</th>
                                 <th>N° Vol</th>
-                                <th>Destination</th>
+                                <th>De</th>
+                                <th>Vers</th>
                                 <th>Type</th>
                                 <th>PAX</th>
                                 <th>Bébés</th>
@@ -104,7 +111,7 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="7">TOTAL</td>
+                                <td colspan="8">TOTAL</td>
                                 <td id="totalPassengers">0</td>
                                 <td id="totalBabies">0</td>
                                 <td></td>
@@ -149,8 +156,14 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="fDestination">Destination</label>
-                    <select id="fDestination" required>
+                    <label for="fFrom">Départ de</label>
+                    <select id="fFrom" required>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fTo">Arrivée à</label>
+                    <select id="fTo" required>
                     </select>
                 </div>
                 
@@ -186,4 +199,3 @@
     <script type="module" src="app.js"></script>
 </body>
 </html>
-
