@@ -226,36 +226,6 @@ function attachEventListeners() {
         });
     });
     
-    // Event delegation for table action buttons
-    elements.flightTableBody.addEventListener('click', (event) => {
-        const actionsBtn = event.target.closest('.actions-btn');
-        const editBtn = event.target.closest('.action-edit');
-        const deleteBtn = event.target.closest('.action-delete');
-        
-        if (actionsBtn) {
-            event.stopPropagation();
-            const flightId = actionsBtn.dataset.flightId;
-            toggleActionsMenu(actionsBtn, flightId);
-            return;
-        }
-        
-        if (editBtn) {
-            event.stopPropagation();
-            const flightId = editBtn.dataset.flightId;
-            closeAllActionsMenus();
-            editFlight(flightId);
-            return;
-        }
-        
-        if (deleteBtn) {
-            event.stopPropagation();
-            const flightId = deleteBtn.dataset.flightId;
-            closeAllActionsMenus();
-            deleteFlight(flightId);
-            return;
-        }
-    });
-    
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyboardShortcuts);
     
@@ -806,15 +776,15 @@ function createFlightRow(flight) {
         <td>${flight.babies}</td>
         <td class="actions-cell">
             <div class="actions-wrapper">
-                <button class="actions-btn" data-flight-id="${flight.id}" aria-label="Actions">
+                <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">
                     ⋯
                 </button>
                 <div class="actions-menu" id="actions-${flight.id}">
-                    <button class="action-item action-edit" data-flight-id="${flight.id}">
+                    <button onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item">
                         <span class="action-icon">✏️</span>
                         <span>Modifier</span>
                     </button>
-                    <button class="action-item action-delete" data-flight-id="${flight.id}">
+                    <button onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete">
                         <span class="action-icon">🗑️</span>
                         <span>Supprimer</span>
                     </button>
@@ -1036,7 +1006,9 @@ async function requireAuthentication(action) {
 // ============================================
 // ACTIONS MENU FUNCTIONS
 // ============================================
-function toggleActionsMenu(btn, flightId) {
+function toggleActionsMenu(event, flightId) {
+    event.stopPropagation();
+    
     const menuId = `actions-${flightId}`;
     const menu = document.getElementById(menuId);
     if (!menu) return;
@@ -1045,14 +1017,6 @@ function toggleActionsMenu(btn, flightId) {
     closeAllActionsMenus();
     
     if (!isOpen) {
-        const rect = btn.getBoundingClientRect();
-        const top = rect.bottom + window.scrollY + 4;
-        let left = rect.right + window.scrollX - 160;
-        if (left < 8) left = 8;
-        if (left + 160 > window.innerWidth - 8) left = window.innerWidth - 168;
-        
-        menu.style.top = `${top}px`;
-        menu.style.left = `${left}px`;
         menu.classList.add('active');
         activeActionsMenu = menu;
     }
@@ -1077,6 +1041,7 @@ window.app = {
     deleteFlight,
     updateFlightsData,
     showNotification,
+    toggleActionsMenu,
     editFlight
 };
 
