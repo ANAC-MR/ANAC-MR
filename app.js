@@ -81,7 +81,8 @@ const elements = {
     // Filters
     monthSelect: document.getElementById('monthSelect'),
     companySelect: document.getElementById('companySelect'),
-    destinationSelect: document.getElementById('destinationSelect'),
+    fromSelect: document.getElementById('fromSelect'),
+    toSelect: document.getElementById('toSelect'),
     searchFrom: document.getElementById('searchFrom'),
     searchTo: document.getElementById('searchTo'),
     searchImm: document.getElementById('searchImm'),
@@ -107,7 +108,8 @@ const elements = {
     fImm: document.getElementById('fImm'),
     fVol: document.getElementById('fVol'),
     fType: document.getElementById('fType'),
-    fDestination: document.getElementById('fDestination'),
+    fFrom: document.getElementById('fFrom'),
+    fTo: document.getElementById('fTo'),
     fPassengers: document.getElementById('fPassengers'),
     fBabies: document.getElementById('fBabies'),
     
@@ -157,19 +159,16 @@ function populateSelects() {
         elements.fCompany.appendChild(formOption);
     });
     
-    // Populate destination selects
+    // Populate airport selects (filters + form)
     DESTINATIONS.forEach(dest => {
-        // Filter select
-        const filterOption = document.createElement('option');
-        filterOption.value = dest.code;
-        filterOption.textContent = `${dest.code} – ${dest.name}`;
-        elements.destinationSelect.appendChild(filterOption);
+        const label = `${dest.code} – ${dest.name}`;
         
-        // Form select
-        const formOption = document.createElement('option');
-        formOption.value = dest.code;
-        formOption.textContent = `${dest.code} – ${dest.name}`;
-        elements.fDestination.appendChild(formOption);
+        [elements.fromSelect, elements.toSelect, elements.fFrom, elements.fTo].forEach(sel => {
+            const opt = document.createElement('option');
+            opt.value = dest.code;
+            opt.textContent = label;
+            sel.appendChild(opt);
+        });
     });
 }
 
@@ -179,7 +178,7 @@ function populateSelects() {
 function attachEventListeners() {
     // Filter changes
     const filterElements = [
-        elements.monthSelect, elements.companySelect, elements.destinationSelect,
+        elements.monthSelect, elements.companySelect, elements.fromSelect, elements.toSelect,
         elements.searchFrom, elements.searchTo
     ];
     
@@ -276,7 +275,8 @@ function openModal(flightId = null) {
                 elements.fImm.value = flight.registration;
                 elements.fVol.value = flight.flightNumber;
                 elements.fType.value = flight.type;
-                if (flight.destination) elements.fDestination.value = flight.destination;
+                if (flight.from) elements.fFrom.value = flight.from;
+                if (flight.to) elements.fTo.value = flight.to;
                 elements.fPassengers.value = flight.passengers;
                 elements.fBabies.value = flight.babies;
                 
@@ -294,7 +294,8 @@ function openModal(flightId = null) {
             // Set default values
             elements.fCompany.value = AIRLINES[0];
             elements.fType.value = 'DEP';
-            elements.fDestination.value = DESTINATIONS[0].code;
+            elements.fFrom.value = DESTINATIONS[0].code;
+            elements.fTo.value = DESTINATIONS[1].code;
             elements.fPassengers.value = '0';
             elements.fBabies.value = '0';
             
@@ -358,7 +359,8 @@ function validateForm() {
         { field: elements.fCompany, message: 'La compagnie est requise' },
         { field: elements.fImm, message: 'L\'immatriculation est requise' },
         { field: elements.fVol, message: 'Le numéro de vol est requis' },
-        { field: elements.fDestination, message: 'La destination est requise' }
+        { field: elements.fFrom, message: 'L\'aéroport de départ est requis' },
+        { field: elements.fTo, message: 'L\'aéroport d\'arrivée est requis' }
     ];
     
     required.forEach(({ field, message }) => {
@@ -410,7 +412,8 @@ function getFormData() {
         registration: elements.fImm.value.trim().toUpperCase(),
         flightNumber: elements.fVol.value.trim().toUpperCase(),
         type: elements.fType.value,
-        destination: elements.fDestination.value,
+        from: elements.fFrom.value,
+        to: elements.fTo.value,
         passengers: parseInt(elements.fPassengers.value) || 0,
         babies: parseInt(elements.fBabies.value) || 0,
         timestamp: Date.now()
@@ -630,7 +633,8 @@ function handleTypeFilter(button) {
 function resetFilters() {
     elements.monthSelect.value = 'ALL';
     elements.companySelect.value = 'ALL';
-    elements.destinationSelect.value = 'ALL';
+    elements.fromSelect.value = 'ALL';
+    elements.toSelect.value = 'ALL';
     elements.searchFrom.value = '';
     elements.searchTo.value = '';
     elements.searchImm.value = '';
@@ -648,7 +652,8 @@ function resetFilters() {
 function filterFlights() {
     const monthFilter = elements.monthSelect.value;
     const companyFilter = elements.companySelect.value;
-    const destinationFilter = elements.destinationSelect.value;
+    const fromFilter = elements.fromSelect.value;
+    const toFilter = elements.toSelect.value;
     const dateFrom = elements.searchFrom.value;
     const dateTo = elements.searchTo.value;
     const immFilter = elements.searchImm.value.toUpperCase().trim();
@@ -667,8 +672,13 @@ function filterFlights() {
             return false;
         }
         
-        // Destination filter
-        if (destinationFilter !== 'ALL' && flight.destination !== destinationFilter) {
+        // From airport filter
+        if (fromFilter !== 'ALL' && flight.from !== fromFilter) {
+            return false;
+        }
+        
+        // To airport filter
+        if (toFilter !== 'ALL' && flight.to !== toFilter) {
             return false;
         }
         
@@ -706,11 +716,14 @@ function filterFlights() {
 function render() {
     const filteredFlights = filterFlights();
     
-    // Sort by date (most recent first) and then by timestamp
+    // Sort by authorization number ascending (smallest to largest)
     filteredFlights.sort((a, b) => {
-        const dateCompare = new Date(b.date) - new Date(a.date);
-        if (dateCompare !== 0) return dateCompare;
-        return (b.timestamp || 0) - (a.timestamp || 0);
+        const getAuthNum = (auth) => {
+            if (!auth) return 0;
+            const match = auth.match(/(\d+)$/);
+            return match ? parseInt(match[1]) : 0;
+        };
+        return getAuthNum(a.authorizationNumber) - getAuthNum(b.authorizationNumber);
     });
     
     renderTable(filteredFlights);
@@ -723,7 +736,7 @@ function renderTable(filteredFlights) {
     if (filteredFlights.length === 0) {
         elements.flightTableBody.innerHTML = `
             <tr>
-                <td colspan="10" class="empty-state">
+                <td colspan="11" class="empty-state">
                     <p>Aucun vol trouvé</p>
                     <small>Ajoutez un vol ou modifiez vos filtres</small>
                 </td>
@@ -745,7 +758,8 @@ function createFlightRow(flight) {
     const typeText = flight.type === 'DEP' ? 'Départ' : 'Arrivée';
     const typeClass = flight.type === 'DEP' ? 'type-depart' : 'type-arrivee';
     const authNumber = flight.authorizationNumber || 'N/A';
-    const destinationCode = flight.destination || '–';
+    const fromCode = flight.from || '–';
+    const toCode = flight.to || '–';
     
     row.innerHTML = `
         <td><strong>${escapeHtml(authNumber)}</strong></td>
@@ -753,7 +767,8 @@ function createFlightRow(flight) {
         <td>${escapeHtml(flight.company)}</td>
         <td><strong>${escapeHtml(flight.registration)}</strong></td>
         <td>${escapeHtml(flight.flightNumber)}</td>
-        <td><strong>${escapeHtml(destinationCode)}</strong></td>
+        <td><strong>${escapeHtml(fromCode)}</strong></td>
+        <td><strong>${escapeHtml(toCode)}</strong></td>
         <td><span class="type-badge ${typeClass}">${typeText}</span></td>
         <td>${flight.passengers}</td>
         <td>${flight.babies}</td>
