@@ -734,56 +734,39 @@ button:focus:not(:focus-visible) {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  
+
   .container {
-    box-shadow: none;
+    box-shadow: none !important;
     background: transparent !important;
     padding: 20px;
   }
-  
+
   .filters-section,
   .actions-section,
   .modal {
-    display: none;
+    display: none !important;
   }
-  
+
   .table-wrapper {
-    box-shadow: none;
+    box-shadow: none !important;
     background: transparent !important;
+    overflow: visible !important;
   }
 
   table {
     background: transparent !important;
     font-size: 12px;
-  }
-
-  thead {
-    background: transparent !important;
-    color: black !important;
-  }
-
-  tfoot {
-    background: transparent !important;
-    color: black !important;
-  }
-
-  thead tr, tfoot tr {
-    background: transparent !important;
-  }
-
-  td, th {
-    background: transparent !important;
-    color: black !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
     border: none !important;
   }
 
-  table {
-    border-collapse: collapse !important;
+  thead, tfoot, tbody, tr, td, th {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: black !important;
     border: none !important;
-  }
-
-  tr {
-    border: none !important;
+    box-shadow: none !important;
   }
 
   * {
