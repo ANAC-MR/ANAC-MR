@@ -30,6 +30,28 @@ const AIRLINE_PREFIXES = {
     "Air France": "AF"
 };
 
+// ===============================
+// LISTE DES DESTINATIONS (ICAO)
+// ===============================
+const DESTINATIONS = [
+    { name: "Nouakchott Oumtounsy", code: "GQNN" },
+    { name: "Nouadhibou International", code: "GQPP" },
+    { name: "Zoueratt International", code: "GQPF" },
+    { name: "Néma Airport", code: "GQNE" },
+    { name: "Kiffa Airport", code: "GQNK" },
+    { name: "Casablanca Mohammed V", code: "GMMN" },
+    { name: "Tunis Carthage", code: "DTTA" },
+    { name: "Dakar Blaise Diagne", code: "GOOY" },
+    { name: "Las Palmas Gran Canaria", code: "GCLP" },
+    { name: "Bamako Modibo Keita", code: "GABS" },
+    { name: "Conakry Gbessia", code: "GUCY" },
+    { name: "Abidjan Félix Houphouët-Boigny", code: "DIAP" },
+    { name: "Istanbul Airport", code: "LTFM" },
+    { name: "Paris Charles de Gaulle", code: "LFPG" },
+    { name: "Alger Houari Boumediene", code: "DAAG" },
+    { name: "Madinah Prince Mohammad Bin Abdulaziz", code: "OEMA" }
+];
+
 // ============================================
 // AUTHENTICATION
 // ============================================
@@ -59,6 +81,7 @@ const elements = {
     // Filters
     monthSelect: document.getElementById('monthSelect'),
     companySelect: document.getElementById('companySelect'),
+    destinationSelect: document.getElementById('destinationSelect'),
     searchFrom: document.getElementById('searchFrom'),
     searchTo: document.getElementById('searchTo'),
     searchImm: document.getElementById('searchImm'),
@@ -84,6 +107,7 @@ const elements = {
     fImm: document.getElementById('fImm'),
     fVol: document.getElementById('fVol'),
     fType: document.getElementById('fType'),
+    fDestination: document.getElementById('fDestination'),
     fPassengers: document.getElementById('fPassengers'),
     fBabies: document.getElementById('fBabies'),
     
@@ -132,6 +156,21 @@ function populateSelects() {
         formOption.textContent = airline;
         elements.fCompany.appendChild(formOption);
     });
+    
+    // Populate destination selects
+    DESTINATIONS.forEach(dest => {
+        // Filter select
+        const filterOption = document.createElement('option');
+        filterOption.value = dest.code;
+        filterOption.textContent = `${dest.code} – ${dest.name}`;
+        elements.destinationSelect.appendChild(filterOption);
+        
+        // Form select
+        const formOption = document.createElement('option');
+        formOption.value = dest.code;
+        formOption.textContent = `${dest.code} – ${dest.name}`;
+        elements.fDestination.appendChild(formOption);
+    });
 }
 
 // ============================================
@@ -140,7 +179,7 @@ function populateSelects() {
 function attachEventListeners() {
     // Filter changes
     const filterElements = [
-        elements.monthSelect, elements.companySelect, 
+        elements.monthSelect, elements.companySelect, elements.destinationSelect,
         elements.searchFrom, elements.searchTo
     ];
     
@@ -237,6 +276,7 @@ function openModal(flightId = null) {
                 elements.fImm.value = flight.registration;
                 elements.fVol.value = flight.flightNumber;
                 elements.fType.value = flight.type;
+                if (flight.destination) elements.fDestination.value = flight.destination;
                 elements.fPassengers.value = flight.passengers;
                 elements.fBabies.value = flight.babies;
                 
@@ -254,6 +294,7 @@ function openModal(flightId = null) {
             // Set default values
             elements.fCompany.value = AIRLINES[0];
             elements.fType.value = 'DEP';
+            elements.fDestination.value = DESTINATIONS[0].code;
             elements.fPassengers.value = '0';
             elements.fBabies.value = '0';
             
@@ -316,7 +357,8 @@ function validateForm() {
         { field: elements.fDate, message: 'La date est requise' },
         { field: elements.fCompany, message: 'La compagnie est requise' },
         { field: elements.fImm, message: 'L\'immatriculation est requise' },
-        { field: elements.fVol, message: 'Le numéro de vol est requis' }
+        { field: elements.fVol, message: 'Le numéro de vol est requis' },
+        { field: elements.fDestination, message: 'La destination est requise' }
     ];
     
     required.forEach(({ field, message }) => {
@@ -368,6 +410,7 @@ function getFormData() {
         registration: elements.fImm.value.trim().toUpperCase(),
         flightNumber: elements.fVol.value.trim().toUpperCase(),
         type: elements.fType.value,
+        destination: elements.fDestination.value,
         passengers: parseInt(elements.fPassengers.value) || 0,
         babies: parseInt(elements.fBabies.value) || 0,
         timestamp: Date.now()
@@ -587,6 +630,7 @@ function handleTypeFilter(button) {
 function resetFilters() {
     elements.monthSelect.value = 'ALL';
     elements.companySelect.value = 'ALL';
+    elements.destinationSelect.value = 'ALL';
     elements.searchFrom.value = '';
     elements.searchTo.value = '';
     elements.searchImm.value = '';
@@ -604,6 +648,7 @@ function resetFilters() {
 function filterFlights() {
     const monthFilter = elements.monthSelect.value;
     const companyFilter = elements.companySelect.value;
+    const destinationFilter = elements.destinationSelect.value;
     const dateFrom = elements.searchFrom.value;
     const dateTo = elements.searchTo.value;
     const immFilter = elements.searchImm.value.toUpperCase().trim();
@@ -619,6 +664,11 @@ function filterFlights() {
         
         // Company filter
         if (companyFilter !== 'ALL' && flight.company !== companyFilter) {
+            return false;
+        }
+        
+        // Destination filter
+        if (destinationFilter !== 'ALL' && flight.destination !== destinationFilter) {
             return false;
         }
         
@@ -673,7 +723,7 @@ function renderTable(filteredFlights) {
     if (filteredFlights.length === 0) {
         elements.flightTableBody.innerHTML = `
             <tr>
-                <td colspan="9" class="empty-state">
+                <td colspan="10" class="empty-state">
                     <p>Aucun vol trouvé</p>
                     <small>Ajoutez un vol ou modifiez vos filtres</small>
                 </td>
@@ -695,6 +745,7 @@ function createFlightRow(flight) {
     const typeText = flight.type === 'DEP' ? 'Départ' : 'Arrivée';
     const typeClass = flight.type === 'DEP' ? 'type-depart' : 'type-arrivee';
     const authNumber = flight.authorizationNumber || 'N/A';
+    const destinationCode = flight.destination || '–';
     
     row.innerHTML = `
         <td><strong>${escapeHtml(authNumber)}</strong></td>
@@ -702,6 +753,7 @@ function createFlightRow(flight) {
         <td>${escapeHtml(flight.company)}</td>
         <td><strong>${escapeHtml(flight.registration)}</strong></td>
         <td>${escapeHtml(flight.flightNumber)}</td>
+        <td><strong>${escapeHtml(destinationCode)}</strong></td>
         <td><span class="type-badge ${typeClass}">${typeText}</span></td>
         <td>${flight.passengers}</td>
         <td>${flight.babies}</td>
