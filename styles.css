@@ -252,7 +252,7 @@ button:disabled {
    TABLE
    ============================================ */
 .table-wrapper {
-  overflow-x: auto;
+  overflow: visible;
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
   background: white;
@@ -744,7 +744,9 @@ button:focus:not(:focus-visible) {
    ACTIONS MENU STYLES
    ============================================ */
 .actions-cell {
+  position: relative;
   text-align: center;
+  overflow: visible;
 }
 
 .actions-wrapper {
@@ -774,7 +776,9 @@ button:focus:not(:focus-visible) {
 }
 
 .actions-menu {
-  position: fixed;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
