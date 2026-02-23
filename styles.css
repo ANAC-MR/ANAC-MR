@@ -744,7 +744,6 @@ button:focus:not(:focus-visible) {
    ACTIONS MENU STYLES
    ============================================ */
 .actions-cell {
-  position: relative;
   text-align: center;
 }
 
@@ -775,20 +774,17 @@ button:focus:not(:focus-visible) {
 }
 
 .actions-menu {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  margin-top: 4px;
+  position: fixed;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  min-width: 150px;
-  z-index: 1000;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  z-index: 9999;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-10px);
-  transition: all 0.2s ease;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
 }
 
 .actions-menu.active {
