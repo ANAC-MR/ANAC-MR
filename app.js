@@ -226,12 +226,45 @@ function attachEventListeners() {
         });
     });
     
+    // Event delegation for table action buttons
+    elements.flightTableBody.addEventListener('click', (event) => {
+        const actionsBtn = event.target.closest('.actions-btn');
+        const editBtn = event.target.closest('.action-edit');
+        const deleteBtn = event.target.closest('.action-delete');
+        
+        if (actionsBtn) {
+            const flightId = actionsBtn.dataset.flightId;
+            // Pass a synthetic event with currentTarget set to the button
+            const syntheticEvent = { ...event, currentTarget: actionsBtn, stopPropagation: () => event.stopPropagation() };
+            toggleActionsMenu(syntheticEvent, flightId);
+            return;
+        }
+        
+        if (editBtn) {
+            event.stopPropagation();
+            const flightId = editBtn.dataset.flightId;
+            closeAllActionsMenus();
+            editFlight(flightId);
+            return;
+        }
+        
+        if (deleteBtn) {
+            event.stopPropagation();
+            const flightId = deleteBtn.dataset.flightId;
+            closeAllActionsMenus();
+            deleteFlight(flightId);
+            return;
+        }
+    });
+    
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyboardShortcuts);
     
     // Close actions menus when clicking outside
-    document.addEventListener('click', () => {
-        closeAllActionsMenus();
+    document.addEventListener('click', (event) => {
+        if (activeActionsMenu && !event.target.closest('.actions-wrapper')) {
+            closeAllActionsMenus();
+        }
     });
 }
 
@@ -774,15 +807,15 @@ function createFlightRow(flight) {
         <td>${flight.babies}</td>
         <td class="actions-cell">
             <div class="actions-wrapper">
-                <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">
+                <button class="actions-btn" data-flight-id="${flight.id}" aria-label="Actions">
                     ⋯
                 </button>
                 <div class="actions-menu" id="actions-${flight.id}">
-                    <button onclick="app.editFlight('${flight.id}')" class="action-item">
+                    <button class="action-item action-edit" data-flight-id="${flight.id}">
                         <span class="action-icon">✏️</span>
                         <span>Modifier</span>
                     </button>
-                    <button onclick="app.deleteFlight('${flight.id}')" class="action-item action-delete">
+                    <button class="action-item action-delete" data-flight-id="${flight.id}">
                         <span class="action-icon">🗑️</span>
                         <span>Supprimer</span>
                     </button>
@@ -1009,16 +1042,31 @@ function toggleActionsMenu(event, flightId) {
     
     const menuId = `actions-${flightId}`;
     const menu = document.getElementById(menuId);
+    if (!menu) return;
     
-    // Close any other open menu
-    if (activeActionsMenu && activeActionsMenu !== menu) {
-        activeActionsMenu.classList.remove('active');
-    }
+    const isOpen = menu.classList.contains('active');
     
-    // Toggle current menu
-    if (menu) {
-        menu.classList.toggle('active');
-        activeActionsMenu = menu.classList.contains('active') ? menu : null;
+    // Close all open menus first
+    closeAllActionsMenus();
+    
+    // If it was closed, open it and position it
+    if (!isOpen) {
+        const btn = event.currentTarget || event.target.closest('.actions-btn') || event.target;
+        const rect = btn.getBoundingClientRect();
+        
+        // Position below the button, aligned to the right
+        const top = rect.bottom + 4;
+        let left = rect.right - 160; // 160 = min-width of menu
+        
+        // Ensure it doesn't go off-screen left
+        if (left < 8) left = 8;
+        // Ensure it doesn't go off-screen right
+        if (left + 160 > window.innerWidth - 8) left = window.innerWidth - 168;
+        
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+        menu.classList.add('active');
+        activeActionsMenu = menu;
     }
 }
 
