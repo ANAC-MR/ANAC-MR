@@ -34,14 +34,14 @@ const AIRLINE_PREFIXES = {
 // LISTE DES DESTINATIONS (ICAO)
 // ===============================
 const DESTINATIONS = [
-    { name: "Nouakchott Oumtounsy", code: "GQNN" },
+    { name: "Nouakchott Oumtounsy", code: "GQNO" },
     { name: "Nouadhibou International", code: "GQPP" },
-    { name: "Zoueratt International", code: "GQPF" },
-    { name: "Néma Airport", code: "GQNE" },
-    { name: "Kiffa Airport", code: "GQNK" },
+    { name: "Zoueratt International", code: "GQPZ" },
+    { name: "Néma Airport", code: "GQNI" },
+    { name: "Kiffa Airport", code: "GQNF" },
     { name: "Casablanca Mohammed V", code: "GMMN" },
     { name: "Tunis Carthage", code: "DTTA" },
-    { name: "Dakar Blaise Diagne", code: "GOOY" },
+    { name: "Dakar Blaise Diagne", code: "GOBD" },
     { name: "Las Palmas Gran Canaria", code: "GCLP" },
     { name: "Bamako Modibo Keita", code: "GABS" },
     { name: "Conakry Gbessia", code: "GUCY" },
