@@ -1432,17 +1432,19 @@ async function loadAll() {
 
 async function loadAirlines() {
     try {
-        const snap = await getDocs(query(airlinesCol, orderBy('name')));
+        const snap = await getDocs(airlinesCol);
         if (snap.empty) {
-            // Seed default data on first load
             await seedDefaultAirlines();
-            return loadAirlines();
+            const snap2 = await getDocs(airlinesCol);
+            airlines = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+        } else {
+            airlines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }
-        airlines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        airlines.sort((a,b) => (a.name||'').localeCompare(b.name||''));
         renderAirlines();
     } catch(e) {
-        console.error(e);
-        showNotif('Erreur chargement compagnies', 'error');
+        console.error('Airlines error:', e);
+        showNotif('Erreur: ' + e.message, 'error');
     }
 }
 
@@ -1465,16 +1467,19 @@ async function seedDefaultAirlines() {
 
 async function loadAirports() {
     try {
-        const snap = await getDocs(query(airportsCol, orderBy('icao')));
+        const snap = await getDocs(airportsCol);
         if (snap.empty) {
             await seedDefaultAirports();
-            return loadAirports();
+            const snap2 = await getDocs(airportsCol);
+            airports = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+        } else {
+            airports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }
-        airports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        airports.sort((a,b) => (a.icao||'').localeCompare(b.icao||''));
         renderAirports();
     } catch(e) {
-        console.error(e);
-        showNotif('Erreur chargement aéroports', 'error');
+        console.error('Airports error:', e);
+        showNotif('Erreur: ' + e.message, 'error');
     }
 }
 
