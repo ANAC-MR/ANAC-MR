@@ -1,0 +1,306 @@
+/* ============================================
+   ADMIN PANEL STYLES
+   ============================================ */
+
+.header-nav {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.nav-link {
+    color: var(--primary-blue);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border: 2px solid var(--primary-blue);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: inline-block;
+}
+
+.nav-link:hover {
+    background: var(--primary-blue);
+    color: white;
+}
+
+/* Login */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+.login-box {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.login-icon { font-size: 50px; margin-bottom: 16px; }
+.login-box h2 { font-size: 20px; color: #2d3748; margin-bottom: 6px; }
+.login-box p { color: #718096; font-size: 14px; margin-bottom: 24px; }
+.login-box .form-group { text-align: left; margin-bottom: 16px; }
+
+.btn-full { width: 100%; padding: 12px; font-size: 15px; }
+
+/* Admin Header */
+.admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.admin-tabs {
+    display: flex;
+    gap: 6px;
+    background: #f7fafc;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+}
+
+.admin-tab {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: #718096;
+    transition: all 0.2s ease;
+}
+
+.admin-tab:hover {
+    background: white;
+    color: var(--primary-blue);
+}
+
+.admin-tab.active {
+    background: var(--primary-blue);
+    color: white;
+    box-shadow: 0 4px 12px rgba(43, 90, 142, 0.3);
+}
+
+.btn-sm-logout {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+/* Admin Content */
+.admin-content { display: none; }
+.admin-content.active { display: block; }
+
+.section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.section-header-row h2 {
+    font-size: 20px;
+    color: #2d3748;
+}
+
+/* Info box */
+.info-box {
+    background: #ebf8ff;
+    border: 1px solid #bee3f8;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #2c5282;
+    margin-bottom: 16px;
+}
+
+/* Admin Table */
+.admin-table-wrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 14px;
+}
+
+.admin-table thead {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+    color: white;
+}
+
+.admin-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.admin-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+
+.admin-table tbody tr:hover { background: #f7fafc; }
+
+/* Inline edit */
+.admin-table td input,
+.admin-table td select {
+    border: 2px solid var(--primary-blue);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 14px;
+    width: 100%;
+    background: white;
+    font-family: inherit;
+}
+
+/* Role badge */
+.role-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.role-admin { background: #fef3c7; color: #92400e; }
+.role-transport { background: #d1fae5; color: #065f46; }
+.role-direction { background: #dbeafe; color: #1e40af; }
+
+/* Action buttons */
+.action-btns { display: flex; gap: 6px; }
+
+.btn-edit {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-edit:hover { transform: translateY(-1px); }
+
+.btn-delete-sm {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-delete-sm:hover { transform: translateY(-1px); }
+
+.btn-save-inline {
+    background: linear-gradient(135deg, var(--green) 0%, #005030 100%);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-cancel-inline {
+    background: #e2e8f0;
+    color: #4a5568;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Modal form */
+#modalForm .form-group {
+    margin-bottom: 16px;
+}
+
+#modalForm label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 6px;
+}
+
+#modalForm input,
+#modalForm select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    background: white;
+    box-sizing: border-box;
+}
+
+#modalForm input:focus,
+#modalForm select:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+}
+
+.immat-preview {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #718096;
+    margin-top: 8px;
+}
+
+.immat-preview strong { color: var(--primary-blue); font-size: 15px; }
+
+/* btn-danger */
+.btn-danger {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+}
+
+@media (max-width: 768px) {
+    .admin-tabs { flex-direction: column; }
+    .admin-tab { width: 100%; }
+    .section-header-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
