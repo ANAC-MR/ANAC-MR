@@ -36,6 +36,12 @@
             overflow-x: hidden;
         }
 
+        /* ─── LOGIN ALWAYS VISIBLE BY DEFAULT ─── */
+        #loginScreen { display: flex !important; }
+        #adminPanel  { display: none !important; }
+        body.authenticated #loginScreen { display: none !important; }
+        body.authenticated #adminPanel  { display: block !important; }
+
         /* ─── GRID BG ─── */
         body::before {
             content: '';
@@ -1388,8 +1394,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     if (user === storedUser && pass === storedPass) {
         recordAttempt(true);
         sessionStorage.setItem(AUTH_KEY, 'true');
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('adminPanel').style.display = 'block';
+        document.body.classList.add('authenticated');
         await loadAll();
         logActivity('Connexion admin', 'success');
     } else {
@@ -1408,14 +1413,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
 // Auto login si déjà authentifié
 if (sessionStorage.getItem(AUTH_KEY) === 'true') {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('adminPanel').style.display = 'block';
+    document.body.classList.add('authenticated');
     loadAll();
 }
 
 window.logout = function() {
     sessionStorage.removeItem(AUTH_KEY);
-    location.reload();
+    document.body.classList.remove('authenticated');
 };
 
 // ────────────────────────────────────────
