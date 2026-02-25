@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANAC Mauritanie – Panneau Administration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy:       #0f1e36;
+            --navy-mid:   #162844;
+            --navy-light: #1e3a5c;
+            --blue:       #2B5A8E;
+            --blue-acc:   #4a90d9;
+            --gold:       #D4AF37;
+            --gold-light: #f0cc5a;
+            --green:      #00b67a;
+            --red:        #e84141;
+            --orange:     #ff8c42;
+            --text:       #e8edf5;
+            --text-dim:   #8da4c0;
+            --border:     rgba(212,175,55,0.18);
+            --card-bg:    rgba(22,40,68,0.85);
+            --card-glow:  0 0 30px rgba(43,90,142,0.25);
+            --input-bg:   rgba(15,30,54,0.7);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Sora', sans-serif;
+            background: var(--navy);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ─── GRID BG ─── */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(43,90,142,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(43,90,142,0.06) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ─── WATERMARK LOGO ─── */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px; height: 500px;
+            background-image: url('./assets/ANAC-logo.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.04;
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ════════════════════════════════════
+           LOGIN SCREEN
+        ════════════════════════════════════ */
+        #loginScreen {
+            position: fixed; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100;
+            background: radial-gradient(ellipse at 40% 30%, rgba(43,90,142,0.35) 0%, transparent 70%),
+                        radial-gradient(ellipse at 70% 80%, rgba(212,175,55,0.12) 0%, transparent 60%),
+                        var(--navy);
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 52px 48px;
+            width: 420px;
+            max-width: 95vw;
+            box-shadow: var(--card-glow), 0 40px 80px rgba(0,0,0,0.5);
+            backdrop-filter: blur(20px);
+            animation: fadeUp 0.5s ease;
+        }
+
+        .login-logo-wrap {
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 32px; justify-content: center;
+        }
+
+        .login-logo-wrap img {
+            width: 52px; height: 52px; object-fit: contain;
+        }
+
+        .login-logo-wrap .brand {
+            display: flex; flex-direction: column;
+        }
+
+        .login-logo-wrap .brand-top {
+            font-size: 22px; font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        .login-logo-wrap .brand-sub {
+            font-size: 11px; color: var(--text-dim);
+            letter-spacing: 1.5px; text-transform: uppercase;
+        }
+
+        .login-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+            margin-bottom: 28px;
+        }
+
+        .login-title {
+            font-size: 13px; font-weight: 600;
+            color: var(--text-dim); letter-spacing: 2px;
+            text-transform: uppercase; text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .login-field { margin-bottom: 20px; }
+
+        .login-field label {
+            display: block; font-size: 11px; font-weight: 600;
+            color: var(--text-dim); letter-spacing: 1.5px;
+            text-transform: uppercase; margin-bottom: 8px;
+        }
+
+        .login-field input {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 14px; font-family: 'Sora', sans-serif;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .login-field input:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212,175,55,0.15);
+        }
+
+        .login-field input.shake {
+            animation: shake 0.4s ease;
+            border-color: var(--red);
+        }
+
+        .login-error {
+            font-size: 12px; color: var(--red);
+            margin-top: 6px; display: none;
+        }
+
+        .btn-login {
+            width: 100%; padding: 15px;
+            background: linear-gradient(135deg, var(--gold), var(--gold-light));
+            border: none; border-radius: 10px;
+            font-family: 'Sora', sans-serif;
+            font-size: 14px; font-weight: 700;
+            color: var(--navy); letter-spacing: 1px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(212,175,55,0.35);
+        }
+
+        .btn-login:active { transform: translateY(0); }
+
+        .login-attempts {
+            text-align: center; font-size: 12px;
+            color: var(--text-dim); margin-top: 16px;
+        }
+
+        .login-attempts.warn { color: var(--orange); }
+        .login-attempts.danger { color: var(--red); }
+
+        /* ════════════════════════════════════
+           MAIN LAYOUT
+        ════════════════════════════════════ */
+        #adminPanel {
+            display: none;
+            min-height: 100vh;
+            position: relative; z-index: 1;
+        }
+
+        /* Topbar */
+        .topbar {
+            background: rgba(15,30,54,0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            padding: 0 32px;
+            height: 66px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 50;
+        }
+
+        .topbar-left {
+            display: flex; align-items: center; gap: 16px;
+        }
+
+        .topbar-logo { width: 36px; height: 36px; object-fit: contain; }
+
+        .topbar-title {
+            font-size: 15px; font-weight: 700;
+            color: var(--text); letter-spacing: 0.5px;
+        }
+
+        .topbar-badge {
+            background: rgba(212,175,55,0.15);
+            border: 1px solid rgba(212,175,55,0.3);
+            color: var(--gold);
+            font-size: 10px; font-weight: 700;
+            padding: 3px 9px; border-radius: 20px;
+            letter-spacing: 1.5px; text-transform: uppercase;
+        }
+
+        .topbar-right {
+            display: flex; align-items: center; gap: 12px;
+        }
+
+        .btn-logout {
+            background: rgba(232,65,65,0.12);
+            border: 1px solid rgba(232,65,65,0.3);
+            color: #e84141;
+            padding: 8px 18px; border-radius: 8px;
+            font-family: 'Sora', sans-serif;
+            font-size: 13px; font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-logout:hover { background: rgba(232,65,65,0.22); }
+
+        .btn-back-main {
+            background: rgba(74,144,217,0.12);
+            border: 1px solid rgba(74,144,217,0.3);
+            color: var(--blue-acc);
+            padding: 8px 18px; border-radius: 8px;
+            font-family: 'Sora', sans-serif;
+            font-size: 13px; font-weight: 600;
+            cursor: pointer; text-decoration: none;
+            transition: background 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-back-main:hover { background: rgba(74,144,217,0.22); }
+
+        /* Sidebar + Content */
+        .layout {
+            display: flex;
+            min-height: calc(100vh - 66px);
+        }
+
+        .sidebar {
+            width: 240px;
+            background: rgba(15,30,54,0.6);
+            border-right: 1px solid var(--border);
+            padding: 24px 0;
+            flex-shrink: 0;
+        }
+
+        .sidebar-section {
+            padding: 0 16px 8px;
+            font-size: 10px; font-weight: 700;
+            color: var(--text-dim); letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 16px;
+        }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 11px 20px;
+            cursor: pointer;
+            color: var(--text-dim);
+            font-size: 14px; font-weight: 500;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            color: var(--text);
+            background: rgba(43,90,142,0.2);
+        }
+
+        .nav-item.active {
+            color: var(--gold);
+            background: rgba(212,175,55,0.08);
+            border-left-color: var(--gold);
+        }
+
+        .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+        .main-content {
+            flex: 1;
+            padding: 36px 40px;
+            overflow-y: auto;
+        }
+
+        /* ─── Section Pages ─── */
+        .section-page { display: none; animation: fadeIn 0.3s ease; }
+        .section-page.active { display: block; }
+
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 32px;
+        }
+
+        .page-header-left h2 {
+            font-size: 24px; font-weight: 700; color: var(--text);
+        }
+
+        .page-header-left p {
+            font-size: 13px; color: var(--text-dim); margin-top: 4px;
+        }
+
+        /* ════════════════════════════════════
+           CARDS & TABLES
+        ════════════════════════════════════ */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--card-glow);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 13px; font-weight: 700;
+            color: var(--text-dim); letter-spacing: 1.5px;
+            text-transform: uppercase; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .card-title::after {
+            content: ''; flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Stats row */
+        .stats-row {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px; margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 22px 24px;
+            position: relative; overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+
+        .stat-card.blue::before  { background: var(--blue-acc); }
+        .stat-card.gold::before  { background: var(--gold); }
+        .stat-card.green::before { background: var(--green); }
+        .stat-card.orange::before { background: var(--orange); }
+
+        .stat-value {
+            font-size: 32px; font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text);
+        }
+
+        .stat-label {
+            font-size: 12px; color: var(--text-dim);
+            margin-top: 4px; letter-spacing: 0.5px;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 6px;
+        }
+
+        .data-table th {
+            font-size: 11px; font-weight: 700;
+            color: var(--text-dim); letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 10px 16px;
+            text-align: left;
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            font-size: 13px;
+        }
+
+        .data-table tbody tr {
+            background: rgba(22,40,68,0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.15s;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(43,90,142,0.25);
+        }
+
+        .data-table tbody tr td:first-child { border-radius: 8px 0 0 8px; }
+        .data-table tbody tr td:last-child  { border-radius: 0 8px 8px 0; }
+
+        .airline-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+
+        .airline-color-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .prefix-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px; font-weight: 600;
+            background: rgba(212,175,55,0.1);
+            border: 1px solid rgba(212,175,55,0.25);
+            color: var(--gold);
+            padding: 3px 8px; border-radius: 5px;
+        }
+
+        .code-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px; font-weight: 600;
+            background: rgba(74,144,217,0.1);
+            border: 1px solid rgba(74,144,217,0.2);
+            color: var(--blue-acc);
+            padding: 3px 8px; border-radius: 5px;
+        }
+
+        .action-btns {
+            display: flex; gap: 6px;
+        }
+
+        .btn-icon {
+            width: 32px; height: 32px;
+            border-radius: 7px;
+            border: 1px solid;
+            background: transparent;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            transition: background 0.15s;
+        }
+
+        .btn-icon.edit {
+            border-color: rgba(74,144,217,0.35);
+            color: var(--blue-acc);
+        }
+        .btn-icon.edit:hover { background: rgba(74,144,217,0.15); }
+
+        .btn-icon.delete {
+            border-color: rgba(232,65,65,0.35);
+            color: var(--red);
+        }
+        .btn-icon.delete:hover { background: rgba(232,65,65,0.15); }
+
+        /* ════════════════════════════════════
+           BUTTONS
+        ════════════════════════════════════ */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--blue), var(--blue-acc));
+            border: none; border-radius: 9px;
+            padding: 11px 22px;
+            font-family: 'Sora', sans-serif;
+            font-size: 13px; font-weight: 600;
+            color: #fff; cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold), var(--gold-light));
+            border: none; border-radius: 9px;
+            padding: 11px 22px;
+            font-family: 'Sora', sans-serif;
+            font-size: 13px; font-weight: 700;
+            color: var(--navy); cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-gold:hover { opacity: 0.85; transform: translateY(-1px); }
+
+        .btn-danger {
+            background: rgba(232,65,65,0.15);
+            border: 1px solid rgba(232,65,65,0.35);
+            border-radius: 9px; padding: 11px 22px;
+            font-family: 'Sora', sans-serif;
+            font-size: 13px; font-weight: 600;
+            color: var(--red); cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-danger:hover { background: rgba(232,65,65,0.25); }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 9px; padding: 11px 22px;
+            font-family: 'Sora', sans-serif;
+            font-size: 13px; font-weight: 500;
+            color: var(--text-dim); cursor: pointer;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .btn-ghost:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
+
+        /* ════════════════════════════════════
+           FORMS
+        ════════════════════════════════════ */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+        .form-full { grid-column: 1 / -1; }
+
+        .field-group { display: flex; flex-direction: column; gap: 7px; }
+
+        .field-group label {
+            font-size: 11px; font-weight: 700;
+            color: var(--text-dim); letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .field-group input,
+        .field-group select,
+        .field-group textarea {
+            background: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 9px;
+            padding: 12px 14px;
+            font-size: 13px; font-family: 'Sora', sans-serif;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .field-group input:focus,
+        .field-group select:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212,175,55,0.12);
+        }
+
+        .field-group select option { background: var(--navy-mid); }
+
+        .field-group .hint {
+            font-size: 11px; color: var(--text-dim);
+        }
+
+        .field-group .color-preview-row {
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .field-group input[type="color"] {
+            width: 48px; height: 40px;
+            padding: 4px; border-radius: 9px; cursor: pointer;
+        }
+
+        /* Inline input for locked format */
+        .format-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px; font-weight: 600;
+            color: var(--gold);
+            letter-spacing: 2px;
+        }
+
+        .lock-toggle {
+            display: inline-flex; align-items: center; gap: 8px;
+            cursor: pointer; user-select: none;
+        }
+
+        .lock-toggle input[type="checkbox"] { display: none; }
+
+        .lock-toggle .track {
+            width: 40px; height: 22px;
+            border-radius: 11px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .lock-toggle input:checked ~ .track {
+            background: var(--gold);
+        }
+
+        .lock-toggle .track::after {
+            content: '';
+            position: absolute;
+            top: 3px; left: 3px;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.2s;
+        }
+
+        .lock-toggle input:checked ~ .track::after {
+            transform: translateX(18px);
+        }
+
+        .lock-toggle .label-text {
+            font-size: 12px; color: var(--text-dim);
+        }
+
+        .locked-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(212,175,55,0.12);
+            border: 1px solid rgba(212,175,55,0.3);
+            color: var(--gold);
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+            letter-spacing: 1px;
+        }
+
+        .unlocked-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: var(--text-dim);
+            font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px;
+            letter-spacing: 1px;
+        }
+
+        /* ════════════════════════════════════
+           MODAL
+        ════════════════════════════════════ */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 200;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1; pointer-events: all;
+        }
+
+        .modal-box {
+            background: var(--navy-mid);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px;
+            width: 560px; max-width: 95vw;
+            max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+            transform: translateY(20px);
+            transition: transform 0.2s;
+        }
+
+        .modal-overlay.open .modal-box {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 28px;
+        }
+
+        .modal-header h3 {
+            font-size: 18px; font-weight: 700; color: var(--text);
+        }
+
+        .modal-close {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-dim); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; transition: background 0.15s;
+        }
+        .modal-close:hover { background: rgba(255,255,255,0.12); }
+
+        .modal-footer {
+            display: flex; gap: 12px; justify-content: flex-end;
+            margin-top: 28px; padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ════════════════════════════════════
+           NOTIFICATIONS
+        ════════════════════════════════════ */
+        #notifContainer {
+            position: fixed; top: 80px; right: 24px;
+            z-index: 1000;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .notif {
+            background: var(--navy-mid);
+            border-radius: 10px;
+            padding: 14px 20px;
+            display: flex; align-items: center; gap: 12px;
+            font-size: 13px; font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
+            border-left: 3px solid;
+            min-width: 280px;
+        }
+
+        .notif.success { border-color: var(--green); }
+        .notif.error   { border-color: var(--red); }
+        .notif.warning { border-color: var(--orange); }
+        .notif.info    { border-color: var(--blue-acc); }
+
+        /* ─── Format Builder ─── */
+        .format-builder {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            align-items: center; margin-top: 12px;
+        }
+
+        .format-part {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+            transition: opacity 0.15s;
+        }
+
+        .format-part.static {
+            background: rgba(212,175,55,0.15);
+            border: 1px solid rgba(212,175,55,0.35);
+            color: var(--gold);
+        }
+
+        .format-part.number {
+            background: rgba(74,144,217,0.15);
+            border: 1px solid rgba(74,144,217,0.3);
+            color: var(--blue-acc);
+        }
+
+        .format-part.separator {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: var(--text-dim);
+        }
+
+        .format-preview {
+            background: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 9px;
+            padding: 14px 18px;
+            margin-top: 16px;
+        }
+
+        .format-preview-label {
+            font-size: 11px; color: var(--text-dim);
+            letter-spacing: 1px; text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .format-preview-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px; font-weight: 600;
+            color: var(--gold);
+            letter-spacing: 2px;
+        }
+
+        /* ─── Color Swatch Grid ─── */
+        .color-swatches {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            margin-top: 8px;
+        }
+
+        .color-swatch {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+
+        .color-swatch:hover, .color-swatch.selected {
+            transform: scale(1.2);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        /* ─── Confim Dialog ─── */
+        .confirm-text {
+            font-size: 14px; color: var(--text);
+            line-height: 1.7;
+        }
+        .confirm-name {
+            font-weight: 700; color: var(--red);
+        }
+
+        /* ─── Dashboard widgets ─── */
+        .activity-item {
+            display: flex; align-items: center; gap: 14px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .activity-item:last-child { border-bottom: none; }
+
+        .activity-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .activity-msg { font-size: 13px; color: var(--text); flex: 1; }
+        .activity-time { font-size: 11px; color: var(--text-dim); }
+
+        /* ════════════════════════════════════
+           KEYFRAMES
+        ════════════════════════════════════ */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(40px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%       { transform: translateX(-8px); }
+            40%       { transform: translateX(8px); }
+            60%       { transform: translateX(-5px); }
+            80%       { transform: translateX(5px); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            .layout { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 12px 0; }
+            .main-content { padding: 24px 20px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: 1fr 1fr; }
+            .topbar { padding: 0 16px; }
+        }
+
+        /* ─── Empty State ─── */
+        .empty-state {
+            text-align: center; padding: 48px 24px;
+            color: var(--text-dim);
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════ -->
+<div id="loginScreen">
+    <div class="login-card">
+        <div class="login-logo-wrap">
+            <img src="assets/ANAC-logo.png" alt="ANAC" onerror="this.style.display='none'">
+            <div class="brand">
+                <span class="brand-top">ANAC</span>
+                <span class="brand-sub">Mauritanie</span>
+            </div>
+        </div>
+        <div class="login-divider"></div>
+        <div class="login-title">🔐 Panneau d'Administration</div>
+
+        <form id="loginForm">
+            <div class="login-field">
+                <label>Identifiant</label>
+                <input type="text" id="loginUser" placeholder="admin" autocomplete="username" required>
+            </div>
+            <div class="login-field">
+                <label>Mot de passe</label>
+                <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
+                <span class="login-error" id="loginError">Identifiants incorrects. Réessayez.</span>
+            </div>
+            <button type="submit" class="btn-login">Connexion</button>
+        </form>
+        <div class="login-attempts" id="loginAttempts"></div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════
+     ADMIN PANEL
+════════════════════════════════════ -->
+<div id="adminPanel">
+    <!-- Topbar -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <img src="assets/ANAC-logo.png" class="topbar-logo" alt="ANAC" onerror="this.style.display='none'">
+            <span class="topbar-title">ANAC Mauritanie</span>
+            <span class="topbar-badge">Admin</span>
+        </div>
+        <div class="topbar-right">
+            <a href="index.html" class="btn-back-main">← Retour au suivi des vols</a>
+            <button class="btn-logout" onclick="logout()">Déconnexion</button>
+        </div>
+    </div>
+
+    <div class="layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-section">Navigation</div>
+            <div class="nav-item active" onclick="showSection('dashboard')" data-section="dashboard">
+                <span class="icon">📊</span> Tableau de bord
+            </div>
+            <div class="nav-item" onclick="showSection('airlines')" data-section="airlines">
+                <span class="icon">✈️</span> Compagnies
+            </div>
+            <div class="nav-item" onclick="showSection('airports')" data-section="airports">
+                <span class="icon">🛬</span> Aéroports
+            </div>
+            <div class="sidebar-section" style="margin-top:24px;">Paramètres</div>
+            <div class="nav-item" onclick="showSection('formats')" data-section="formats">
+                <span class="icon">🔢</span> Format N° Auth.
+            </div>
+            <div class="nav-item" onclick="showSection('security')" data-section="security">
+                <span class="icon">🛡️</span> Sécurité
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <!-- ─── DASHBOARD ─── -->
+            <div class="section-page active" id="section-dashboard">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>Tableau de bord</h2>
+                        <p>Vue d'ensemble de la configuration</p>
+                    </div>
+                </div>
+
+                <div class="stats-row" id="dashboardStats">
+                    <div class="stat-card blue">
+                        <div class="stat-value" id="stat-airlines">–</div>
+                        <div class="stat-label">Compagnies actives</div>
+                    </div>
+                    <div class="stat-card gold">
+                        <div class="stat-value" id="stat-airports">–</div>
+                        <div class="stat-label">Aéroports enregistrés</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-value" id="stat-format">–</div>
+                        <div class="stat-label">Format N° Auth.</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="stat-value" id="stat-locked">–</div>
+                        <div class="stat-label">Statut verrouillage</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📋 Activité récente</div>
+                    <div id="activityLog">
+                        <div class="empty-state">
+                            <div class="icon">📝</div>
+                            <p>Aucune activité récente</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── COMPAGNIES ─── -->
+            <div class="section-page" id="section-airlines">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>Compagnies aériennes</h2>
+                        <p>Gérez les compagnies disponibles dans le système</p>
+                    </div>
+                    <button class="btn-gold" onclick="openAirlineModal()">
+                        ＋ Ajouter une compagnie
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">✈️ Liste des compagnies</div>
+                    <table class="data-table" id="airlinesTable">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Nom de la compagnie</th>
+                                <th>Préfixe vol</th>
+                                <th>IATA</th>
+                                <th>Couleur</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="airlinesBody">
+                            <tr>
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <div class="icon">⏳</div>
+                                        <p>Chargement…</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ─── AÉROPORTS ─── -->
+            <div class="section-page" id="section-airports">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>Aéroports & Destinations</h2>
+                        <p>Gérez les aéroports de départ et d'arrivée</p>
+                    </div>
+                    <button class="btn-gold" onclick="openAirportModal()">
+                        ＋ Ajouter un aéroport
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🛬 Liste des aéroports</div>
+                    <table class="data-table" id="airportsTable">
+                        <thead>
+                            <tr>
+                                <th>Code ICAO</th>
+                                <th>Code IATA</th>
+                                <th>Nom de l'aéroport</th>
+                                <th>Pays / Ville</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="airportsBody">
+                            <tr>
+                                <td colspan="5">
+                                    <div class="empty-state">
+                                        <div class="icon">⏳</div>
+                                        <p>Chargement…</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ─── FORMAT N° AUTH ─── -->
+            <div class="section-page" id="section-formats">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>Format du numéro d'autorisation</h2>
+                        <p>Définissez et verrouillez le format du numéro d'autorisation</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔢 Configuration du format</div>
+
+                    <div class="form-grid" style="margin-bottom:24px;">
+                        <div class="field-group">
+                            <label>Préfixe (texte fixe)</label>
+                            <input type="text" id="fmtPrefix" placeholder="Ex: SNA26" maxlength="8"
+                                   oninput="this.value=this.value.toUpperCase(); updateFormatPreview()">
+                            <span class="hint">Partie fixe au début (lettres, chiffres)</span>
+                        </div>
+                        <div class="field-group">
+                            <label>Séparateur</label>
+                            <select id="fmtSeparator" onchange="updateFormatPreview()">
+                                <option value="-">Tiret  –  ( - )</option>
+                                <option value="/">Slash  –  ( / )</option>
+                                <option value=".">Point  –  ( . )</option>
+                                <option value="">Aucun</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label>Longueur du numéro</label>
+                            <select id="fmtLength" onchange="updateFormatPreview()">
+                                <option value="3">3 chiffres – ex: 001</option>
+                                <option value="4" selected>4 chiffres – ex: 0001</option>
+                                <option value="5">5 chiffres – ex: 00001</option>
+                                <option value="6">6 chiffres – ex: 000001</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label>Suffixe (optionnel)</label>
+                            <input type="text" id="fmtSuffix" placeholder="Ex: /MR" maxlength="6"
+                                   oninput="this.value=this.value.toUpperCase(); updateFormatPreview()">
+                        </div>
+                    </div>
+
+                    <div class="format-preview">
+                        <div class="format-preview-label">Aperçu du format</div>
+                        <div class="format-preview-value" id="formatPreviewValue">SNA26-0001</div>
+                    </div>
+
+                    <div style="margin-top:24px; display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+                        <label class="lock-toggle">
+                            <input type="checkbox" id="formatLocked" onchange="handleLockToggle()">
+                            <span class="track"></span>
+                            <span class="label-text" id="lockLabel">Format déverrouillé – cliquez pour verrouiller</span>
+                        </label>
+                        <span id="lockBadge" class="unlocked-badge">🔓 Déverrouillé</span>
+                    </div>
+
+                    <div class="modal-footer" style="justify-content:flex-start; padding-top:20px; margin-top:0;">
+                        <button class="btn-gold" onclick="saveFormatConfig()">💾 Enregistrer la configuration</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">ℹ️ Informations</div>
+                    <p style="font-size:13px; color:var(--text-dim); line-height:1.8;">
+                        Lorsque le format est <strong style="color:var(--gold)">verrouillé</strong>, les opérateurs ne peuvent saisir 
+                        que des numéros d'autorisation conformes au format défini. Toute saisie hors format sera rejetée.<br><br>
+                        Lorsqu'il est <strong style="color:var(--text-dim)">déverrouillé</strong>, le champ accepte n'importe quelle 
+                        saisie (mode libre).
+                    </p>
+                </div>
+            </div>
+
+            <!-- ─── SÉCURITÉ ─── -->
+            <div class="section-page" id="section-security">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>Sécurité</h2>
+                        <p>Gérez les accès et mots de passe</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔑 Changer le mot de passe admin</div>
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label>Mot de passe actuel</label>
+                            <input type="password" id="secCurrentPass" placeholder="••••••••">
+                        </div>
+                        <div class="field-group" style="grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+                            <div class="field-group">
+                                <label>Nouveau mot de passe</label>
+                                <input type="password" id="secNewPass" placeholder="••••••••" oninput="checkPasswordStrength()">
+                                <div id="strengthBar" style="height:4px; border-radius:2px; background:rgba(255,255,255,0.1); margin-top:8px; overflow:hidden;">
+                                    <div id="strengthFill" style="height:100%; width:0%; transition:width 0.3s, background 0.3s;"></div>
+                                </div>
+                                <span id="strengthLabel" class="hint"></span>
+                            </div>
+                            <div class="field-group">
+                                <label>Confirmer le nouveau mot de passe</label>
+                                <input type="password" id="secConfirmPass" placeholder="••••••••">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px;">
+                        <button class="btn-primary" onclick="changePassword()">🔒 Mettre à jour le mot de passe</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔓 Réinitialiser la session</div>
+                    <p style="font-size:13px; color:var(--text-dim); margin-bottom:16px; line-height:1.7;">
+                        Déconnecte toutes les sessions actives. Les utilisateurs devront se reconnecter.
+                    </p>
+                    <button class="btn-danger" onclick="clearAllSessions()">🗑️ Réinitialiser toutes les sessions</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MODALS
+════════════════════════════════════ -->
+
+<!-- Modal Compagnie -->
+<div class="modal-overlay" id="airlineModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="airlineModalTitle">Ajouter une compagnie</h3>
+            <button class="modal-close" onclick="closeModal('airlineModal')">×</button>
+        </div>
+        <input type="hidden" id="airlineEditId">
+        <div class="form-grid">
+            <div class="field-group form-full">
+                <label>Nom de la compagnie *</label>
+                <input type="text" id="airlineName" placeholder="Ex: Mauritania Airlines" required>
+            </div>
+            <div class="field-group">
+                <label>Préfixe de vol (2-3 lettres) *</label>
+                <input type="text" id="airlinePrefix" placeholder="Ex: L6" maxlength="3"
+                       oninput="this.value=this.value.toUpperCase()">
+                <span class="hint">Code utilisé pour les numéros de vol</span>
+            </div>
+            <div class="field-group">
+                <label>Code IATA (2 lettres)</label>
+                <input type="text" id="airlineIATA" placeholder="Ex: MV" maxlength="2"
+                       oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="field-group form-full">
+                <label>Couleur d'identification</label>
+                <div class="color-swatches" id="colorSwatches"></div>
+                <div class="color-preview-row" style="margin-top:10px;">
+                    <input type="color" id="airlineColorPicker" value="#2B5A8E" onchange="syncColorFromPicker(this.value)">
+                    <span style="font-size:12px; color:var(--text-dim);">Couleur personnalisée</span>
+                    <span id="airlineColorDisplay" style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim);">#2B5A8E</span>
+                </div>
+            </div>
+            <div class="field-group form-full">
+                <label>Pays d'origine</label>
+                <input type="text" id="airlineCountry" placeholder="Ex: Mauritanie">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost" onclick="closeModal('airlineModal')">Annuler</button>
+            <button class="btn-gold" onclick="saveAirline()">💾 Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Aéroport -->
+<div class="modal-overlay" id="airportModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="airportModalTitle">Ajouter un aéroport</h3>
+            <button class="modal-close" onclick="closeModal('airportModal')">×</button>
+        </div>
+        <input type="hidden" id="airportEditId">
+        <div class="form-grid">
+            <div class="field-group">
+                <label>Code ICAO (4 lettres) *</label>
+                <input type="text" id="airportICAO" placeholder="Ex: GQNO" maxlength="4"
+                       oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="field-group">
+                <label>Code IATA (3 lettres)</label>
+                <input type="text" id="airportIATA" placeholder="Ex: NKC" maxlength="3"
+                       oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="field-group form-full">
+                <label>Nom de l'aéroport *</label>
+                <input type="text" id="airportName" placeholder="Ex: Nouakchott Oumtounsy International">
+            </div>
+            <div class="field-group">
+                <label>Ville</label>
+                <input type="text" id="airportCity" placeholder="Ex: Nouakchott">
+            </div>
+            <div class="field-group">
+                <label>Pays</label>
+                <input type="text" id="airportCountry" placeholder="Ex: Mauritanie">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-ghost" onclick="closeModal('airportModal')">Annuler</button>
+            <button class="btn-gold" onclick="saveAirport()">💾 Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmation Suppression -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-box" style="max-width:420px;">
+        <div class="modal-header">
+            <h3>Confirmer la suppression</h3>
+            <button class="modal-close" onclick="closeModal('confirmModal')">×</button>
+        </div>
+        <p class="confirm-text" id="confirmText">Êtes-vous sûr de vouloir supprimer <span class="confirm-name" id="confirmName"></span> ?<br>Cette action est irréversible.</p>
+        <div class="modal-footer">
+            <button class="btn-ghost" onclick="closeModal('confirmModal')">Annuler</button>
+            <button class="btn-danger" id="confirmDeleteBtn">🗑️ Supprimer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications -->
+<div id="notifContainer"></div>
+
+<!-- ════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════ -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import {
+    getFirestore, collection, doc,
+    getDocs, addDoc, updateDoc, deleteDoc,
+    setDoc, onSnapshot, serverTimestamp, query, orderBy
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+// ─── Firebase ───────────────────────────
+const firebaseConfig = {
+    apiKey: "AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+    authDomain: "anacmr-e05b4.firebaseapp.com",
+    projectId: "anacmr-e05b4",
+    storageBucket: "anacmr-e05b4.firebasestorage.app",
+    messagingSenderId: "857117390430",
+    appId: "1:857117390430:web:0231614b880df3196e26cf"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
+
+// Collections
+const airlinesCol  = collection(db, 'admin_airlines');
+const airportsCol  = collection(db, 'admin_airports');
+const configDoc    = () => doc(db, 'admin_config', 'main');
+const activityCol  = collection(db, 'admin_activity');
+
+// ─── AUTH CONFIG (stocké dans localStorage + Firebase) ──
+const AUTH_KEY   = 'anac_admin_auth';
+const PASS_KEY   = 'anac_admin_password';
+const DEFAULT_USER = 'admin';
+const DEFAULT_PASS = 'ANACdady2024!';
+let MAX_ATTEMPTS  = 5;
+let LOCKOUT_MS    = 15 * 60 * 1000; // 15 min
+
+// ─── STATE ──────────────────────────────
+let airlines  = [];
+let airports  = [];
+let formatCfg = { prefix: 'SNA26', separator: '-', length: 4, suffix: '', locked: false };
+let selectedColor = '#2B5A8E';
+
+// ────────────────────────────────────────
+// AUTHENTICATION
+// ────────────────────────────────────────
+function getStoredPassword() {
+    return localStorage.getItem(PASS_KEY) || DEFAULT_PASS;
+}
+
+function checkLockout() {
+    const data = JSON.parse(sessionStorage.getItem('login_attempts') || '{"count":0,"lockUntil":0}');
+    if (data.lockUntil && Date.now() < data.lockUntil) {
+        const remaining = Math.ceil((data.lockUntil - Date.now()) / 60000);
+        return `Compte verrouillé – réessayez dans ${remaining} min`;
+    }
+    return null;
+}
+
+function recordAttempt(success) {
+    let data = JSON.parse(sessionStorage.getItem('login_attempts') || '{"count":0,"lockUntil":0}');
+    if (success) {
+        sessionStorage.removeItem('login_attempts');
+        return;
+    }
+    data.count++;
+    if (data.count >= MAX_ATTEMPTS) {
+        data.lockUntil = Date.now() + LOCKOUT_MS;
+        data.count = 0;
+    }
+    sessionStorage.setItem('login_attempts', JSON.stringify(data));
+    return MAX_ATTEMPTS - data.count;
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const lockMsg = checkLockout();
+    if (lockMsg) { showNotif(lockMsg, 'error'); return; }
+
+    const user = document.getElementById('loginUser').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const storedPass = getStoredPassword();
+    const storedUser = localStorage.getItem('anac_admin_user') || DEFAULT_USER;
+
+    if (user === storedUser && pass === storedPass) {
+        recordAttempt(true);
+        sessionStorage.setItem(AUTH_KEY, 'true');
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminPanel').style.display = 'block';
+        await loadAll();
+        logActivity('Connexion admin', 'success');
+    } else {
+        const remaining = recordAttempt(false);
+        document.getElementById('loginPass').classList.add('shake');
+        document.getElementById('loginError').style.display = 'block';
+        setTimeout(() => document.getElementById('loginPass').classList.remove('shake'), 500);
+        document.getElementById('loginPass').value = '';
+        if (remaining !== undefined) {
+            const el = document.getElementById('loginAttempts');
+            el.textContent = `${remaining} tentative(s) restante(s) avant verrouillage`;
+            el.className = 'login-attempts ' + (remaining <= 2 ? 'danger' : 'warn');
+        }
+    }
+});
+
+// Auto login si déjà authentifié
+if (sessionStorage.getItem(AUTH_KEY) === 'true') {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    loadAll();
+}
+
+window.logout = function() {
+    sessionStorage.removeItem(AUTH_KEY);
+    location.reload();
+};
+
+// ────────────────────────────────────────
+// LOAD DATA
+// ────────────────────────────────────────
+async function loadAll() {
+    await Promise.all([ loadAirlines(), loadAirports(), loadFormatConfig() ]);
+    updateDashboard();
+}
+
+async function loadAirlines() {
+    try {
+        const snap = await getDocs(query(airlinesCol, orderBy('name')));
+        if (snap.empty) {
+            // Seed default data on first load
+            await seedDefaultAirlines();
+            return loadAirlines();
+        }
+        airlines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderAirlines();
+    } catch(e) {
+        console.error(e);
+        showNotif('Erreur chargement compagnies', 'error');
+    }
+}
+
+async function seedDefaultAirlines() {
+    const defaults = [
+        { name: "Mauritania Airlines", prefix: "L6", iata: "MV", color: "#006B3F", country: "Mauritanie" },
+        { name: "Air Sénégal", prefix: "HC", iata: "HC", color: "#C8102E", country: "Sénégal" },
+        { name: "Turkish Airlines", prefix: "TK", iata: "TK", color: "#C8102E", country: "Turquie" },
+        { name: "Binter", prefix: "NT", iata: "NT", color: "#FF7F00", country: "Espagne" },
+        { name: "Air Algérie", prefix: "AH", iata: "AH", color: "#006B3F", country: "Algérie" },
+        { name: "ASKY", prefix: "KP", iata: "KP", color: "#003087", country: "Togo" },
+        { name: "Royal Air Maroc", prefix: "AT", iata: "AT", color: "#D4AF37", country: "Maroc" },
+        { name: "Tunisair", prefix: "TU", iata: "TU", color: "#E30613", country: "Tunisie" },
+        { name: "Air France", prefix: "AF", iata: "AF", color: "#002157", country: "France" },
+    ];
+    for (const a of defaults) {
+        await addDoc(airlinesCol, { ...a, createdAt: new Date().toISOString() });
+    }
+}
+
+async function loadAirports() {
+    try {
+        const snap = await getDocs(query(airportsCol, orderBy('icao')));
+        if (snap.empty) {
+            await seedDefaultAirports();
+            return loadAirports();
+        }
+        airports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderAirports();
+    } catch(e) {
+        console.error(e);
+        showNotif('Erreur chargement aéroports', 'error');
+    }
+}
+
+async function seedDefaultAirports() {
+    const defaults = [
+        { icao: "GQNO", iata: "NKC", name: "Nouakchott Oumtounsy International", city: "Nouakchott", country: "Mauritanie" },
+        { icao: "GQPP", iata: "NDB", name: "Nouadhibou International", city: "Nouadhibou", country: "Mauritanie" },
+        { icao: "GQPZ", iata: "OUZ", name: "Zouerate International", city: "Zouerate", country: "Mauritanie" },
+        { icao: "GQNI", iata: "EMN", name: "Nema Airport", city: "Nema", country: "Mauritanie" },
+        { icao: "GQPF", iata: "KFA", name: "Kiffa Airport", city: "Kiffa", country: "Mauritanie" },
+        { icao: "GMMN", iata: "CMN", name: "Casablanca Mohammed V", city: "Casablanca", country: "Maroc" },
+        { icao: "DTTA", iata: "TUN", name: "Tunis Carthage", city: "Tunis", country: "Tunisie" },
+        { icao: "GOBD", iata: "DSS", name: "Dakar Blaise Diagne", city: "Dakar", country: "Sénégal" },
+        { icao: "GCLP", iata: "LPA", name: "Las Palmas Gran Canaria", city: "Las Palmas", country: "Espagne" },
+        { icao: "GABS", iata: "BKO", name: "Bamako Modibo Keita", city: "Bamako", country: "Mali" },
+        { icao: "GUCY", iata: "CKY", name: "Conakry Gbessia", city: "Conakry", country: "Guinée" },
+        { icao: "DIAP", iata: "ABJ", name: "Abidjan Félix Houphouët-Boigny", city: "Abidjan", country: "Côte d'Ivoire" },
+        { icao: "LTFM", iata: "IST", name: "Istanbul Airport", city: "Istanbul", country: "Turquie" },
+        { icao: "LFPG", iata: "CDG", name: "Paris Charles de Gaulle", city: "Paris", country: "France" },
+        { icao: "DAAG", iata: "ALG", name: "Alger Houari Boumediene", city: "Alger", country: "Algérie" },
+        { icao: "OEMA", iata: "MED", name: "Madinah Prince Mohammad Bin Abdulaziz", city: "Madinah", country: "Arabie Saoudite" },
+    ];
+    for (const a of defaults) {
+        await addDoc(airportsCol, { ...a, createdAt: new Date().toISOString() });
+    }
+}
+
+async function loadFormatConfig() {
+    try {
+        const snap = await getDocs(collection(db, 'admin_config'));
+        if (!snap.empty) {
+            const data = snap.docs.find(d => d.id === 'main');
+            if (data) {
+                formatCfg = { ...formatCfg, ...data.data() };
+            }
+        }
+        applyFormatToUI();
+    } catch(e) { console.error(e); }
+}
+
+// ────────────────────────────────────────
+// RENDER
+// ────────────────────────────────────────
+function renderAirlines() {
+    const tbody = document.getElementById('airlinesBody');
+    if (!airlines.length) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">✈️</div><p>Aucune compagnie</p></div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = airlines.map(a => `
+        <tr>
+            <td><div class="airline-color-dot" style="background:${a.color||'#2B5A8E'}"></div></td>
+            <td style="font-weight:600;">${esc(a.name)}</td>
+            <td><span class="prefix-tag">${esc(a.prefix||'–')}</span></td>
+            <td><span class="code-tag">${esc(a.iata||'–')}</span></td>
+            <td>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:20px;height:20px;border-radius:4px;background:${a.color||'#2B5A8E'};border:1px solid rgba(255,255,255,0.15)"></div>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim)">${a.color||'–'}</span>
+                </div>
+            </td>
+            <td>
+                <div class="action-btns">
+                    <button class="btn-icon edit" onclick="openAirlineModal('${a.id}')" title="Modifier">✏️</button>
+                    <button class="btn-icon delete" onclick="confirmDelete('airline','${a.id}','${esc(a.name)}')" title="Supprimer">🗑️</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderAirports() {
+    const tbody = document.getElementById('airportsBody');
+    if (!airports.length) {
+        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">🛬</div><p>Aucun aéroport</p></div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = airports.map(a => `
+        <tr>
+            <td><span class="prefix-tag">${esc(a.icao||'–')}</span></td>
+            <td><span class="code-tag">${esc(a.iata||'–')}</span></td>
+            <td style="font-weight:500;">${esc(a.name)}</td>
+            <td style="color:var(--text-dim);font-size:12px;">${esc(a.city||'')}${a.city&&a.country?', ':''}${esc(a.country||'')}</td>
+            <td>
+                <div class="action-btns">
+                    <button class="btn-icon edit" onclick="openAirportModal('${a.id}')" title="Modifier">✏️</button>
+                    <button class="btn-icon delete" onclick="confirmDelete('airport','${a.id}','${esc(a.name)}')" title="Supprimer">🗑️</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ────────────────────────────────────────
+// AIRLINE MODAL
+// ────────────────────────────────────────
+const PRESET_COLORS = ['#006B3F','#C8102E','#2B5A8E','#D4AF37','#FF7F00','#8B00FF','#00B67A','#E63946','#003087','#F77F00'];
+
+function buildColorSwatches(currentColor) {
+    const el = document.getElementById('colorSwatches');
+    el.innerHTML = PRESET_COLORS.map(c => `
+        <div class="color-swatch ${c===currentColor?'selected':''}" style="background:${c}" 
+             onclick="selectColor('${c}')" title="${c}"></div>
+    `).join('');
+}
+
+window.selectColor = function(color) {
+    selectedColor = color;
+    document.getElementById('airlineColorPicker').value = color;
+    document.getElementById('airlineColorDisplay').textContent = color;
+    document.querySelectorAll('.color-swatch').forEach(s => {
+        s.classList.toggle('selected', s.style.background === color || s.title === color);
+    });
+};
+
+window.syncColorFromPicker = function(color) {
+    selectedColor = color;
+    document.getElementById('airlineColorDisplay').textContent = color;
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+};
+
+window.openAirlineModal = function(id = null) {
+    document.getElementById('airlineModalTitle').textContent = id ? 'Modifier la compagnie' : 'Ajouter une compagnie';
+    document.getElementById('airlineEditId').value = id || '';
+    if (id) {
+        const a = airlines.find(x => x.id === id);
+        if (!a) return;
+        document.getElementById('airlineName').value    = a.name    || '';
+        document.getElementById('airlinePrefix').value  = a.prefix  || '';
+        document.getElementById('airlineIATA').value    = a.iata    || '';
+        document.getElementById('airlineCountry').value = a.country || '';
+        selectedColor = a.color || '#2B5A8E';
+    } else {
+        document.getElementById('airlineName').value    = '';
+        document.getElementById('airlinePrefix').value  = '';
+        document.getElementById('airlineIATA').value    = '';
+        document.getElementById('airlineCountry').value = '';
+        selectedColor = '#2B5A8E';
+    }
+    document.getElementById('airlineColorPicker').value    = selectedColor;
+    document.getElementById('airlineColorDisplay').textContent = selectedColor;
+    buildColorSwatches(selectedColor);
+    openModal('airlineModal');
+};
+
+window.saveAirline = async function() {
+    const id     = document.getElementById('airlineEditId').value;
+    const name   = document.getElementById('airlineName').value.trim();
+    const prefix = document.getElementById('airlinePrefix').value.trim();
+    const iata   = document.getElementById('airlineIATA').value.trim();
+    const country= document.getElementById('airlineCountry').value.trim();
+
+    if (!name) { showNotif('Le nom est obligatoire', 'error'); return; }
+    if (!prefix) { showNotif('Le préfixe est obligatoire', 'error'); return; }
+
+    const data = { name, prefix, iata, color: selectedColor, country, updatedAt: new Date().toISOString() };
+
+    try {
+        if (id) {
+            await updateDoc(doc(db, 'admin_airlines', id), data);
+            showNotif(`Compagnie "${name}" mise à jour`, 'success');
+            logActivity(`Modification compagnie: ${name}`, 'edit');
+        } else {
+            data.createdAt = new Date().toISOString();
+            await addDoc(airlinesCol, data);
+            showNotif(`Compagnie "${name}" ajoutée`, 'success');
+            logActivity(`Ajout compagnie: ${name}`, 'add');
+        }
+        closeModal('airlineModal');
+        await loadAirlines();
+        updateDashboard();
+        // Sync to main app
+        syncToMainApp();
+    } catch(e) {
+        console.error(e);
+        showNotif('Erreur lors de l\'enregistrement', 'error');
+    }
+};
+
+// ────────────────────────────────────────
+// AIRPORT MODAL
+// ────────────────────────────────────────
+window.openAirportModal = function(id = null) {
+    document.getElementById('airportModalTitle').textContent = id ? 'Modifier l\'aéroport' : 'Ajouter un aéroport';
+    document.getElementById('airportEditId').value = id || '';
+    if (id) {
+        const a = airports.find(x => x.id === id);
+        if (!a) return;
+        document.getElementById('airportICAO').value    = a.icao    || '';
+        document.getElementById('airportIATA').value    = a.iata    || '';
+        document.getElementById('airportName').value    = a.name    || '';
+        document.getElementById('airportCity').value    = a.city    || '';
+        document.getElementById('airportCountry').value = a.country || '';
+    } else {
+        ['airportICAO','airportIATA','airportName','airportCity','airportCountry'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+    }
+    openModal('airportModal');
+};
+
+window.saveAirport = async function() {
+    const id      = document.getElementById('airportEditId').value;
+    const icao    = document.getElementById('airportICAO').value.trim();
+    const iata    = document.getElementById('airportIATA').value.trim();
+    const name    = document.getElementById('airportName').value.trim();
+    const city    = document.getElementById('airportCity').value.trim();
+    const country = document.getElementById('airportCountry').value.trim();
+
+    if (!icao || icao.length !== 4) { showNotif('Code ICAO invalide (4 lettres)', 'error'); return; }
+    if (!name) { showNotif('Le nom est obligatoire', 'error'); return; }
+
+    const data = { icao, iata, name, city, country, updatedAt: new Date().toISOString() };
+
+    try {
+        if (id) {
+            await updateDoc(doc(db, 'admin_airports', id), data);
+            showNotif(`Aéroport "${icao}" mis à jour`, 'success');
+            logActivity(`Modification aéroport: ${icao} - ${name}`, 'edit');
+        } else {
+            data.createdAt = new Date().toISOString();
+            await addDoc(airportsCol, data);
+            showNotif(`Aéroport "${icao}" ajouté`, 'success');
+            logActivity(`Ajout aéroport: ${icao} - ${name}`, 'add');
+        }
+        closeModal('airportModal');
+        await loadAirports();
+        updateDashboard();
+        syncToMainApp();
+    } catch(e) {
+        console.error(e);
+        showNotif('Erreur lors de l\'enregistrement', 'error');
+    }
+};
+
+// ────────────────────────────────────────
+// DELETE
+// ────────────────────────────────────────
+window.confirmDelete = function(type, id, name) {
+    document.getElementById('confirmName').textContent = name;
+    document.getElementById('confirmDeleteBtn').onclick = () => doDelete(type, id, name);
+    openModal('confirmModal');
+};
+
+async function doDelete(type, id, name) {
+    try {
+        const colPath = type === 'airline' ? 'admin_airlines' : 'admin_airports';
+        await deleteDoc(doc(db, colPath, id));
+        showNotif(`"${name}" supprimé`, 'success');
+        logActivity(`Suppression ${type}: ${name}`, 'delete');
+        closeModal('confirmModal');
+        if (type === 'airline') { await loadAirlines(); }
+        else { await loadAirports(); }
+        updateDashboard();
+        syncToMainApp();
+    } catch(e) {
+        console.error(e);
+        showNotif('Erreur lors de la suppression', 'error');
+    }
+}
+
+// ────────────────────────────────────────
+// FORMAT CONFIG
+// ────────────────────────────────────────
+window.updateFormatPreview = function() {
+    const prefix    = document.getElementById('fmtPrefix').value || 'SNA26';
+    const separator = document.getElementById('fmtSeparator').value;
+    const length    = parseInt(document.getElementById('fmtLength').value);
+    const suffix    = document.getElementById('fmtSuffix').value;
+    const num       = '0'.repeat(length - 1) + '1';
+    const preview   = `${prefix}${separator}${num}${suffix}`;
+    document.getElementById('formatPreviewValue').textContent = preview;
+};
+
+function applyFormatToUI() {
+    document.getElementById('fmtPrefix').value         = formatCfg.prefix    || 'SNA26';
+    document.getElementById('fmtSeparator').value      = formatCfg.separator || '-';
+    document.getElementById('fmtLength').value         = String(formatCfg.length || 4);
+    document.getElementById('fmtSuffix').value         = formatCfg.suffix    || '';
+    document.getElementById('formatLocked').checked    = !!formatCfg.locked;
+    updateFormatPreview();
+    handleLockToggle();
+}
+
+window.handleLockToggle = function() {
+    const locked = document.getElementById('formatLocked').checked;
+    document.getElementById('lockLabel').textContent = locked
+        ? 'Format verrouillé – les opérateurs ne peuvent pas modifier le format'
+        : 'Format déverrouillé – cliquez pour verrouiller';
+    document.getElementById('lockBadge').className = locked ? 'locked-badge' : 'unlocked-badge';
+    document.getElementById('lockBadge').textContent = locked ? '🔒 Verrouillé' : '🔓 Déverrouillé';
+};
+
+window.saveFormatConfig = async function() {
+    const cfg = {
+        prefix:    document.getElementById('fmtPrefix').value.trim() || 'SNA26',
+        separator: document.getElementById('fmtSeparator').value,
+        length:    parseInt(document.getElementById('fmtLength').value),
+        suffix:    document.getElementById('fmtSuffix').value.trim(),
+        locked:    document.getElementById('formatLocked').checked,
+        updatedAt: new Date().toISOString()
+    };
+    try {
+        await setDoc(configDoc(), cfg);
+        formatCfg = cfg;
+        showNotif('Configuration du format enregistrée ✓', 'success');
+        logActivity(`Format mis à jour: ${cfg.prefix}${cfg.separator}${'0'.repeat(cfg.length)}`, 'edit');
+        updateDashboard();
+        syncToMainApp();
+    } catch(e) {
+        console.error(e);
+        showNotif('Erreur lors de la sauvegarde', 'error');
+    }
+};
+
+// ────────────────────────────────────────
+// SECURITY
+// ────────────────────────────────────────
+window.checkPasswordStrength = function() {
+    const val = document.getElementById('secNewPass').value;
+    const fill = document.getElementById('strengthFill');
+    const label = document.getElementById('strengthLabel');
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const levels = [
+        {pct:'25%', bg:'#e84141', txt:'Faible'},
+        {pct:'50%', bg:'#ff8c42', txt:'Moyen'},
+        {pct:'75%', bg:'#D4AF37', txt:'Bien'},
+        {pct:'100%', bg:'#00b67a', txt:'Fort'},
+    ];
+    const lvl = levels[score-1] || {pct:'0%', bg:'transparent', txt:''};
+    fill.style.width = lvl.pct;
+    fill.style.background = lvl.bg;
+    label.textContent = lvl.txt;
+    label.style.color = lvl.bg;
+};
+
+window.changePassword = async function() {
+    const current = document.getElementById('secCurrentPass').value;
+    const newPass  = document.getElementById('secNewPass').value;
+    const confirm  = document.getElementById('secConfirmPass').value;
+    const stored   = getStoredPassword();
+
+    if (current !== stored) { showNotif('Mot de passe actuel incorrect', 'error'); return; }
+    if (newPass.length < 8)  { showNotif('Le nouveau mot de passe doit faire au moins 8 caractères', 'error'); return; }
+    if (newPass !== confirm)  { showNotif('Les mots de passe ne correspondent pas', 'error'); return; }
+
+    localStorage.setItem(PASS_KEY, newPass);
+    ['secCurrentPass','secNewPass','secConfirmPass'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('strengthFill').style.width = '0%';
+    document.getElementById('strengthLabel').textContent = '';
+    showNotif('Mot de passe mis à jour avec succès ✓', 'success');
+    logActivity('Changement de mot de passe admin', 'security');
+};
+
+window.clearAllSessions = function() {
+    sessionStorage.clear();
+    showNotif('Toutes les sessions ont été réinitialisées', 'success');
+    logActivity('Réinitialisation des sessions', 'security');
+};
+
+// ────────────────────────────────────────
+// DASHBOARD
+// ────────────────────────────────────────
+function updateDashboard() {
+    document.getElementById('stat-airlines').textContent = airlines.length;
+    document.getElementById('stat-airports').textContent = airports.length;
+    const num = '0'.repeat((formatCfg.length||4)-1) + '1';
+    document.getElementById('stat-format').textContent = `${formatCfg.prefix||'SNA26'}${formatCfg.separator||'-'}${num}`;
+    document.getElementById('stat-locked').textContent  = formatCfg.locked ? '🔒 Actif' : '🔓 Libre';
+}
+
+// ────────────────────────────────────────
+// ACTIVITY LOG
+// ────────────────────────────────────────
+const activities = [];
+
+async function logActivity(msg, type) {
+    const entry = { msg, type, time: new Date().toLocaleTimeString('fr-FR') };
+    activities.unshift(entry);
+    if (activities.length > 20) activities.pop();
+    renderActivity();
+    try {
+        await addDoc(activityCol, { ...entry, timestamp: new Date().toISOString() });
+    } catch(e) {}
+}
+
+function renderActivity() {
+    const container = document.getElementById('activityLog');
+    if (!activities.length) return;
+    const icons = { success:'🟢', edit:'🔵', add:'✨', delete:'🔴', security:'🟡' };
+    container.innerHTML = activities.map(a => `
+        <div class="activity-item">
+            <div class="activity-dot" style="background:${a.type==='delete'?'var(--red)':a.type==='add'?'var(--green)':a.type==='security'?'var(--orange)':'var(--blue-acc)'}"></div>
+            <span class="activity-msg">${icons[a.type]||'⚪'} ${esc(a.msg)}</span>
+            <span class="activity-time">${a.time}</span>
+        </div>
+    `).join('');
+}
+
+// ────────────────────────────────────────
+// SYNC TO MAIN APP
+// ────────────────────────────────────────
+async function syncToMainApp() {
+    // Write a sync document that main app.js can read
+    try {
+        await setDoc(doc(db, 'admin_config', 'sync'), {
+            airlines: airlines.map(a => ({ name: a.name, prefix: a.prefix, iata: a.iata, color: a.color })),
+            airports: airports.map(a => ({ icao: a.icao, iata: a.iata, name: a.name })),
+            format: formatCfg,
+            syncedAt: new Date().toISOString()
+        });
+    } catch(e) { console.error('Sync error:', e); }
+}
+
+// ────────────────────────────────────────
+// MODAL HELPERS
+// ────────────────────────────────────────
+window.openModal = function(id) {
+    document.getElementById(id).classList.add('open');
+};
+window.closeModal = function(id) {
+    document.getElementById(id).classList.remove('open');
+};
+
+// Close on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.classList.remove('open');
+    });
+});
+
+// ────────────────────────────────────────
+// NAV
+// ────────────────────────────────────────
+window.showSection = function(name) {
+    document.querySelectorAll('.section-page').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.getElementById(`section-${name}`).classList.add('active');
+    document.querySelector(`[data-section="${name}"]`).classList.add('active');
+};
+
+// ────────────────────────────────────────
+// NOTIFICATIONS
+// ────────────────────────────────────────
+window.showNotif = function(msg, type='info') {
+    const container = document.getElementById('notifContainer');
+    const el = document.createElement('div');
+    el.className = `notif ${type}`;
+    el.innerHTML = `<span>${msg}</span>`;
+    container.appendChild(el);
+    setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(40px)'; el.style.transition='0.3s'; setTimeout(()=>el.remove(),300); }, 3500);
+};
+
+// ────────────────────────────────────────
+// HELPERS
+// ────────────────────────────────────────
+function esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+</script>
+
+</body>
+</html>
