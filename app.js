@@ -983,6 +983,7 @@ function setupRealtimeListener() {
             console.log('Real-time update received:', updatedFlights.length, 'flights');
             flights = updatedFlights;
             render();
+            if (window.refreshChartsFromApp) window.refreshChartsFromApp(flights);
         });
         console.log('Real-time listener setup complete');
     } else {
@@ -993,6 +994,7 @@ function setupRealtimeListener() {
 function updateFlightsData(newFlights) {
     flights = newFlights;
     render();
+    if (window.refreshChartsFromApp) window.refreshChartsFromApp(flights);
 }
 
 // ============================================
