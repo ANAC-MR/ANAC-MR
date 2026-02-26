@@ -878,6 +878,44 @@
             .topbar { padding: 0 16px; }
         }
 
+        /* ─── Immatriculations ─── */
+        .immat-list {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            margin-top: 10px; min-height: 32px;
+        }
+        .immat-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(212,175,55,0.12);
+            border: 1px solid rgba(212,175,55,0.3);
+            color: var(--gold);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px; font-weight: 600;
+            padding: 4px 10px; border-radius: 6px;
+        }
+        .immat-tag .remove-immat {
+            cursor: pointer; color: var(--text-dim);
+            font-size: 14px; line-height: 1;
+            transition: color 0.15s;
+        }
+        .immat-tag .remove-immat:hover { color: var(--red); }
+        .immat-add-row {
+            display: flex; gap: 8px; margin-top: 10px;
+        }
+        .immat-add-row input {
+            flex: 1;
+        }
+        .immat-count {
+            font-size: 11px; color: var(--text-dim);
+            margin-left: 4px;
+        }
+        .lock-immat-row {
+            display: flex; align-items: center; gap: 12px;
+            margin-top: 12px; padding: 10px 14px;
+            background: rgba(212,175,55,0.06);
+            border: 1px solid rgba(212,175,55,0.15);
+            border-radius: 8px;
+        }
+
         /* ─── Empty State ─── */
         .empty-state {
             text-align: center; padding: 48px 24px;
@@ -1242,6 +1280,30 @@
                 <label>Pays d'origine</label>
                 <input type="text" id="airlineCountry" placeholder="Ex: Mauritanie">
             </div>
+            <div class="field-group form-full" style="border-top:1px solid var(--border); padding-top:18px; margin-top:4px;">
+                <label>Préfixe immatriculation <span class="immat-count" id="immatPrefixHint"></span></label>
+                <input type="text" id="airlineImmPrefix" placeholder="Ex: 5T-" maxlength="5"
+                       oninput="this.value=this.value.toUpperCase(); updateImmPrefixHint()">
+                <span class="hint">Les immatriculations de cette compagnie commencent par ce préfixe</span>
+            </div>
+            <div class="field-group form-full">
+                <label>Liste des immatriculations autorisées <span class="immat-count" id="immatCount"></span></label>
+                <div class="lock-immat-row">
+                    <label class="lock-toggle">
+                        <input type="checkbox" id="immatLocked">
+                        <span class="track"></span>
+                    </label>
+                    <span id="immatLockLabel" style="font-size:12px; color:var(--text-dim);">Déverrouillé – saisie libre</span>
+                    <span id="immatLockBadge" class="unlocked-badge">🔓 Libre</span>
+                </div>
+                <div class="immat-list" id="immatList"></div>
+                <div class="immat-add-row">
+                    <input type="text" id="immatInput" placeholder="Ex: 5T-CLC" maxlength="8"
+                           oninput="this.value=this.value.toUpperCase()"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();addImmat();}">
+                    <button type="button" class="btn-primary" onclick="addImmat()" style="white-space:nowrap;">+ Ajouter</button>
+                </div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn-ghost" onclick="closeModal('airlineModal')">Annuler</button>
@@ -1349,6 +1411,7 @@ let airlines  = [];
 let airports  = [];
 let formatCfg = { prefix: 'SNA26', separator: '-', length: 4, suffix: '', locked: false };
 let selectedColor = '#2B5A8E';
+let currentImmatList = [];
 
 // ────────────────────────────────────────
 // AUTHENTICATION
@@ -1597,23 +1660,90 @@ window.openAirlineModal = function(id = null) {
     if (id) {
         const a = airlines.find(x => x.id === id);
         if (!a) return;
-        document.getElementById('airlineName').value    = a.name    || '';
-        document.getElementById('airlinePrefix').value  = a.prefix  || '';
-        document.getElementById('airlineIATA').value    = a.iata    || '';
-        document.getElementById('airlineCountry').value = a.country || '';
+        document.getElementById('airlineName').value      = a.name       || '';
+        document.getElementById('airlinePrefix').value    = a.prefix     || '';
+        document.getElementById('airlineIATA').value      = a.iata       || '';
+        document.getElementById('airlineCountry').value   = a.country    || '';
+        document.getElementById('airlineImmPrefix').value = a.immPrefix  || '';
+        document.getElementById('immatLocked').checked    = !!a.immLocked;
+        currentImmatList = [...(a.immatriculations || [])];
         selectedColor = a.color || '#2B5A8E';
     } else {
-        document.getElementById('airlineName').value    = '';
-        document.getElementById('airlinePrefix').value  = '';
-        document.getElementById('airlineIATA').value    = '';
-        document.getElementById('airlineCountry').value = '';
+        document.getElementById('airlineName').value      = '';
+        document.getElementById('airlinePrefix').value    = '';
+        document.getElementById('airlineIATA').value      = '';
+        document.getElementById('airlineCountry').value   = '';
+        document.getElementById('airlineImmPrefix').value = '';
+        document.getElementById('immatLocked').checked    = false;
+        currentImmatList = [];
         selectedColor = '#2B5A8E';
     }
-    document.getElementById('airlineColorPicker').value    = selectedColor;
+    document.getElementById('airlineColorPicker').value       = selectedColor;
     document.getElementById('airlineColorDisplay').textContent = selectedColor;
     buildColorSwatches(selectedColor);
+    renderImmatList();
+    updateImmatLockUI();
+    updateImmPrefixHint();
     openModal('airlineModal');
 };
+
+window.addImmat = function() {
+    const input = document.getElementById('immatInput');
+    const val = input.value.trim().toUpperCase();
+    if (!val) return;
+    if (currentImmatList.includes(val)) {
+        showNotif('Immatriculation déjà dans la liste', 'warning'); return;
+    }
+    currentImmatList.push(val);
+    input.value = '';
+    renderImmatList();
+    updateImmatCount();
+};
+
+window.removeImmat = function(val) {
+    currentImmatList = currentImmatList.filter(i => i !== val);
+    renderImmatList();
+    updateImmatCount();
+};
+
+function renderImmatList() {
+    const el = document.getElementById('immatList');
+    if (!currentImmatList.length) {
+        el.innerHTML = '<span style="font-size:12px;color:var(--text-dim);">Aucune immatriculation — saisie libre</span>';
+        return;
+    }
+    el.innerHTML = currentImmatList.map(v => `
+        <span class="immat-tag">
+            ${esc(v)}
+            <span class="remove-immat" onclick="removeImmat('${esc(v)}')">×</span>
+        </span>
+    `).join('');
+    updateImmatCount();
+}
+
+function updateImmatCount() {
+    const el = document.getElementById('immatCount');
+    if (el) el.textContent = currentImmatList.length ? `(${currentImmatList.length})` : '';
+}
+
+function updateImmPrefixHint() {
+    const val = document.getElementById('airlineImmPrefix').value;
+    const el = document.getElementById('immatPrefixHint');
+    if (el) el.textContent = val ? `→ ex: ${val}CLX` : '';
+}
+
+function updateImmatLockUI() {
+    const locked = document.getElementById('immatLocked').checked;
+    document.getElementById('immatLockLabel').textContent = locked
+        ? 'Verrouillé – seulement les immat de la liste'
+        : 'Déverrouillé – saisie libre';
+    document.getElementById('immatLockBadge').className   = locked ? 'locked-badge' : 'unlocked-badge';
+    document.getElementById('immatLockBadge').textContent = locked ? '🔒 Verrouillé' : '🔓 Libre';
+}
+
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'immatLocked') updateImmatLockUI();
+});
 
 window.saveAirline = async function() {
     const id     = document.getElementById('airlineEditId').value;
@@ -1625,7 +1755,11 @@ window.saveAirline = async function() {
     if (!name) { showNotif('Le nom est obligatoire', 'error'); return; }
     if (!prefix) { showNotif('Le préfixe est obligatoire', 'error'); return; }
 
-    const data = { name, prefix, iata, color: selectedColor, country, updatedAt: new Date().toISOString() };
+    const immPrefix = document.getElementById('airlineImmPrefix').value.trim().toUpperCase();
+    const immLocked = document.getElementById('immatLocked').checked;
+    const data = { name, prefix, iata, color: selectedColor, country,
+                   immPrefix, immLocked, immatriculations: currentImmatList,
+                   updatedAt: new Date().toISOString() };
 
     try {
         if (id) {
