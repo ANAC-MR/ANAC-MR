@@ -37,7 +37,7 @@ const DESTINATIONS = [
     { name: "Nouakchott Oumtounsy", code: "GQNO" },
     { name: "Nouadhibou International", code: "GQPP" },
     { name: "Zoueratt International", code: "GQPZ" },
-    { name: "Nema Airport", code: "GQNI" },
+    { name: "N�ma Airport", code: "GQNI" },
     { name: "Kiffa Airport", code: "GQPF" },
     { name: "Casablanca Mohammed V", code: "GMMN" },
     { name: "Tunis Carthage", code: "DTTA" },
@@ -45,7 +45,7 @@ const DESTINATIONS = [
     { name: "Las Palmas Gran Canaria", code: "GCLP" },
     { name: "Bamako Modibo Keita", code: "GABS" },
     { name: "Conakry Gbessia", code: "GUCY" },
-    { name: "Abidjan Felix Houphouet-Boigny", code: "DIAP" },
+    { name: "Abidjan F�lix Houphou�t-Boigny", code: "DIAP" },
     { name: "Istanbul Airport", code: "LTFM" },
     { name: "Paris Charles de Gaulle", code: "LFPG" },
     { name: "Alger Houari Boumediene", code: "DAAG" },
@@ -67,6 +67,7 @@ let lastDeletedFlight = null;
 let undoTimeout = null;
 let isInitialized = false;
 let editingFlightId = null;
+let adminConfig = null; // loaded from Firebase admin config
 let activeActionsMenu = null;
 
 // ============================================
@@ -144,25 +145,30 @@ function populateSelects() {
         elements.monthSelect.appendChild(option);
     });
     
-    // Populate company selects
-    AIRLINES.forEach(airline => {
-        // Filter select
+    // Use admin config airlines if available, else fallback to AIRLINES constant
+    const airlinesList = (adminConfig && adminConfig.airlines && adminConfig.airlines.length)
+        ? adminConfig.airlines.map(a => a.name)
+        : AIRLINES;
+    
+    airlinesList.forEach(airline => {
         const filterOption = document.createElement('option');
         filterOption.value = airline;
         filterOption.textContent = airline;
         elements.companySelect.appendChild(filterOption);
         
-        // Form select
         const formOption = document.createElement('option');
         formOption.value = airline;
         formOption.textContent = airline;
         elements.fCompany.appendChild(formOption);
     });
     
-    // Populate airport selects (filters + form)
-    DESTINATIONS.forEach(dest => {
+    // Use admin config airports if available, else fallback to DESTINATIONS constant
+    const destinationsList = (adminConfig && adminConfig.airports && adminConfig.airports.length)
+        ? adminConfig.airports.map(a => ({ code: a.icao, name: a.name }))
+        : DESTINATIONS;
+    
+    destinationsList.forEach(dest => {
         const label = `${dest.code} – ${dest.name}`;
-        
         [elements.fromSelect, elements.toSelect, elements.fFrom, elements.fTo].forEach(sel => {
             const opt = document.createElement('option');
             opt.value = dest.code;
@@ -411,7 +417,7 @@ function getFormData() {
         authorizationNumber: elements.fAuthNumber.value.trim().toUpperCase(),
         date: elements.fDate.value,
         company: elements.fCompany.value,
-        registration: elements.fImm.value.trim().toUpperCase(),
+        registration: (document.getElementById('fImmSelect') && document.getElementById('fImmSelect').value ? document.getElementById('fImmSelect').value : elements.fImm.value.trim().toUpperCase()),
         flightNumber: elements.fVol.value.trim().toUpperCase(),
         type: elements.fType.value,
         from: elements.fFrom.value,
@@ -424,11 +430,83 @@ function getFormData() {
 
 function updateFlightNumberPrefix() {
     const company = elements.fCompany.value;
-    const prefix = AIRLINE_PREFIXES[company];
-    const currentValue = elements.fVol.value.trim();
     
+    // Update flight number prefix
+    const prefix = AIRLINE_PREFIXES[company] || 
+        (adminConfig && adminConfig.airlines 
+            ? (adminConfig.airlines.find(a => a.name === company) || {}).prefix 
+            : null);
+    const currentValue = elements.fVol.value.trim();
     if (prefix && (!currentValue || currentValue.match(/^[A-Z0-9]+-$/))) {
         elements.fVol.value = prefix + '-';
+    }
+    
+    // Update immatriculation field based on admin config
+    updateImmField(company);
+}
+
+function updateImmField(company) {
+    if (!adminConfig || !adminConfig.airlines) return;
+    
+    const airlineData = adminConfig.airlines.find(a => a.name === company);
+    if (!airlineData) return;
+    
+    const fImm = elements.fImm;
+    const parent = fImm.parentNode;
+    
+    // Remove existing select if any
+    const existingSelect = parent.querySelector('#fImmSelect');
+    if (existingSelect) existingSelect.remove();
+    
+    const immatList = airlineData.immatriculations || [];
+    const isLocked  = airlineData.immLocked;
+    
+    if (isLocked && immatList.length > 0) {
+        // Replace text input with select
+        fImm.style.display = 'none';
+        
+        const sel = document.createElement('select');
+        sel.id = 'fImmSelect';
+        sel.required = true;
+        sel.className = fImm.className;
+        sel.style.cssText = fImm.style.cssText;
+        sel.style.display = '';
+        
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '— Choisir une immatriculation —';
+        sel.appendChild(defaultOpt);
+        
+        immatList.forEach(imm => {
+            const opt = document.createElement('option');
+            opt.value = imm;
+            opt.textContent = imm;
+            if (fImm.value === imm) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        
+        parent.insertBefore(sel, fImm.nextSibling);
+        
+        // Sync select value back to hidden input on change
+        sel.addEventListener('change', () => { fImm.value = sel.value; });
+        if (fImm.value) sel.value = fImm.value;
+        
+    } else {
+        // Show text input (free mode)
+        fImm.style.display = '';
+        const hint = parent.querySelector('.imm-hint');
+        if (hint) hint.remove();
+        
+        // Add prefix hint if available
+        if (airlineData.immPrefix) {
+            let hintEl = parent.querySelector('.imm-hint');
+            if (!hintEl) {
+                hintEl = document.createElement('small');
+                hintEl.className = 'field-hint imm-hint';
+                parent.appendChild(hintEl);
+            }
+            hintEl.textContent = `Préfixe attendu: ${airlineData.immPrefix} (ex: ${airlineData.immPrefix}CLX)`;
+        }
     }
 }
 
@@ -1048,7 +1126,7 @@ window.app = {
 // ============================================
 // INITIALIZATION
 // ============================================
-document.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', () => initializeApp());
 
 // Add CSS for additional styling
 const additionalStyles = `
