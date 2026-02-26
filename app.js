@@ -1126,7 +1126,7 @@ window.app = {
 // ============================================
 // INITIALIZATION
 // ============================================
-document.addEventListener('DOMContentLoaded', () => initializeApp());
+document.addEventListener('DOMContentLoaded', async () => { await initializeApp(); });
 
 // Add CSS for additional styling
 const additionalStyles = `
