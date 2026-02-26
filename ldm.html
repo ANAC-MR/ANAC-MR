@@ -4,371 +4,250 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ANAC – Lecteur LDM/MVT</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --navy:   #0a1628;
-  --navy2:  #0f1f3d;
-  --blue:   #1a3a6b;
-  --accent: #D4AF37;
-  --green:  #00c98d;
-  --red:    #e53e3e;
-  --text:   #e8edf5;
-  --dim:    #7a8ba8;
-  --border: rgba(212,175,55,0.15);
-  --card:   rgba(255,255,255,0.04);
+  --navy:#0a1628;--navy2:#0f1f3d;--blue:#1a3a6b;--accent:#D4AF37;
+  --green:#00c98d;--red:#e53e3e;--text:#e8edf5;--dim:#7a8ba8;
+  --border:rgba(212,175,55,0.15);--card:rgba(255,255,255,0.04);
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: 'Sora', sans-serif;
-  background: var(--navy);
-  color: var(--text);
-  min-height: 100vh;
-}
-/* BG grid */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background-image:
-    linear-gradient(rgba(212,175,55,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(212,175,55,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none; z-index: 0;
-}
-
-/* ── HEADER ── */
-.header {
-  position: relative; z-index: 10;
-  background: linear-gradient(135deg, var(--navy2), var(--blue));
-  border-bottom: 1px solid var(--border);
-  padding: 18px 32px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.header-left { display: flex; align-items: center; gap: 14px; }
-.header-logo {
-  width: 44px; height: 44px; border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent), #b8942a);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
-}
-.header-title { font-size: 18px; font-weight: 800; color: var(--accent); letter-spacing: 0.5px; }
-.header-sub   { font-size: 12px; color: var(--dim); margin-top: 1px; }
-.header-nav { display: flex; gap: 10px; }
-.nav-link {
-  padding: 8px 16px; border-radius: 8px;
-  font-size: 12px; font-weight: 600; text-decoration: none;
-  color: var(--dim); border: 1px solid transparent;
-  transition: all 0.2s;
-}
-.nav-link:hover { color: var(--text); border-color: var(--border); }
-.nav-link.active { color: var(--accent); border-color: var(--border); background: rgba(212,175,55,0.08); }
-
-/* ── MAIN ── */
-.main { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
-
-/* ── STATUS BAR ── */
-.status-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; padding: 14px 20px; margin-bottom: 24px;
-  flex-wrap: wrap; gap: 12px;
-}
-.status-indicator {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 600;
-}
-.status-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--dim); flex-shrink: 0;
-}
-.status-dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
-.status-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-.status-right { display: flex; align-items: center; gap: 10px; }
-.last-check { font-size: 11px; color: var(--dim); font-family: 'JetBrains Mono', monospace; }
-
-/* ── BUTTONS ── */
-.btn {
-  padding: 9px 18px; border-radius: 8px; border: none;
-  font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 700;
-  cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
-  transition: all 0.2s; white-space: nowrap;
-}
-.btn-gold {
-  background: linear-gradient(135deg, var(--accent), #b8942a);
-  color: #0a1628; box-shadow: 0 4px 14px rgba(212,175,55,0.3);
-}
-.btn-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212,175,55,0.4); }
-.btn-gold:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-outline {
-  background: transparent; color: var(--dim);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-.btn-outline:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
-.btn-green {
-  background: rgba(0,201,141,0.15); color: var(--green);
-  border: 1px solid rgba(0,201,141,0.3);
-}
-.btn-green:hover { background: rgba(0,201,141,0.25); }
-.btn-red {
-  background: rgba(229,62,62,0.12); color: #fc8181;
-  border: 1px solid rgba(229,62,62,0.25);
-}
-.btn-red:hover { background: rgba(229,62,62,0.22); }
-
-/* ── AUTO-REFRESH CONTROLS ── */
-.auto-controls {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; padding: 14px 20px; margin-bottom: 24px;
-}
-.auto-label { font-size: 12px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
-.interval-select {
-  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
-  color: var(--text); font-family: 'Sora', sans-serif; font-size: 13px;
-  padding: 7px 12px; border-radius: 8px; cursor: pointer;
-}
-.toggle-auto {
-  display: flex; align-items: center; gap: 8px; cursor: pointer;
-  font-size: 13px; font-weight: 600; color: var(--dim);
-}
-.toggle-track {
-  width: 38px; height: 20px; border-radius: 10px;
-  background: rgba(255,255,255,0.1); position: relative;
-  transition: background 0.2s; flex-shrink: 0;
-}
-.toggle-track.on { background: var(--green); }
-.toggle-thumb {
-  position: absolute; top: 3px; left: 3px;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: #fff; transition: transform 0.2s;
-}
-.toggle-track.on .toggle-thumb { transform: translateX(18px); }
-
-/* ── EMAIL LIST ── */
-.section-title {
-  font-size: 13px; font-weight: 700; color: var(--dim);
-  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;
-  display: flex; align-items: center; gap: 10px;
-}
-.section-title span { background: rgba(212,175,55,0.15); color: var(--accent); font-size: 11px; padding: 2px 8px; border-radius: 10px; }
-
-.email-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
-.email-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden;
-  transition: border-color 0.2s;
-}
-.email-card:hover { border-color: rgba(212,175,55,0.3); }
-.email-card.imported { border-color: rgba(0,201,141,0.25); background: rgba(0,201,141,0.04); }
-.email-header {
-  display: flex; align-items: center; gap: 14px;
-  padding: 14px 18px; cursor: pointer;
-}
-.email-type-badge {
-  font-size: 10px; font-weight: 800; padding: 4px 9px; border-radius: 6px;
-  text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
-  font-family: 'JetBrains Mono', monospace;
-}
-.badge-ldm { background: rgba(26,58,107,0.6); color: #93c5fd; border: 1px solid rgba(147,197,253,0.2); }
-.badge-mvt { background: rgba(212,175,55,0.15); color: var(--accent); border: 1px solid var(--border); }
-.email-meta { flex: 1; min-width: 0; }
-.email-subject { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.email-from    { font-size: 11px; color: var(--dim); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
-.email-date    { font-size: 11px; color: var(--dim); flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
-.email-status  { flex-shrink: 0; }
-.imported-badge {
-  font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 6px;
-  background: rgba(0,201,141,0.15); color: var(--green);
-  border: 1px solid rgba(0,201,141,0.25);
-}
-
-/* ── PARSED DATA ── */
-.email-body { border-top: 1px solid var(--border); }
-.raw-text {
-  font-family: 'JetBrains Mono', monospace; font-size: 11px;
-  color: var(--dim); background: rgba(0,0,0,0.2);
-  padding: 14px 18px; line-height: 1.7;
-  max-height: 160px; overflow-y: auto; white-space: pre-wrap;
-  border-bottom: 1px solid var(--border);
-}
-.parsed-section { padding: 16px 18px; }
-.parsed-title {
-  font-size: 11px; font-weight: 700; color: var(--accent);
-  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
-}
-.parsed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.parsed-field {
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 8px; padding: 10px 12px;
-}
-.parsed-field label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
-.parsed-field .val {
-  font-size: 14px; font-weight: 700; color: var(--text);
-  font-family: 'JetBrains Mono', monospace;
-}
-.parsed-field .val.empty { color: var(--dim); font-size: 12px; font-weight: 400; }
-
-/* Editable fields */
-.parsed-field input, .parsed-field select {
-  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
-  color: var(--text); font-family: 'JetBrains Mono', monospace;
-  font-size: 13px; font-weight: 600; padding: 4px 8px;
-  border-radius: 6px; width: 100%; outline: none;
-  transition: border-color 0.2s;
-}
-.parsed-field input:focus, .parsed-field select:focus { border-color: var(--accent); }
-
-.import-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.import-note { font-size: 11px; color: var(--dim); margin-left: auto; }
-
-/* ── EMPTY / LOADING ── */
-.empty-state {
-  text-align: center; padding: 60px 20px;
-  color: var(--dim); font-size: 14px;
-}
-.empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
-.empty-state h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-
-.spinner {
-  display: inline-block; width: 16px; height: 16px;
-  border: 2px solid rgba(212,175,55,0.3); border-top-color: var(--accent);
-  border-radius: 50%; animation: spin 0.7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── TOAST ── */
-.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
-.toast {
-  background: var(--navy2); border: 1px solid var(--border);
-  border-radius: 10px; padding: 12px 18px;
-  font-size: 13px; font-weight: 600; color: var(--text);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  display: flex; align-items: center; gap: 10px;
-  animation: slideIn 0.3s ease; max-width: 340px;
-}
-.toast.success { border-color: rgba(0,201,141,0.3); }
-.toast.error   { border-color: rgba(229,62,62,0.3); }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-/* ── STATS ── */
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
-.stat-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 10px; padding: 14px 16px; text-align: center;
-}
-.stat-val   { font-size: 24px; font-weight: 800; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
-.stat-label { font-size: 11px; color: var(--dim); margin-top: 3px; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sora',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(212,175,55,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.header{position:relative;z-index:10;background:linear-gradient(135deg,var(--navy2),var(--blue));border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;}
+.header-left{display:flex;align-items:center;gap:14px;}
+.header-logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#b8942a);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.header-title{font-size:18px;font-weight:800;color:var(--accent);}
+.header-sub{font-size:12px;color:var(--dim);margin-top:1px;}
+.header-nav{display:flex;gap:8px;}
+.nav-link{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;color:var(--dim);border:1px solid transparent;transition:all 0.2s;}
+.nav-link:hover{color:var(--text);border-color:var(--border);}
+.nav-link.active{color:var(--accent);border-color:var(--border);background:rgba(212,175,55,0.08);}
+.main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px;}
+/* CONFIG CARD */
+.config-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px 24px;margin-bottom:20px;}
+.config-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:16px;}
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.config-field label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px;}
+.config-field input{width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;padding:9px 14px;border-radius:8px;outline:none;transition:border-color 0.2s;}
+.config-field input:focus{border-color:var(--accent);}
+/* STATUS */
+.status-bar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.status-indicator{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex-shrink:0;}
+.status-dot.active{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
+.status-dot.loading{background:var(--accent);animation:pulse 0.8s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.status-right{display:flex;align-items:center;gap:8px;}
+.mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+/* AUTO */
+.auto-bar{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;margin-bottom:20px;flex-wrap:wrap;}
+.auto-lbl{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:0.4px;}
+.toggle-wrap{display:flex;align-items:center;gap:8px;cursor:pointer;}
+.track{width:38px;height:20px;border-radius:10px;background:rgba(255,255,255,0.1);position:relative;transition:background 0.2s;flex-shrink:0;}
+.track.on{background:var(--green);}
+.thumb{position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;}
+.track.on .thumb{transform:translateX(18px);}
+.interval-sel{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;padding:6px 10px;border-radius:7px;cursor:pointer;}
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:8px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all 0.2s;white-space:nowrap;}
+.btn-gold{background:linear-gradient(135deg,var(--accent),#b8942a);color:#0a1628;box-shadow:0 4px 14px rgba(212,175,55,0.3);}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(212,175,55,0.4);}
+.btn-gold:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.btn-outline{background:transparent;color:var(--dim);border:1px solid rgba(255,255,255,0.1);}
+.btn-outline:hover{color:var(--text);border-color:rgba(255,255,255,0.25);}
+.btn-green{background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.3);}
+.btn-green:hover{background:rgba(0,201,141,0.25);}
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
+.stat-val{font-size:24px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace;}
+.stat-label{font-size:11px;color:var(--dim);margin-top:3px;}
+/* SECTION TITLE */
+.sec-title{font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.sec-badge{background:rgba(212,175,55,0.15);color:var(--accent);font-size:11px;padding:2px 8px;border-radius:10px;}
+/* EMAIL CARDS */
+.email-list{display:flex;flex-direction:column;gap:10px;}
+.email-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color 0.2s;}
+.email-card:hover{border-color:rgba(212,175,55,0.3);}
+.email-card.imported{border-color:rgba(0,201,141,0.3);background:rgba(0,201,141,0.03);}
+.email-card.duplicate{border-color:rgba(255,165,0,0.3);background:rgba(255,165,0,0.03);}
+.email-hdr{display:flex;align-items:center;gap:12px;padding:13px 18px;cursor:pointer;}
+.type-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:0.5px;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+.badge-ldm{background:rgba(26,58,107,0.6);color:#93c5fd;border:1px solid rgba(147,197,253,0.2);}
+.badge-mvt{background:rgba(212,175,55,0.15);color:var(--accent);border:1px solid var(--border);}
+.email-meta{flex:1;min-width:0;}
+.email-subj{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.email-from{font-size:11px;color:var(--dim);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+.email-date{font-size:11px;color:var(--dim);flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+.st-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;flex-shrink:0;}
+.st-imported{background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.25);}
+.st-duplicate{background:rgba(255,165,0,0.15);color:#ffa500;border:1px solid rgba(255,165,0,0.25);}
+.email-body{border-top:1px solid var(--border);}
+.raw-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);background:rgba(0,0,0,0.25);padding:12px 18px;line-height:1.7;max-height:150px;overflow-y:auto;white-space:pre-wrap;border-bottom:1px solid var(--border);}
+.parsed-sec{padding:16px 18px;}
+.parsed-lbl{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;}
+.parsed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:14px;}
+.pf{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px;}
+.pf label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;}
+.pf input{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:5px 8px;border-radius:6px;width:100%;outline:none;transition:border-color 0.2s;}
+.pf input:focus{border-color:var(--accent);}
+.import-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.dup-notice{background:rgba(255,165,0,0.1);border:1px solid rgba(255,165,0,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#ffa500;display:flex;align-items:center;gap:8px;}
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;color:var(--dim);}
+.empty .ico{font-size:48px;margin-bottom:14px;opacity:0.4;}
+.empty h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
+/* SPINNER */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(212,175,55,0.3);border-top-color:var(--accent);border-radius:50%;animation:s 0.7s linear infinite;}
+@keyframes s{to{transform:rotate(360deg)}}
+/* TOAST */
+.toasts{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--navy2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:600;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;animation:si 0.3s ease;max-width:320px;}
+.toast.ok{border-color:rgba(0,201,141,0.3);}
+.toast.err{border-color:rgba(229,62,62,0.3);}
+.toast.warn{border-color:rgba(255,165,0,0.3);}
+@keyframes si{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@media(max-width:680px){.stats-row{grid-template-columns:1fr 1fr;}.config-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 
 <div class="header">
   <div class="header-left">
-    <div class="header-logo">✈️</div>
+    <div class="header-logo">📨</div>
     <div>
-      <div class="header-title">ANAC Mauritanie — LDM/MVT Reader</div>
+      <div class="header-title">LDM / MVT Reader</div>
       <div class="header-sub">Lecture automatique des messages de vol depuis Gmail</div>
     </div>
   </div>
   <div class="header-nav">
     <a href="index.html" class="nav-link">📋 Suivi des vols</a>
     <a href="admin.html" class="nav-link">⚙️ Admin</a>
-    <a href="ldm.html" class="nav-link active">📨 LDM/MVT</a>
+    <a href="ldm.html"   class="nav-link active">📨 LDM/MVT</a>
   </div>
 </div>
 
 <div class="main">
 
+  <!-- CONFIG -->
+  <div class="config-card">
+    <div class="config-title">⚙️ Configuration</div>
+    <div class="config-grid">
+      <div class="config-field">
+        <label>Adresse Gmail à surveiller</label>
+        <input type="email" id="cfgEmail" placeholder="ex: anac@gmail.com"
+               value="" onchange="saveConfig()">
+      </div>
+      <div class="config-field">
+        <label>Mots-clés dans l'objet (séparés par virgule)</label>
+        <input type="text" id="cfgKeywords" placeholder="LDM, MVT"
+               value="LDM, MVT" onchange="saveConfig()">
+      </div>
+    </div>
+  </div>
+
   <!-- STATS -->
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-val" id="statTotal">–</div><div class="stat-label">Emails trouvés</div></div>
-    <div class="stat-card"><div class="stat-val" id="statLDM">–</div><div class="stat-label">LDM</div></div>
-    <div class="stat-card"><div class="stat-val" id="statMVT">–</div><div class="stat-label">MVT</div></div>
-    <div class="stat-card"><div class="stat-val" id="statImported">–</div><div class="stat-label">Importés</div></div>
+    <div class="stat-card"><div class="stat-val" id="stTotal">–</div><div class="stat-label">Emails trouvés</div></div>
+    <div class="stat-card"><div class="stat-val" id="stLDM">–</div><div class="stat-label">LDM</div></div>
+    <div class="stat-card"><div class="stat-val" id="stMVT">–</div><div class="stat-label">MVT</div></div>
+    <div class="stat-card"><div class="stat-val" id="stImported">–</div><div class="stat-label">Importés</div></div>
   </div>
 
-  <!-- STATUS BAR -->
+  <!-- STATUS -->
   <div class="status-bar">
     <div class="status-indicator">
-      <div class="status-dot" id="statusDot"></div>
-      <span id="statusText">Prêt — cliquez sur "Lire emails" pour démarrer</span>
+      <div class="status-dot" id="sDot"></div>
+      <span id="sTxt">Prêt — configurez votre email puis cliquez sur "Lire emails"</span>
     </div>
     <div class="status-right">
-      <span class="last-check" id="lastCheck"></span>
-      <button class="btn btn-outline" onclick="clearResults()">🗑 Effacer</button>
-      <button class="btn btn-gold" id="readBtn" onclick="readEmails()">
-        📨 Lire emails
-      </button>
+      <span class="mono" id="sLast"></span>
+      <button class="btn btn-outline" onclick="clearAll()">🗑 Effacer</button>
+      <button class="btn btn-gold" id="readBtn" onclick="readEmails()">📨 Lire emails</button>
     </div>
   </div>
 
-  <!-- AUTO-REFRESH -->
-  <div class="auto-controls">
-    <span class="auto-label">Auto-actualisation</span>
-    <label class="toggle-auto" onclick="toggleAuto()">
-      <div class="toggle-track" id="autoTrack"><div class="toggle-thumb"></div></div>
-      <span id="autoLabel">Désactivé</span>
+  <!-- AUTO -->
+  <div class="auto-bar">
+    <span class="auto-lbl">Auto-actualisation :</span>
+    <label class="toggle-wrap" onclick="toggleAuto()">
+      <div class="track" id="autoTrack"><div class="thumb"></div></div>
+      <span id="autoLbl" style="font-size:13px;font-weight:600;color:var(--dim);">Désactivé</span>
     </label>
-    <span class="auto-label" style="margin-left:12px;">Intervalle :</span>
-    <select class="interval-select" id="intervalSelect" onchange="updateInterval()">
-      <option value="5">5 minutes</option>
-      <option value="10" selected>10 minutes</option>
-      <option value="15">15 minutes</option>
-      <option value="30">30 minutes</option>
+    <span class="auto-lbl" style="margin-left:10px;">Intervalle :</span>
+    <select class="interval-sel" id="intSel" onchange="updateInterval()">
+      <option value="5">5 min</option>
+      <option value="10" selected>10 min</option>
+      <option value="15">15 min</option>
+      <option value="30">30 min</option>
       <option value="60">1 heure</option>
     </select>
-    <span class="last-check" id="nextCheck" style="margin-left:auto;"></span>
+    <span class="mono" id="sNext" style="margin-left:auto;"></span>
   </div>
 
-  <!-- RESULTS -->
-  <div class="section-title">
-    Emails LDM/MVT <span id="emailCount">0</span>
-  </div>
-
+  <!-- LIST -->
+  <div class="sec-title">Emails LDM/MVT <span class="sec-badge" id="eCount">0</span></div>
   <div class="email-list" id="emailList">
-    <div class="empty-state">
-      <div class="icon">📭</div>
-      <h3>Aucun email chargé</h3>
-      <p>Cliquez sur "Lire emails" pour rechercher les LDM et MVT dans votre Gmail</p>
-    </div>
+    <div class="empty"><div class="ico">📭</div><h3>Aucun email chargé</h3><p>Entrez votre adresse Gmail et cliquez sur "Lire emails"</p></div>
   </div>
 
 </div>
-
-<div class="toast-container" id="toastContainer"></div>
+<div class="toasts" id="toasts"></div>
 
 <script>
-// ══════════════════════════════════════════
-// STATE
-// ══════════════════════════════════════════
-let emails       = [];
-let importedIds  = new Set(JSON.parse(localStorage.getItem('ldm_imported') || '[]'));
-let autoTimer    = null;
-let autoEnabled  = false;
-let countdown    = null;
-
-// Firebase config (same as main app)
-const FB_CONFIG = {
-  apiKey: "AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
-  authDomain: "anacmr-e05b4.firebaseapp.com",
-  projectId: "anacmr-e05b4",
-  storageBucket: "anacmr-e05b4.firebasestorage.app",
-  messagingSenderId: "857117390430",
-  appId: "1:857117390430:web:0231614b880df3196e26cf"
+// ── FIREBASE CONFIG ──
+const FB = {
+  apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+  authDomain:"anacmr-e05b4.firebaseapp.com",
+  projectId:"anacmr-e05b4",
+  storageBucket:"anacmr-e05b4.firebasestorage.app",
+  messagingSenderId:"857117390430",
+  appId:"1:857117390430:web:0231614b880df3196e26cf"
 };
 
-// ══════════════════════════════════════════
-// READ EMAILS via Claude API + Gmail MCP
-// ══════════════════════════════════════════
+// ── STATE ──
+let emails = [];
+let autoOn = false;
+let timer  = null;
+
+// ── ANTI-DUPLICATE: clé unique par vol ──
+// fingerprint = flightNumber + date + registration (normalisés)
+function makeFingerprint(p) {
+  const fn  = (p.flightNumber  || '').replace(/\s/g,'').toUpperCase();
+  const dt  = (p.date          || '').trim();
+  const reg = (p.registration  || '').replace(/[.\-\s]/g,'').toUpperCase();
+  return `${fn}|${dt}|${reg}`;
+}
+
+function getImported() {
+  try { return new Map(JSON.parse(localStorage.getItem('ldm_fp') || '[]')); }
+  catch { return new Map(); }
+}
+function saveImported(map) {
+  localStorage.setItem('ldm_fp', JSON.stringify([...map.entries()]));
+}
+
+// ── CONFIG ──
+function saveConfig() {
+  localStorage.setItem('ldm_email',    document.getElementById('cfgEmail').value);
+  localStorage.setItem('ldm_keywords', document.getElementById('cfgKeywords').value);
+}
+function loadConfig() {
+  document.getElementById('cfgEmail').value    = localStorage.getItem('ldm_email')    || '';
+  document.getElementById('cfgKeywords').value = localStorage.getItem('ldm_keywords') || 'LDM, MVT';
+}
+
+// ── READ EMAILS ──
 async function readEmails() {
+  const email    = document.getElementById('cfgEmail').value.trim();
+  const keywords = document.getElementById('cfgKeywords').value.trim() || 'LDM, MVT';
+
+  if (!email) { toast('⚠️ Entrez votre adresse Gmail d\'abord','warn'); return; }
+
   const btn = document.getElementById('readBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Lecture...';
-  setStatus('loading', 'Connexion à Gmail...');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Lecture...';
+  setStatus('loading','Connexion à Gmail...');
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -377,159 +256,119 @@ async function readEmails() {
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 4000,
-        system: `Tu es un assistant qui lit des emails Gmail contenant des messages LDM (Load Distribution Message) et MVT (Movement Message) de l'aviation.
+        system: `Tu es un assistant spécialisé dans la lecture de messages LDM (Load Distribution Message) et MVT (Movement Message) de l'aviation civile.
 
-Cherche les emails récents (derniers 30 jours) dont le sujet ou le corps contient "LDM" ou "MVT".
+Cherche dans la boite Gmail (adresse: ${email}) les emails des 30 derniers jours dont l'objet ou le corps contient: ${keywords}.
 
-Pour chaque email trouvé, extrais et retourne un JSON structuré avec:
-- id: identifiant unique de l'email
-- type: "LDM" ou "MVT"
-- subject: sujet de l'email
+Pour chaque email trouvé, extrais un JSON structuré:
+- id: ID unique de l'email Gmail
+- type: "LDM" ou "MVT" selon le contenu
+- subject: sujet exact de l'email
 - from: expéditeur
-- date: date au format YYYY-MM-DD
-- rawText: le texte brut du message LDM/MVT
-- parsed: objet avec les champs extraits:
-  - flightNumber: numéro de vol (ex: "L6212", "AF598", "AF781")
-  - registration: immatriculation avion (ex: "5TCLJ", "FHTYP", "FGSPA")
-  - date: date du vol au format YYYY-MM-DD
-  - from: aéroport départ (code ICAO ou IATA, ex: "NKC", "DSS", "CDG")
-  - to: aéroport arrivée
-  - paxAdults: nombre adultes (nombre avant "/")
-  - paxChildren: nombre enfants
-  - paxBabies: nombre bébés
-  - totalPax: total passagers
-  - bags: nombre de bagages
-  - bagWeight: poids bagages en kg
-  - fuel: carburant en kg (FUEL IN TANKS)
-  - cargo: cargo total en kg
+- date: date réception format YYYY-MM-DD
+- rawText: texte brut complet du message LDM/MVT
+- parsed:
+  - flightNumber: numéro de vol SANS espace (ex: "L6212", "AF598", "TK741")
+  - registration: immatriculation avion SANS tiret (ex: "5TCLJ", "FHTYP")  
+  - date: date du VOL (dans le message) format YYYY-MM-DD
+  - from: code ICAO ou IATA départ (ex: "NKC", "GQNO", "CDG")
+  - to: code ICAO ou IATA arrivée
+  - paxAdults: adultes (entier)
+  - paxChildren: enfants (entier)
+  - paxBabies: bébés (entier)
+  - totalPax: total passagers adultes + enfants
+  - bags: nombre bagages enregistrés (entier)
+  - bagWeight: poids bagages kg (entier)
+  - fuel: carburant FUEL IN TANKS kg (entier)
 
-Retourne UNIQUEMENT un JSON valide, sans texte autour, format:
+Retourne UNIQUEMENT un JSON valide sans markdown:
 {"emails": [...]}
-
-Si aucun email trouvé, retourne: {"emails": []}`,
-        messages: [{ role: "user", content: "Cherche et extrais tous les emails LDM et MVT récents de mon Gmail." }],
-        mcp_servers: [{
-          type: "url",
-          url: "https://gmail.mcp.claude.com/mcp",
-          name: "gmail"
-        }]
+Si aucun email: {"emails": []}`,
+        messages: [{ role: "user", content: `Cherche les emails LDM/MVT dans Gmail (${email}) et extrais les données.` }],
+        mcp_servers: [{ type: "url", url: "https://gmail.mcp.claude.com/mcp", name: "gmail" }]
       })
     });
 
     const data = await response.json();
-    
-    // Extract text from response
-    const textBlock = data.content && data.content.find(b => b.type === 'text');
-    if (!textBlock) throw new Error('Pas de réponse texte');
+    const block = data.content && data.content.find(b => b.type === 'text');
+    if (!block) throw new Error('Pas de réponse');
 
     let parsed;
     try {
-      const clean = textBlock.text.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      // Try to extract JSON from text
-      const match = textBlock.text.match(/\{[\s\S]*\}/);
-      if (match) parsed = JSON.parse(match[0]);
-      else throw new Error('Impossible de parser la réponse');
+      parsed = JSON.parse(block.text.replace(/```json|```/g,'').trim());
+    } catch {
+      const m = block.text.match(/\{[\s\S]*\}/);
+      if (m) parsed = JSON.parse(m[0]); else throw new Error('Réponse non parseable');
     }
 
     emails = parsed.emails || [];
+
+    // Mark duplicates
+    const imported = getImported();
+    emails.forEach(em => {
+      const fp = makeFingerprint(em.parsed || {});
+      em._fingerprint = fp;
+      em._imported    = imported.has(fp);
+      em._duplicate   = imported.has(fp);
+    });
+
     renderEmails();
     updateStats();
-    
     const now = new Date().toLocaleTimeString('fr-FR');
-    document.getElementById('lastCheck').textContent = `Dernière vérification : ${now}`;
-    setStatus('active', `${emails.length} email(s) LDM/MVT trouvé(s)`);
-    showToast(`✅ ${emails.length} email(s) trouvé(s)`, 'success');
+    document.getElementById('sLast').textContent = `Dernière vérif. : ${now}`;
+    setStatus('active', `${emails.length} email(s) trouvé(s) — ${emails.filter(e=>e._imported).length} déjà importé(s)`);
+    toast(`✅ ${emails.length} email(s) trouvé(s)`,'ok');
 
   } catch(e) {
     console.error(e);
-    setStatus('idle', 'Erreur : ' + e.message);
-    showToast('❌ Erreur : ' + e.message, 'error');
+    setStatus('idle','Erreur : ' + e.message);
+    toast('❌ ' + e.message,'err');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '📨 Lire emails';
+    btn.disabled = false; btn.innerHTML = '📨 Lire emails';
   }
 }
 
-// ══════════════════════════════════════════
-// RENDER EMAILS
-// ══════════════════════════════════════════
+// ── RENDER ──
 function renderEmails() {
   const list = document.getElementById('emailList');
-  document.getElementById('emailCount').textContent = emails.length;
-
+  document.getElementById('eCount').textContent = emails.length;
   if (!emails.length) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <div class="icon">📭</div>
-        <h3>Aucun email LDM/MVT trouvé</h3>
-        <p>Aucun message LDM ou MVT dans votre Gmail récent</p>
-      </div>`;
+    list.innerHTML = '<div class="empty"><div class="ico">📭</div><h3>Aucun email LDM/MVT trouvé</h3><p>Aucun message correspondant dans votre Gmail</p></div>';
     return;
   }
-
   list.innerHTML = emails.map((em, i) => {
-    const isImported = importedIds.has(em.id);
-    const p = em.parsed || {};
+    const p   = em.parsed || {};
+    const imp = em._imported;
+    const dup = em._duplicate;
     return `
-    <div class="email-card ${isImported ? 'imported' : ''}" id="card-${i}">
-      <div class="email-header" onclick="toggleCard(${i})">
-        <span class="email-type-badge badge-${(em.type||'LDM').toLowerCase()}">${em.type || 'LDM'}</span>
+    <div class="email-card ${imp?'imported':''}" id="card-${i}">
+      <div class="email-hdr" onclick="toggleCard(${i})">
+        <span class="type-badge badge-${(em.type||'LDM').toLowerCase()}">${em.type||'LDM'}</span>
         <div class="email-meta">
-          <div class="email-subject">${esc(em.subject || 'Sans objet')}</div>
-          <div class="email-from">De : ${esc(em.from || '–')}</div>
+          <div class="email-subj">${esc(em.subject||'Sans objet')}</div>
+          <div class="email-from">De : ${esc(em.from||'–')}</div>
         </div>
-        <div class="email-date">${em.date || '–'}</div>
-        <div class="email-status">
-          ${isImported ? '<span class="imported-badge">✓ Importé</span>' : ''}
-        </div>
-        <span style="color:var(--dim);margin-left:8px;font-size:16px;" id="arrow-${i}">▼</span>
+        <div class="email-date">${em.date||'–'}</div>
+        ${imp ? '<span class="st-badge st-imported">✓ Importé</span>' : ''}
+        ${dup && !imp ? '<span class="st-badge st-duplicate">⚠ Doublon</span>' : ''}
+        <span style="color:var(--dim);font-size:16px;margin-left:4px;" id="arr-${i}">▼</span>
       </div>
-      <div class="email-body" id="body-${i}" style="display:none;">
+      <div class="email-body" id="bdy-${i}" style="display:none;">
         ${em.rawText ? `<div class="raw-text">${esc(em.rawText)}</div>` : ''}
-        <div class="parsed-section">
-          <div class="parsed-title">✦ Données extraites — modifiez si nécessaire</div>
+        <div class="parsed-sec">
+          <div class="parsed-lbl">✦ Données extraites — vérifiez et corrigez si nécessaire</div>
           <div class="parsed-grid">
-            <div class="parsed-field">
-              <label>N° Vol</label>
-              <input type="text" id="f-${i}-flight" value="${esc(p.flightNumber||'')}" placeholder="ex: L6212">
-            </div>
-            <div class="parsed-field">
-              <label>Immatriculation</label>
-              <input type="text" id="f-${i}-reg" value="${esc(p.registration||'')}" placeholder="ex: 5T-CLJ">
-            </div>
-            <div class="parsed-field">
-              <label>Date du vol</label>
-              <input type="date" id="f-${i}-date" value="${p.date||''}">
-            </div>
-            <div class="parsed-field">
-              <label>Départ (ICAO)</label>
-              <input type="text" id="f-${i}-from" value="${esc(p.from||'')}" placeholder="ex: GQNO">
-            </div>
-            <div class="parsed-field">
-              <label>Arrivée (ICAO)</label>
-              <input type="text" id="f-${i}-to" value="${esc(p.to||'')}" placeholder="ex: GOBD">
-            </div>
-            <div class="parsed-field">
-              <label>PAX Total</label>
-              <input type="number" id="f-${i}-pax" value="${p.totalPax||p.paxAdults||0}" min="0">
-            </div>
-            <div class="parsed-field">
-              <label>Bébés</label>
-              <input type="number" id="f-${i}-babies" value="${p.paxBabies||0}" min="0">
-            </div>
-            <div class="parsed-field">
-              <label>Bagages (pièces)</label>
-              <input type="number" id="f-${i}-bags" value="${p.bags||0}" min="0">
-            </div>
+            <div class="pf"><label>N° Vol</label><input id="p${i}-fn"  value="${esc(p.flightNumber||'')}"  placeholder="ex: L6212"></div>
+            <div class="pf"><label>Immatriculation</label><input id="p${i}-rg"  value="${esc(p.registration||'')}" placeholder="ex: 5TCLJ"></div>
+            <div class="pf"><label>Date du vol</label><input type="date" id="p${i}-dt"  value="${p.date||''}"></div>
+            <div class="pf"><label>Départ</label><input id="p${i}-fr"  value="${esc(p.from||'')}"  placeholder="ex: GQNO"></div>
+            <div class="pf"><label>Arrivée</label><input id="p${i}-to"  value="${esc(p.to||'')}"   placeholder="ex: CDG"></div>
+            <div class="pf"><label>PAX (adultes+enfants)</label><input type="number" id="p${i}-px" value="${p.totalPax||p.paxAdults||0}" min="0"></div>
+            <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
+            <div class="pf"><label>Bagages (pièces)</label><input type="number" id="p${i}-bg" value="${p.bags||0}" min="0"></div>
           </div>
-          <div class="import-actions">
-            ${isImported
-              ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>'
-              : `<button class="btn btn-green" onclick="importFlight(${i})">⬆️ Importer dans le système</button>`
-            }
-            <span class="import-note">Les données importées apparaissent dans l'onglet Suivi des vols</span>
+          <div class="import-row" id="act-${i}">
+            ${renderActions(i, imp, dup)}
           </div>
         </div>
       </div>
@@ -537,177 +376,143 @@ function renderEmails() {
   }).join('');
 }
 
-function toggleCard(i) {
-  const body  = document.getElementById(`body-${i}`);
-  const arrow = document.getElementById(`arrow-${i}`);
-  const open  = body.style.display !== 'none';
-  body.style.display  = open ? 'none' : 'block';
-  arrow.textContent   = open ? '▼' : '▲';
+function renderActions(i, imp, dup) {
+  if (imp) return '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>';
+  if (dup) return `
+    <div class="dup-notice">⚠️ Ce vol semble déjà importé (même N° vol + date + immat). Vérifiez les données avant de forcer l'import.</div>
+    <button class="btn btn-outline" style="margin-top:8px;" onclick="forceImport(${i})">Forcer l'import quand même</button>`;
+  return `<button class="btn btn-green" onclick="importFlight(${i})">⬆️ Importer dans le système</button>`;
 }
 
-// ══════════════════════════════════════════
-// IMPORT FLIGHT TO FIREBASE
-// ══════════════════════════════════════════
-async function importFlight(i) {
-  const em = emails[i];
-  const flightNumber  = document.getElementById(`f-${i}-flight`).value.trim().toUpperCase();
-  const registration  = document.getElementById(`f-${i}-reg`).value.trim().toUpperCase();
-  const date          = document.getElementById(`f-${i}-date`).value;
-  const from          = document.getElementById(`f-${i}-from`).value.trim().toUpperCase();
-  const to            = document.getElementById(`f-${i}-to`).value.trim().toUpperCase();
-  const passengers    = parseInt(document.getElementById(`f-${i}-pax`).value) || 0;
-  const babies        = parseInt(document.getElementById(`f-${i}-babies`).value) || 0;
+function toggleCard(i) {
+  const b = document.getElementById(`bdy-${i}`);
+  const a = document.getElementById(`arr-${i}`);
+  const open = b.style.display !== 'none';
+  b.style.display = open ? 'none' : 'block';
+  a.textContent   = open ? '▼' : '▲';
+}
 
-  if (!flightNumber || !date) {
-    showToast('⚠️ N° vol et date obligatoires', 'error'); return;
+// ── IMPORT ──
+async function importFlight(i, force) {
+  const fn  = document.getElementById(`p${i}-fn`).value.trim().toUpperCase();
+  const rg  = document.getElementById(`p${i}-rg`).value.trim().toUpperCase().replace(/[.\-\s]/g,'');
+  const dt  = document.getElementById(`p${i}-dt`).value;
+  const fr  = document.getElementById(`p${i}-fr`).value.trim().toUpperCase();
+  const to  = document.getElementById(`p${i}-to`).value.trim().toUpperCase();
+  const px  = parseInt(document.getElementById(`p${i}-px`).value) || 0;
+  const bb  = parseInt(document.getElementById(`p${i}-bb`).value) || 0;
+
+  if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires','warn'); return; }
+
+  // Check fingerprint again with current values
+  const fp = `${fn}|${dt}|${rg}`;
+  const imported = getImported();
+  if (!force && imported.has(fp)) {
+    toast('⚠️ Ce vol est déjà importé','warn'); return;
   }
 
   try {
     const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
     const { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const apps  = getApps();
+    const app   = apps.find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    const db    = getFirestore(app);
 
-    const apps   = getApps();
-    const fbApp  = apps.find(a => a.name === 'ldm-import') || initializeApp(FB_CONFIG, 'ldm-import');
-    const db     = getFirestore(fbApp);
-
-    // Detect company from flight number prefix
-    const company = detectCompany(flightNumber);
-
-    const flightData = {
-      flightNumber, registration, date, from, to,
-      passengers, babies, company,
-      type: detectType(em),
+    await addDoc(collection(db,'flights'), {
+      flightNumber: fn,
+      registration: rg,
+      date: dt, from: fr, to,
+      passengers: px, babies: bb,
+      company: detectCompany(fn),
+      type: 'DEP',
       authorizationNumber: '',
-      createdAt: new Date().toISOString(),
       source: 'LDM_EMAIL',
+      createdAt: new Date().toISOString(),
       timestamp: Date.now()
-    };
+    });
 
-    await addDoc(collection(db, 'flights'), flightData);
+    // Save fingerprint
+    imported.set(fp, { fn, dt, rg, importedAt: new Date().toISOString() });
+    saveImported(imported);
 
-    importedIds.add(em.id);
-    localStorage.setItem('ldm_imported', JSON.stringify([...importedIds]));
-
-    // Update card UI
+    // Update UI
+    emails[i]._imported = true;
     const card = document.getElementById(`card-${i}`);
     card.classList.add('imported');
-    const actions = card.querySelector('.import-actions');
-    actions.innerHTML = '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Importé avec succès dans le système</span>';
-    const status = card.querySelector('.email-status');
-    status.innerHTML = '<span class="imported-badge">✓ Importé</span>';
+    document.getElementById(`act-${i}`).innerHTML =
+      '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Importé avec succès</span>';
+    const hdr = card.querySelector('.email-hdr');
+    // remove old badges
+    hdr.querySelectorAll('.st-badge').forEach(b=>b.remove());
+    hdr.insertBefore(Object.assign(document.createElement('span'),{className:'st-badge st-imported',textContent:'✓ Importé'}), document.getElementById(`arr-${i}`));
 
     updateStats();
-    showToast(`✅ Vol ${flightNumber} importé avec succès`, 'success');
+    toast(`✅ Vol ${fn} importé avec succès`,'ok');
 
   } catch(e) {
     console.error(e);
-    showToast('❌ Erreur import : ' + e.message, 'error');
+    toast('❌ Erreur import : '+e.message,'err');
   }
 }
 
-function detectCompany(flightNumber) {
-  const prefixes = {
-    'L6': 'Mauritania Airlines', 'HC': 'Air Sénégal', 'TK': 'Turkish Airlines',
-    'NT': 'Binter', 'AH': 'Air Algérie', 'KP': 'ASKY',
-    'AT': 'Royal Air Maroc', 'TU': 'Tunisair', 'AF': 'Air France'
-  };
-  for (const [pfx, name] of Object.entries(prefixes)) {
-    if (flightNumber.startsWith(pfx)) return name;
-  }
-  return flightNumber.slice(0, 2);
+function forceImport(i) { importFlight(i, true); }
+
+function detectCompany(fn) {
+  const map = {'L6':'Mauritania Airlines','HC':'Air Sénégal','TK':'Turkish Airlines','NT':'Binter','AH':'Air Algérie','KP':'ASKY','AT':'Royal Air Maroc','TU':'Tunisair','AF':'Air France'};
+  return map[fn.slice(0,2)] || fn.slice(0,2);
 }
 
-function detectType(em) {
-  const text = (em.rawText || '') + (em.subject || '');
-  if (text.includes('ARR') || text.includes('arrivée')) return 'ARR';
-  return 'DEP';
-}
-
-// ══════════════════════════════════════════
-// AUTO REFRESH
-// ══════════════════════════════════════════
+// ── AUTO ──
 function toggleAuto() {
-  autoEnabled = !autoEnabled;
-  const track = document.getElementById('autoTrack');
-  const label = document.getElementById('autoLabel');
-  track.classList.toggle('on', autoEnabled);
-  label.textContent = autoEnabled ? 'Activé' : 'Désactivé';
-
-  if (autoEnabled) {
-    startAutoRefresh();
-    showToast('🔄 Auto-actualisation activée', 'success');
-  } else {
-    stopAutoRefresh();
-    document.getElementById('nextCheck').textContent = '';
-    showToast('⏸ Auto-actualisation désactivée', '');
-  }
+  autoOn = !autoOn;
+  document.getElementById('autoTrack').classList.toggle('on',autoOn);
+  document.getElementById('autoLbl').textContent = autoOn ? 'Activé' : 'Désactivé';
+  if (autoOn) { startAuto(); toast('🔄 Auto-actualisation activée','ok'); }
+  else        { stopAuto(); document.getElementById('sNext').textContent=''; toast('⏸ Désactivé',''); }
 }
-
-function startAutoRefresh() {
-  stopAutoRefresh();
-  const minutes = parseInt(document.getElementById('intervalSelect').value);
-  let remaining = minutes * 60;
-
-  countdown = setInterval(() => {
-    remaining--;
-    const m = Math.floor(remaining / 60);
-    const s = remaining % 60;
-    document.getElementById('nextCheck').textContent =
-      `Prochaine vérification dans ${m}:${String(s).padStart(2,'0')}`;
-    if (remaining <= 0) {
-      readEmails();
-      remaining = minutes * 60;
-    }
-  }, 1000);
+function startAuto() {
+  stopAuto();
+  const mins = parseInt(document.getElementById('intSel').value);
+  let rem = mins * 60;
+  timer = setInterval(()=>{
+    rem--;
+    const m=Math.floor(rem/60), s=rem%60;
+    document.getElementById('sNext').textContent = `Prochaine vérif. dans ${m}:${String(s).padStart(2,'0')}`;
+    if(rem<=0){ readEmails(); rem=mins*60; }
+  },1000);
 }
+function stopAuto() { if(timer){clearInterval(timer);timer=null;} }
+function updateInterval() { if(autoOn){stopAuto();startAuto();} }
 
-function stopAutoRefresh() {
-  if (countdown) { clearInterval(countdown); countdown = null; }
-}
-
-function updateInterval() {
-  if (autoEnabled) { stopAutoRefresh(); startAutoRefresh(); }
-}
-
-// ══════════════════════════════════════════
-// UTILS
-// ══════════════════════════════════════════
+// ── UTILS ──
 function updateStats() {
-  document.getElementById('statTotal').textContent    = emails.length;
-  document.getElementById('statLDM').textContent      = emails.filter(e=>e.type==='LDM').length;
-  document.getElementById('statMVT').textContent      = emails.filter(e=>e.type==='MVT').length;
-  document.getElementById('statImported').textContent = importedIds.size;
+  document.getElementById('stTotal').textContent    = emails.length;
+  document.getElementById('stLDM').textContent      = emails.filter(e=>e.type==='LDM').length;
+  document.getElementById('stMVT').textContent      = emails.filter(e=>e.type==='MVT').length;
+  document.getElementById('stImported').textContent = getImported().size;
 }
-
-function setStatus(state, text) {
-  const dot = document.getElementById('statusDot');
-  dot.className = 'status-dot' + (state==='active'?' active':state==='loading'?' loading':'');
-  document.getElementById('statusText').textContent = text;
+function setStatus(st,txt) {
+  const d = document.getElementById('sDot');
+  d.className = 'status-dot'+(st==='active'?' active':st==='loading'?' loading':'');
+  document.getElementById('sTxt').textContent = txt;
 }
-
-function clearResults() {
-  emails = [];
-  renderEmails();
-  updateStats();
-  setStatus('idle', 'Résultats effacés');
+function clearAll() {
+  emails=[]; renderEmails(); updateStats(); setStatus('idle','Résultats effacés');
 }
-
-function showToast(msg, type) {
-  const c = document.getElementById('toastContainer');
+function toast(msg, type) {
+  const c = document.getElementById('toasts');
   const t = document.createElement('div');
-  t.className = `toast ${type}`;
+  t.className = `toast ${type==='ok'?'ok':type==='err'?'err':type==='warn'?'warn':''}`;
   t.textContent = msg;
   c.appendChild(t);
-  setTimeout(() => t.remove(), 4000);
+  setTimeout(()=>t.remove(), 4000);
 }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function esc(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// Init stats
+// ── INIT ──
+loadConfig();
 updateStats();
-setStatus('idle', 'Prêt');
+setStatus('idle','Prêt');
 </script>
 </body>
 </html>
