@@ -1701,9 +1701,10 @@ window.openAirlineModal = function(id = null) {
     document.getElementById('airlineColorPicker').value       = selectedColor;
     document.getElementById('airlineColorDisplay').textContent = selectedColor;
     buildColorSwatches(selectedColor);
-    // Vol numbers
-    document.getElementById('volLocked').checked = !!a && !!a.volLocked || false;
-    currentVolList = (a && a.volNumbers) ? [...a.volNumbers] : [];
+    // Vol numbers - a peut être undefined ici si id=null
+    const airlineForVol = id ? airlines.find(x => x.id === id) : null;
+    document.getElementById('volLocked').checked = !!(airlineForVol && airlineForVol.volLocked);
+    currentVolList = (airlineForVol && airlineForVol.volNumbers) ? [...airlineForVol.volNumbers] : [];
     renderImmatList();
     updateImmatLockUI();
     updateImmPrefixHint();
