@@ -111,6 +111,7 @@ const elements = {
     fType: document.getElementById('fType'),
     fFrom: document.getElementById('fFrom'),
     fTo: document.getElementById('fTo'),
+    fStopover: document.getElementById('fStopover'),
     fPassengers: document.getElementById('fPassengers'),
     fBabies: document.getElementById('fBabies'),
     
@@ -205,7 +206,7 @@ function populateSelects() {
     
     destinationsList.forEach(dest => {
         const label = `${dest.code} – ${dest.name}`;
-        [elements.fromSelect, elements.toSelect, elements.fFrom, elements.fTo].forEach(sel => {
+        [elements.fromSelect, elements.toSelect, elements.fFrom, elements.fTo, elements.fStopover].forEach(sel => {
             const opt = document.createElement('option');
             opt.value = dest.code;
             opt.textContent = label;
@@ -251,6 +252,13 @@ function attachEventListeners() {
     
     // Form interactions
     elements.fCompany.addEventListener('change', updateFlightNumberPrefix);
+    if (elements.fType) {
+        elements.fType.addEventListener('change', function() {
+            const grp = document.getElementById('stopoverGroup');
+            if (grp) grp.style.display = this.value === 'TRANSIT' ? '' : 'none';
+            if (elements.fStopover && this.value !== 'TRANSIT') elements.fStopover.value = '';
+        });
+    }
     elements.fAuthNumber.addEventListener('input', handleAuthNumberInput);
     
     // Uppercase transformation for all text inputs
@@ -458,6 +466,7 @@ function getFormData() {
         type: elements.fType.value,
         from: elements.fFrom.value,
         to: elements.fTo.value,
+        stopover: (elements.fStopover && elements.fStopover.value) || '',
         passengers: parseInt(elements.fPassengers.value) || 0,
         babies: parseInt(elements.fBabies.value) || 0,
         timestamp: Date.now()
