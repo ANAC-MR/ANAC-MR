@@ -454,7 +454,7 @@ function getFormData() {
         date: elements.fDate.value,
         company: elements.fCompany.value,
         registration: (document.getElementById('fImmSelect') && document.getElementById('fImmSelect').value ? document.getElementById('fImmSelect').value : elements.fImm.value.trim().toUpperCase()),
-        flightNumber: elements.fVol.value.trim().toUpperCase(),
+        flightNumber: (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value ? document.getElementById('fVolSelect').value : elements.fVol.value.trim().toUpperCase()),
         type: elements.fType.value,
         from: elements.fFrom.value,
         to: elements.fTo.value,
@@ -462,6 +462,55 @@ function getFormData() {
         babies: parseInt(elements.fBabies.value) || 0,
         timestamp: Date.now()
     };
+}
+
+function updateVolField(company) {
+    if (!adminConfig || !adminConfig.airlines) return;
+    const airlineData = adminConfig.airlines.find(a => a.name === company);
+    if (!airlineData) return;
+
+    const fVol = elements.fVol;
+    const parent = fVol.parentNode;
+
+    // Remove existing select if any
+    const existingSelect = parent.querySelector('#fVolSelect');
+    if (existingSelect) existingSelect.remove();
+
+    const volList   = airlineData.volNumbers || [];
+    const isLocked  = airlineData.volLocked;
+
+    if (isLocked && volList.length > 0) {
+        fVol.style.display = 'none';
+
+        const sel = document.createElement('select');
+        sel.id = 'fVolSelect';
+        sel.required = true;
+        sel.className = fVol.className;
+        sel.style.cssText = fVol.style.cssText;
+        sel.style.display = '';
+
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '— Choisir un numéro de vol —';
+        sel.appendChild(defaultOpt);
+
+        volList.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            if (fVol.value === v) opt.selected = true;
+            sel.appendChild(opt);
+        });
+
+        parent.insertBefore(sel, fVol.nextSibling);
+        sel.addEventListener('change', () => { fVol.value = sel.value; });
+        if (fVol.value) sel.value = fVol.value;
+
+    } else {
+        fVol.style.display = '';
+        const existingSel = parent.querySelector('#fVolSelect');
+        if (existingSel) existingSel.remove();
+    }
 }
 
 function updateFlightNumberPrefix() {
@@ -479,6 +528,8 @@ function updateFlightNumberPrefix() {
     
     // Update immatriculation field based on admin config
     updateImmField(company);
+    // Update vol number field based on admin config
+    updateVolField(company);
 }
 
 function updateImmField(company) {
