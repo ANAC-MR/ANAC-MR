@@ -224,11 +224,11 @@
 
             <div class="charts-filter-bar">
                 <label>Année :</label>
-                <select id="chartYearFilter" onchange="refreshCharts()">
+                <select id="chartYearFilter">
                     <option value="ALL">Toutes les années</option>
                 </select>
                 <label style="margin-left:12px;">Mois :</label>
-                <select id="chartMonthFilter" onchange="refreshCharts()">
+                <select id="chartMonthFilter">
                     <option value="ALL">Tous les mois</option>
                     <option value="0">Janvier</option><option value="1">Février</option>
                     <option value="2">Mars</option><option value="3">Avril</option>
@@ -237,6 +237,29 @@
                     <option value="8">Septembre</option><option value="9">Octobre</option>
                     <option value="10">Novembre</option><option value="11">Décembre</option>
                 </select>
+                <label style="margin-left:12px;">Compagnie :</label>
+                <select id="chartCompanyFilter">
+                    <option value="ALL">Toutes les compagnies</option>
+                </select>
+                <button onclick="refreshCharts()" style="
+                    margin-left:16px; padding:8px 22px;
+                    background:linear-gradient(135deg,#2B5A8E,#4a90d9);
+                    color:#fff; border:none; border-radius:8px;
+                    font-family:inherit; font-size:13px; font-weight:700;
+                    cursor:pointer; box-shadow:0 3px 10px rgba(43,90,142,0.3);
+                    transition:opacity 0.2s,transform 0.15s;
+                " onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                    🔍 Générer
+                </button>
+                <button onclick="resetChartFilters()" style="
+                    margin-left:6px; padding:8px 16px;
+                    background:transparent; color:#718096;
+                    border:1px solid #cbd5e0; border-radius:8px;
+                    font-family:inherit; font-size:13px;
+                    cursor:pointer; transition:all 0.2s;
+                " onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='transparent'">
+                    ↺ Réinitialiser
+                </button>
             </div>
 
             <!-- KPIs -->
@@ -396,13 +419,36 @@ function getFlights() { return window.appFlights || []; }
 function filterFlights(flights) {
     const y = document.getElementById('chartYearFilter').value;
     const m = document.getElementById('chartMonthFilter').value;
+    const c = document.getElementById('chartCompanyFilter') ? document.getElementById('chartCompanyFilter').value : 'ALL';
     return flights.filter(f => {
         if (!f.date) return false;
         const d = new Date(f.date);
         if (y !== 'ALL' && d.getFullYear() !== +y) return false;
         if (m !== 'ALL' && d.getMonth()    !== +m) return false;
+        if (c !== 'ALL' && f.company !== c) return false;
         return true;
     });
+}
+
+function populateCompanyFilter(flights) {
+    const sel = document.getElementById('chartCompanyFilter');
+    if (!sel) return;
+    const cur = sel.value;
+    const companies = [...new Set(flights.map(f => f.company).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="ALL">Toutes les compagnies</option>';
+    companies.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        if (c === cur) o.selected = true;
+        sel.appendChild(o);
+    });
+}
+
+function resetChartFilters() {
+    document.getElementById('chartYearFilter').value    = 'ALL';
+    document.getElementById('chartMonthFilter').value   = 'ALL';
+    document.getElementById('chartCompanyFilter').value = 'ALL';
+    refreshCharts();
 }
 
 function populateYearFilter(flights) {
@@ -433,6 +479,7 @@ function refreshCharts() {
         return;
     }
     populateYearFilter(all);
+    populateCompanyFilter(all);
     const flt = filterFlights(all);
 
     // KPIs
