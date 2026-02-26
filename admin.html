@@ -1305,6 +1305,25 @@
                 </div>
             </div>
         </div>
+            <div class="field-group form-full" style="border-top:1px solid var(--border); padding-top:18px; margin-top:4px;">
+                <label>Liste des numéros de vol autorisés <span class="immat-count" id="volCount"></span></label>
+                <div class="lock-immat-row">
+                    <label class="lock-toggle">
+                        <input type="checkbox" id="volLocked">
+                        <span class="track"></span>
+                    </label>
+                    <span id="volLockLabel" style="font-size:12px; color:var(--text-dim);">Déverrouillé – saisie libre</span>
+                    <span id="volLockBadge" class="unlocked-badge">🔓 Libre</span>
+                </div>
+                <div class="immat-list" id="volList"></div>
+                <div class="immat-add-row">
+                    <input type="text" id="volInput" placeholder="Ex: L6-101" maxlength="10"
+                           oninput="this.value=this.value.toUpperCase()"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();addVol();}">
+                    <button type="button" class="btn-primary" onclick="addVol()" style="white-space:nowrap;">+ Ajouter</button>
+                </div>
+            </div>
+        </div>
         <div class="modal-footer">
             <button class="btn-ghost" onclick="closeModal('airlineModal')">Annuler</button>
             <button class="btn-gold" onclick="saveAirline()">💾 Enregistrer</button>
@@ -1412,6 +1431,7 @@ let airports  = [];
 let formatCfg = { prefix: 'SNA26', separator: '-', length: 4, suffix: '', locked: false };
 let selectedColor = '#2B5A8E';
 let currentImmatList = [];
+let currentVolList = [];
 
 // ────────────────────────────────────────
 // AUTHENTICATION
@@ -1681,9 +1701,14 @@ window.openAirlineModal = function(id = null) {
     document.getElementById('airlineColorPicker').value       = selectedColor;
     document.getElementById('airlineColorDisplay').textContent = selectedColor;
     buildColorSwatches(selectedColor);
+    // Vol numbers
+    document.getElementById('volLocked').checked = !!a && !!a.volLocked || false;
+    currentVolList = (a && a.volNumbers) ? [...a.volNumbers] : [];
     renderImmatList();
     updateImmatLockUI();
     updateImmPrefixHint();
+    renderVolList();
+    updateVolLockUI();
     openModal('airlineModal');
 };
 
@@ -1705,6 +1730,54 @@ window.removeImmat = function(val) {
     renderImmatList();
     updateImmatCount();
 };
+
+window.addVol = function() {
+    const input = document.getElementById('volInput');
+    const val = input.value.trim().toUpperCase();
+    if (!val) return;
+    if (currentVolList.includes(val)) {
+        showNotif('Numéro de vol déjà dans la liste', 'warning'); return;
+    }
+    currentVolList.push(val);
+    input.value = '';
+    renderVolList();
+};
+
+window.removeVol = function(val) {
+    currentVolList = currentVolList.filter(i => i !== val);
+    renderVolList();
+};
+
+function renderVolList() {
+    const el = document.getElementById('volList');
+    if (!el) return;
+    if (!currentVolList.length) {
+        el.innerHTML = '<span style="font-size:12px;color:var(--text-dim);">Aucun numéro de vol — saisie libre</span>';
+        document.getElementById('volCount').textContent = '';
+        return;
+    }
+    el.innerHTML = currentVolList.map(v => `
+        <span class="immat-tag" style="background:rgba(74,144,217,0.12);border-color:rgba(74,144,217,0.3);color:var(--blue-acc);">
+            ${esc(v)}
+            <span class="remove-immat" onclick="removeVol('${esc(v)}')">×</span>
+        </span>
+    `).join('');
+    document.getElementById('volCount').textContent = `(${currentVolList.length})`;
+}
+
+function updateVolLockUI() {
+    const locked = document.getElementById('volLocked') && document.getElementById('volLocked').checked;
+    if (!document.getElementById('volLockLabel')) return;
+    document.getElementById('volLockLabel').textContent = locked
+        ? 'Verrouillé – seulement les N° vol de la liste'
+        : 'Déverrouillé – saisie libre';
+    document.getElementById('volLockBadge').className   = locked ? 'locked-badge' : 'unlocked-badge';
+    document.getElementById('volLockBadge').textContent = locked ? '🔒 Verrouillé' : '🔓 Libre';
+}
+
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'volLocked') updateVolLockUI();
+});
 
 function renderImmatList() {
     const el = document.getElementById('immatList');
@@ -1757,8 +1830,10 @@ window.saveAirline = async function() {
 
     const immPrefix = document.getElementById('airlineImmPrefix').value.trim().toUpperCase();
     const immLocked = document.getElementById('immatLocked').checked;
+    const volLocked = document.getElementById('volLocked').checked;
     const data = { name, prefix, iata, color: selectedColor, country,
                    immPrefix, immLocked, immatriculations: currentImmatList,
+                   volLocked, volNumbers: currentVolList,
                    updatedAt: new Date().toISOString() };
 
     try {
