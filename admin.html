@@ -1417,13 +1417,46 @@ const airlinesDoc  = () => doc(db, 'flights', 'cfg-airlines');
 const airportsDoc  = () => doc(db, 'flights', 'cfg-airports');
 const configDoc    = () => doc(db, 'flights', 'cfg-format');
 
-// ─── AUTH CONFIG (stocké dans localStorage + Firebase) ──
+// ─── AUTH CONFIG ──
 const AUTH_KEY   = 'anac_admin_auth';
-const PASS_KEY   = 'anac_admin_password';
 const DEFAULT_USER = 'admin';
 const DEFAULT_PASS = 'ANACdady2024!';
 let MAX_ATTEMPTS  = 5;
 let LOCKOUT_MS    = 15 * 60 * 1000; // 15 min
+// Mot de passe chargé depuis Firebase (partagé entre tous les appareils)
+let _cachedPass = null;
+let _cachedUser = null;
+
+async function getStoredCredentials() {
+    if (_cachedPass) return { user: _cachedUser, pass: _cachedPass };
+    try {
+        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const fbConfig = {
+            apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+            authDomain:"anacmr-e05b4.firebaseapp.com",
+            projectId:"anacmr-e05b4",
+            storageBucket:"anacmr-e05b4.firebasestorage.app",
+            messagingSenderId:"857117390430",
+            appId:"1:857117390430:web:0231614b880df3196e26cf"
+        };
+        const apps = getApps();
+        const app  = apps.find(a=>a.name==='auth-reader') || initializeApp(fbConfig,'auth-reader');
+        const db   = getFirestore(app);
+        const snap = await getDoc(doc(db,'flights','cfg-auth'));
+        if (snap.exists()) {
+            _cachedPass = snap.data().password || DEFAULT_PASS;
+            _cachedUser = snap.data().username || DEFAULT_USER;
+        } else {
+            _cachedPass = DEFAULT_PASS;
+            _cachedUser = DEFAULT_USER;
+        }
+    } catch(e) {
+        _cachedPass = DEFAULT_PASS;
+        _cachedUser = DEFAULT_USER;
+    }
+    return { user: _cachedUser, pass: _cachedPass };
+}
 
 // ─── STATE ──────────────────────────────
 let airlines  = [];
@@ -1436,9 +1469,7 @@ let currentVolList = [];
 // ────────────────────────────────────────
 // AUTHENTICATION
 // ────────────────────────────────────────
-function getStoredPassword() {
-    return localStorage.getItem(PASS_KEY) || DEFAULT_PASS;
-}
+// getStoredPassword remplacé par getStoredCredentials() async
 
 function checkLockout() {
     const data = JSON.parse(sessionStorage.getItem('login_attempts') || '{"count":0,"lockUntil":0}');
@@ -1471,8 +1502,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     const user = document.getElementById('loginUser').value.trim();
     const pass = document.getElementById('loginPass').value;
-    const storedPass = getStoredPassword();
-    const storedUser = localStorage.getItem('anac_admin_user') || DEFAULT_USER;
+
+    // Show loading on button
+    const btn = e.target.querySelector('button[type="submit"]');
+    if(btn){ btn.disabled=true; btn.textContent='Vérification...'; }
+
+    const creds = await getStoredCredentials();
+    const storedPass = creds.pass;
+    const storedUser = creds.user;
+
+    if(btn){ btn.disabled=false; btn.textContent='Se connecter'; }
 
     if (user === storedUser && pass === storedPass) {
         recordAttempt(true);
@@ -2040,7 +2079,17 @@ window.changePassword = async function() {
     if (newPass.length < 8)  { showNotif('Le nouveau mot de passe doit faire au moins 8 caractères', 'error'); return; }
     if (newPass !== confirm)  { showNotif('Les mots de passe ne correspondent pas', 'error'); return; }
 
-    localStorage.setItem(PASS_KEY, newPass);
+    // Save to Firebase so all devices get the new password
+    try {
+        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const fbConfig = {apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
+        const apps = getApps();
+        const app  = apps.find(a=>a.name==='auth-reader') || initializeApp(fbConfig,'auth-reader');
+        const db   = getFirestore(app);
+        await setDoc(doc(db,'flights','cfg-auth'), { password: newPass, username: creds.user, updatedAt: new Date().toISOString() });
+        _cachedPass = newPass; // update cache
+    } catch(e) { console.warn('Firebase save failed:', e); }
     ['secCurrentPass','secNewPass','secConfirmPass'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('strengthFill').style.width = '0%';
     document.getElementById('strengthLabel').textContent = '';
