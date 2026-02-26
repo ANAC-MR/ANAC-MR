@@ -1314,7 +1314,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     getFirestore, collection, doc,
-    getDocs, addDoc, updateDoc, deleteDoc,
+    getDocs, getDoc, addDoc, updateDoc, deleteDoc,
     setDoc, onSnapshot, serverTimestamp, query, orderBy
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -1331,10 +1331,10 @@ const fbApp = initializeApp(firebaseConfig);
 const db    = getFirestore(fbApp);
 
 // Collections
-const airlinesCol  = collection(db, 'admin_airlines');
-const airportsCol  = collection(db, 'admin_airports');
-const configDoc    = () => doc(db, 'admin_config', 'main');
-const activityCol  = collection(db, 'admin_activity');
+// Tout dans la collection 'flights' existante, docs spéciaux avec prefix __
+const airlinesDoc  = () => doc(db, 'flights', '__admin_airlines__');
+const airportsDoc  = () => doc(db, 'flights', '__admin_airports__');
+const configDoc    = () => doc(db, 'flights', '__admin_config__');
 
 // ─── AUTH CONFIG (stocké dans localStorage + Firebase) ──
 const AUTH_KEY   = 'anac_admin_auth';
@@ -1432,92 +1432,82 @@ async function loadAll() {
 
 async function loadAirlines() {
     try {
-        const snap = await getDocs(airlinesCol);
-        if (snap.empty) {
-            await seedDefaultAirlines();
-            const snap2 = await getDocs(airlinesCol);
-            airlines = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+        const snap = await getDoc(airlinesDoc());
+        if (!snap.exists() || !snap.data().list || snap.data().list.length === 0) {
+            await setDoc(airlinesDoc(), { list: getDefaultAirlines() });
+            airlines = getDefaultAirlines();
         } else {
-            airlines = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            airlines = snap.data().list;
         }
         airlines.sort((a,b) => (a.name||'').localeCompare(b.name||''));
         renderAirlines();
     } catch(e) {
         console.error('Airlines error:', e);
-        showNotif('Erreur: ' + e.message, 'error');
+        showNotif('Erreur airlines: ' + e.message, 'error');
     }
 }
 
-async function seedDefaultAirlines() {
-    const defaults = [
-        { name: "Mauritania Airlines", prefix: "L6", iata: "MV", color: "#006B3F", country: "Mauritanie" },
-        { name: "Air Sénégal", prefix: "HC", iata: "HC", color: "#C8102E", country: "Sénégal" },
-        { name: "Turkish Airlines", prefix: "TK", iata: "TK", color: "#C8102E", country: "Turquie" },
-        { name: "Binter", prefix: "NT", iata: "NT", color: "#FF7F00", country: "Espagne" },
-        { name: "Air Algérie", prefix: "AH", iata: "AH", color: "#006B3F", country: "Algérie" },
-        { name: "ASKY", prefix: "KP", iata: "KP", color: "#003087", country: "Togo" },
-        { name: "Royal Air Maroc", prefix: "AT", iata: "AT", color: "#D4AF37", country: "Maroc" },
-        { name: "Tunisair", prefix: "TU", iata: "TU", color: "#E30613", country: "Tunisie" },
-        { name: "Air France", prefix: "AF", iata: "AF", color: "#002157", country: "France" },
+function getDefaultAirlines() {
+    return [
+        { id: "1", name: "Mauritania Airlines", prefix: "L6", iata: "MV", color: "#006B3F", country: "Mauritanie" },
+        { id: "2", name: "Air Sénégal", prefix: "HC", iata: "HC", color: "#C8102E", country: "Sénégal" },
+        { id: "3", name: "Turkish Airlines", prefix: "TK", iata: "TK", color: "#C8102E", country: "Turquie" },
+        { id: "4", name: "Binter", prefix: "NT", iata: "NT", color: "#FF7F00", country: "Espagne" },
+        { id: "5", name: "Air Algérie", prefix: "AH", iata: "AH", color: "#006B3F", country: "Algérie" },
+        { id: "6", name: "ASKY", prefix: "KP", iata: "KP", color: "#003087", country: "Togo" },
+        { id: "7", name: "Royal Air Maroc", prefix: "AT", iata: "AT", color: "#D4AF37", country: "Maroc" },
+        { id: "8", name: "Tunisair", prefix: "TU", iata: "TU", color: "#E30613", country: "Tunisie" },
+        { id: "9", name: "Air France", prefix: "AF", iata: "AF", color: "#002157", country: "France" },
     ];
-    for (const a of defaults) {
-        await addDoc(airlinesCol, { ...a, createdAt: new Date().toISOString() });
-    }
 }
 
 async function loadAirports() {
     try {
-        const snap = await getDocs(airportsCol);
-        if (snap.empty) {
-            await seedDefaultAirports();
-            const snap2 = await getDocs(airportsCol);
-            airports = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+        const snap = await getDoc(airportsDoc());
+        if (!snap.exists() || !snap.data().list || snap.data().list.length === 0) {
+            await setDoc(airportsDoc(), { list: getDefaultAirports() });
+            airports = getDefaultAirports();
         } else {
-            airports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            airports = snap.data().list;
         }
         airports.sort((a,b) => (a.icao||'').localeCompare(b.icao||''));
         renderAirports();
     } catch(e) {
         console.error('Airports error:', e);
-        showNotif('Erreur: ' + e.message, 'error');
+        showNotif('Erreur airports: ' + e.message, 'error');
     }
 }
 
-async function seedDefaultAirports() {
-    const defaults = [
-        { icao: "GQNO", iata: "NKC", name: "Nouakchott Oumtounsy International", city: "Nouakchott", country: "Mauritanie" },
-        { icao: "GQPP", iata: "NDB", name: "Nouadhibou International", city: "Nouadhibou", country: "Mauritanie" },
-        { icao: "GQPZ", iata: "OUZ", name: "Zouerate International", city: "Zouerate", country: "Mauritanie" },
-        { icao: "GQNI", iata: "EMN", name: "Nema Airport", city: "Nema", country: "Mauritanie" },
-        { icao: "GQPF", iata: "KFA", name: "Kiffa Airport", city: "Kiffa", country: "Mauritanie" },
-        { icao: "GMMN", iata: "CMN", name: "Casablanca Mohammed V", city: "Casablanca", country: "Maroc" },
-        { icao: "DTTA", iata: "TUN", name: "Tunis Carthage", city: "Tunis", country: "Tunisie" },
-        { icao: "GOBD", iata: "DSS", name: "Dakar Blaise Diagne", city: "Dakar", country: "Sénégal" },
-        { icao: "GCLP", iata: "LPA", name: "Las Palmas Gran Canaria", city: "Las Palmas", country: "Espagne" },
-        { icao: "GABS", iata: "BKO", name: "Bamako Modibo Keita", city: "Bamako", country: "Mali" },
-        { icao: "GUCY", iata: "CKY", name: "Conakry Gbessia", city: "Conakry", country: "Guinée" },
-        { icao: "DIAP", iata: "ABJ", name: "Abidjan Félix Houphouët-Boigny", city: "Abidjan", country: "Côte d'Ivoire" },
-        { icao: "LTFM", iata: "IST", name: "Istanbul Airport", city: "Istanbul", country: "Turquie" },
-        { icao: "LFPG", iata: "CDG", name: "Paris Charles de Gaulle", city: "Paris", country: "France" },
-        { icao: "DAAG", iata: "ALG", name: "Alger Houari Boumediene", city: "Alger", country: "Algérie" },
-        { icao: "OEMA", iata: "MED", name: "Madinah Prince Mohammad Bin Abdulaziz", city: "Madinah", country: "Arabie Saoudite" },
+function getDefaultAirports() {
+    return [
+        { id: "a1", icao: "GQNO", iata: "NKC", name: "Nouakchott Oumtounsy International", city: "Nouakchott", country: "Mauritanie" },
+        { id: "a2", icao: "GQPP", iata: "NDB", name: "Nouadhibou International", city: "Nouadhibou", country: "Mauritanie" },
+        { id: "a3", icao: "GQPZ", iata: "OUZ", name: "Zouerate International", city: "Zouerate", country: "Mauritanie" },
+        { id: "a4", icao: "GQNI", iata: "EMN", name: "Nema Airport", city: "Nema", country: "Mauritanie" },
+        { id: "a5", icao: "GQPF", iata: "KFA", name: "Kiffa Airport", city: "Kiffa", country: "Mauritanie" },
+        { id: "a6", icao: "GMMN", iata: "CMN", name: "Casablanca Mohammed V", city: "Casablanca", country: "Maroc" },
+        { id: "a7", icao: "DTTA", iata: "TUN", name: "Tunis Carthage", city: "Tunis", country: "Tunisie" },
+        { id: "a8", icao: "GOBD", iata: "DSS", name: "Dakar Blaise Diagne", city: "Dakar", country: "Sénégal" },
+        { id: "a9", icao: "GCLP", iata: "LPA", name: "Las Palmas Gran Canaria", city: "Las Palmas", country: "Espagne" },
+        { id: "a10", icao: "GABS", iata: "BKO", name: "Bamako Modibo Keita", city: "Bamako", country: "Mali" },
+        { id: "a11", icao: "GUCY", iata: "CKY", name: "Conakry Gbessia", city: "Conakry", country: "Guinée" },
+        { id: "a12", icao: "DIAP", iata: "ABJ", name: "Abidjan Félix Houphouët-Boigny", city: "Abidjan", country: "Côte d'Ivoire" },
+        { id: "a13", icao: "LTFM", iata: "IST", name: "Istanbul Airport", city: "Istanbul", country: "Turquie" },
+        { id: "a14", icao: "LFPG", iata: "CDG", name: "Paris Charles de Gaulle", city: "Paris", country: "France" },
+        { id: "a15", icao: "DAAG", iata: "ALG", name: "Alger Houari Boumediene", city: "Alger", country: "Algérie" },
+        { id: "a16", icao: "OEMA", iata: "MED", name: "Madinah Prince Mohammad Bin Abdulaziz", city: "Madinah", country: "Arabie Saoudite" },
     ];
-    for (const a of defaults) {
-        await addDoc(airportsCol, { ...a, createdAt: new Date().toISOString() });
-    }
 }
 
 async function loadFormatConfig() {
     try {
-        const snap = await getDocs(collection(db, 'admin_config'));
-        if (!snap.empty) {
-            const data = snap.docs.find(d => d.id === 'main');
-            if (data) {
-                formatCfg = { ...formatCfg, ...data.data() };
-            }
+        const snap = await getDoc(configDoc());
+        if (snap.exists()) {
+            const d = snap.data();
+            if (d.formatCfg) formatCfg = { ...formatCfg, ...d.formatCfg };
         }
         applyFormatToUI();
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error('Config error:', e); }
 }
 
 // ────────────────────────────────────────
@@ -1639,19 +1629,21 @@ window.saveAirline = async function() {
 
     try {
         if (id) {
-            await updateDoc(doc(db, 'admin_airlines', id), data);
+            const idx = airlines.findIndex(a => a.id === id);
+            if (idx !== -1) airlines[idx] = { ...airlines[idx], ...data };
             showNotif(`Compagnie "${name}" mise à jour`, 'success');
             logActivity(`Modification compagnie: ${name}`, 'edit');
         } else {
-            data.createdAt = new Date().toISOString();
-            await addDoc(airlinesCol, data);
+            data.id = 'a_' + Date.now();
+            airlines.push(data);
             showNotif(`Compagnie "${name}" ajoutée`, 'success');
             logActivity(`Ajout compagnie: ${name}`, 'add');
         }
+        await setDoc(airlinesDoc(), { list: airlines });
         closeModal('airlineModal');
-        await loadAirlines();
+        airlines.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+        renderAirlines();
         updateDashboard();
-        // Sync to main app
         syncToMainApp();
     } catch(e) {
         console.error(e);
@@ -1696,17 +1688,20 @@ window.saveAirport = async function() {
 
     try {
         if (id) {
-            await updateDoc(doc(db, 'admin_airports', id), data);
+            const idx = airports.findIndex(a => a.id === id);
+            if (idx !== -1) airports[idx] = { ...airports[idx], ...data };
             showNotif(`Aéroport "${icao}" mis à jour`, 'success');
             logActivity(`Modification aéroport: ${icao} - ${name}`, 'edit');
         } else {
-            data.createdAt = new Date().toISOString();
-            await addDoc(airportsCol, data);
+            data.id = 'ap_' + Date.now();
+            airports.push(data);
             showNotif(`Aéroport "${icao}" ajouté`, 'success');
             logActivity(`Ajout aéroport: ${icao} - ${name}`, 'add');
         }
+        await setDoc(airportsDoc(), { list: airports });
         closeModal('airportModal');
-        await loadAirports();
+        airports.sort((a,b) => (a.icao||'').localeCompare(b.icao||''));
+        renderAirports();
         updateDashboard();
         syncToMainApp();
     } catch(e) {
@@ -1726,13 +1721,18 @@ window.confirmDelete = function(type, id, name) {
 
 async function doDelete(type, id, name) {
     try {
-        const colPath = type === 'airline' ? 'admin_airlines' : 'admin_airports';
-        await deleteDoc(doc(db, colPath, id));
+        if (type === 'airline') {
+            airlines = airlines.filter(a => a.id !== id);
+            await setDoc(airlinesDoc(), { list: airlines });
+            renderAirlines();
+        } else {
+            airports = airports.filter(a => a.id !== id);
+            await setDoc(airportsDoc(), { list: airports });
+            renderAirports();
+        }
         showNotif(`"${name}" supprimé`, 'success');
         logActivity(`Suppression ${type}: ${name}`, 'delete');
         closeModal('confirmModal');
-        if (type === 'airline') { await loadAirlines(); }
-        else { await loadAirports(); }
         updateDashboard();
         syncToMainApp();
     } catch(e) {
@@ -1783,7 +1783,7 @@ window.saveFormatConfig = async function() {
         updatedAt: new Date().toISOString()
     };
     try {
-        await setDoc(configDoc(), cfg);
+        await setDoc(configDoc(), { formatCfg: cfg });
         formatCfg = cfg;
         showNotif('Configuration du format enregistrée ✓', 'success');
         logActivity(`Format mis à jour: ${cfg.prefix}${cfg.separator}${'0'.repeat(cfg.length)}`, 'edit');
@@ -1865,9 +1865,7 @@ async function logActivity(msg, type) {
     activities.unshift(entry);
     if (activities.length > 20) activities.pop();
     renderActivity();
-    try {
-        await addDoc(activityCol, { ...entry, timestamp: new Date().toISOString() });
-    } catch(e) {}
+    // activity log in memory only
 }
 
 function renderActivity() {
@@ -1887,15 +1885,7 @@ function renderActivity() {
 // SYNC TO MAIN APP
 // ────────────────────────────────────────
 async function syncToMainApp() {
-    // Write a sync document that main app.js can read
-    try {
-        await setDoc(doc(db, 'admin_config', 'sync'), {
-            airlines: airlines.map(a => ({ name: a.name, prefix: a.prefix, iata: a.iata, color: a.color })),
-            airports: airports.map(a => ({ icao: a.icao, iata: a.iata, name: a.name })),
-            format: formatCfg,
-            syncedAt: new Date().toISOString()
-        });
-    } catch(e) { console.error('Sync error:', e); }
+    // Already saved in airlinesDoc/airportsDoc/configDoc
 }
 
 // ────────────────────────────────────────
