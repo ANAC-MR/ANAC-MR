@@ -380,84 +380,139 @@ function getBody(em) {
 
 // ── PARSE LDM/MVT TEXT ──
 function parseLDM(em) {
-  const subject = getHeader(em, 'Subject') || '';
-  const from    = getHeader(em, 'From')    || '';
-  const dateHdr = getHeader(em, 'Date')    || '';
-  const body    = getBody(em);
-  const text    = body || subject;
-
-  // Detect type
-  const type = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
-
-  // Parse date received
+  const subject  = getHeader(em, 'Subject') || '';
+  const from     = getHeader(em, 'From')    || '';
+  const dateHdr  = getHeader(em, 'Date')    || '';
+  const body     = getBody(em);
+  const text     = body || subject;
+  const type     = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
   let dateReceived = '';
   try { dateReceived = new Date(dateHdr).toISOString().split('T')[0]; } catch {}
-
-  const p = extractFields(text);
-
-  return {
-    id: em.id,
-    type, subject, from,
-    date: dateReceived,
-    rawText: text.trim(),
-    parsed: p
-  };
+  const p = extractFields(text, dateReceived);
+  return { id: em.id, type, subject, from, date: dateReceived, rawText: text.trim(), parsed: p };
 }
 
-function extractFields(text) {
+function extractFields(text, dateReceived) {
   const p = {};
-  const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
+  // Normalize: remove carriage returns, collapse spaces
+  const lines = text.replace(/\r/g,'').split('\n').map(l => l.trim()).filter(Boolean);
 
-  // Flight number + registration from first LDM line
-  // Pattern: LDM\nL6212/21.5TCLJ.C16Y144.2/5
-  // or: AF598/22.FHTYP.J34W24Y266.2/10
-  const ldmLine = lines.find(l => /^[A-Z]{2}\d{2,4}\/\d{2}/.test(l) || /^[A-Z0-9]{4,8}\/\d{2}\.[A-Z0-9]+/.test(l));
-  if (ldmLine) {
-    const parts = ldmLine.split('.');
-    // First part: FLIGHTNUM/DATE
-    const fp = parts[0].split('/');
-    p.flightNumber = fp[0] ? fp[0].replace(/\s/g,'') : '';
-    // Day of flight
-    const day = fp[1] ? fp[1].trim() : '';
-    // Registration is second part
-    p.registration = parts[1] ? parts[1].replace(/[^A-Z0-9]/g,'') : '';
-    // Build date from received date + day
-    // We'll keep date from received email for now
-    p.date = '';
+  // ── 1. FLIGHT LINE: AF598/22.FHTYP.J34W24Y266.2/10
+  //                    L6212/21.5TCLJ.C16Y144.2/5
+  const flightLineRx = /^([A-Z]{1,2}\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,6})\./;
+  const flightLine = lines.find(l => flightLineRx.test(l));
+  if (flightLine) {
+    const m = flightLine.match(flightLineRx);
+    p.flightNumber = m[1];
+    const day      = m[2].padStart(2,'0');
+    p.registration = m[3];
+    // Build flight date: use day from LDM + month/year from email received date
+    if (dateReceived) {
+      const [yr, mo] = dateReceived.split('-');
+      p.date = `${yr}-${mo}-${day}`;
+    } else {
+      p.date = '';
+    }
   }
 
-  // PAX line: .PAX/24/20/71.PAD/0/0/1 or PAX/7/3/47
-  const paxMatch = text.match(/PAX\/(\d+)\/(\d+)\/(\d+)/i);
-  if (paxMatch) {
-    p.paxAdults   = parseInt(paxMatch[1]) || 0;
-    p.paxChildren = parseInt(paxMatch[2]) || 0;
-    p.paxBabies   = parseInt(paxMatch[3]) || 0;
-    p.totalPax    = p.paxAdults + p.paxChildren;
+  // ── 2. ROUTE: NKC = Nouakchott Oumtounsy (base airport)
+  // Logic:
+  //   - NKC only → simple ARR or DEP
+  //   - 2 other cities + NKC → stopover at NKC (transit)
+  //   - 2 other cities without NKC → DEP from NKC, stopover at first, dest = last
+  const BASE = 'NKC';
+  const routeLines = lines.filter(l => /^-[A-Z]{2,4}[./]/.test(l));
+  const stations = routeLines.map(l => l.match(/^-([A-Z]{2,4})/)?.[1]).filter(Boolean);
+
+  // Also collect SI stations
+  const siStations = [];
+  const siAllRx = /SI\s+([A-Z]{2,4})\s+BAG/gi;
+  let siAll;
+  while ((siAll = siAllRx.exec(text)) !== null) siStations.push(siAll[1]);
+
+  // Merge all stations keeping order, deduplicated
+  const allStations = [...new Set([...stations, ...siStations])];
+  const otherStations = allStations.filter(s => s !== BASE);
+
+  if (otherStations.length >= 2) {
+    if (allStations.includes(BASE)) {
+      // NKC is the stopover: e.g. DSS → NKC(escale) → ABJ
+      p.from     = otherStations[0];
+      p.to       = otherStations[otherStations.length - 1];
+      p.stopover = BASE;
+      p.type     = 'TRANSIT';
+    } else {
+      // 2 cities no NKC: depart NKC, stopover first city, dest last
+      p.from     = BASE;
+      p.stopover = otherStations[0];
+      p.to       = otherStations[otherStations.length - 1];
+      p.type     = 'DEP';
+    }
+  } else if (allStations.includes(BASE)) {
+    p.from = otherStations[0] || '';
+    p.to   = BASE;
+    p.type = 'ARR';
+  } else {
+    p.from = BASE;
+    p.to   = otherStations[0] || '';
+    p.type = 'DEP';
   }
 
-  // Route from -DSS or -CDG lines: -DSS.41/0.0.T693... or -CDG.132/155...
-  const routeLines = lines.filter(l => /^-[A-Z]{3}\./.test(l) || /^-[A-Z]{3,4}\.\d/.test(l));
-  if (routeLines.length > 0) {
-    // stations mentioned = from/to
-    const stations = routeLines.map(l => l.match(/^-([A-Z]{3,4})\./)?.[1]).filter(Boolean);
-    if (stations.length >= 2) { p.from = stations[0]; p.to = stations[1]; }
-    else if (stations.length === 1) { p.from = stations[0]; }
+  // ── 3 & 4. PAX + BABIES from station lines
+  // Format -CODE.X/X/X   → last = babies, sum rest = pax  (3 numbers)
+  // Format -CODE.X/X/X/X → last = babies, sum rest = pax  (4 numbers)
+  // We sum PAX and babies across ALL station lines (not just NKC)
+  let totalPax    = 0;
+  let totalBabies = 0;
+  let foundPax    = false;
+
+  routeLines.forEach(line => {
+    const numMatch = line.match(/\.(\d+(?:\/\d+)+)/);
+    if (!numMatch) return;
+    const nums = numMatch[1].split('/').map(Number);
+    if (nums.length >= 2) {
+      totalBabies = Math.max(totalBabies, nums[nums.length - 1]); // take max babies across lines
+      const linePax = nums.slice(0, -1).reduce((a,b) => a+b, 0);
+      if (linePax > totalPax) { totalPax = linePax; foundPax = true; } // take max pax line
+    }
+  });
+
+  // Fallback: .PAX/X/X/X line if route lines had no pax
+  if (!foundPax) {
+    const paxRx = /\.?PAX\/(\d+(?:\/\d+)+)/i;
+    const paxM  = text.match(paxRx);
+    if (paxM) {
+      const nums = paxM[1].split('/').map(Number);
+      totalBabies = nums[nums.length - 1];
+      totalPax    = nums.slice(0,-1).reduce((a,b)=>a+b,0);
+    }
   }
 
-  // SI line: SI CKY  BAG 83  or  SI CDG  BAG 1361
-  const siMatch = text.match(/SI\s+([A-Z]{3,4})\s+BAG\s+(\d+)/i);
-  if (siMatch) {
-    p.to   = p.to   || siMatch[1];
-    p.bags = parseInt(siMatch[2]) || 0;
+  // MVT format: PAX followed by a simple number (no slashes)
+  if (!foundPax) {
+    const mvtPax = text.match(/\bPAX\s+(\d+)/i);
+    if (mvtPax) { totalPax = parseInt(mvtPax[1]); totalBabies = 0; }
   }
 
-  // FUEL IN TANKS
-  const fuelMatch = text.match(/FUEL IN TANKS\s+(\d+)/i);
-  if (fuelMatch) p.fuel = parseInt(fuelMatch[1]);
+  p.totalPax  = totalPax;
+  p.paxBabies = totalBabies;
 
-  // Baggage weight from T#### pattern
-  const tMatch = text.match(/\.T(\d{3,5})\./);
-  if (tMatch) p.bagWeight = parseInt(tMatch[1]);
+  // ── 5. BAGS: take max from all SI lines
+  let maxBags = 0;
+  const siRx2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi;
+  let siM2;
+  while ((siM2 = siRx2.exec(text)) !== null) {
+    maxBags = Math.max(maxBags, parseInt(siM2[1]) || 0);
+  }
+  p.bags = maxBags;
+
+  // ── 6. FUEL IN TANKS
+  const fuelM = text.match(/FUEL IN TANKS\s+(\d+)/i);
+  if (fuelM) p.fuel = parseInt(fuelM[1]);
+
+  // ── 7. Baggage weight T#### (e.g. T8189)
+  const tM = text.match(/\.T(\d{4,5})[\.\s\/]/);
+  if (tM) p.bagWeight = parseInt(tM[1]);
 
   return p;
 }
