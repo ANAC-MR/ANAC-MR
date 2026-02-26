@@ -373,11 +373,7 @@
                     <div class="chart-wrap"><canvas id="chartPaxMois"></canvas></div>
                 </div>
 
-                <div class="chart-card">
-                    <h3>🔄 Répartition DEP / ARR</h3>
-                    <div class="chart-subtitle">Proportion départs et arrivées</div>
-                    <div class="chart-wrap"><canvas id="chartDepArr"></canvas></div>
-                </div>
+
 
                 <div class="chart-card">
                     <h3>🏆 Top compagnies</h3>
@@ -608,14 +604,13 @@ function refreshCharts() {
     const pax  = flt.reduce((s,f) => s + (+f.passengers||0) + (+f.babies||0), 0);
     const comp = new Set(flt.map(f=>f.company).filter(Boolean));
     const dest = new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(Boolean));
-    const dep  = flt.filter(f=>f.type==='DEP').length;
-    const arr  = flt.filter(f=>f.type==='ARR').length;
+
 
     document.getElementById('kpi-vols').textContent      = flt.length;
     document.getElementById('kpi-pax').textContent       = pax.toLocaleString('fr-FR');
     document.getElementById('kpi-comp').textContent      = comp.size;
     document.getElementById('kpi-dest').textContent      = dest.size;
-    document.getElementById('kpi-vols-sub').textContent  = `${dep} départs · ${arr} arrivées`;
+    document.getElementById('kpi-vols-sub').textContent  = '';
     document.getElementById('kpi-pax-sub').textContent   = `dont ${flt.reduce((s,f)=>s+(+f.babies||0),0)} bébés`;
     document.getElementById('kpi-comp-sub').textContent  = [...comp].slice(0,2).join(', ') + (comp.size>2?'…':'');
     document.getElementById('kpi-dest-sub').textContent  = `codes ICAO distincts`;
@@ -645,17 +640,7 @@ function refreshCharts() {
         options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
     });
 
-    // Chart 3 — DEP / ARR
-    kill('d'); charts['d'] = new Chart(document.getElementById('chartDepArr'), {
-        type:'doughnut', data:{
-            labels:['Départs','Arrivées'],
-            datasets:[{ data:[dep,arr], backgroundColor:[PALETTE[0],PALETTE[3]], borderWidth:0 }]
-        },
-        options:{ responsive:true, maintainAspectRatio:false, cutout:'65%',
-            plugins:{ legend:{position:'bottom'},
-                tooltip:{callbacks:{ label:c=>`${c.label}: ${c.raw} (${flt.length?Math.round(c.raw/flt.length*100):0}%)` }} }
-        }
-    });
+
 
     // Chart 4 — Top compagnies
     kill('c'); const cc={};
@@ -753,7 +738,7 @@ async function exportPDF() {
         const chartList = [
             {id:'chartVolsMois',    title:'Vols par mois',                full:true},
             {id:'chartPaxMois',     title:'Passagers par mois',           full:true},
-            {id:'chartDepArr',      title:'Répartition DEP / ARR',        full:false},
+
             {id:'chartTopComp',     title:'Top compagnies',               full:false},
             {id:'chartComparaison', title:'Comparaison mois en mois',     full:true},
             {id:'chartDestinations',title:'Destinations fréquentées',     full:true},
@@ -893,8 +878,6 @@ function runComparison() {
     const stats = (flights) => ({
         vols: flights.length,
         pax:  flights.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0),
-        dep:  flights.filter(f=>f.type==='DEP').length,
-        arr:  flights.filter(f=>f.type==='ARR').length,
         imm:  new Set(flights.map(f=>f.registration).filter(Boolean)).size,
         monthly: monthly(flights),
     });
@@ -937,17 +920,7 @@ function runComparison() {
                 ${winner(sA.pax,sB.pax)==='b'?'<span class="winner-badge">LEADER</span>':''}
             </div>
 
-            <div class="compare-kpi a">
-                <div class="ck-val">${sA.dep}</div>
-                <div class="ck-label">Départs</div>
-            </div>
-            <div class="compare-kpi neutral" style="display:flex;align-items:center;justify-content:center;">
-                <div style="font-size:12px;font-weight:700;color:#718096;text-transform:uppercase;">Départs</div>
-            </div>
-            <div class="compare-kpi b">
-                <div class="ck-val">${sB.dep}</div>
-                <div class="ck-label">Départs</div>
-            </div>
+
         </div>
 
         <div class="compare-chart-row" style="margin-top:16px;">
@@ -1005,11 +978,9 @@ function runRouteComparison() {
     const byComp = {};
     all.forEach(f => {
         if (!f.company) return;
-        if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0, dep:0, arr:0 };
+        if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0 };
         byComp[f.company].vols++;
         byComp[f.company].pax  += (+f.passengers||0) + (+f.babies||0);
-        if (f.type==='DEP') byComp[f.company].dep++;
-        if (f.type==='ARR') byComp[f.company].arr++;
     });
 
     const sorted = Object.entries(byComp).sort((a,b)=>b[1].vols-a[1].vols);
@@ -1030,8 +1001,7 @@ function runRouteComparison() {
                     <th>Vols</th>
                     <th>Part</th>
                     <th>PAX</th>
-                    <th>DEP</th>
-                    <th>ARR</th>
+
                 </tr>
             </thead>
             <tbody>
@@ -1047,8 +1017,7 @@ function runRouteComparison() {
                         </td>
                         <td style="font-weight:600;color:#2B5A8E;">${Math.round(s.vols/all.length*100)}%</td>
                         <td>${s.pax.toLocaleString('fr-FR')}</td>
-                        <td>${s.dep}</td>
-                        <td>${s.arr}</td>
+
                     </tr>
                 `).join('')}
             </tbody>
