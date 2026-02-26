@@ -1332,9 +1332,9 @@ const db    = getFirestore(fbApp);
 
 // Collections
 // Tout dans la collection 'flights' existante, docs spéciaux avec prefix __
-const airlinesDoc  = () => doc(db, 'flights', '__admin_airlines__');
-const airportsDoc  = () => doc(db, 'flights', '__admin_airports__');
-const configDoc    = () => doc(db, 'flights', '__admin_config__');
+const airlinesDoc  = () => doc(db, 'flights', 'cfg-airlines');
+const airportsDoc  = () => doc(db, 'flights', 'cfg-airports');
+const configDoc    = () => doc(db, 'flights', 'cfg-format');
 
 // ─── AUTH CONFIG (stocké dans localStorage + Firebase) ──
 const AUTH_KEY   = 'anac_admin_auth';
