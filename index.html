@@ -486,11 +486,18 @@
                 <label for="fTo">Arrivée à</label>
                 <select id="fTo" required></select>
             </div>
+            <div class="form-group" id="stopoverGroup" style="display:none;">
+                <label for="fStopover">✈ Escale (optionnel)</label>
+                <select id="fStopover">
+                    <option value="">— Aucune escale —</option>
+                </select>
+            </div>
             <div class="form-group">
                 <label for="fType">Type du vol</label>
                 <select id="fType" required>
                     <option value="DEP">Départ</option>
                     <option value="ARR">Arrivée</option>
+                    <option value="TRANSIT">Transit (escale NKC)</option>
                 </select>
             </div>
             <div class="form-group">
@@ -784,6 +791,12 @@ async function exportPDF() {
     } finally {
         btn.innerHTML = '📄 Exporter en PDF'; btn.disabled = false;
     }
+}
+
+function toggleStopoverField() {
+    const type = document.getElementById('fType').value;
+    const grp  = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
 }
 
 // Called from app.js when flights are loaded/updated
