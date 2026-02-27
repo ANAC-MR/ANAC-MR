@@ -34,38 +34,65 @@ const AIRLINE_PREFIXES = {
 // AÉROPORT D'ORIGINE PAR COMPAGNIE
 // (Quand DEP: De=NKC, À=home; Quand ARR: De=home, À=NKC)
 // ===============================
+// Aéroport domicile par compagnie (ICAO)
+// NKC = GQNO est toujours la BASE
 const COMPANY_HOME_AIRPORT = {
-    "Mauritania Airlines": "NKC",
-    "Air Sénégal":         "DSS",
-    "Turkish Airlines":    "IST",
-    "Binter":              "LPA",
-    "Air Algérie":         "ALG",
-    "ASKY":                "LFW",
-    "Royal Air Maroc":     "CMN",
-    "Tunisair":            "TUN",
-    "Air France":          "CDG"
+    "Mauritania Airlines": "",      // Multi-destinations (voir COMPANY_DESTINATIONS)
+    "Air Sénégal":         "GOBD",  // Dakar
+    "Turkish Airlines":    "LTFM",  // Istanbul
+    "Binter":              "GCLP",  // Las Palmas
+    "Air Algérie":         "DAAG",  // Alger
+    "ASKY":                "DBBP",  // Lomé
+    "Royal Air Maroc":     "GMMN",  // Casablanca
+    "Tunisair":            "DTTA",  // Tunis
+    "Air France":          "LFPG"   // Paris CDG
+};
+
+// Destinations autorisées par compagnie (pour filtrer le select À)
+// Mauritania Airlines vole vers toutes ces destinations depuis NKC
+const COMPANY_DESTINATIONS = {
+    "Mauritania Airlines": [
+        "DAAG", // Alger
+        "DTTA", // Tunis
+        "GOBD", // Dakar
+        "GABS", // Bamako
+        "GCLP", // Las Palmas
+        "GUCY", // Conakry
+        "GMMN", // Casablanca
+        "GQPP", // Nouadhibou
+        "GQNI", // Néma
+        "GQPF", // Kiffa
+        "GQPZ", // Zoueratt
+    ]
+    // Les autres compagnies ont un seul aéroport domicile
 };
 
 // ===============================
 // LISTE DES DESTINATIONS (ICAO)
 // ===============================
 const DESTINATIONS = [
-    { name: "Nouakchott Oumtounsy", code: "GQNO" },
-    { name: "Nouadhibou International", code: "GQPP" },
-    { name: "Zoueratt International", code: "GQPZ" },
-    { name: "N�ma Airport", code: "GQNI" },
-    { name: "Kiffa Airport", code: "GQPF" },
-    { name: "Casablanca Mohammed V", code: "GMMN" },
-    { name: "Tunis Carthage", code: "DTTA" },
-    { name: "Dakar Blaise Diagne", code: "GOBD" },
-    { name: "Las Palmas Gran Canaria", code: "GCLP" },
-    { name: "Bamako Modibo Keita", code: "GABS" },
-    { name: "Conakry Gbessia", code: "GUCY" },
-    { name: "Abidjan F�lix Houphou�t-Boigny", code: "DIAP" },
-    { name: "Istanbul Airport", code: "LTFM" },
-    { name: "Paris Charles de Gaulle", code: "LFPG" },
+    // ── Mauritanie ──
+    { name: "Nouakchott Oumtounsy",    code: "GQNO" },
+    { name: "Nouadhibou",              code: "GQPP" },
+    { name: "Néma",                    code: "GQNI" },
+    { name: "Kiffa",                   code: "GQPF" },
+    { name: "Zoueratt",                code: "GQPZ" },
+    // ── Afrique du Nord ──
     { name: "Alger Houari Boumediene", code: "DAAG" },
-    { name: "Madinah Prince Mohammad Bin Abdulaziz", code: "OEMA" }
+    { name: "Tunis Carthage",          code: "DTTA" },
+    { name: "Casablanca Mohammed V",   code: "GMMN" },
+    // ── Afrique de l'Ouest ──
+    { name: "Dakar Blaise Diagne",     code: "GOBD" },
+    { name: "Bamako Modibo Keita",     code: "GABS" },
+    { name: "Conakry Gbessia",         code: "GUCY" },
+    { name: "Abidjan Houphouet",       code: "DIAP" },
+    { name: "Lome Gnassingbe",         code: "DBBP" },
+    // ── Europe & Canaries ──
+    { name: "Las Palmas Gran Canaria", code: "GCLP" },
+    { name: "Paris Charles de Gaulle", code: "LFPG" },
+    // ── Moyen-Orient ──
+    { name: "Istanbul Airport",        code: "LTFM" },
+    { name: "Madinah Mohammad Abdulaziz", code: "OEMA" },
 ];
 
 // ============================================
@@ -341,7 +368,7 @@ function openModal(flightId = null) {
                 elements.fCompany.value = flight.company;
                 elements.fImm.value = flight.registration;
                 elements.fVol.value = flight.flightNumber;
-                elements.fType.value = flight.type;
+                if (window.selectType) window.selectType(flight.type || 'DEP'); else { const fi=document.getElementById('fType'); if(fi) fi.value=flight.type; }
                 if (flight.from) elements.fFrom.value = flight.from;
                 if (flight.to) elements.fTo.value = flight.to;
                 elements.fPassengers.value = flight.passengers;
@@ -367,19 +394,22 @@ function openModal(flightId = null) {
             
             // Set default values
             elements.fCompany.value = AIRLINES[0];
-            elements.fType.value = 'DEP';
             elements.fPassengers.value = '0';
             elements.fBabies.value = '0';
+            elements.fImm.value = '';
+            elements.fVol.value = '';
             if (elements.hasStopover) elements.hasStopover.checked = false;
-            if (elements.fStopover) elements.fStopover.value = '';
             if (elements.fStopoverPax) elements.fStopoverPax.value = 0;
             if (elements.fStopoverBabies) elements.fStopoverBabies.value = 0;
             const sg0 = document.getElementById('stopoverGroup');
             if (sg0) sg0.style.display = 'none';
             
             elements.fDate.focus();
-            updateFlightNumberPrefix();
-            setTimeout(updateRouteByType, 80);
+            // Active bouton DEP + met à jour tout selon la compagnie
+            setTimeout(() => {
+                if (window.selectType) window.selectType('DEP');
+                updateFlightNumberPrefix();
+            }, 60);
         }
     });
 }
@@ -574,41 +604,90 @@ function updateFlightNumberPrefix() {
     updateVolField(company);
 }
 
-// Auto-fill From/To when type or company changes
+// Auto-fill From/To + filtrer le select À selon compagnie + type
+// NKC (GQNO) est toujours la BASE
 function updateRouteByType() {
-    const company = elements.fCompany.value;
-    const type    = elements.fType ? elements.fType.value : 'DEP';
-    const NKC     = 'GQNO'; // Nouakchott Oumtounsy
-    const homeCode = COMPANY_HOME_AIRPORT[company] || '';
+    const company  = elements.fCompany ? elements.fCompany.value : '';
+    const type     = elements.fType    ? elements.fType.value    : 'DEP';
+    const NKC_ICAO = 'GQNO';
 
-    // Find airport option values (ICAO codes stored as option values)
-    // fFrom and fTo are selects populated with airport names
-    // We need to match by code in the option text or value
-    const setSelectByCode = (sel, code) => {
-        if (!sel) return;
-        // Try exact value match first
-        for (const opt of sel.options) {
-            if (opt.value === code || opt.value.includes(code) || opt.text.includes(code)) {
-                sel.value = opt.value;
-                return;
-            }
+    const homeCode = COMPANY_HOME_AIRPORT[company] || '';
+    const multiDests = COMPANY_DESTINATIONS[company] || null;
+
+    // Rebuild the fTo select options filtered for this company
+    const rebuildToSelect = (allowedCodes) => {
+        if (!elements.fTo) return;
+        const currentVal = elements.fTo.value;
+        // Clear and repopulate
+        elements.fTo.innerHTML = '';
+        const allDests = (adminConfig && adminConfig.airports && adminConfig.airports.length)
+            ? adminConfig.airports.map(a => ({ code: a.icao, name: a.name }))
+            : DESTINATIONS;
+        allDests.forEach(dest => {
+            if (allowedCodes && !allowedCodes.includes(dest.code)) return;
+            const opt = document.createElement('option');
+            opt.value = dest.code;
+            opt.textContent = dest.code + ' – ' + dest.name;
+            elements.fTo.appendChild(opt);
+        });
+        // Restore selection if still valid, else pick first
+        if (currentVal && [...elements.fTo.options].some(o => o.value === currentVal)) {
+            elements.fTo.value = currentVal;
+        } else if (elements.fTo.options.length > 0) {
+            elements.fTo.value = elements.fTo.options[0].value;
+        }
+    };
+
+    // Rebuild the fFrom select options filtered for this company
+    const rebuildFromSelect = (allowedCodes) => {
+        if (!elements.fFrom) return;
+        const currentVal = elements.fFrom.value;
+        elements.fFrom.innerHTML = '';
+        const allDests = (adminConfig && adminConfig.airports && adminConfig.airports.length)
+            ? adminConfig.airports.map(a => ({ code: a.icao, name: a.name }))
+            : DESTINATIONS;
+        allDests.forEach(dest => {
+            if (allowedCodes && !allowedCodes.includes(dest.code)) return;
+            const opt = document.createElement('option');
+            opt.value = dest.code;
+            opt.textContent = dest.code + ' – ' + dest.name;
+            elements.fFrom.appendChild(opt);
+        });
+        if (currentVal && [...elements.fFrom.options].some(o => o.value === currentVal)) {
+            elements.fFrom.value = currentVal;
+        } else if (elements.fFrom.options.length > 0) {
+            elements.fFrom.value = elements.fFrom.options[0].value;
         }
     };
 
     if (type === 'DEP') {
-        // Departure: FROM = NKC, TO = company home
-        setSelectByCode(elements.fFrom, 'NKC');
-        if (homeCode) setSelectByCode(elements.fTo, homeCode);
+        // De = NKC (fixe), À = destinations de la compagnie
+        if (elements.fFrom) {
+            // fFrom = toutes destinations (NKC sera sélectionné)
+            rebuildFromSelect(null);
+            elements.fFrom.value = NKC_ICAO;
+        }
+        if (multiDests) {
+            // Mauritania Airlines: À = ses destinations uniquement
+            rebuildToSelect(multiDests);
+        } else {
+            rebuildToSelect(null);
+            if (elements.fTo && homeCode) elements.fTo.value = homeCode;
+        }
     } else if (type === 'ARR') {
-        // Arrival: FROM = company home, TO = NKC
-        if (homeCode) setSelectByCode(elements.fFrom, homeCode);
-        setSelectByCode(elements.fTo, 'NKC');
+        // À = NKC (fixe), De = aéroport d'origine de la compagnie
+        if (elements.fTo) {
+            rebuildToSelect(null);
+            elements.fTo.value = NKC_ICAO;
+        }
+        if (multiDests) {
+            // Mauritania Airlines: De = ses destinations uniquement
+            rebuildFromSelect(multiDests);
+        } else {
+            rebuildFromSelect(null);
+            if (elements.fFrom && homeCode) elements.fFrom.value = homeCode;
+        }
     }
-
-    // Show/hide stopover
-    const grp = document.getElementById('stopoverGroup');
-    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
-    if (elements.fStopover && type !== 'TRANSIT') elements.fStopover.value = '';
 }
 
 function updateImmField(company) {
@@ -1290,6 +1369,24 @@ window.toggleStopoverField = function() {
 };
 
 window.updateRouteByType = updateRouteByType;
+
+// Sélection type DEP/ARR via boutons visuels
+window.selectType = function(type) {
+    const hiddenInput = document.getElementById('fType');
+    if (hiddenInput) hiddenInput.value = type;
+    const btnDEP = document.getElementById('btnDEP');
+    const btnARR = document.getElementById('btnARR');
+    if (btnDEP && btnARR) {
+        if (type === 'DEP') {
+            btnDEP.style.cssText += ';background:#2B5A8E!important;color:#fff!important;border-color:#2B5A8E!important;';
+            btnARR.style.cssText += ';background:#f7fafc!important;color:#718096!important;border-color:#e2e8f0!important;';
+        } else {
+            btnARR.style.cssText += ';background:#2B5A8E!important;color:#fff!important;border-color:#2B5A8E!important;';
+            btnDEP.style.cssText += ';background:#f7fafc!important;color:#718096!important;border-color:#e2e8f0!important;';
+        }
+    }
+    updateRouteByType();
+};
 
 window.app = {
     deleteFlight,
