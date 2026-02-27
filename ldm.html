@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ANAC – Lecteur LDM/MVT</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -187,7 +188,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="hlogo">📨</div>
     <div>
       <div class="htitle">LDM / MVT Reader</div>
-      <div class="hsub">Extraction intelligente des données de vol</div>
+      <div class="hsub">Lecture automatique des LDM/MVT — OCR intégré</div>
     </div>
   </div>
   <div class="nav">
@@ -219,7 +220,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="card">
       <div class="card-title">
         🖼 Importer des images LDM/MVT
-        <span class="ai-badge">IA Claude</span>
+        <span class="ai-badge" style="background:rgba(0,201,141,0.1);border-color:rgba(0,201,141,0.3);color:var(--green);">OCR Local</span>
       </div>
 
       <div class="upload-zone" id="uploadZone"
@@ -241,7 +242,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
       <div class="btn-row">
         <button class="btn btn-gold" id="analyzeBtn" onclick="analyzeAll()" disabled>
-          ✦ Analyser avec l'IA
+          🔍 Lire avec OCR
         </button>
         <button class="btn btn-outline btn-sm" onclick="clearImages()">🗑 Effacer</button>
         <span class="mono" id="imgStatus"></span>
@@ -415,12 +416,11 @@ function clearImages() {
 }
 
 // ══════════════════════════════════════════
-// AI ANALYSIS — call Anthropic API
+// OCR — Tesseract.js (local, gratuit, sans clé)
 // ══════════════════════════════════════════
 async function analyzeAll() {
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> Analyse IA...';
   document.getElementById('imgStatus').textContent = `0 / ${pendingFiles.length} traité(s)`;
 
   let done = 0;
@@ -428,13 +428,37 @@ async function analyzeAll() {
     const f = pendingFiles[i];
     pendingFiles[i].status = 'loading';
     renderFileList();
+
+    // Live progress in status
+    const setProgress = (pct) => {
+      document.getElementById('imgStatus').textContent =
+        `📄 ${f.name} — OCR ${pct}%  (${done}/${pendingFiles.length} terminé)`;
+      const el = document.getElementById(`fi-st-${i}`);
+      if (el) { el.textContent = `⏳ Lecture OCR… ${pct}%`; el.className = 'fi-status loading'; }
+    };
+
     try {
-      const parsed = await analyzeWithClaude(f);
+      btn.innerHTML = `<span class="spin"></span> OCR ${i+1}/${pendingFiles.length}…`;
+      const text = await runOCR(f.dataUrl, setProgress);
+      const today = new Date().toISOString().split('T')[0];
+      const parsed = extractFields(text, today);
+      // Detect LDM vs MVT from OCR text
+      const up = text.toUpperCase();
+      const docType = (up.includes('MVT') && !up.includes('LDM')) ? 'MVT' : 'LDM';
+      parsed.confidence = scoreConfidence(parsed);
+
       pendingFiles[i].status = 'done';
-      results.push(parsed);
+      results.push({
+        id: Date.now() + '_' + Math.random(),
+        source: 'image',
+        docType,
+        fileName: f.name,
+        dataUrl: f.dataUrl,
+        rawText: text.slice(0, 1000),
+        parsed
+      });
       done++;
-      document.getElementById('imgStatus').textContent = `${done} / ${pendingFiles.length} traité(s)`;
-      toast(`✅ ${f.name} analysé`, 'ok');
+      toast(`✅ ${f.name} lu`, 'ok');
     } catch (e) {
       pendingFiles[i].status = 'error';
       toast(`❌ ${f.name} : ${e.message}`, 'err');
@@ -442,95 +466,30 @@ async function analyzeAll() {
     renderFileList();
   }
 
+  document.getElementById('imgStatus').textContent = `${done} / ${pendingFiles.length} traité(s)`;
   btn.disabled = false;
-  btn.innerHTML = '✦ Analyser avec l\'IA';
+  btn.innerHTML = '🔍 Lire avec OCR';
   markDuplicates();
   renderResults();
   updateStats();
 }
 
-async function analyzeWithClaude(fileItem) {
-  // Convert dataUrl to base64
-  const dataUrl = fileItem.dataUrl;
-  const base64  = dataUrl.split(',')[1];
-  const mimeType = fileItem.file.type || 'image/jpeg';
-
-  const prompt = `Tu es un expert en déchiffrage de documents aéronautiques LDM (Load Distribution Message) et MVT (Movement Message).
-
-Analyse cette image et extrait TOUTES les données suivantes au format JSON strict.
-
-Règles d'extraction :
-- N° vol : ex "L6212", "TK762", "AF598"
-- Immatriculation : ex "5TCLJ", "TC-JRI", "F-GKXA" (enlève les tirets/espaces → "5TCLJ")
-- Date : format YYYY-MM-DD (le jour vient du LDM ex "/21" = le 21 du mois de l'email)
-- De/À : codes IATA 3 lettres ex "NKC", "CDG", "DSS"
-- Type : "DEP" si vol part de NKC, "ARR" si vol arrive à NKC, "TRANSIT" si NKC est escale
-- PAX : total passagers adultes + enfants (somme de TOUTES les stations)
-- Bébés : total bébés (somme de TOUTES les stations)
-- Compagnie : déduis depuis le préfixe du N° vol (L6=Mauritania Airlines, TK=Turkish, AF=Air France, AT=Royal Air Maroc, TU=Tunisair, AH=Air Algérie, NT=Binter, KP=ASKY, HC=Air Sénégal)
-- Escale : aéroport intermédiaire si présent (code IATA)
-- Source : "LDM" ou "MVT"
-- Confiance : "haute", "moyenne" ou "faible" selon ta certitude
-
-Réponds UNIQUEMENT avec ce JSON, sans texte avant ou après :
-{
-  "source": "LDM",
-  "flightNumber": "",
-  "registration": "",
-  "date": "",
-  "company": "",
-  "from": "",
-  "to": "",
-  "type": "DEP",
-  "passengers": 0,
-  "babies": 0,
-  "stopover": "",
-  "stopoverPax": 0,
-  "stopoverBabies": 0,
-  "confidence": "haute",
-  "rawNotes": ""
-}`;
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-          { type: 'text', text: prompt }
-        ]
-      }]
-    })
+async function runOCR(dataUrl, onProgress) {
+  const worker = await Tesseract.createWorker('eng', 1, {
+    logger: m => { if (m.status === 'recognizing text') onProgress(Math.round(m.progress * 100)); }
   });
-
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error?.message || `HTTP ${response.status}`);
-  }
-
-  const data = await response.json();
-  const text = data.content?.[0]?.text || '';
-
-  // Parse JSON from response
-  const clean = text.replace(/```json|```/g, '').trim();
-  let parsed;
-  try { parsed = JSON.parse(clean); }
-  catch { throw new Error('Réponse IA illisible'); }
-
-  return {
-    id: Date.now() + '_' + Math.random(),
-    source: 'image',
-    docType: parsed.source || 'LDM',
-    fileName: fileItem.name,
-    dataUrl: fileItem.dataUrl,
-    parsed,
-    _imported: false
-  };
+  const { data: { text } } = await worker.recognize(dataUrl);
+  await worker.terminate();
+  return text;
 }
+
+function scoreConfidence(p) {
+  if (p.flightNumber && p.from && p.to && p.date) return 'haute';
+  if (p.flightNumber && (p.from || p.to)) return 'moyenne';
+  return 'faible';
+}
+
+
 
 // ══════════════════════════════════════════
 // TEXT PARSER
@@ -708,7 +667,7 @@ function renderResults() {
         <div class="parsed-sec">
           <div class="parsed-lbl">
             ✦ Données extraites
-            ${r.source === 'image' ? '<span class="ai-badge">IA Claude</span>' : ''}
+            ${r.source === 'image' ? '<span class="ai-badge" style="background:rgba(0,201,141,0.1);border-color:rgba(0,201,141,0.3);color:var(--green);">OCR Local</span>' : ''}
           </div>
           <div class="pgrid">
             <div class="pf"><label>N° Vol</label><input id="r${i}-fn" value="${esc(p.flightNumber||'')}" oninput="this.value=this.value.toUpperCase()"></div>
