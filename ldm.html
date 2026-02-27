@@ -501,6 +501,21 @@ function extractFields(text, dateReceived) {
   p.totalPax  = totalPax;
   p.paxBabies = totalBabies;
 
+  // Stopover PAX: from the stopover station line specifically
+  if (p.stopover && routeLines.length >= 1) {
+    const stopLine = routeLines.find(l => l.startsWith('-'+p.stopover));
+    if (stopLine) {
+      const nm = stopLine.match(/\.(\d+(?:\/\d+)+)/);
+      if (nm) {
+        const nums = nm[1].split('/').map(Number);
+        if (nums.length >= 2) {
+          p.stopoverBabies = nums[nums.length - 1];
+          p.stopoverPax    = nums.slice(0, -1).reduce((a,b) => a+b, 0);
+        }
+      }
+    }
+  }
+
   // ── 5. BAGS: take max from all SI lines
   let maxBags = 0;
   const siRx2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi;
@@ -552,12 +567,28 @@ function renderEmails() {
             <div class="pf"><label>N° Vol</label><input id="p${i}-fn" value="${esc(p.flightNumber||'')}" placeholder="ex: L6212" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>Immatriculation</label><input id="p${i}-rg" value="${esc(p.registration||'')}" placeholder="ex: 5TCLJ" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>Date du vol</label><input type="date" id="p${i}-dt" value="${p.date||em.date||''}"></div>
+            <div class="pf"><label>Compagnie</label><input id="p${i}-co" value="${esc(detectCompany(p.flightNumber||''))}"></div>
+            <div class="pf"><label>Type</label>
+              <select id="p${i}-ty" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:13px;padding:5px 8px;border-radius:6px;width:100%;outline:none;">
+                <option value="DEP" ${(p.type==='DEP'||!p.type)?'selected':''}>Départ</option>
+                <option value="ARR" ${p.type==='ARR'?'selected':''}>Arrivée</option>
+                <option value="TRANSIT" ${p.type==='TRANSIT'?'selected':''}>Transit</option>
+              </select>
+            </div>
             <div class="pf"><label>Départ</label><input id="p${i}-fr" value="${esc(p.from||'')}" placeholder="ex: NKC" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>Arrivée</label><input id="p${i}-to" value="${esc(p.to||'')}" placeholder="ex: CDG" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>PAX (adultes+enfants)</label><input type="number" id="p${i}-px" value="${p.totalPax||p.paxAdults||0}" min="0"></div>
-            <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
-            <div class="pf"><label>Bagages (pièces)</label><input type="number" id="p${i}-bg" value="${p.bags||0}" min="0"></div>
+            <div class="pf"><label>PAX Total</label><input type="number" id="p${i}-px" value="${p.totalPax||0}" min="0"></div>
+            <div class="pf"><label>Bébés Total</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
           </div>
+          ${p.stopover ? `
+          <div style="background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.2);border-radius:8px;padding:12px 14px;margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">✈ Escale</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+              <div class="pf"><label>Aéroport escale</label><input id="p${i}-sw" value="${esc(p.stopover||'')}" oninput="this.value=this.value.toUpperCase()"></div>
+              <div class="pf"><label>PAX escale</label><input type="number" id="p${i}-spx" value="${p.stopoverPax||0}" min="0"></div>
+              <div class="pf"><label>Bébés escale</label><input type="number" id="p${i}-sbb" value="${p.stopoverBabies||0}" min="0"></div>
+            </div>
+          </div>` : ''}
           <div class="act-row" id="act-${i}">
             ${imp
               ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>'
