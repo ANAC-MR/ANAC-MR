@@ -31,19 +31,19 @@ const AIRLINE_PREFIXES = {
 };
 
 // ===============================
-// AÉROPORT DOMICILE PAR COMPAGNIE
-// DEP: De=NKC, À=home | ARR: De=home, À=NKC
+// AÉROPORT D'ORIGINE PAR COMPAGNIE
+// (Quand DEP: De=NKC, À=home; Quand ARR: De=home, À=NKC)
 // ===============================
 const COMPANY_HOME_AIRPORT = {
-    "Mauritania Airlines": "GQNO",
-    "Air Sénégal":         "GOBD",
-    "Turkish Airlines":    "LTFM",
-    "Binter":              "GCLP",
-    "Air Algérie":         "DAAG",
-    "ASKY":                "DBBP",
-    "Royal Air Maroc":     "GMMN",
-    "Tunisair":            "DTTA",
-    "Air France":          "LFPG"
+    "Mauritania Airlines": "NKC",
+    "Air Sénégal":         "DSS",
+    "Turkish Airlines":    "IST",
+    "Binter":              "LPA",
+    "Air Algérie":         "ALG",
+    "ASKY":                "LFW",
+    "Royal Air Maroc":     "CMN",
+    "Tunisair":            "TUN",
+    "Air France":          "CDG"
 };
 
 // ===============================
@@ -83,6 +83,7 @@ let lastDeletedFlight = null;
 let undoTimeout = null;
 let isInitialized = false;
 let editingFlightId = null;
+let adminConfig = null; // loaded from Firebase admin config
 let activeActionsMenu = null;
 
 // ============================================
@@ -140,10 +141,11 @@ const elements = {
 // ============================================
 // INITIALIZATION
 // ============================================
-function initializeApp() {
+async function initializeApp() {
     if (isInitialized) return;
     
     try {
+        await loadAdminConfig();
         populateSelects();
         attachEventListeners();
         setupRealtimeListener();
@@ -152,6 +154,41 @@ function initializeApp() {
     } catch (error) {
         console.error('Error initializing app:', error);
         showNotification('Erreur lors de l\'initialisation', 'error');
+    }
+}
+
+
+async function loadAdminConfig() {
+    try {
+        const { initializeApp: fbInit, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const fbConfig = {
+            apiKey: "AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+            authDomain: "anacmr-e05b4.firebaseapp.com",
+            projectId: "anacmr-e05b4",
+            storageBucket: "anacmr-e05b4.firebasestorage.app",
+            messagingSenderId: "857117390430",
+            appId: "1:857117390430:web:0231614b880df3196e26cf"
+        };
+        const apps = getApps();
+        const fbApp = apps.find(a => a.name === 'admin-reader') || fbInit(fbConfig, 'admin-reader');
+        const db = getFirestore(fbApp);
+        const [airlinesSnap, airportsSnap] = await Promise.all([
+            getDoc(doc(db, 'flights', 'cfg-airlines')),
+            getDoc(doc(db, 'flights', 'cfg-airports'))
+        ]);
+        adminConfig = {};
+        if (airlinesSnap.exists() && airlinesSnap.data().list) {
+            adminConfig.airlines = airlinesSnap.data().list;
+            console.log('Admin airlines loaded:', adminConfig.airlines.length);
+        }
+        if (airportsSnap.exists() && airportsSnap.data().list) {
+            adminConfig.airports = airportsSnap.data().list;
+            console.log('Admin airports loaded:', adminConfig.airports.length);
+        }
+    } catch(e) {
+        console.warn('Admin config not loaded:', e.message);
+        adminConfig = null;
     }
 }
 
@@ -164,25 +201,30 @@ function populateSelects() {
         elements.monthSelect.appendChild(option);
     });
     
-    // Populate company selects
-    AIRLINES.forEach(airline => {
-        // Filter select
+    // Use admin config airlines if available, else fallback to AIRLINES constant
+    const airlinesList = (adminConfig && adminConfig.airlines && adminConfig.airlines.length)
+        ? adminConfig.airlines.map(a => a.name)
+        : AIRLINES;
+    
+    airlinesList.forEach(airline => {
         const filterOption = document.createElement('option');
         filterOption.value = airline;
         filterOption.textContent = airline;
         elements.companySelect.appendChild(filterOption);
         
-        // Form select
         const formOption = document.createElement('option');
         formOption.value = airline;
         formOption.textContent = airline;
         elements.fCompany.appendChild(formOption);
     });
     
-    // Populate airport selects (filters + form)
-    DESTINATIONS.forEach(dest => {
+    // Use admin config airports if available, else fallback to DESTINATIONS constant
+    const destinationsList = (adminConfig && adminConfig.airports && adminConfig.airports.length)
+        ? adminConfig.airports.map(a => ({ code: a.icao, name: a.name }))
+        : DESTINATIONS;
+    
+    destinationsList.forEach(dest => {
         const label = `${dest.code} – ${dest.name}`;
-        
         [elements.fromSelect, elements.toSelect, elements.fFrom, elements.fTo, elements.fStopover].forEach(sel => {
             const opt = document.createElement('option');
             opt.value = dest.code;
@@ -229,7 +271,9 @@ function attachEventListeners() {
     
     // Form interactions
     elements.fCompany.addEventListener('change', updateFlightNumberPrefix);
-    elements.fType.addEventListener('change', updateRouteByType);
+    if (elements.fType) {
+        elements.fType.addEventListener('change', updateRouteByType);
+    }
     elements.fAuthNumber.addEventListener('input', handleAuthNumberInput);
     
     // Uppercase transformation for all text inputs
@@ -302,13 +346,6 @@ function openModal(flightId = null) {
                 if (flight.to) elements.fTo.value = flight.to;
                 elements.fPassengers.value = flight.passengers;
                 elements.fBabies.value = flight.babies;
-                const hasStop = !!(flight.stopover);
-                if (elements.hasStopover) elements.hasStopover.checked = hasStop;
-                if (elements.fStopover) elements.fStopover.value = flight.stopover || '';
-                if (elements.fStopoverPax) elements.fStopoverPax.value = flight.stopoverPax || 0;
-                if (elements.fStopoverBabies) elements.fStopoverBabies.value = flight.stopoverBabies || 0;
-                const sg2 = document.getElementById('stopoverGroup');
-                if (sg2) sg2.style.display = hasStop ? '' : 'none';
                 
                 elements.fAuthNumber.focus();
             }
@@ -324,18 +361,13 @@ function openModal(flightId = null) {
             // Set default values
             elements.fCompany.value = AIRLINES[0];
             elements.fType.value = 'DEP';
+            elements.fFrom.value = DESTINATIONS[0].code;
+            elements.fTo.value = DESTINATIONS[1].code;
             elements.fPassengers.value = '0';
             elements.fBabies.value = '0';
-            if (elements.hasStopover) elements.hasStopover.checked = false;
-            if (elements.fStopover) elements.fStopover.value = '';
-            if (elements.fStopoverPax) elements.fStopoverPax.value = 0;
-            if (elements.fStopoverBabies) elements.fStopoverBabies.value = 0;
-            const sg = document.getElementById('stopoverGroup');
-            if (sg) sg.style.display = 'none';
             
             elements.fDate.focus();
             updateFlightNumberPrefix();
-            setTimeout(updateRouteByType, 50);
         }
     });
 }
@@ -440,59 +472,196 @@ function clearValidationErrors() {
 }
 
 function getFormData() {
-    const hasStop = elements.hasStopover && elements.hasStopover.checked;
     return {
         authorizationNumber: elements.fAuthNumber.value.trim().toUpperCase(),
         date: elements.fDate.value,
         company: elements.fCompany.value,
-        registration: elements.fImm.value.trim().toUpperCase(),
-        flightNumber: elements.fVol.value.trim().toUpperCase(),
+        registration: (document.getElementById('fImmSelect') && document.getElementById('fImmSelect').value ? document.getElementById('fImmSelect').value : elements.fImm.value.trim().toUpperCase()),
+        flightNumber: (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value ? document.getElementById('fVolSelect').value : elements.fVol.value.trim().toUpperCase()),
         type: elements.fType.value,
         from: elements.fFrom.value,
         to: elements.fTo.value,
-        hasStopover: !!hasStop,
-        stopover: hasStop && elements.fStopover ? elements.fStopover.value : '',
-        stopoverPax: hasStop && elements.fStopoverPax ? (parseInt(elements.fStopoverPax.value) || 0) : 0,
-        stopoverBabies: hasStop && elements.fStopoverBabies ? (parseInt(elements.fStopoverBabies.value) || 0) : 0,
+        hasStopover: !!(elements.hasStopover && elements.hasStopover.checked),
+        stopover: (elements.hasStopover && elements.hasStopover.checked && elements.fStopover) ? elements.fStopover.value : '',
+        stopoverPax: (elements.hasStopover && elements.hasStopover.checked) ? (parseInt(elements.fStopoverPax && elements.fStopoverPax.value) || 0) : 0,
+        stopoverBabies: (elements.hasStopover && elements.hasStopover.checked) ? (parseInt(elements.fStopoverBabies && elements.fStopoverBabies.value) || 0) : 0,
         passengers: parseInt(elements.fPassengers.value) || 0,
         babies: parseInt(elements.fBabies.value) || 0,
         timestamp: Date.now()
     };
 }
 
+function updateVolField(company) {
+    if (!adminConfig || !adminConfig.airlines) return;
+    const airlineData = adminConfig.airlines.find(a => a.name === company);
+    if (!airlineData) return;
+
+    const fVol = elements.fVol;
+    const parent = fVol.parentNode;
+
+    // Remove existing select if any
+    const existingSelect = parent.querySelector('#fVolSelect');
+    if (existingSelect) existingSelect.remove();
+
+    const volList   = airlineData.volNumbers || [];
+    const isLocked  = airlineData.volLocked;
+
+    if (isLocked && volList.length > 0) {
+        fVol.style.display = 'none';
+
+        const sel = document.createElement('select');
+        sel.id = 'fVolSelect';
+        sel.required = true;
+        sel.className = fVol.className;
+        sel.style.cssText = fVol.style.cssText;
+        sel.style.display = '';
+
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '— Choisir un numéro de vol —';
+        sel.appendChild(defaultOpt);
+
+        volList.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            if (fVol.value === v) opt.selected = true;
+            sel.appendChild(opt);
+        });
+
+        parent.insertBefore(sel, fVol.nextSibling);
+        sel.addEventListener('change', () => { fVol.value = sel.value; });
+        if (fVol.value) sel.value = fVol.value;
+
+    } else {
+        fVol.style.display = '';
+        const existingSel = parent.querySelector('#fVolSelect');
+        if (existingSel) existingSel.remove();
+    }
+}
+
 function updateFlightNumberPrefix() {
     const company = elements.fCompany.value;
-    const prefix = AIRLINE_PREFIXES[company];
+    
+    // Update flight number prefix
+    const prefix = AIRLINE_PREFIXES[company] || 
+        (adminConfig && adminConfig.airlines 
+            ? (adminConfig.airlines.find(a => a.name === company) || {}).prefix 
+            : null);
     const currentValue = elements.fVol.value.trim();
     if (prefix && (!currentValue || currentValue.match(/^[A-Z0-9]+-$/))) {
         elements.fVol.value = prefix + '-';
     }
+    
+    // Auto-fill From/To based on company + type
     updateRouteByType();
+    
+    // Update immatriculation field based on admin config
+    updateImmField(company);
+    // Update vol number field based on admin config
+    updateVolField(company);
 }
 
-// Auto-fill From/To based on type + company
+// Auto-fill From/To when type or company changes
 function updateRouteByType() {
-    const company = elements.fCompany ? elements.fCompany.value : '';
+    const company = elements.fCompany.value;
     const type    = elements.fType ? elements.fType.value : 'DEP';
-    const NKC     = 'GQNO';
+    const NKC     = 'GQNO'; // Nouakchott Oumtounsy
     const homeCode = COMPANY_HOME_AIRPORT[company] || '';
 
+    // Find airport option values (ICAO codes stored as option values)
+    // fFrom and fTo are selects populated with airport names
+    // We need to match by code in the option text or value
+    const setSelectByCode = (sel, code) => {
+        if (!sel) return;
+        // Try exact value match first
+        for (const opt of sel.options) {
+            if (opt.value === code || opt.value.includes(code) || opt.text.includes(code)) {
+                sel.value = opt.value;
+                return;
+            }
+        }
+    };
+
     if (type === 'DEP') {
-        // Départ: De=NKC, À=aéroport de la compagnie
-        if (elements.fFrom) elements.fFrom.value = NKC;
-        if (elements.fTo && homeCode) elements.fTo.value = homeCode;
+        // Departure: FROM = NKC, TO = company home
+        setSelectByCode(elements.fFrom, 'NKC');
+        if (homeCode) setSelectByCode(elements.fTo, homeCode);
     } else if (type === 'ARR') {
-        // Arrivée: De=aéroport de la compagnie, À=NKC
-        if (elements.fFrom && homeCode) elements.fFrom.value = homeCode;
-        if (elements.fTo) elements.fTo.value = NKC;
+        // Arrival: FROM = company home, TO = NKC
+        if (homeCode) setSelectByCode(elements.fFrom, homeCode);
+        setSelectByCode(elements.fTo, 'NKC');
     }
+
+    // Show/hide stopover
+    const grp = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
+    if (elements.fStopover && type !== 'TRANSIT') elements.fStopover.value = '';
 }
 
-// Show/hide stopover section
-function toggleStopoverField() {
-    const cb  = document.getElementById('hasStopover');
-    const grp = document.getElementById('stopoverGroup');
-    if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
+function updateImmField(company) {
+    if (!adminConfig || !adminConfig.airlines) return;
+    
+    const airlineData = adminConfig.airlines.find(a => a.name === company);
+    if (!airlineData) return;
+    
+    const fImm = elements.fImm;
+    const parent = fImm.parentNode;
+    
+    // Remove existing select if any
+    const existingSelect = parent.querySelector('#fImmSelect');
+    if (existingSelect) existingSelect.remove();
+    
+    const immatList = airlineData.immatriculations || [];
+    const isLocked  = airlineData.immLocked;
+    
+    if (isLocked && immatList.length > 0) {
+        // Replace text input with select
+        fImm.style.display = 'none';
+        
+        const sel = document.createElement('select');
+        sel.id = 'fImmSelect';
+        sel.required = true;
+        sel.className = fImm.className;
+        sel.style.cssText = fImm.style.cssText;
+        sel.style.display = '';
+        
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '— Choisir une immatriculation —';
+        sel.appendChild(defaultOpt);
+        
+        immatList.forEach(imm => {
+            const opt = document.createElement('option');
+            opt.value = imm;
+            opt.textContent = imm;
+            if (fImm.value === imm) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        
+        parent.insertBefore(sel, fImm.nextSibling);
+        
+        // Sync select value back to hidden input on change
+        sel.addEventListener('change', () => { fImm.value = sel.value; });
+        if (fImm.value) sel.value = fImm.value;
+        
+    } else {
+        // Show text input (free mode)
+        fImm.style.display = '';
+        const hint = parent.querySelector('.imm-hint');
+        if (hint) hint.remove();
+        
+        // Add prefix hint if available
+        if (airlineData.immPrefix) {
+            let hintEl = parent.querySelector('.imm-hint');
+            if (!hintEl) {
+                hintEl = document.createElement('small');
+                hintEl.className = 'field-hint imm-hint';
+                parent.appendChild(hintEl);
+            }
+            hintEl.textContent = `Préfixe attendu: ${airlineData.immPrefix} (ex: ${airlineData.immPrefix}CLX)`;
+        }
+    }
 }
 
 function handleAuthNumberInput(event) {
@@ -833,7 +1002,7 @@ function createFlightRow(flight) {
         <td><strong>${escapeHtml(flight.registration)}</strong></td>
         <td>${escapeHtml(flight.flightNumber)}</td>
         <td><strong>${escapeHtml(fromCode)}</strong></td>
-        <td><strong>${escapeHtml(toCode)}</strong>${flight.stopover ? `<br><small style="color:#718096;font-style:italic;">via ${escapeHtml(flight.stopover)}</small>` : ''}</td>
+        <td><strong>${escapeHtml(toCode)}</strong></td>
         <td><span class="type-badge ${typeClass}">${typeText}</span></td>
         <td>${flight.passengers}</td>
         <td>${flight.babies}</td>
@@ -881,6 +1050,7 @@ function setupRealtimeListener() {
             console.log('Real-time update received:', updatedFlights.length, 'flights');
             flights = updatedFlights;
             render();
+            if (window.refreshChartsFromApp) window.refreshChartsFromApp(flights);
         });
         console.log('Real-time listener setup complete');
     } else {
@@ -891,6 +1061,7 @@ function setupRealtimeListener() {
 function updateFlightsData(newFlights) {
     flights = newFlights;
     render();
+    if (window.refreshChartsFromApp) window.refreshChartsFromApp(flights);
 }
 
 // ============================================
@@ -1111,7 +1282,7 @@ window.app = {
 // ============================================
 // INITIALIZATION
 // ============================================
-document.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', async () => { await initializeApp(); });
 
 // Add CSS for additional styling
 const additionalStyles = `
