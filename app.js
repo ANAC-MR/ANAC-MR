@@ -346,6 +346,13 @@ function openModal(flightId = null) {
                 if (flight.to) elements.fTo.value = flight.to;
                 elements.fPassengers.value = flight.passengers;
                 elements.fBabies.value = flight.babies;
+                const hasStop = !!(flight.stopover);
+                if (elements.hasStopover) elements.hasStopover.checked = hasStop;
+                if (elements.fStopover) elements.fStopover.value = flight.stopover || '';
+                if (elements.fStopoverPax) elements.fStopoverPax.value = flight.stopoverPax || 0;
+                if (elements.fStopoverBabies) elements.fStopoverBabies.value = flight.stopoverBabies || 0;
+                const sg1 = document.getElementById('stopoverGroup');
+                if (sg1) sg1.style.display = hasStop ? '' : 'none';
                 
                 elements.fAuthNumber.focus();
             }
@@ -361,13 +368,18 @@ function openModal(flightId = null) {
             // Set default values
             elements.fCompany.value = AIRLINES[0];
             elements.fType.value = 'DEP';
-            elements.fFrom.value = DESTINATIONS[0].code;
-            elements.fTo.value = DESTINATIONS[1].code;
             elements.fPassengers.value = '0';
             elements.fBabies.value = '0';
+            if (elements.hasStopover) elements.hasStopover.checked = false;
+            if (elements.fStopover) elements.fStopover.value = '';
+            if (elements.fStopoverPax) elements.fStopoverPax.value = 0;
+            if (elements.fStopoverBabies) elements.fStopoverBabies.value = 0;
+            const sg0 = document.getElementById('stopoverGroup');
+            if (sg0) sg0.style.display = 'none';
             
             elements.fDate.focus();
             updateFlightNumberPrefix();
+            setTimeout(updateRouteByType, 80);
         }
     });
 }
@@ -1271,6 +1283,14 @@ function editFlight(flightId) {
 // ============================================
 // PUBLIC API
 // ============================================
+window.toggleStopoverField = function() {
+    const cb  = document.getElementById('hasStopover');
+    const grp = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
+};
+
+window.updateRouteByType = updateRouteByType;
+
 window.app = {
     deleteFlight,
     updateFlightsData,
