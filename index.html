@@ -794,9 +794,9 @@ async function exportPDF() {
 }
 
 function toggleStopoverField() {
-    const type = document.getElementById('fType').value;
-    const grp  = document.getElementById('stopoverGroup');
-    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
+    const cb  = document.getElementById('hasStopover');
+    const grp = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
 }
 
 // Called from app.js when flights are loaded/updated
