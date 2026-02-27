@@ -514,22 +514,34 @@ function clearValidationErrors() {
 }
 
 function getFormData() {
+    const hasStop     = !!(elements.hasStopover && elements.hasStopover.checked);
+    const stopPax     = hasStop ? (parseInt(elements.fStopoverPax   && elements.fStopoverPax.value)   || 0) : 0;
+    const stopBabies  = hasStop ? (parseInt(elements.fStopoverBabies && elements.fStopoverBabies.value) || 0) : 0;
+    const volPax      = parseInt(elements.fPassengers.value) || 0;
+    const volBabies   = parseInt(elements.fBabies.value)     || 0;
+
     return {
         authorizationNumber: elements.fAuthNumber.value.trim().toUpperCase(),
-        date: elements.fDate.value,
-        company: elements.fCompany.value,
-        registration: (document.getElementById('fImmSelect') && document.getElementById('fImmSelect').value ? document.getElementById('fImmSelect').value : elements.fImm.value.trim().toUpperCase()),
-        flightNumber: (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value ? document.getElementById('fVolSelect').value : elements.fVol.value.trim().toUpperCase()),
-        type: elements.fType.value,
-        from: elements.fFrom.value,
-        to: elements.fTo.value,
-        hasStopover: !!(elements.hasStopover && elements.hasStopover.checked),
-        stopover: (elements.hasStopover && elements.hasStopover.checked && elements.fStopover) ? elements.fStopover.value : '',
-        stopoverPax: (elements.hasStopover && elements.hasStopover.checked) ? (parseInt(elements.fStopoverPax && elements.fStopoverPax.value) || 0) : 0,
-        stopoverBabies: (elements.hasStopover && elements.hasStopover.checked) ? (parseInt(elements.fStopoverBabies && elements.fStopoverBabies.value) || 0) : 0,
-        passengers: parseInt(elements.fPassengers.value) || 0,
-        babies: parseInt(elements.fBabies.value) || 0,
-        timestamp: Date.now()
+        date:     elements.fDate.value,
+        company:  elements.fCompany.value,
+        registration: (document.getElementById('fImmSelect') && document.getElementById('fImmSelect').value
+            ? document.getElementById('fImmSelect').value
+            : elements.fImm.value.trim().toUpperCase()),
+        flightNumber: (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value
+            ? document.getElementById('fVolSelect').value
+            : elements.fVol.value.trim().toUpperCase()),
+        type:     elements.fType.value,
+        from:     elements.fFrom.value,
+        to:       elements.fTo.value,
+        // Escale
+        hasStopover:    hasStop,
+        stopover:       hasStop && elements.fStopover ? elements.fStopover.value : '',
+        stopoverPax:    stopPax,
+        stopoverBabies: stopBabies,
+        // PAX TOTAL = vol + escale
+        passengers: volPax + stopPax,
+        babies:     volBabies + stopBabies,
+        timestamp:  Date.now()
     };
 }
 
