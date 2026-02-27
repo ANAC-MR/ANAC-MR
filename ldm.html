@@ -458,10 +458,12 @@ function extractFields(text, dateReceived) {
     p.type = 'DEP';
   }
 
-  // ── 3 & 4. PAX + BABIES from station lines
-  // Format -CODE.X/X/X   → last = babies, sum rest = pax  (3 numbers)
-  // Format -CODE.X/X/X/X → last = babies, sum rest = pax  (4 numbers)
-  // We sum PAX and babies across ALL station lines (not just NKC)
+  // ── 3 & 4. PAX + BABIES
+  // Rule: after each station code X/X/X or X/X/X/X
+  //   last number = babies for that leg
+  //   sum of rest  = pax for that leg
+  // Total PAX = SUM across ALL station lines
+  // Total babies = SUM across ALL station lines
   let totalPax    = 0;
   let totalBabies = 0;
   let foundPax    = false;
@@ -471,24 +473,26 @@ function extractFields(text, dateReceived) {
     if (!numMatch) return;
     const nums = numMatch[1].split('/').map(Number);
     if (nums.length >= 2) {
-      totalBabies = Math.max(totalBabies, nums[nums.length - 1]); // take max babies across lines
-      const linePax = nums.slice(0, -1).reduce((a,b) => a+b, 0);
-      if (linePax > totalPax) { totalPax = linePax; foundPax = true; } // take max pax line
+      totalBabies += nums[nums.length - 1];             // SUM babies
+      totalPax    += nums.slice(0, -1).reduce((a,b) => a+b, 0); // SUM pax
+      foundPax = true;
     }
   });
 
-  // Fallback: .PAX/X/X/X line if route lines had no pax
+  // Fallback for MVT: .PAX/X/X/X or PAX 123
   if (!foundPax) {
-    const paxRx = /\.?PAX\/(\d+(?:\/\d+)+)/i;
-    const paxM  = text.match(paxRx);
-    if (paxM) {
-      const nums = paxM[1].split('/').map(Number);
-      totalBabies = nums[nums.length - 1];
-      totalPax    = nums.slice(0,-1).reduce((a,b)=>a+b,0);
+    const paxSlash = text.match(/\.?PAX\/(\d+(?:\/\d+)*)/i);
+    if (paxSlash) {
+      const nums = paxSlash[1].split('/').map(Number);
+      if (nums.length >= 2) {
+        totalBabies = nums[nums.length - 1];
+        totalPax    = nums.slice(0,-1).reduce((a,b)=>a+b,0);
+      } else {
+        totalPax = nums[0]; totalBabies = 0;
+      }
+      foundPax = true;
     }
   }
-
-  // MVT format: PAX followed by a simple number (no slashes)
   if (!foundPax) {
     const mvtPax = text.match(/\bPAX\s+(\d+)/i);
     if (mvtPax) { totalPax = parseInt(mvtPax[1]); totalBabies = 0; }
@@ -576,13 +580,18 @@ function toggleCard(i) {
 
 // ── IMPORT TO FIREBASE ──
 async function importFlight(i, force) {
-  const fn = document.getElementById(`p${i}-fn`).value.trim().toUpperCase();
-  const rg = document.getElementById(`p${i}-rg`).value.trim().toUpperCase().replace(/[\s.\-]/g,'');
-  const dt = document.getElementById(`p${i}-dt`).value;
-  const fr = document.getElementById(`p${i}-fr`).value.trim().toUpperCase();
-  const to = document.getElementById(`p${i}-to`).value.trim().toUpperCase();
-  const px = parseInt(document.getElementById(`p${i}-px`).value) || 0;
-  const bb = parseInt(document.getElementById(`p${i}-bb`).value) || 0;
+  const fn  = document.getElementById(`p${i}-fn`).value.trim().toUpperCase();
+  const rg  = document.getElementById(`p${i}-rg`).value.trim().toUpperCase().replace(/[\s.\-]/g,'');
+  const dt  = document.getElementById(`p${i}-dt`).value;
+  const fr  = document.getElementById(`p${i}-fr`).value.trim().toUpperCase();
+  const to  = document.getElementById(`p${i}-to`).value.trim().toUpperCase();
+  const ty  = document.getElementById(`p${i}-ty`) ? document.getElementById(`p${i}-ty`).value : 'DEP';
+  const co  = document.getElementById(`p${i}-co`) ? document.getElementById(`p${i}-co`).value.trim() : '';
+  const sw  = document.getElementById(`p${i}-sw`) ? document.getElementById(`p${i}-sw`).value.trim().toUpperCase() : '';
+  const spx = document.getElementById(`p${i}-spx`) ? parseInt(document.getElementById(`p${i}-spx`).value)||0 : 0;
+  const sbb = document.getElementById(`p${i}-sbb`) ? parseInt(document.getElementById(`p${i}-sbb`).value)||0 : 0;
+  const px  = parseInt(document.getElementById(`p${i}-px`).value) || 0;
+  const bb  = parseInt(document.getElementById(`p${i}-bb`).value) || 0;
 
   if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires','warn'); return; }
 
@@ -611,9 +620,13 @@ async function importFlight(i, force) {
     await addDoc(collection(db,'flights'), {
       flightNumber: fn, registration: rg,
       date: dt, from: fr, to,
+      type: ty,
+      hasStopover: !!sw,
+      stopover: sw || '',
+      stopoverPax: spx,
+      stopoverBabies: sbb,
       passengers: px, babies: bb,
-      company: detectCompany(fn),
-      type: 'DEP',
+      company: co || detectCompany(fn),
       authorizationNumber: '',
       source: 'LDM_EMAIL',
       createdAt: new Date().toISOString(),
