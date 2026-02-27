@@ -5,72 +5,245 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ANAC Mauritanie – Suivi Mensuel des Vols</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        .header-content { position: relative; }
+        .admin-link {
+            position: absolute; top: 10px; right: 10px;
+            font-size: 20px; opacity: 0.4; text-decoration: none;
+        }
+        .admin-link:hover { opacity: 0.8; }
+
+        /* ── TABS ── */
+        .main-tabs {
+            display: flex; gap: 4px;
+            border-bottom: 2px solid rgba(43,90,142,0.2);
+            margin-bottom: 24px;
+        }
+        .main-tab {
+            padding: 10px 28px; border: none; background: transparent;
+            font-family: inherit; font-size: 14px; font-weight: 600;
+            color: #718096; cursor: pointer;
+            border-bottom: 3px solid transparent; margin-bottom: -2px;
+            border-radius: 6px 6px 0 0; transition: all 0.2s;
+        }
+        .main-tab:hover { color: #2B5A8E; background: rgba(43,90,142,0.04); }
+        .main-tab.active { color: #2B5A8E; border-bottom-color: #2B5A8E; background: rgba(43,90,142,0.07); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ── CHARTS ── */
+        .charts-header {
+            display: flex; align-items: flex-start;
+            justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+        }
+        .charts-header h2 { font-size: 20px; font-weight: 700; color: #2d3748; margin: 0; }
+        .charts-header p  { font-size: 13px; color: #718096; margin: 4px 0 0; }
+
+        .btn-pdf {
+            background: linear-gradient(135deg, #C8102E, #e53e3e);
+            color: #fff; border: none; border-radius: 8px;
+            padding: 10px 22px; font-family: inherit; font-size: 13px; font-weight: 700;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(200,16,46,0.3);
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .btn-pdf:hover { opacity: 0.85; transform: translateY(-1px); }
+        .btn-pdf:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .charts-filter-bar {
+            display: flex; gap: 16px; align-items: center;
+            background: rgba(43,90,142,0.05); border: 1px solid rgba(43,90,142,0.15);
+            border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .charts-filter-bar label { font-size: 12px; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: 0.4px; }
+        .charts-filter-bar select {
+            padding: 6px 12px; border-radius: 7px; border: 1px solid rgba(43,90,142,0.2);
+            background: #fff; font-family: inherit; font-size: 13px; color: #2d3748; cursor: pointer;
+        }
+
+        /* KPI */
+        .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+        .kpi-card {
+            background: #fff; border-radius: 12px; padding: 18px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid;
+        }
+        .kpi-card:nth-child(1) { border-color: #2B5A8E; }
+        .kpi-card:nth-child(2) { border-color: #00b67a; }
+        .kpi-card:nth-child(3) { border-color: #D4AF37; }
+        .kpi-card:nth-child(4) { border-color: #C8102E; }
+        .kpi-value { font-size: 30px; font-weight: 800; color: #2d3748; }
+        .kpi-label { font-size: 12px; color: #718096; font-weight: 500; margin-top: 2px; }
+        .kpi-sub   { font-size: 11px; color: #a0aec0; margin-top: 3px; }
+
+        /* Charts grid */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .chart-card {
+            background: #fff; border-radius: 14px; padding: 22px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07); border: 1px solid rgba(43,90,142,0.1);
+        }
+        .chart-card.full { grid-column: 1 / -1; }
+        .chart-card h3 {
+            font-size: 13px; font-weight: 700; color: #2d3748; margin: 0 0 3px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .chart-subtitle { font-size: 12px; color: #718096; margin-bottom: 14px; }
+        .chart-wrap { position: relative; height: 260px; }
+        .chart-wrap.tall { height: 320px; }
+
+        /* Route tags */
+        .route-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+        .route-tag {
+            background: rgba(43,90,142,0.08); border: 1px solid rgba(43,90,142,0.18);
+            color: #2B5A8E; font-size: 12px; font-weight: 600;
+            padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;
+        }
+        .route-count {
+            background: #2B5A8E; color: #fff; border-radius: 10px;
+            padding: 1px 7px; font-size: 10px;
+        }
+
+        /* ── COMPARISON ── */
+        .compare-section {
+            background: #fff; border-radius: 14px; padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            border: 1px solid rgba(43,90,142,0.1);
+            margin-bottom: 20px;
+        }
+        .compare-section h3 {
+            font-size: 14px; font-weight: 700; color: #2d3748;
+            text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px;
+        }
+        .compare-controls {
+            display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;
+        }
+        .compare-controls label { font-size: 12px; font-weight: 700; color: #4a5568; text-transform: uppercase; }
+        .compare-controls select {
+            padding: 7px 12px; border-radius: 8px; border: 2px solid;
+            font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+            background: #fff;
+        }
+        .compare-controls select.sel-a { border-color: #2B5A8E; color: #2B5A8E; }
+        .compare-controls select.sel-b { border-color: #C8102E; color: #C8102E; }
+        .compare-controls select.sel-route { border-color: #006B3F; color: #006B3F; }
+        .vs-badge {
+            background: #f7fafc; border: 2px solid #e2e8f0;
+            border-radius: 50%; width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 800; color: #718096;
+            flex-shrink: 0;
+        }
+        .compare-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .compare-kpi {
+            border-radius: 10px; padding: 14px 16px; text-align: center;
+        }
+        .compare-kpi.a { background: rgba(43,90,142,0.08); border: 2px solid rgba(43,90,142,0.2); }
+        .compare-kpi.b { background: rgba(200,16,46,0.07); border: 2px solid rgba(200,16,46,0.2); }
+        .compare-kpi.neutral { background: rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
+        .compare-kpi .ck-val { font-size: 26px; font-weight: 800; }
+        .compare-kpi.a .ck-val { color: #2B5A8E; }
+        .compare-kpi.b .ck-val { color: #C8102E; }
+        .compare-kpi .ck-label { font-size: 11px; color: #718096; margin-top: 3px; }
+        .compare-kpi .ck-name  { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+        .compare-kpi.a .ck-name { color: #2B5A8E; }
+        .compare-kpi.b .ck-name { color: #C8102E; }
+        .winner-badge {
+            display: inline-block; font-size: 10px; font-weight: 700;
+            padding: 2px 8px; border-radius: 10px;
+            background: #D4AF37; color: #fff; margin-top: 4px;
+        }
+        .compare-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .compare-chart-wrap { position: relative; height: 220px; }
+
+        .route-compare-table {
+            width: 100%; border-collapse: collapse; margin-top: 12px;
+        }
+        .route-compare-table th {
+            background: rgba(43,90,142,0.07); padding: 9px 14px;
+            font-size: 12px; font-weight: 700; color: #4a5568;
+            text-align: left; border-bottom: 2px solid rgba(43,90,142,0.15);
+        }
+        .route-compare-table td {
+            padding: 9px 14px; font-size: 13px; border-bottom: 1px solid #f0f4f8;
+        }
+        .route-compare-table tr:hover td { background: rgba(43,90,142,0.03); }
+        .bar-cell { display: flex; align-items: center; gap: 8px; }
+        .mini-bar {
+            height: 8px; border-radius: 4px; background: #2B5A8E;
+            min-width: 4px; transition: width 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .chart-card.full { grid-column: 1; }
+            .kpi-row { grid-template-columns: 1fr 1fr; }
+            .compare-grid { grid-template-columns: 1fr; }
+            .compare-chart-row { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="header-content">
-                <img src="assets/ANAC-logo.png" alt="ANAC Logo" class="logo">
-                <h1>ANAC Mauritanie – Suivi Mensuel des Vols</h1>
+<div class="container">
+    <header>
+        <div class="header-content">
+            <img src="assets/ANAC-logo.png" alt="ANAC Logo" class="logo">
+            <h1>ANAC Mauritanie – Suivi Mensuel des Vols</h1>
+            <div style="position:absolute;top:10px;right:10px;display:flex;gap:8px;align-items:center;">
+                <a href="ldm.html" style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.55);text-decoration:none;background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);">📨 LDM/MVT</a>
+                <a href="admin.html" class="admin-link" title="Administration" style="font-size:20px;opacity:0.4;text-decoration:none;position:static;">⚙️</a>
             </div>
-        </header>
-        
-        <main>
+        </div>
+    </header>
+
+    <main>
+        <!-- TABS -->
+        <div class="main-tabs">
+            <button class="main-tab active" onclick="switchTab('suivi')">📋 Suivi des Vols</button>
+            <button class="main-tab" onclick="switchTab('rapports')">📊 Diagrammes & Rapports</button>
+        </div>
+
+        <!-- ═══ TAB 1 : SUIVI ═══ -->
+        <div class="tab-content active" id="tab-suivi">
             <section class="filters-section">
                 <div class="filters">
                     <div class="filter-row">
                         <div class="filter-group">
                             <label for="monthSelect">Mois</label>
-                            <select id="monthSelect">
-                                <option value="ALL">Tous les mois</option>
-                            </select>
+                            <select id="monthSelect"><option value="ALL">Tous les mois</option></select>
                         </div>
-                        
                         <div class="filter-group">
                             <label for="companySelect">Compagnie</label>
-                            <select id="companySelect">
-                                <option value="ALL">Toutes les compagnies</option>
-                            </select>
+                            <select id="companySelect"><option value="ALL">Toutes les compagnies</option></select>
                         </div>
                     </div>
-                    
                     <div class="filter-row">
                         <div class="filter-group">
                             <label for="fromSelect">Départ de</label>
-                            <select id="fromSelect">
-                                <option value="ALL">Tous les aéroports</option>
-                            </select>
+                            <select id="fromSelect"><option value="ALL">Tous les aéroports</option></select>
                         </div>
                         <div class="filter-group">
                             <label for="toSelect">Arrivée à</label>
-                            <select id="toSelect">
-                                <option value="ALL">Tous les aéroports</option>
-                            </select>
+                            <select id="toSelect"><option value="ALL">Tous les aéroports</option></select>
                         </div>
                     </div>
-
                     <div class="filter-row">
                         <div class="filter-group">
                             <label for="searchFrom">Date début</label>
                             <input type="date" id="searchFrom">
                         </div>
-                        
                         <div class="filter-group">
                             <label for="searchTo">Date fin</label>
                             <input type="date" id="searchTo">
                         </div>
-                        
                         <div class="filter-group">
                             <label for="searchImm">Immatriculation</label>
                             <input type="text" id="searchImm" placeholder="Rechercher...">
                         </div>
-                        
                         <div class="filter-group">
                             <label for="searchVol">N° Vol</label>
                             <input type="text" id="searchVol" placeholder="Rechercher...">
                         </div>
                     </div>
-                    
                     <div class="filter-row">
                         <div class="button-group">
                             <button class="btn-primary btn-active" data-type="ALL">Tout</button>
@@ -81,34 +254,25 @@
                     </div>
                 </div>
             </section>
-            
+
             <section class="actions-section">
                 <div class="actions">
                     <button class="btn-success" id="addFlightBtn">➕ Ajouter un vol</button>
-                    <button class="btn-warning" id="undoBtn" style="display: none;">↩️ Annuler suppression</button>
+                    <button class="btn-warning" id="undoBtn" style="display:none;">↩️ Annuler suppression</button>
                 </div>
             </section>
-            
+
             <section class="table-section">
                 <div class="table-wrapper">
                     <table>
                         <thead>
                             <tr>
-                                <th>N° d'autorisation</th>
-                                <th>Date</th>
-                                <th>Compagnie</th>
-                                <th>Immatriculation</th>
-                                <th>N° Vol</th>
-                                <th>De</th>
-                                <th>Vers</th>
-                                <th>Type</th>
-                                <th>PAX</th>
-                                <th>Bébés</th>
-                                <th>Action</th>
+                                <th>N° d'autorisation</th><th>Date</th><th>Compagnie</th>
+                                <th>Immatriculation</th><th>N° Vol</th><th>De</th><th>Vers</th>
+                                <th>Type</th><th>PAX</th><th>Bébés</th><th>Action</th>
                             </tr>
                         </thead>
-                        <tbody id="flightTableBody">
-                        </tbody>
+                        <tbody id="flightTableBody"></tbody>
                         <tfoot>
                             <tr>
                                 <td colspan="8">TOTAL</td>
@@ -120,108 +284,762 @@
                     </table>
                 </div>
             </section>
-        </main>
-    </div>
-    
-    <div class="modal" id="flightModal">
-        <div class="modal-content">
-            <h2>Ajouter un vol</h2>
-            
-            <form id="flightForm">
-                <div class="form-group">
-                    <label for="fAuthNumber">Numéro d'autorisation</label>
-                    <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
-                    <small class="field-hint">Format: SNA26-XXXX (ex: SNA26-0001)</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fDate">Date</label>
-                    <input type="date" id="fDate" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fCompany">Compagnie</label>
-                    <select id="fCompany" required>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fImm">Immatriculation</label>
-                    <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fVol">N° Vol</label>
-                    <input type="text" id="fVol" placeholder="Ex: L6-123" required>
-                </div>
-                
-                <!-- TYPE EN PREMIER -->
-                <div class="form-group">
-                    <label for="fType">Type du vol</label>
-                    <select id="fType" required onchange="if(window.updateRouteByType) updateRouteByType()">
-                        <option value="DEP">Départ</option>
-                        <option value="ARR">Arrivée</option>
-                    </select>
-                </div>
-
-                <!-- FROM / TO auto-rempli -->
-                <div class="form-group">
-                    <label for="fFrom">Départ de</label>
-                    <select id="fFrom" required></select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fTo">Arrivée à</label>
-                    <select id="fTo" required></select>
-                </div>
-
-                <!-- ESCALE -->
-                <div class="form-group">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
-                        <input type="checkbox" id="hasStopover" onchange="toggleStopoverField()" style="width:16px;height:16px;cursor:pointer;accent-color:#2B5A8E;">
-                        ✈ Ce vol a une escale
-                    </label>
-                </div>
-                <div id="stopoverGroup" style="display:none;background:rgba(43,90,142,0.06);border-radius:8px;padding:12px;margin-bottom:8px;border:1px solid rgba(43,90,142,0.15);">
-                    <div class="form-group">
-                        <label for="fStopover">Aéroport d'escale</label>
-                        <select id="fStopover">
-                            <option value="">— Choisir l'escale —</option>
-                        </select>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                        <div class="form-group">
-                            <label for="fStopoverPax">PAX à l'escale</label>
-                            <input type="number" id="fStopoverPax" min="0" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="fStopoverBabies">Bébés à l'escale</label>
-                            <input type="number" id="fStopoverBabies" min="0" value="0">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="fPassengers">PAX (Passagers)</label>
-                    <input type="number" id="fPassengers" min="0" value="0" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fBabies">Bébés</label>
-                    <input type="number" id="fBabies" min="0" value="0" required>
-                </div>
-                
-                <div class="modal-buttons">
-                    <button type="submit" class="btn-success">Enregistrer</button>
-                    <button type="button" class="btn-secondary" id="cancelBtn">Annuler</button>
-                </div>
-            </form>
         </div>
+
+        <!-- ═══ TAB 2 : RAPPORTS ═══ -->
+        <div class="tab-content" id="tab-rapports">
+
+            <div class="charts-header">
+                <div>
+                    <h2>📊 Diagrammes & Rapports</h2>
+                    <p id="chartsSubtitle">Analyse automatique des données de vol</p>
+                </div>
+                <button class="btn-pdf" onclick="exportPDF()">📄 Exporter en PDF</button>
+            </div>
+
+            <div class="charts-filter-bar">
+                <label>Année :</label>
+                <select id="chartYearFilter">
+                    <option value="ALL">Toutes les années</option>
+                </select>
+                <label style="margin-left:12px;">Mois :</label>
+                <select id="chartMonthFilter">
+                    <option value="ALL">Tous les mois</option>
+                    <option value="0">Janvier</option><option value="1">Février</option>
+                    <option value="2">Mars</option><option value="3">Avril</option>
+                    <option value="4">Mai</option><option value="5">Juin</option>
+                    <option value="6">Juillet</option><option value="7">Août</option>
+                    <option value="8">Septembre</option><option value="9">Octobre</option>
+                    <option value="10">Novembre</option><option value="11">Décembre</option>
+                </select>
+                <label style="margin-left:12px;">Compagnie :</label>
+                <select id="chartCompanyFilter">
+                    <option value="ALL">Toutes les compagnies</option>
+                </select>
+                <button onclick="refreshCharts()" style="
+                    margin-left:16px; padding:8px 22px;
+                    background:linear-gradient(135deg,#2B5A8E,#4a90d9);
+                    color:#fff; border:none; border-radius:8px;
+                    font-family:inherit; font-size:13px; font-weight:700;
+                    cursor:pointer; box-shadow:0 3px 10px rgba(43,90,142,0.3);
+                    transition:opacity 0.2s,transform 0.15s;
+                " onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                    🔍 Générer
+                </button>
+                <button onclick="resetChartFilters()" style="
+                    margin-left:6px; padding:8px 16px;
+                    background:transparent; color:#718096;
+                    border:1px solid #cbd5e0; border-radius:8px;
+                    font-family:inherit; font-size:13px;
+                    cursor:pointer; transition:all 0.2s;
+                " onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='transparent'">
+                    ↺ Réinitialiser
+                </button>
+            </div>
+
+            <!-- KPIs -->
+            <div class="kpi-row">
+                <div class="kpi-card">
+                    <div class="kpi-value" id="kpi-vols">–</div>
+                    <div class="kpi-label">Total vols</div>
+                    <div class="kpi-sub"  id="kpi-vols-sub"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="kpi-pax">–</div>
+                    <div class="kpi-label">Total passagers</div>
+                    <div class="kpi-sub"  id="kpi-pax-sub"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="kpi-comp">–</div>
+                    <div class="kpi-label">Compagnies actives</div>
+                    <div class="kpi-sub"  id="kpi-comp-sub"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="kpi-dest">–</div>
+                    <div class="kpi-label">Destinations</div>
+                    <div class="kpi-sub"  id="kpi-dest-sub"></div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+
+                <div class="chart-card full">
+                    <h3>✈️ Vols par mois</h3>
+                    <div class="chart-subtitle">Nombre de vols enregistrés chaque mois</div>
+                    <div class="chart-wrap"><canvas id="chartVolsMois"></canvas></div>
+                </div>
+
+                <div class="chart-card full">
+                    <h3>👥 Passagers par mois</h3>
+                    <div class="chart-subtitle">Total passagers (PAX + Bébés) par mois</div>
+                    <div class="chart-wrap"><canvas id="chartPaxMois"></canvas></div>
+                </div>
+
+
+
+                <div class="chart-card">
+                    <h3>🏆 Top compagnies</h3>
+                    <div class="chart-subtitle">Classement par nombre de vols</div>
+                    <div class="chart-wrap"><canvas id="chartTopComp"></canvas></div>
+                </div>
+
+                <div class="chart-card full">
+                    <h3>📈 Comparaison mois en mois</h3>
+                    <div class="chart-subtitle">Évolution des vols sur l'année — comparaison avec l'année précédente</div>
+                    <div class="chart-wrap tall"><canvas id="chartComparaison"></canvas></div>
+                </div>
+
+                <div class="chart-card full">
+                    <h3>🗺️ Destinations les plus fréquentées</h3>
+                    <div class="chart-subtitle">Routes actives et nombre de passages par destination</div>
+                    <div class="chart-wrap"><canvas id="chartDestinations"></canvas></div>
+                    <div class="route-list" id="routeList"></div>
+                </div>
+
+            </div>
+        <!-- ═══ COMPARAISON 2 COMPAGNIES ═══ -->
+        <div class="compare-section" id="compareSection">
+            <h3>⚖️ Comparaison de deux compagnies</h3>
+            <div class="compare-controls">
+                <label>Compagnie A :</label>
+                <select id="cmpA" class="sel-a" onchange="runComparison()">
+                    <option value="">— Choisir —</option>
+                </select>
+                <div class="vs-badge">VS</div>
+                <label>Compagnie B :</label>
+                <select id="cmpB" class="sel-b" onchange="runComparison()">
+                    <option value="">— Choisir —</option>
+                </select>
+                <label style="margin-left:12px;">Période :</label>
+                <select id="cmpYear" onchange="runComparison()">
+                    <option value="ALL">Toutes années</option>
+                </select>
+                <select id="cmpMonth" onchange="runComparison()">
+                    <option value="ALL">Tous mois</option>
+                    <option value="0">Janvier</option><option value="1">Février</option>
+                    <option value="2">Mars</option><option value="3">Avril</option>
+                    <option value="4">Mai</option><option value="5">Juin</option>
+                    <option value="6">Juillet</option><option value="7">Août</option>
+                    <option value="8">Septembre</option><option value="9">Octobre</option>
+                    <option value="10">Novembre</option><option value="11">Décembre</option>
+                </select>
+            </div>
+            <div id="cmpResult" style="color:#a0aec0; font-size:13px; text-align:center; padding:20px 0;">
+                Sélectionnez deux compagnies pour comparer
+            </div>
+        </div>
+
+        <!-- ═══ COMPARAISON SUR MÊME TRAJET ═══ -->
+        <div class="compare-section" id="routeSection">
+            <h3>🛤️ Compagnies sur le même trajet</h3>
+            <div class="compare-controls">
+                <label>Trajet :</label>
+                <select id="routeFilter" class="sel-route" onchange="runRouteComparison()">
+                    <option value="">— Choisir un trajet —</option>
+                </select>
+                <label style="margin-left:12px;">Période :</label>
+                <select id="routeYear" onchange="runRouteComparison()">
+                    <option value="ALL">Toutes années</option>
+                </select>
+            </div>
+            <div id="routeCmpResult" style="color:#a0aec0; font-size:13px; text-align:center; padding:20px 0;">
+                Sélectionnez un trajet pour voir les compagnies
+            </div>
+        </div>
+
+        </div><!-- end tab-rapports -->
+    </main>
+</div>
+
+<!-- MODAL VOL -->
+<div class="modal" id="flightModal">
+    <div class="modal-content">
+        <h2>Ajouter un vol</h2>
+        <form id="flightForm">
+            <div class="form-group">
+                <label for="fAuthNumber">Numéro d'autorisation</label>
+                <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
+                <small class="field-hint">Format: SNA26-XXXX (ex: SNA26-0001)</small>
+            </div>
+            <div class="form-group">
+                <label for="fDate">Date</label>
+                <input type="date" id="fDate" required>
+            </div>
+            <div class="form-group">
+                <label for="fCompany">Compagnie</label>
+                <select id="fCompany" required></select>
+            </div>
+            <div class="form-group">
+                <label for="fImm">Immatriculation</label>
+                <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
+            </div>
+            <div class="form-group">
+                <label for="fVol">N° Vol</label>
+                <input type="text" id="fVol" placeholder="Ex: L6-123" required>
+            </div>
+            <div class="form-group">
+                <label for="fFrom">Départ de</label>
+                <select id="fFrom" required></select>
+            </div>
+            <div class="form-group">
+                <label for="fTo">Arrivée à</label>
+                <select id="fTo" required></select>
+            </div>
+            <div class="form-group" id="stopoverGroup" style="display:none;">
+                <label for="fStopover">✈ Escale (optionnel)</label>
+                <select id="fStopover">
+                    <option value="">— Aucune escale —</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="fType">Type du vol</label>
+                <select id="fType" required>
+                    <option value="DEP">Départ</option>
+                    <option value="ARR">Arrivée</option>
+                    <option value="TRANSIT">Transit (escale NKC)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="fPassengers">PAX (Passagers)</label>
+                <input type="number" id="fPassengers" min="0" value="0" required>
+            </div>
+            <div class="form-group">
+                <label for="fBabies">Bébés</label>
+                <input type="number" id="fBabies" min="0" value="0" required>
+            </div>
+            <div class="modal-buttons">
+                <button type="submit" class="btn-success">Enregistrer</button>
+                <button type="button" class="btn-secondary" id="cancelBtn">Annuler</button>
+            </div>
+        </form>
     </div>
-    
-    <div id="notificationContainer"></div>
-    
-    <script type="module" src="firebase.js"></script>
-    <script type="module" src="app.js"></script>
+</div>
+
+<div id="notificationContainer"></div>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="app.js"></script>
+
+<script>
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+function switchTab(tab) {
+    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.querySelectorAll('.main-tab').forEach(t => {
+        if (t.getAttribute('onclick') === `switchTab('${tab}')`) t.classList.add('active');
+    });
+    if (tab === 'rapports') setTimeout(refreshCharts, 150);
+}
+
+// ══════════════════════════════════════════
+// CHARTS
+// ══════════════════════════════════════════
+const MONTHS_FR = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+const PALETTE   = ['#2B5A8E','#D4AF37','#006B3F','#C8102E','#FF7F00','#8B00FF','#00B67A','#E63946','#003087','#F77F00','#4a90d9','#e84141'];
+let charts = {};
+
+function getFlights() { return window.appFlights || []; }
+
+function filterFlights(flights) {
+    const y = document.getElementById('chartYearFilter').value;
+    const m = document.getElementById('chartMonthFilter').value;
+    const c = document.getElementById('chartCompanyFilter') ? document.getElementById('chartCompanyFilter').value : 'ALL';
+    return flights.filter(f => {
+        if (!f.date) return false;
+        const d = new Date(f.date);
+        if (y !== 'ALL' && d.getFullYear() !== +y) return false;
+        if (m !== 'ALL' && d.getMonth()    !== +m) return false;
+        if (c !== 'ALL' && f.company !== c) return false;
+        return true;
+    });
+}
+
+function populateCompanyFilter(flights) {
+    const sel = document.getElementById('chartCompanyFilter');
+    if (!sel) return;
+    const cur = sel.value;
+    const companies = [...new Set(flights.map(f => f.company).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="ALL">Toutes les compagnies</option>';
+    companies.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        if (c === cur) o.selected = true;
+        sel.appendChild(o);
+    });
+}
+
+function resetChartFilters() {
+    document.getElementById('chartYearFilter').value    = 'ALL';
+    document.getElementById('chartMonthFilter').value   = 'ALL';
+    document.getElementById('chartCompanyFilter').value = 'ALL';
+    refreshCharts();
+}
+
+function populateYearFilter(flights) {
+    const sel = document.getElementById('chartYearFilter');
+    const cur = sel.value;
+    const years = [...new Set(flights.map(f => f.date ? new Date(f.date).getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
+    sel.innerHTML = '<option value="ALL">Toutes les années</option>';
+    years.forEach(y => {
+        const o = document.createElement('option');
+        o.value = y; o.textContent = y;
+        if (String(y) === cur) o.selected = true;
+        sel.appendChild(o);
+    });
+}
+
+function kill(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function monthly(flights, field) {
+    const d = Array(12).fill(0);
+    flights.forEach(f => { if (f.date) d[new Date(f.date).getMonth()] += field ? (+f[field]||0) : 1; });
+    return d;
+}
+
+function refreshCharts() {
+    const all = getFlights();
+    if (!all.length) {
+        document.getElementById('chartsSubtitle').textContent = 'Aucune donnée disponible';
+        return;
+    }
+    populateYearFilter(all);
+    populateCompanyFilter(all);
+    const flt = filterFlights(all);
+
+    // KPIs
+    const pax  = flt.reduce((s,f) => s + (+f.passengers||0) + (+f.babies||0), 0);
+    const comp = new Set(flt.map(f=>f.company).filter(Boolean));
+    const dest = new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(Boolean));
+
+
+    document.getElementById('kpi-vols').textContent      = flt.length;
+    document.getElementById('kpi-pax').textContent       = pax.toLocaleString('fr-FR');
+    document.getElementById('kpi-comp').textContent      = comp.size;
+    document.getElementById('kpi-dest').textContent      = dest.size;
+    document.getElementById('kpi-vols-sub').textContent  = '';
+    document.getElementById('kpi-pax-sub').textContent   = `dont ${flt.reduce((s,f)=>s+(+f.babies||0),0)} bébés`;
+    document.getElementById('kpi-comp-sub').textContent  = [...comp].slice(0,2).join(', ') + (comp.size>2?'…':'');
+    document.getElementById('kpi-dest-sub').textContent  = `codes ICAO distincts`;
+
+    const y = document.getElementById('chartYearFilter').value;
+    const m = document.getElementById('chartMonthFilter').value;
+    const mn = m!=='ALL' ? ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][+m] : '';
+    document.getElementById('chartsSubtitle').textContent = `${flt.length} vol(s) analysé(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
+
+    // Chart 1 — Vols par mois
+    kill('v'); charts['v'] = new Chart(document.getElementById('chartVolsMois'), {
+        type:'bar', data:{ labels:MONTHS_FR, datasets:[{
+            label:'Vols', data:monthly(flt),
+            backgroundColor: PALETTE[0]+'bb', borderColor:PALETTE[0], borderWidth:2, borderRadius:6
+        }]},
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,ticks:{stepSize:1}}} }
+    });
+
+    // Chart 2 — PAX par mois
+    kill('p'); const paxData = monthly(flt,'passengers').map((v,i)=>v+monthly(flt,'babies')[i]);
+    charts['p'] = new Chart(document.getElementById('chartPaxMois'), {
+        type:'line', data:{ labels:MONTHS_FR, datasets:[{
+            label:'Passagers', data:paxData,
+            backgroundColor:PALETTE[1]+'33', borderColor:PALETTE[1], borderWidth:3,
+            fill:true, tension:0.4, pointRadius:5, pointBackgroundColor:PALETTE[1]
+        }]},
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    });
+
+
+
+    // Chart 4 — Top compagnies
+    kill('c'); const cc={};
+    flt.forEach(f=>{ if(f.company) cc[f.company]=(cc[f.company]||0)+1; });
+    const sc = Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    charts['c'] = new Chart(document.getElementById('chartTopComp'), {
+        type:'bar',
+        data:{ labels:sc.map(([k])=>k.length>14?k.slice(0,14)+'…':k),
+               datasets:[{ label:'Vols', data:sc.map(([,v])=>v),
+                   backgroundColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]+'bb'),
+                   borderColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]),
+                   borderWidth:2, borderRadius:5 }] },
+        options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true}} }
+    });
+
+    // Chart 5 — Comparaison mois en mois
+    kill('k');
+    const allYears = [...new Set(all.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort();
+    const yrs = y!=='ALL' ? [y-1,+y] : allYears.slice(-2);
+    const dsets = yrs.map((yr,i) => {
+        const yf = all.filter(f=>f.date&&new Date(f.date).getFullYear()===+yr);
+        return { label:String(yr), data:monthly(yf), borderColor:PALETTE[i*2],
+                 backgroundColor:PALETTE[i*2]+'22', borderWidth:2.5, fill:false, tension:0.4, pointRadius:4 };
+    });
+    charts['k'] = new Chart(document.getElementById('chartComparaison'), {
+        type:'line', data:{ labels:MONTHS_FR, datasets:dsets },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}} }
+    });
+
+    // Chart 6 — Destinations
+    kill('t'); const dc={};
+    flt.forEach(f=>{ if(f.from) dc[f.from]=(dc[f.from]||0)+1; if(f.to) dc[f.to]=(dc[f.to]||0)+1; });
+    const sd = Object.entries(dc).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    charts['t'] = new Chart(document.getElementById('chartDestinations'), {
+        type:'bar',
+        data:{ labels:sd.map(([k])=>k),
+               datasets:[{ label:'Passages', data:sd.map(([,v])=>v),
+                   backgroundColor:sd.map((_,i)=>PALETTE[i%PALETTE.length]+'bb'),
+                   borderColor:sd.map((_,i)=>PALETTE[i%PALETTE.length]),
+                   borderWidth:2, borderRadius:5 }] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    });
+
+    // Route tags
+    const routes={};
+    flt.forEach(f=>{ if(f.from&&f.to){ const k=`${f.from} → ${f.to}`; routes[k]=(routes[k]||0)+1; } });
+    document.getElementById('routeList').innerHTML =
+        Object.entries(routes).sort((a,b)=>b[1]-a[1]).slice(0,16)
+        .map(([r,n])=>`<span class="route-tag">${r} <span class="route-count">${n}</span></span>`).join('');
+}
+
+// ══════════════════════════════════════════
+// PDF EXPORT
+// ══════════════════════════════════════════
+async function exportPDF() {
+    const btn = document.querySelector('.btn-pdf');
+    btn.textContent = '⏳ Génération...'; btn.disabled = true;
+    try {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+        const W=210, H=297, M=12;
+
+        // Header
+        pdf.setFillColor(43,90,142);
+        pdf.rect(0,0,W,28,'F');
+        pdf.setTextColor(255,255,255);
+        pdf.setFontSize(16); pdf.setFont('helvetica','bold');
+        pdf.text('ANAC Mauritanie – Rapport des Vols', M, 12);
+        pdf.setFontSize(9); pdf.setFont('helvetica','normal');
+        const y  = document.getElementById('chartYearFilter').value;
+        const m  = document.getElementById('chartMonthFilter').value;
+        const mn = m!=='ALL'?['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][+m]:'Tous les mois';
+        pdf.text(`Période : ${y!=='ALL'?y:'Toutes années'} – ${mn}   |   Généré le ${new Date().toLocaleDateString('fr-FR')}`, M, 22);
+
+        // KPIs
+        pdf.setTextColor(44,62,80); pdf.setFontSize(11); pdf.setFont('helvetica','bold');
+        pdf.text('INDICATEURS CLÉS', M, 37);
+        const kpis = [
+            { v: document.getElementById('kpi-vols').textContent, l:'Total vols',         c:[43,90,142] },
+            { v: document.getElementById('kpi-pax').textContent,  l:'Total passagers',    c:[0,182,122] },
+            { v: document.getElementById('kpi-comp').textContent, l:'Compagnies actives', c:[212,175,55] },
+            { v: document.getElementById('kpi-dest').textContent, l:'Destinations',       c:[200,16,46] },
+        ];
+        kpis.forEach((k,i) => {
+            const x = M + i*46;
+            pdf.setFillColor(...k.c); pdf.roundedRect(x,41,43,20,3,3,'F');
+            pdf.setTextColor(255,255,255);
+            pdf.setFontSize(15); pdf.setFont('helvetica','bold');
+            pdf.text(k.v, x+21.5, 52, {align:'center'});
+            pdf.setFontSize(7); pdf.setFont('helvetica','normal');
+            pdf.text(k.l, x+21.5, 58, {align:'center'});
+        });
+
+        // Charts
+        const chartList = [
+            {id:'chartVolsMois',    title:'Vols par mois',                full:true},
+            {id:'chartPaxMois',     title:'Passagers par mois',           full:true},
+
+            {id:'chartTopComp',     title:'Top compagnies',               full:false},
+            {id:'chartComparaison', title:'Comparaison mois en mois',     full:true},
+            {id:'chartDestinations',title:'Destinations fréquentées',     full:true},
+        ];
+        let yPos=66, left=true;
+        for (const ch of chartList) {
+            const canvas = document.getElementById(ch.id);
+            if (!canvas) continue;
+            const img = canvas.toDataURL('image/png');
+            const w = ch.full ? W-M*2 : (W-M*2-5)/2;
+            const h = 55;
+            const x = ch.full ? M : (left ? M : M+w+5);
+            if (yPos+h+14 > H-10) {
+                pdf.addPage();
+                pdf.setFillColor(43,90,142); pdf.rect(0,0,W,12,'F');
+                pdf.setTextColor(255,255,255); pdf.setFontSize(8);
+                pdf.text('ANAC Mauritanie – Rapport des Vols (suite)', M, 9);
+                yPos=18; left=true;
+            }
+            pdf.setTextColor(44,62,80); pdf.setFontSize(8); pdf.setFont('helvetica','bold');
+            pdf.text(ch.title.toUpperCase(), x, yPos);
+            pdf.addImage(img,'PNG', x, yPos+3, w, h);
+            if (ch.full) { yPos+=h+13; left=true; }
+            else { if(!left) yPos+=h+13; left=!left; }
+        }
+
+        // Page numbers
+        const n = pdf.internal.getNumberOfPages();
+        for (let i=1;i<=n;i++) {
+            pdf.setPage(i);
+            pdf.setFontSize(7); pdf.setTextColor(160,160,160);
+            pdf.text(`Page ${i}/${n} – ANAC Mauritanie`, W/2, H-5, {align:'center'});
+        }
+
+        const fname = `ANAC-Rapport-${y!=='ALL'?y:'Complet'}-${new Date().toLocaleDateString('fr-FR').replace(/\//g,'-')}.pdf`;
+        pdf.save(fname);
+    } catch(e) {
+        console.error(e);
+        alert('Erreur PDF: ' + e.message);
+    } finally {
+        btn.innerHTML = '📄 Exporter en PDF'; btn.disabled = false;
+    }
+}
+
+function toggleStopoverField() {
+    const type = document.getElementById('fType').value;
+    const grp  = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
+}
+
+// Called from app.js when flights are loaded/updated
+window.refreshChartsFromApp = function(flightsData) {
+    window.appFlights = flightsData;
+    if (document.getElementById('tab-rapports').classList.contains('active')) refreshCharts();
+    populateCmpSelects(flightsData);
+    populateRouteSelect(flightsData);
+};
+
+// ══════════════════════════════════════════
+// COMPARISON ENGINE
+// ══════════════════════════════════════════
+let cmpCharts = {};
+function killCmp(id) { if(cmpCharts[id]){cmpCharts[id].destroy();delete cmpCharts[id];} }
+
+function populateCmpSelects(flights) {
+    const companies = [...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
+    const years = [...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
+
+    ['cmpA','cmpB'].forEach(id => {
+        const sel = document.getElementById(id);
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">— Choisir —</option>';
+        companies.forEach(c => {
+            const o = document.createElement('option');
+            o.value = c; o.textContent = c;
+            if (c === cur) o.selected = true;
+            sel.appendChild(o);
+        });
+    });
+
+    const yearSel = document.getElementById('cmpYear');
+    const curY = yearSel.value;
+    yearSel.innerHTML = '<option value="ALL">Toutes années</option>';
+    years.forEach(y => {
+        const o = document.createElement('option');
+        o.value = y; o.textContent = y;
+        if (String(y) === curY) o.selected = true;
+        yearSel.appendChild(o);
+    });
+}
+
+function populateRouteSelect(flights) {
+    const routes = {};
+    flights.forEach(f => {
+        if (f.from && f.to) {
+            const k = `${f.from} → ${f.to}`;
+            routes[k] = (routes[k]||0) + 1;
+        }
+    });
+    const routeSel = document.getElementById('routeFilter');
+    const cur = routeSel.value;
+    routeSel.innerHTML = '<option value="">— Choisir un trajet —</option>';
+    Object.entries(routes).sort((a,b)=>b[1]-a[1]).forEach(([r, n]) => {
+        const o = document.createElement('option');
+        o.value = r; o.textContent = `${r}  (${n} vol${n>1?'s':''})`;
+        if (r === cur) o.selected = true;
+        routeSel.appendChild(o);
+    });
+
+    const routeYearSel = document.getElementById('routeYear');
+    const curRY = routeYearSel.value;
+    const years = [...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
+    routeYearSel.innerHTML = '<option value="ALL">Toutes années</option>';
+    years.forEach(y => {
+        const o = document.createElement('option');
+        o.value = y; o.textContent = y;
+        if (String(y) === curRY) o.selected = true;
+        routeYearSel.appendChild(o);
+    });
+}
+
+function runComparison() {
+    const a    = document.getElementById('cmpA').value;
+    const b    = document.getElementById('cmpB').value;
+    const year = document.getElementById('cmpYear').value;
+    const month= document.getElementById('cmpMonth').value;
+    const res  = document.getElementById('cmpResult');
+
+    if (!a || !b) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Sélectionnez deux compagnies pour comparer</span>'; return; }
+    if (a === b)  { res.innerHTML = '<span style="color:#e53e3e;font-size:13px;">⚠️ Choisissez deux compagnies différentes</span>'; return; }
+
+    const all = getFlights();
+    const filter = f => {
+        if (!f.date) return false;
+        const d = new Date(f.date);
+        if (year  !== 'ALL' && d.getFullYear() !== +year)  return false;
+        if (month !== 'ALL' && d.getMonth()    !== +month) return false;
+        return true;
+    };
+    const fA = all.filter(f => f.company === a && filter(f));
+    const fB = all.filter(f => f.company === b && filter(f));
+
+    const stats = (flights) => ({
+        vols: flights.length,
+        pax:  flights.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0),
+        imm:  new Set(flights.map(f=>f.registration).filter(Boolean)).size,
+        monthly: monthly(flights),
+    });
+
+    const sA = stats(fA), sB = stats(fB);
+    const winner = (va, vb) => va > vb ? 'a' : vb > va ? 'b' : '';
+
+    res.innerHTML = `
+        <div class="compare-grid">
+            <div class="compare-kpi a">
+                <div class="ck-name">${a}</div>
+                <div class="ck-val">${sA.vols}</div>
+                <div class="ck-label">Vols totaux</div>
+                ${winner(sA.vols,sB.vols)==='a'?'<span class="winner-badge">LEADER</span>':''}
+            </div>
+            <div class="compare-kpi neutral" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+                <div style="font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;">Vols</div>
+                <div style="font-size:22px;font-weight:800;color:#4a5568;">${sA.vols} / ${sB.vols}</div>
+                <div style="font-size:11px;color:#a0aec0;">PAX: ${sA.pax.toLocaleString('fr-FR')} / ${sB.pax.toLocaleString('fr-FR')}</div>
+                <div style="font-size:11px;color:#a0aec0;">Immat: ${sA.imm} / ${sB.imm}</div>
+            </div>
+            <div class="compare-kpi b">
+                <div class="ck-name">${b}</div>
+                <div class="ck-val">${sB.vols}</div>
+                <div class="ck-label">Vols totaux</div>
+                ${winner(sA.vols,sB.vols)==='b'?'<span class="winner-badge">LEADER</span>':''}
+            </div>
+
+            <div class="compare-kpi a">
+                <div class="ck-val">${sA.pax.toLocaleString('fr-FR')}</div>
+                <div class="ck-label">Passagers</div>
+                ${winner(sA.pax,sB.pax)==='a'?'<span class="winner-badge">LEADER</span>':''}
+            </div>
+            <div class="compare-kpi neutral" style="display:flex;align-items:center;justify-content:center;">
+                <div style="font-size:12px;font-weight:700;color:#718096;text-transform:uppercase;">Passagers</div>
+            </div>
+            <div class="compare-kpi b">
+                <div class="ck-val">${sB.pax.toLocaleString('fr-FR')}</div>
+                <div class="ck-label">Passagers</div>
+                ${winner(sA.pax,sB.pax)==='b'?'<span class="winner-badge">LEADER</span>':''}
+            </div>
+
+
+        </div>
+
+        <div class="compare-chart-row" style="margin-top:16px;">
+            <div>
+                <div style="font-size:12px;font-weight:700;color:#4a5568;text-transform:uppercase;margin-bottom:8px;">Vols par mois</div>
+                <div class="compare-chart-wrap"><canvas id="cmpChartMois"></canvas></div>
+            </div>
+            <div>
+                <div style="font-size:12px;font-weight:700;color:#4a5568;text-transform:uppercase;margin-bottom:8px;">Passagers par mois</div>
+                <div class="compare-chart-wrap"><canvas id="cmpChartPax"></canvas></div>
+            </div>
+        </div>
+    `;
+
+    // Draw comparison charts
+    killCmp('m');
+    cmpCharts['m'] = new Chart(document.getElementById('cmpChartMois'), {
+        type:'bar',
+        data:{ labels:MONTHS_FR, datasets:[
+            { label:a.length>16?a.slice(0,16)+'…':a, data:sA.monthly, backgroundColor:'rgba(43,90,142,0.7)', borderColor:'#2B5A8E', borderWidth:2, borderRadius:4 },
+            { label:b.length>16?b.slice(0,16)+'…':b, data:sB.monthly, backgroundColor:'rgba(200,16,46,0.7)', borderColor:'#C8102E', borderWidth:2, borderRadius:4 },
+        ]},
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}} }
+    });
+
+    killCmp('p');
+    const paxA = monthly(fA,'passengers').map((v,i)=>v+monthly(fA,'babies')[i]);
+    const paxB = monthly(fB,'passengers').map((v,i)=>v+monthly(fB,'babies')[i]);
+    cmpCharts['p'] = new Chart(document.getElementById('cmpChartPax'), {
+        type:'line',
+        data:{ labels:MONTHS_FR, datasets:[
+            { label:a.length>16?a.slice(0,16)+'…':a, data:paxA, borderColor:'#2B5A8E', backgroundColor:'rgba(43,90,142,0.1)', borderWidth:2.5, fill:true, tension:0.4, pointRadius:4 },
+            { label:b.length>16?b.slice(0,16)+'…':b, data:paxB, borderColor:'#C8102E', backgroundColor:'rgba(200,16,46,0.08)', borderWidth:2.5, fill:true, tension:0.4, pointRadius:4 },
+        ]},
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}} }
+    });
+}
+
+function runRouteComparison() {
+    const route  = document.getElementById('routeFilter').value;
+    const year   = document.getElementById('routeYear').value;
+    const res    = document.getElementById('routeCmpResult');
+
+    if (!route) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Sélectionnez un trajet pour voir les compagnies</span>'; return; }
+
+    const [from, to] = route.split(' → ');
+    const all = getFlights().filter(f => {
+        if (f.from !== from || f.to !== to) return false;
+        if (year !== 'ALL' && f.date && new Date(f.date).getFullYear() !== +year) return false;
+        return true;
+    });
+
+    if (!all.length) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Aucun vol sur ce trajet pour la période sélectionnée</span>'; return; }
+
+    const byComp = {};
+    all.forEach(f => {
+        if (!f.company) return;
+        if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0 };
+        byComp[f.company].vols++;
+        byComp[f.company].pax  += (+f.passengers||0) + (+f.babies||0);
+    });
+
+    const sorted = Object.entries(byComp).sort((a,b)=>b[1].vols-a[1].vols);
+    const maxVols = sorted[0][1].vols;
+
+    res.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <span style="font-size:15px;font-weight:700;color:#2d3748;">${from}</span>
+            <span style="font-size:20px;">✈️</span>
+            <span style="font-size:15px;font-weight:700;color:#2d3748;">${to}</span>
+            <span style="font-size:12px;color:#718096;margin-left:8px;">${all.length} vol(s) au total</span>
+        </div>
+        <table class="route-compare-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Compagnie</th>
+                    <th>Vols</th>
+                    <th>Part</th>
+                    <th>PAX</th>
+
+                </tr>
+            </thead>
+            <tbody>
+                ${sorted.map(([comp, s], i) => `
+                    <tr>
+                        <td><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:11px;font-weight:800;background:${i===0?'#2B5A8E':i===1?'#4a90d9':i===2?'rgba(43,90,142,0.15)':'#f0f4f8'};color:${i===0?'#fff':i===1?'#fff':i===2?'#2B5A8E':'#718096'};">${i+1}</span></td>
+                        <td style="font-weight:600;">${comp}</td>
+                        <td>
+                            <div class="bar-cell">
+                                <div class="mini-bar" style="width:${Math.round(s.vols/maxVols*120)}px;background:${PALETTE[i%PALETTE.length]};"></div>
+                                <span style="font-weight:700;">${s.vols}</span>
+                            </div>
+                        </td>
+                        <td style="font-weight:600;color:#2B5A8E;">${Math.round(s.vols/all.length*100)}%</td>
+                        <td>${s.pax.toLocaleString('fr-FR')}</td>
+
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+</script>
 </body>
 </html>
