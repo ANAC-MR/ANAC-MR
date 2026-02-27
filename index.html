@@ -454,7 +454,7 @@
 
 <!-- MODAL VOL -->
 <div class="modal" id="flightModal">
-    <div class="modal-content" style="max-width:560px;padding:0;border-radius:16px;overflow:hidden;">
+    <div class="modal-content" style="max-width:560px;padding:0;border-radius:16px;overflow:visible;max-height:90vh;overflow-y:auto;">
 
         <!-- En-tête modal -->
         <div style="background:linear-gradient(135deg,#1a3a6b,#2B5A8E);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
@@ -465,7 +465,7 @@
             <button onclick="closeModal()" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
         </div>
 
-        <form id="flightForm" style="padding:20px 24px;display:flex;flex-direction:column;gap:0;">
+        <form id="flightForm" style="padding:20px 24px;">
 
             <!-- ① COMPAGNIE — premier champ, tout dépend d'elle -->
             <div style="background:rgba(43,90,142,0.06);border:2px solid rgba(43,90,142,0.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
@@ -559,15 +559,20 @@
                 </div>
             </div>
 
-            <!-- ⑦ PAX + BÉBÉS sur 2 colonnes -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
-                <div class="form-group" style="margin:0;">
-                    <label for="fPassengers" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">👥 PAX (passagers)</label>
-                    <input type="number" id="fPassengers" min="0" value="0" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:15px;font-weight:700;text-align:center;margin-top:5px;">
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label for="fBabies" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">👶 Bébés</label>
-                    <input type="number" id="fBabies" min="0" value="0" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:15px;font-weight:700;text-align:center;margin-top:5px;">
+            <!-- ⑦ PAX + BÉBÉS -->
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">👥 Passagers</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label for="fPassengers" style="font-size:11px;font-weight:700;color:#4a5568;display:block;margin-bottom:5px;">PAX (adultes + enfants)</label>
+                        <input type="number" id="fPassengers" min="0" value="0" required
+                            style="width:100%;padding:10px 12px;border-radius:8px;border:2px solid #86efac;font-family:inherit;font-size:18px;font-weight:800;text-align:center;background:#fff;color:#166534;">
+                    </div>
+                    <div>
+                        <label for="fBabies" style="font-size:11px;font-weight:700;color:#4a5568;display:block;margin-bottom:5px;">Bébés (&lt; 2 ans)</label>
+                        <input type="number" id="fBabies" min="0" value="0" required
+                            style="width:100%;padding:10px 12px;border-radius:8px;border:2px solid #86efac;font-family:inherit;font-size:18px;font-weight:800;text-align:center;background:#fff;color:#166534;">
+                    </div>
                 </div>
             </div>
 
