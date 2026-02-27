@@ -454,81 +454,127 @@
 
 <!-- MODAL VOL -->
 <div class="modal" id="flightModal">
-    <div class="modal-content">
-        <h2>Ajouter un vol</h2>
-        <form id="flightForm">
-            <div class="form-group">
-                <label for="fAuthNumber">Numéro d'autorisation</label>
-                <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
-                <small class="field-hint">Format: SNA26-XXXX (ex: SNA26-0001)</small>
+    <div class="modal-content" style="max-width:560px;padding:0;border-radius:16px;overflow:hidden;">
+
+        <!-- En-tête modal -->
+        <div style="background:linear-gradient(135deg,#1a3a6b,#2B5A8E);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+                <h2 style="margin:0;font-size:17px;font-weight:800;color:#fff;" id="modalTitle">✈ Ajouter un vol</h2>
+                <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:3px;" id="modalSubtitle">Remplissez les informations du vol</div>
             </div>
-            <div class="form-group">
-                <label for="fDate">Date</label>
-                <input type="date" id="fDate" required>
+            <button onclick="closeModal()" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
+        </div>
+
+        <form id="flightForm" style="padding:20px 24px;display:flex;flex-direction:column;gap:0;">
+
+            <!-- ① COMPAGNIE — premier champ, tout dépend d'elle -->
+            <div style="background:rgba(43,90,142,0.06);border:2px solid rgba(43,90,142,0.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                <label style="font-size:11px;font-weight:700;color:#2B5A8E;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">🏢 Compagnie aérienne</label>
+                <select id="fCompany" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(43,90,142,0.25);font-family:inherit;font-size:14px;font-weight:600;color:#2d3748;background:#fff;cursor:pointer;"></select>
+                <!-- Ligne info compagnie : préfixe vol + immat -->
+                <div id="companyInfoBar" style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;"></div>
             </div>
-            <div class="form-group">
-                <label for="fCompany">Compagnie</label>
-                <select id="fCompany" required></select>
+
+            <!-- ② AUTH + DATE sur 2 colonnes -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                <div class="form-group" style="margin:0;">
+                    <label for="fAuthNumber" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">🔖 N° autorisation</label>
+                    <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;">
+                    <small class="field-hint" style="font-size:10px;color:#a0aec0;">Format: SNA26-XXXX</small>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="fDate" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">📅 Date du vol</label>
+                    <input type="date" id="fDate" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;">
+                </div>
             </div>
-            <div class="form-group">
-                <label for="fImm">Immatriculation</label>
-                <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
+
+            <!-- ③ IMMAT + N° VOL sur 2 colonnes (auto-remplis selon compagnie) -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                <div class="form-group" style="margin:0;">
+                    <label for="fImm" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">🛩 Immatriculation</label>
+                    <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;font-weight:600;">
+                    <div style="margin-top:4px;" id="immHint"></div>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="fVol" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">✈ N° de vol</label>
+                    <input type="text" id="fVol" placeholder="Ex: L6-100" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;font-weight:600;">
+                    <div style="margin-top:4px;" id="volHint"></div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="fVol">N° Vol</label>
-                <input type="text" id="fVol" placeholder="Ex: L6-123" required>
+
+            <!-- ④ TYPE — DEP ou ARR, change From/To -->
+            <div style="margin-bottom:14px;">
+                <label style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:8px;">🔄 Type du vol</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <button type="button" id="btnDEP" onclick="selectType('DEP')"
+                        style="padding:11px;border-radius:9px;border:2px solid #2B5A8E;background:#2B5A8E;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;">
+                        ↗ Départ (NKC →)
+                    </button>
+                    <button type="button" id="btnARR" onclick="selectType('ARR')"
+                        style="padding:11px;border-radius:9px;border:2px solid #e2e8f0;background:#f7fafc;color:#718096;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;">
+                        ↙ Arrivée (→ NKC)
+                    </button>
+                </div>
+                <input type="hidden" id="fType" value="DEP">
             </div>
-            <!-- TYPE EN PREMIER -->
-            <div class="form-group">
-                <label for="fType">Type du vol</label>
-                <select id="fType" required onchange="if(window.updateRouteByType)updateRouteByType()">
-                    <option value="DEP">Départ</option>
-                    <option value="ARR">Arrivée</option>
-                </select>
+
+            <!-- ⑤ ROUTE : De → À avec flèche visuelle -->
+            <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+                <label style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:10px;">🗺 Route</label>
+                <div style="display:grid;grid-template-columns:1fr 32px 1fr;gap:6px;align-items:center;">
+                    <div>
+                        <div style="font-size:10px;color:#718096;font-weight:600;margin-bottom:4px;">DÉPART DE</div>
+                        <select id="fFrom" required style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;font-weight:600;background:#fff;"></select>
+                    </div>
+                    <div style="text-align:center;font-size:18px;color:#2B5A8E;padding-top:16px;">→</div>
+                    <div>
+                        <div style="font-size:10px;color:#718096;font-weight:600;margin-bottom:4px;">ARRIVÉE À</div>
+                        <select id="fTo" required style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;font-weight:600;background:#fff;"></select>
+                    </div>
+                </div>
             </div>
-            <!-- FROM / TO auto-rempli selon type + compagnie -->
-            <div class="form-group">
-                <label for="fFrom">Départ de</label>
-                <select id="fFrom" required></select>
-            </div>
-            <div class="form-group">
-                <label for="fTo">Arrivée à</label>
-                <select id="fTo" required></select>
-            </div>
-            <!-- ESCALE : checkbox -->
-            <div class="form-group">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
-                    <input type="checkbox" id="hasStopover" onchange="toggleStopoverField()" style="width:16px;height:16px;cursor:pointer;">
-                    ✈ Ce vol a une escale
+
+            <!-- ⑥ ESCALE checkbox -->
+            <div style="margin-bottom:10px;">
+                <label style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;background:#f7fafc;user-select:none;">
+                    <input type="checkbox" id="hasStopover" onchange="toggleStopoverField()" style="width:16px;height:16px;accent-color:#2B5A8E;cursor:pointer;">
+                    <span style="font-size:13px;font-weight:600;color:#4a5568;">✈ Ce vol a une escale intermédiaire</span>
                 </label>
             </div>
-            <div id="stopoverGroup" style="display:none;background:rgba(43,90,142,0.06);border-radius:8px;padding:12px;margin-bottom:4px;border:1px solid rgba(43,90,142,0.15);">
-                <div class="form-group">
-                    <label for="fStopover">Aéroport d'escale</label>
-                    <select id="fStopover"><option value="">— Choisir —</option></select>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                    <div class="form-group">
-                        <label for="fStopoverPax">PAX à l'escale</label>
-                        <input type="number" id="fStopoverPax" min="0" value="0">
+            <div id="stopoverGroup" style="display:none;background:rgba(43,90,142,0.05);border:1px solid rgba(43,90,142,0.18);border-radius:10px;padding:14px;margin-bottom:10px;">
+                <div style="font-size:11px;font-weight:700;color:#2B5A8E;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">🛑 Escale</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:10px;font-weight:700;color:#718096;display:block;margin-bottom:4px;">AÉROPORT</label>
+                        <select id="fStopover" style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;background:#fff;"><option value="">— Choisir —</option></select>
                     </div>
-                    <div class="form-group">
-                        <label for="fStopoverBabies">Bébés à l'escale</label>
-                        <input type="number" id="fStopoverBabies" min="0" value="0">
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:10px;font-weight:700;color:#718096;display:block;margin-bottom:4px;">PAX ESCALE</label>
+                        <input type="number" id="fStopoverPax" min="0" value="0" style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:10px;font-weight:700;color:#718096;display:block;margin-bottom:4px;">BÉBÉS ESCALE</label>
+                        <input type="number" id="fStopoverBabies" min="0" value="0" style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;">
                     </div>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="fPassengers">PAX (Passagers)</label>
-                <input type="number" id="fPassengers" min="0" value="0" required>
+
+            <!-- ⑦ PAX + BÉBÉS sur 2 colonnes -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                <div class="form-group" style="margin:0;">
+                    <label for="fPassengers" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">👥 PAX (passagers)</label>
+                    <input type="number" id="fPassengers" min="0" value="0" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:15px;font-weight:700;text-align:center;margin-top:5px;">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="fBabies" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">👶 Bébés</label>
+                    <input type="number" id="fBabies" min="0" value="0" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:15px;font-weight:700;text-align:center;margin-top:5px;">
+                </div>
             </div>
-            <div class="form-group">
-                <label for="fBabies">Bébés</label>
-                <input type="number" id="fBabies" min="0" value="0" required>
-            </div>
-            <div class="modal-buttons">
-                <button type="submit" class="btn-success">Enregistrer</button>
-                <button type="button" class="btn-secondary" id="cancelBtn">Annuler</button>
+
+            <!-- ⑧ BOUTONS -->
+            <div class="modal-buttons" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0;">
+                <button type="button" class="btn-secondary" id="cancelBtn" style="padding:12px;border-radius:9px;font-size:14px;font-weight:700;">Annuler</button>
+                <button type="submit" class="btn-success" style="padding:12px;border-radius:9px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#006B3F,#00b67a);border:none;color:#fff;cursor:pointer;">✔ Enregistrer</button>
             </div>
         </form>
     </div>
