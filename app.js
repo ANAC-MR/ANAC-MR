@@ -31,6 +31,22 @@ const AIRLINE_PREFIXES = {
 };
 
 // ===============================
+// AÉROPORT D'ORIGINE PAR COMPAGNIE
+// (Quand DEP: De=NKC, À=home; Quand ARR: De=home, À=NKC)
+// ===============================
+const COMPANY_HOME_AIRPORT = {
+    "Mauritania Airlines": "NKC",
+    "Air Sénégal":         "DSS",
+    "Turkish Airlines":    "IST",
+    "Binter":              "LPA",
+    "Air Algérie":         "ALG",
+    "ASKY":                "LFW",
+    "Royal Air Maroc":     "CMN",
+    "Tunisair":            "TUN",
+    "Air France":          "CDG"
+};
+
+// ===============================
 // LISTE DES DESTINATIONS (ICAO)
 // ===============================
 const DESTINATIONS = [
@@ -112,6 +128,9 @@ const elements = {
     fFrom: document.getElementById('fFrom'),
     fTo: document.getElementById('fTo'),
     fStopover: document.getElementById('fStopover'),
+    fStopoverPax: document.getElementById('fStopoverPax'),
+    fStopoverBabies: document.getElementById('fStopoverBabies'),
+    hasStopover: document.getElementById('hasStopover'),
     fPassengers: document.getElementById('fPassengers'),
     fBabies: document.getElementById('fBabies'),
     
@@ -253,11 +272,7 @@ function attachEventListeners() {
     // Form interactions
     elements.fCompany.addEventListener('change', updateFlightNumberPrefix);
     if (elements.fType) {
-        elements.fType.addEventListener('change', function() {
-            const grp = document.getElementById('stopoverGroup');
-            if (grp) grp.style.display = this.value === 'TRANSIT' ? '' : 'none';
-            if (elements.fStopover && this.value !== 'TRANSIT') elements.fStopover.value = '';
-        });
+        elements.fType.addEventListener('change', updateRouteByType);
     }
     elements.fAuthNumber.addEventListener('input', handleAuthNumberInput);
     
@@ -466,7 +481,10 @@ function getFormData() {
         type: elements.fType.value,
         from: elements.fFrom.value,
         to: elements.fTo.value,
-        stopover: (elements.fStopover && elements.fStopover.value) || '',
+        hasStopover: !!(elements.hasStopover && elements.hasStopover.checked),
+        stopover: (elements.hasStopover && elements.hasStopover.checked && elements.fStopover) ? elements.fStopover.value : '',
+        stopoverPax: (elements.hasStopover && elements.hasStopover.checked) ? (parseInt(elements.fStopoverPax && elements.fStopoverPax.value) || 0) : 0,
+        stopoverBabies: (elements.hasStopover && elements.hasStopover.checked) ? (parseInt(elements.fStopoverBabies && elements.fStopoverBabies.value) || 0) : 0,
         passengers: parseInt(elements.fPassengers.value) || 0,
         babies: parseInt(elements.fBabies.value) || 0,
         timestamp: Date.now()
@@ -535,10 +553,50 @@ function updateFlightNumberPrefix() {
         elements.fVol.value = prefix + '-';
     }
     
+    // Auto-fill From/To based on company + type
+    updateRouteByType();
+    
     // Update immatriculation field based on admin config
     updateImmField(company);
     // Update vol number field based on admin config
     updateVolField(company);
+}
+
+// Auto-fill From/To when type or company changes
+function updateRouteByType() {
+    const company = elements.fCompany.value;
+    const type    = elements.fType ? elements.fType.value : 'DEP';
+    const NKC     = 'GQNO'; // Nouakchott Oumtounsy
+    const homeCode = COMPANY_HOME_AIRPORT[company] || '';
+
+    // Find airport option values (ICAO codes stored as option values)
+    // fFrom and fTo are selects populated with airport names
+    // We need to match by code in the option text or value
+    const setSelectByCode = (sel, code) => {
+        if (!sel) return;
+        // Try exact value match first
+        for (const opt of sel.options) {
+            if (opt.value === code || opt.value.includes(code) || opt.text.includes(code)) {
+                sel.value = opt.value;
+                return;
+            }
+        }
+    };
+
+    if (type === 'DEP') {
+        // Departure: FROM = NKC, TO = company home
+        setSelectByCode(elements.fFrom, 'NKC');
+        if (homeCode) setSelectByCode(elements.fTo, homeCode);
+    } else if (type === 'ARR') {
+        // Arrival: FROM = company home, TO = NKC
+        if (homeCode) setSelectByCode(elements.fFrom, homeCode);
+        setSelectByCode(elements.fTo, 'NKC');
+    }
+
+    // Show/hide stopover
+    const grp = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
+    if (elements.fStopover && type !== 'TRANSIT') elements.fStopover.value = '';
 }
 
 function updateImmField(company) {
