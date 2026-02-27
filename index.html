@@ -478,6 +478,15 @@
                 <label for="fVol">N° Vol</label>
                 <input type="text" id="fVol" placeholder="Ex: L6-123" required>
             </div>
+            <!-- TYPE EN PREMIER -->
+            <div class="form-group">
+                <label for="fType">Type du vol</label>
+                <select id="fType" required onchange="if(window.updateRouteByType)updateRouteByType()">
+                    <option value="DEP">Départ</option>
+                    <option value="ARR">Arrivée</option>
+                </select>
+            </div>
+            <!-- FROM / TO auto-rempli selon type + compagnie -->
             <div class="form-group">
                 <label for="fFrom">Départ de</label>
                 <select id="fFrom" required></select>
@@ -486,19 +495,28 @@
                 <label for="fTo">Arrivée à</label>
                 <select id="fTo" required></select>
             </div>
-            <div class="form-group" id="stopoverGroup" style="display:none;">
-                <label for="fStopover">✈ Escale (optionnel)</label>
-                <select id="fStopover">
-                    <option value="">— Aucune escale —</option>
-                </select>
-            </div>
+            <!-- ESCALE : checkbox -->
             <div class="form-group">
-                <label for="fType">Type du vol</label>
-                <select id="fType" required>
-                    <option value="DEP">Départ</option>
-                    <option value="ARR">Arrivée</option>
-                    <option value="TRANSIT">Transit (escale NKC)</option>
-                </select>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+                    <input type="checkbox" id="hasStopover" onchange="toggleStopoverField()" style="width:16px;height:16px;cursor:pointer;">
+                    ✈ Ce vol a une escale
+                </label>
+            </div>
+            <div id="stopoverGroup" style="display:none;background:rgba(43,90,142,0.06);border-radius:8px;padding:12px;margin-bottom:4px;border:1px solid rgba(43,90,142,0.15);">
+                <div class="form-group">
+                    <label for="fStopover">Aéroport d'escale</label>
+                    <select id="fStopover"><option value="">— Choisir —</option></select>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div class="form-group">
+                        <label for="fStopoverPax">PAX à l'escale</label>
+                        <input type="number" id="fStopoverPax" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="fStopoverBabies">Bébés à l'escale</label>
+                        <input type="number" id="fStopoverBabies" min="0" value="0">
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label for="fPassengers">PAX (Passagers)</label>
@@ -794,9 +812,9 @@ async function exportPDF() {
 }
 
 function toggleStopoverField() {
-    const type = document.getElementById('fType').value;
-    const grp  = document.getElementById('stopoverGroup');
-    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
+    const cb  = document.getElementById('hasStopover');
+    const grp = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
 }
 
 // Called from app.js when flights are loaded/updated
