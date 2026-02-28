@@ -115,7 +115,7 @@ function initializeMockMode() {
     console.log('Initializing in mock mode');
     
     // Mock storage
-    let mockFlights = JSON.parse(localStorage.getItem('mock_flights') || '[]');
+    let mockFlights = window._mockFlightsDB || [];
     
     // Mock service
     const mockDbService = {
@@ -126,7 +126,7 @@ function initializeMockMode() {
             };
             
             mockFlights.push(flight);
-            localStorage.setItem('mock_flights', JSON.stringify(mockFlights));
+            window._mockFlightsDB = mockFlights;
             
             // Simulate delay
             await new Promise(resolve => setTimeout(resolve, 300));
@@ -147,7 +147,7 @@ function initializeMockMode() {
                     ...flightData,
                     id: flightId
                 };
-                localStorage.setItem('mock_flights', JSON.stringify(mockFlights));
+                window._mockFlightsDB = mockFlights;
                 
                 // Simulate delay
                 await new Promise(resolve => setTimeout(resolve, 300));
@@ -164,7 +164,7 @@ function initializeMockMode() {
         
         async deleteFlight(flightId) {
             mockFlights = mockFlights.filter(f => f.id !== flightId);
-            localStorage.setItem('mock_flights', JSON.stringify(mockFlights));
+            window._mockFlightsDB = mockFlights;
             
             // Simulate delay
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -181,9 +181,9 @@ function initializeMockMode() {
             // Initial load
             callback([...mockFlights]);
             
-            // Mock real-time updates (polling localStorage)
+            // Mock real-time updates (polling in-memory)
             const interval = setInterval(() => {
-                const currentFlights = JSON.parse(localStorage.getItem('mock_flights') || '[]');
+                const currentFlights = window._mockFlightsDB || [];
                 if (JSON.stringify(currentFlights) !== JSON.stringify(mockFlights)) {
                     mockFlights = currentFlights;
                     callback([...mockFlights]);
@@ -534,10 +534,11 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
         getStatus: getFirebaseStatus,
         reconnect: reconnectFirebase,
         clearMockData: () => {
-            localStorage.removeItem('mock_flights');
+            window._mockFlightsDB = [];
             console.log('Mock data cleared');
         }
     };
     
     console.log('Firebase debug mode enabled');
 }
+
