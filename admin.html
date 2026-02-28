@@ -2186,7 +2186,6 @@ window.changePassword = async function() {
 
         setTimeout(function() {
             sessionStorage.clear();
-            localStorage.removeItem('anac_session');
             window.location.href = 'index.html';
         }, 1500);
 
@@ -2248,7 +2247,6 @@ window.changeLdmPassword = async function() {
 
 window.clearAllSessions = function() {
     sessionStorage.clear();
-    localStorage.removeItem('anac_session');
     showNotif('Toutes les sessions ont ete reinitialisees', 'success');
     logActivity('Reinitialisation des sessions', 'security');
 };
