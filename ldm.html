@@ -410,94 +410,164 @@ function parseText() {
 }
 
 // ---- EXTRACT FIELDS ----
+// LDM: line1 = VOL/DAY.REG...
+//   line2 = -NKC.A/B/C/D  -> 4 champs: pax=A+B+C, bebes=D
+//           -NKC.A/B/C    -> 3 champs: pax=A+B,   bebes=C
+//   stopover = 2 station lines: pax=sum all sauf dernier de chaque, bebes=sum derniers
+// MVT: line1 = VOL/DAY.REG  somewhere below: PAX T -> pax=T, bebes=0
 function extractFields(text, dateReceived) {
-  var p = {};
-  var raw = text.replace(/\r/g,'');
+  var p = { passengers:0, babies:0 };
+  var raw   = text.replace(/\r/g,'');
   var lines = raw.split('\n').map(function(l){return l.trim();}).filter(Boolean);
-  var upper = raw.toUpperCase();
 
-  // 1. Vol + Immat + Jour
+  // ---------- 1. NUMERO DE VOL + DATE + IMMATRICULATION ----------
+  // Format LDM: L6212/21.5TCLJ.C16Y144.2/5
+  // Format MVT: TK762/15.TCJRI  (tout sur une ligne)
   var PATS = [
-    /^([A-Z]{1,2}-?\d{2,4})[\/.](\d{1,2})\.([A-Z0-9]{2}-?[A-Z0-9]{2,6})\./,
-    /^([A-Z]{1,2}-?\d{2,4})[\/.](\d{1,2})\.([A-Z0-9]{4,8})/,
-    /^([A-Z]{1,2}\s?-?\d{2,4})[\/.](\d{1,2})\.?([A-Z0-9]{4,8})?/
+    /^([A-Z]{1,2}\d{2,4})\/(\d{1,2})\.([A-Z0-9\-]{4,8})\./,
+    /^([A-Z]{1,2}\d{2,4})\/(\d{1,2})\.([A-Z0-9\-]{4,8})/,
+    /^([A-Z]{1,2}\d{2,4})\/(\d{1,2})/
   ];
-  var flLine = null;
-  for (var ri=0; ri<PATS.length; ri++) {
-    for (var li=0; li<lines.length; li++) { if (PATS[ri].test(lines[li])) { flLine=lines[li]; break; } }
-    if (flLine) {
-      var m = flLine.match(PATS[ri]);
-      p.flightNumber = m[1].replace(/[-\s]/g,'');
-      if (m[3]) p.registration = m[3].replace(/[-.\s]/g,'').toUpperCase();
-      var day = m[2]||'1'; if (day.length===1) day='0'+day;
-      if (dateReceived) { var pts=dateReceived.split('-'); p.date=pts[0]+'-'+pts[1]+'-'+day; }
-      break;
+  var flIdx = -1;
+  for (var ri=0; ri<PATS.length && flIdx<0; ri++) {
+    for (var li=0; li<lines.length; li++) {
+      if (PATS[ri].test(lines[li])) { flIdx=li; break; }
     }
   }
-  if (!p.flightNumber) { var fm=upper.match(/(?:FLIGHT|FLT|VOL)\s+([A-Z]{1,2}\d{2,4})/); if(fm)p.flightNumber=fm[1]; }
-
-  // 2. Date fallback
-  if (!p.date) {
-    var dm=raw.match(/(\d{4})-(\d{2})-(\d{2})/) || raw.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
-    if (dm) p.date = dm[1].length===4 ? dm[1]+'-'+dm[2]+'-'+dm[3] : dm[3]+'-'+dm[2]+'-'+dm[1];
+  if (flIdx >= 0) {
+    var m = lines[flIdx].match(PATS[0]) || lines[flIdx].match(PATS[1]) || lines[flIdx].match(PATS[2]);
+    if (m) {
+      p.flightNumber = m[1];
+      var day = m[2]; if (day.length===1) day='0'+day;
+      if (dateReceived) { var pts=dateReceived.split('-'); p.date=pts[0]+'-'+pts[1]+'-'+day; }
+      if (m[3]) p.registration = m[3].replace(/[-.\s]/g,'').toUpperCase();
+    }
   }
 
-  // 3. Compagnie
+  // Fallback date
+  if (!p.date && dateReceived) p.date = dateReceived;
+
+  // Compagnie
   if (p.flightNumber) {
-    var pfx = p.flightNumber.match(/^([A-Z]{1,2})/);
-    p.company = COMPANY_MAP[pfx?pfx[1]:''] || COMPANY_MAP[p.flightNumber.slice(0,2)] || '';
+    var pfx = p.flightNumber.slice(0,2);
+    p.company = {'L6':'Mauritania Airlines','HC':'Air Senegal','TK':'Turkish Airlines','NT':'Binter','AH':'Air Algerie','KP':'ASKY','AT':'Royal Air Maroc','TU':'Tunisair','AF':'Air France'}[pfx] || pfx;
   }
 
-  // 4. Route
-  var BASE = 'NKC';
-  var routeLines = lines.filter(function(l){return /^-[A-Z]{2,4}[.\/]/.test(l);});
-  var ldmSt = routeLines.map(function(l){var mm=l.match(/^-([A-Z]{2,4})/);return mm?mm[1]:null;}).filter(Boolean);
-  var mvtRm = raw.match(/\b([A-Z]{3})\s*\/\s*([A-Z]{3})\b/);
-  var mvtSt = mvtRm ? [mvtRm[1],mvtRm[2]] : [];
-  var siRx=/SI\s+([A-Z]{2,4})\s+BAG/gi; var siM; var siSt=[];
-  while((siM=siRx.exec(raw))!==null) siSt.push(siM[1]);
-  var allRaw=ldmSt.concat(mvtSt).concat(siSt);
-  var seen={}; var allSt=allRaw.filter(function(s){if(seen[s])return false;seen[s]=true;return true;});
-  var otherSt=allSt.filter(function(s){return s!==BASE;});
-  var nkcIdx=allSt.indexOf(BASE);
-  if (otherSt.length>=2 && nkcIdx>=0) {
-    if (nkcIdx===0){p.from=BASE;p.stopover=otherSt[0];p.to=otherSt[otherSt.length-1];p.type='DEP';}
-    else if(nkcIdx===allSt.length-1){p.from=otherSt[0];p.stopover=otherSt.length>1?otherSt[otherSt.length-2]:'';p.to=BASE;p.type='ARR';}
-    else{p.from=allSt[0];p.stopover=BASE;p.to=allSt[allSt.length-1];p.type='TRANSIT';}
-  } else if(otherSt.length>=2){p.from=BASE;p.stopover=otherSt[0];p.to=otherSt[otherSt.length-1];p.type='DEP';}
-  else if(nkcIdx>=0&&otherSt.length===1){if(nkcIdx===0){p.from=BASE;p.to=otherSt[0];p.type='DEP';}else{p.from=otherSt[0];p.to=BASE;p.type='ARR';}}
-  else if(otherSt.length===1){if(upper.indexOf('ARR')>=0){p.from=otherSt[0];p.to=BASE;p.type='ARR';}else{p.from=BASE;p.to=otherSt[0];p.type='DEP';}}
-  else{p.from=BASE;p.to='';p.type='DEP';}
+  // ---------- 2. DETECTER LDM vs MVT ----------
+  var upperRaw = raw.toUpperCase();
+  var isMVT = (upperRaw.indexOf('MVT') >= 0 && upperRaw.indexOf('LDM') < 0);
 
-  // 5. PAX + Bebes
-  var totalPax=0,totalBabies=0,paxFound=false;
-  routeLines.forEach(function(line){
-    var cs=(line.match(/\.((?:[A-Z]\d+)+)\./) || [])[1]||'';
-    if(cs){var cp=0;(cs.match(/[A-Z](\d+)/g)||[]).forEach(function(c){cp+=parseInt(c.slice(1));});
-      if(cp>0){totalPax+=cp;var nm=line.match(/\.(\d+(?:\/\d+)+)/);if(nm){var ns=nm[1].split('/').map(Number);totalBabies+=ns[ns.length-1]||0;}paxFound=true;return;}}
-    var mm=line.match(/\.(\d+(?:\/\d+)+)/);
-    if(mm){var ns=mm[1].split('/').map(Number);if(ns.length>=2){totalPax+=ns.slice(0,-1).reduce(function(a,b){return a+b;},0);totalBabies+=ns[ns.length-1];paxFound=true;}}
-  });
-  if(!paxFound){var ps=raw.match(/\.?PAX[\/\s]+(\d+)\s*\/\s*(\d+)/i);if(ps){totalPax=parseInt(ps[1]);totalBabies=parseInt(ps[2]);paxFound=true;}}
-  if(!paxFound){var pp=raw.match(/\bPAX\s+(\d+)/i);if(pp)totalPax=parseInt(pp[1]);}
-  p.passengers=totalPax; p.babies=totalBabies;
-  if(p.stopover&&p.stopover!==BASE){
-    var sl=null;for(var j=0;j<routeLines.length;j++){if(routeLines[j].indexOf('-'+p.stopover)===0){sl=routeLines[j];break;}}
-    if(sl){var sm2=sl.match(/\.(\d+(?:\/\d+)+)/);if(sm2){var sn=sm2[1].split('/').map(Number);p.stopoverPax=sn.slice(0,-1).reduce(function(a,b){return a+b;},0);p.stopoverBabies=sn[sn.length-1];}}
+  if (isMVT) {
+    // ---- MVT: cherche "PAX T" ou ".PAX/T" ou "PAX/T" ----
+    // On cherche le nombre apres PAX sur n'importe quelle ligne
+    var paxMVT = null;
+    for (var i=0; i<lines.length; i++) {
+      // Format: ".PAX/142" ou "PAX 142" ou "PAX/142" ou ".142" apres mot PAX
+      var pm = lines[i].match(/\.?PAX[\/\s]+(\d+)/i);
+      if (pm) { paxMVT = parseInt(pm[1]); break; }
+      // Format: "PAX" seul sur la ligne, nombre sur la ligne suivante
+      if (lines[i].toUpperCase() === 'PAX' && i+1 < lines.length) {
+        var nm = lines[i+1].match(/^(\d+)/);
+        if (nm) { paxMVT = parseInt(nm[1]); break; }
+      }
+    }
+    if (paxMVT !== null) { p.passengers = paxMVT; p.babies = 0; }
+
+  } else {
+    // ---- LDM: lignes de stations -NKC.A/B/C/D ----
+    // Trouve toutes les lignes qui commencent par -IATA.chiffres
+    var stationLines = [];
+    for (var i=0; i<lines.length; i++) {
+      if (/^-[A-Z]{2,4}[.\/ ]/.test(lines[i])) {
+        var st = lines[i].match(/^-([A-Z]{2,4})/);
+        var nums = lines[i].match(/(\d+(?:\/\d+)+)/);
+        if (st && nums) {
+          var fields = nums[1].split('/').map(Number);
+          stationLines.push({ city: st[1], fields: fields });
+        }
+      }
+    }
+
+    // Additionne PAX et bebes de toutes les stations
+    var totalPax = 0, totalBabies = 0;
+    stationLines.forEach(function(st) {
+      var f = st.fields;
+      if (f.length >= 4) {
+        // 4 champs: A/B/C/D -> pax=A+B+C, bebes=D
+        totalPax   += f[0] + f[1] + f[2];
+        totalBabies += f[f.length - 1];
+      } else if (f.length === 3) {
+        // 3 champs: A/B/C -> pax=A+B, bebes=C
+        totalPax   += f[0] + f[1];
+        totalBabies += f[2];
+      } else if (f.length === 2) {
+        // 2 champs: A/B -> pax=A, bebes=B
+        totalPax   += f[0];
+        totalBabies += f[1];
+      } else if (f.length === 1) {
+        totalPax += f[0];
+      }
+    });
+
+    p.passengers = totalPax;
+    p.babies     = totalBabies;
+
+    // Route depuis les stations
+    var BASE = 'NKC';
+    var cities = stationLines.map(function(s){return s.city;});
+    var others = cities.filter(function(c){return c !== BASE;});
+    var nkcPos = cities.indexOf(BASE);
+
+    if (others.length === 0) {
+      p.from = BASE; p.to = BASE; p.type = 'DEP';
+    } else if (cities.length === 1) {
+      if (cities[0] === BASE) { p.from = BASE; p.to = ''; p.type = 'DEP'; }
+      else { p.from = BASE; p.to = cities[0]; p.type = 'DEP'; }
+    } else if (nkcPos === 0) {
+      // NKC en premier: depart NKC
+      p.from = BASE; p.to = others[others.length-1]; p.type = 'DEP';
+      if (others.length > 1) p.stopover = others[0];
+    } else if (nkcPos === cities.length - 1) {
+      // NKC en dernier: arrivee NKC
+      p.from = others[0]; p.to = BASE; p.type = 'ARR';
+      if (others.length > 1) p.stopover = others[others.length-2];
+    } else if (nkcPos > 0) {
+      // NKC au milieu: transit
+      p.from = cities[0]; p.stopover = BASE; p.to = cities[cities.length-1]; p.type = 'TRANSIT';
+    } else {
+      // Pas de NKC explicite
+      p.from = BASE; p.to = others[others.length-1]; p.type = 'DEP';
+      if (others.length > 1) p.stopover = others[0];
+    }
+
+    // Donnees escale separees (premiere ville non-NKC si stopover)
+    if (p.stopover && stationLines.length >= 2) {
+      var stopSt = stationLines.find(function(s){return s.city === p.stopover;});
+      if (stopSt) {
+        var f = stopSt.fields;
+        if (f.length >= 4)      { p.stopoverPax = f[0]+f[1]+f[2]; p.stopoverBabies = f[f.length-1]; }
+        else if (f.length === 3) { p.stopoverPax = f[0]+f[1];      p.stopoverBabies = f[2]; }
+        else if (f.length === 2) { p.stopoverPax = f[0];           p.stopoverBabies = f[1]; }
+      }
+    }
   }
 
-  // 6. Bagages
-  var maxBags=0;var si2=/SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi;var s2;
-  while((s2=si2.exec(raw))!==null)maxBags=Math.max(maxBags,parseInt(s2[1])||0);
-  if(!maxBags){var bm=raw.match(/(?:BAGS?|BAGGAGE)[\/:\s]+(\d+)/i);if(bm)maxBags=parseInt(bm[1]);}
-  p.bags=maxBags;
+  // Route MVT depuis slash: NKC/CDG
+  if (isMVT && !p.from) {
+    var rm = raw.match(/\b([A-Z]{3})\/([A-Z]{3})\b/);
+    if (rm) {
+      var BASE2 = 'NKC';
+      if (rm[1] === BASE2)      { p.from=BASE2; p.to=rm[2]; p.type='DEP'; }
+      else if (rm[2] === BASE2) { p.from=rm[1]; p.to=BASE2; p.type='ARR'; }
+      else                      { p.from=rm[1]; p.to=rm[2]; p.type='TRANSIT'; }
+    }
+  }
 
-  // 7. Confiance
-  var score=(p.flightNumber?3:0)+(p.date?2:0)+(p.from&&p.to?2:(p.from||p.to?1:0))+(p.passengers>0?1:0)+(p.registration?1:0);
-  p.confidence=score>=7?'haute':score>=4?'moyenne':'faible';
+  // Confiance
+  var score = (p.flightNumber?3:0)+(p.date?2:0)+(p.from&&p.to?2:(p.from||p.to?1:0))+(p.passengers>0?1:0)+(p.registration?1:0);
+  p.confidence = score>=7?'haute':score>=4?'moyenne':'faible';
   return p;
 }
-
 // ---- RENDER RESULTS ----
 function renderResults() {
   var sec=document.getElementById('resultsSection');
