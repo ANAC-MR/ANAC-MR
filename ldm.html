@@ -548,26 +548,69 @@ function extractFields(text, dateReceived) {
   var isMVT = (upperRaw.indexOf('MVT') >= 0 && upperRaw.indexOf('LDM') < 0);
 
   if (isMVT) {
-    // ---- MVT: format PX sur une ligne, nombre sur la ligne suivante ----
-    // Exemple:
-    //   PX
-    //   142
+    // ---- MVT: extraction PAX ----
+    // Format unique: PX colle avec le nombre, ex: PX50
     var paxMVT = null;
     for (var i=0; i<lines.length; i++) {
-      var lup = lines[i].toUpperCase().trim();
-      // Format principal: "PX" seul -> nombre sur ligne suivante
-      if (lup === 'PX' && i+1 < lines.length) {
-        var nm = lines[i+1].match(/^(\d+)/);
-        if (nm) { paxMVT = parseInt(nm[1]); break; }
-      }
-      // Format alternatif sur meme ligne: "PX 142" ou "PX/142"
-      var pm = lines[i].match(/^\.?PX[\/\s]+(\d+)/i);
+      var pm = lines[i].toUpperCase().trim().match(/^PX(\d+)$/);
       if (pm) { paxMVT = parseInt(pm[1]); break; }
-      // Fallback legacy: "PAX 142" ou "PAX/142"
-      var pm2 = lines[i].match(/^\.?PAX[\/\s]+(\d+)/i);
-      if (pm2) { paxMVT = parseInt(pm2[1]); break; }
     }
     if (paxMVT !== null) { p.passengers = paxMVT; p.babies = 0; }
+
+    // ---- MVT: extraction ROUTE ----
+    // Format ligne vol: NT1805/26.ECNPU.NKC
+    //   -> NKC est la destination (derniere ville sur la ligne vol)
+    // Format ligne AD:  AD260128/260138 EA0317 LPA
+    //   -> LPA est l'origine (dernier code IATA 3 lettres sur cette ligne)
+    // Logique: si NKC est dans la ligne vol ET une autre ville dans ligne AD -> ARR (LPA->NKC)
+    //          si NKC absent de la ligne vol -> cherche slash NKC/CDG ou CDG/NKC
+    var BASE = 'NKC';
+    var volLine = flIdx >= 0 ? lines[flIdx] : '';
+    // Villes sur la ligne du vol (apres le . final)
+    var volCities = [];
+    var volParts = volLine.split('.');
+    for (var vi=0; vi<volParts.length; vi++) {
+      var part = volParts[vi].trim().toUpperCase();
+      if (/^[A-Z]{3,4}$/.test(part)) volCities.push(part);
+    }
+    // Ligne AD: cherche la derniere ville IATA (3 lettres) = origine
+    var adLine = null;
+    for (var i=0; i<lines.length; i++) {
+      if (/^AD\d/.test(lines[i].toUpperCase())) { adLine = lines[i]; break; }
+    }
+    var adCities = [];
+    if (adLine) {
+      var adTokens = adLine.split(/\s+/);
+      for (var ai=0; ai<adTokens.length; ai++) {
+        var tok = adTokens[ai].trim().toUpperCase();
+        if (/^[A-Z]{3}$/.test(tok)) adCities.push(tok);
+      }
+    }
+    // Determine route
+    var nkcInVol = volCities.indexOf(BASE) >= 0;
+    var nkcInAd  = adCities.indexOf(BASE) >= 0;
+    if (nkcInVol && adCities.length > 0 && !nkcInAd) {
+      // NKC dans ligne vol = destination, ville AD = origine -> ARR
+      p.from = adCities[adCities.length-1]; p.to = BASE; p.type = 'ARR';
+    } else if (!nkcInVol && adCities.indexOf(BASE) >= 0) {
+      // NKC dans ligne AD = origine -> DEP depuis NKC
+      var dest = volCities.filter(function(c){return c!==BASE;})[0] || adCities.filter(function(c){return c!==BASE;})[0] || '';
+      p.from = BASE; p.to = dest; p.type = 'DEP';
+    } else if (nkcInVol && nkcInAd) {
+      // NKC dans les deux = transit ou erreur, garde DEP par defaut
+      var other = adCities.filter(function(c){return c!==BASE;})[0] || '';
+      p.from = BASE; p.to = other; p.type = 'DEP';
+    } else {
+      // Fallback: cherche slash NKC/CDG
+      var rm = raw.match(/\b([A-Z]{3})\/([A-Z]{3})\b/);
+      if (rm) {
+        if (rm[1]===BASE)       { p.from=BASE; p.to=rm[2]; p.type='DEP'; }
+        else if (rm[2]===BASE)  { p.from=rm[1]; p.to=BASE; p.type='ARR'; }
+        else                    { p.from=rm[1]; p.to=rm[2]; p.type='TRANSIT'; }
+      } else {
+        p.from=''; p.to=''; p.type='DEP';
+      }
+    }
 
   } else {
     // ---- LDM: lignes de stations -NKC.A/B/C/D ----
@@ -648,16 +691,7 @@ function extractFields(text, dateReceived) {
     }
   }
 
-  // Route MVT depuis slash: NKC/CDG
-  if (isMVT && !p.from) {
-    var rm = raw.match(/\b([A-Z]{3})\/([A-Z]{3})\b/);
-    if (rm) {
-      var BASE2 = 'NKC';
-      if (rm[1] === BASE2)      { p.from=BASE2; p.to=rm[2]; p.type='DEP'; }
-      else if (rm[2] === BASE2) { p.from=rm[1]; p.to=BASE2; p.type='ARR'; }
-      else                      { p.from=rm[1]; p.to=rm[2]; p.type='TRANSIT'; }
-    }
-  }
+  // Route MVT: geree dans le bloc isMVT ci-dessus
 
   // Confiance
   var score = (p.flightNumber?3:0)+(p.date?2:0)+(p.from&&p.to?2:(p.from||p.to?1:0))+(p.passengers>0?1:0)+(p.registration?1:0);
