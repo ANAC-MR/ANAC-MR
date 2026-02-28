@@ -11,6 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="assets/icon-192.png">
     <link rel="icon" href="assets/ANAC-logo.png" type="image/png">
+    <link rel="icon" href="assets/ANAC-logo.png" type="image/png">
     <title>ANAC Mauritanie – Suivi Mensuel des Vols</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -42,7 +43,7 @@
         .tab-content.active { display: block; }
 
         /* ── CHARTS ── */
-        /* ══ CHARTS — Design sombre moderne ══ */
+        /* ══ CHARTS modern dark ══ */
         .charts-header { margin-bottom:24px; }
         .charts-header h2 { font-size:22px; font-weight:800; color:#e8edf5; margin:0; }
         .charts-header p  { font-size:13px; color:#7a8ba8; margin:5px 0 0; }
@@ -59,18 +60,16 @@
             color:#e8edf5; font-size:13px; font-weight:600; cursor:pointer; outline:none;
         }
         .charts-filter-bar select:focus { border-color:#D4AF37; }
-        .btn-cf { padding:8px 18px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:700; transition:all 0.2s; }
+        .btn-cf { padding:8px 18px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:700; transition:all 0.2s; font-family:inherit; }
         .btn-cf.pri { background:#D4AF37; color:#0a1628; }
         .btn-cf.sec { background:rgba(255,255,255,0.07); color:#7a8ba8; border:1px solid rgba(255,255,255,0.1); }
         .btn-cf:hover { transform:translateY(-1px); opacity:0.9; }
-        /* KPIs */
         .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:26px; }
         .kpi-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:18px 20px; transition:border-color 0.2s,transform 0.2s; }
         .kpi-card:hover { border-color:rgba(212,175,55,0.3); transform:translateY(-2px); }
         .kpi-value { font-size:30px; font-weight:900; color:#e8edf5; line-height:1; margin-bottom:4px; }
         .kpi-label { font-size:11px; font-weight:700; color:#7a8ba8; text-transform:uppercase; letter-spacing:0.5px; }
         .kpi-sub   { font-size:11px; color:#4a5568; margin-top:4px; }
-        /* Charts grid */
         .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
         .chart-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:16px; padding:22px; transition:border-color 0.25s; }
         .chart-card:hover { border-color:rgba(212,175,55,0.2); }
@@ -79,9 +78,8 @@
         .chart-subtitle { font-size:11px; color:#7a8ba8; margin-bottom:16px; }
         .chart-wrap { position:relative; height:260px; }
         .chart-wrap.tall { height:300px; }
-        /* Destinations cliquables */
         .dest-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:16px; }
-        .dest-btn { display:flex; flex-direction:column; align-items:center; padding:14px 8px; border-radius:12px; cursor:pointer; background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.08); transition:all 0.2s; text-align:center; }
+        .dest-btn { display:flex; flex-direction:column; align-items:center; padding:14px 8px; border-radius:12px; cursor:pointer; background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.08); transition:all 0.2s; text-align:center; user-select:none; }
         .dest-btn:hover { transform:translateY(-3px); border-color:rgba(212,175,55,0.5); background:rgba(212,175,55,0.08); }
         .dest-btn.active { border-color:#D4AF37; background:rgba(212,175,55,0.12); }
         .dest-code { font-size:17px; font-weight:900; color:#D4AF37; letter-spacing:1px; }
@@ -94,10 +92,8 @@
         .dest-stat { text-align:center; }
         .dest-stat-val { font-size:22px; font-weight:900; color:#e8edf5; }
         .dest-stat-lbl { font-size:10px; color:#7a8ba8; text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; }
-        /* Route tags */
         .route-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
-        .route-tag { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; background:rgba(43,90,142,0.15); border:1px solid rgba(43,90,142,0.3); font-size:12px; font-weight:600; color:#7ab3e0; cursor:pointer; transition:all 0.15s; }
-        .route-tag:hover { background:rgba(43,90,142,0.3); }
+        .route-tag { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; background:rgba(43,90,142,0.15); border:1px solid rgba(43,90,142,0.3); font-size:12px; font-weight:600; color:#7ab3e0; }
         .route-count { background:#2B5A8E; color:#fff; border-radius:10px; padding:1px 7px; font-size:10px; font-weight:800; }
         @keyframes fadeSlide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
         @media(max-width:768px){
@@ -316,8 +312,25 @@
                 <select id="chartCompanyFilter">
                     <option value="ALL">Toutes les compagnies</option>
                 </select>
-                <button onclick="refreshCharts()" class="btn-cf pri">🔍 Appliquer</button>
-                <button onclick="resetChartFilters()" class="btn-cf sec">↺ Réinitialiser</button>
+                <button onclick="refreshCharts()" style="
+                    margin-left:16px; padding:8px 22px;
+                    background:linear-gradient(135deg,#2B5A8E,#4a90d9);
+                    color:#fff; border:none; border-radius:8px;
+                    font-family:inherit; font-size:13px; font-weight:700;
+                    cursor:pointer; box-shadow:0 3px 10px rgba(43,90,142,0.3);
+                    transition:opacity 0.2s,transform 0.15s;
+                " onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                    🔍 Générer
+                </button>
+                <button onclick="resetChartFilters()" style="
+                    margin-left:6px; padding:8px 16px;
+                    background:transparent; color:#718096;
+                    border:1px solid #cbd5e0; border-radius:8px;
+                    font-family:inherit; font-size:13px;
+                    cursor:pointer; transition:all 0.2s;
+                " onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='transparent'">
+                    ↺ Réinitialiser
+                </button>
             </div>
 
             <!-- KPIs -->
@@ -360,7 +373,7 @@
                 <div class="chart-card full"><h3>📈 Comparaison mois en mois</h3><div class="chart-subtitle">Évolution des vols — comparaison avec l'année précédente</div><div class="chart-wrap tall"><canvas id="chartComparaison"></canvas></div></div>
                 <div class="chart-card full">
                     <h3>🗺️ Destinations — appuyez pour voir les détails</h3>
-                    <div class="chart-subtitle">Toutes les destinations actives — cliquez sur une pour voir ses statistiques</div>
+                    <div class="chart-subtitle">Cliquez sur une destination pour voir ses statistiques détaillées</div>
                     <div class="dest-grid" id="destGrid"></div>
                     <div class="dest-detail" id="destDetail">
                         <div class="dest-detail-title" id="destDetailTitle"></div>
@@ -501,7 +514,7 @@
 // ══════════════════════════════════════════
 // TABS
 // ══════════════════════════════════════════
-window.switchTab = function(tab) {
+function switchTab(tab) {
     document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
@@ -548,7 +561,7 @@ function populateCompanyFilter(flights) {
     });
 }
 
-window.resetChartFilters = function() {
+function resetChartFilters() {
     document.getElementById('chartYearFilter').value    = 'ALL';
     document.getElementById('chartMonthFilter').value   = 'ALL';
     document.getElementById('chartCompanyFilter').value = 'ALL';
@@ -576,7 +589,12 @@ function monthly(flights, field) {
     return d;
 }
 
-window.refreshCharts = function() {
+const DEST_NAMES={'GQNO':'Nouakchott','GQPP':'Nouadhibou','GQNI':'Néma','GQPF':'Kiffa','GQPZ':'Zoueratt',
+    'DAAG':'Alger','DTTA':'Tunis','GMMN':'Casablanca','GOBD':'Dakar','GABS':'Bamako','GUCY':'Conakry',
+    'DIAP':'Abidjan','DBBP':'Lomé','GCLP':'Las Palmas','LFPG':'Paris CDG','LTFM':'Istanbul','OEMA':'Madinah'};
+var selectedDest = null;
+
+function refreshCharts() {
     Chart.defaults.color = '#7a8ba8';
     Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
     const all = getFlights();
@@ -599,12 +617,15 @@ window.refreshCharts = function() {
     const y=document.getElementById('chartYearFilter').value, m=document.getElementById('chartMonthFilter').value;
     document.getElementById('chartsSubtitle').textContent=flt.length+' vol(s)'+(y!=='ALL'?' — '+y:'')+(m!=='ALL'?' — '+MONTHS_FR[+m]:'');
 
+    const CP=['#D4AF37','#4a90d9','#00c98d','#e84141','#ff8c42','#a78bfa','#38bdf8','#fb923c'];
+
     // Chart 1 — Vols/mois
     kill('v');
     charts['v']=new Chart(document.getElementById('chartVolsMois'),{type:'bar',
         data:{labels:MONTHS_FR,datasets:[{label:'Vols',data:monthly(flt),
-            backgroundColor:MONTHS_FR.map((_,i)=>`hsla(${200+i*8},65%,58%,0.75)`),
-            borderColor:MONTHS_FR.map((_,i)=>`hsl(${200+i*8},65%,58%)`),borderWidth:2,borderRadius:8,borderSkipped:false}]},
+            backgroundColor:MONTHS_FR.map((_,i)=>'hsla('+(200+i*8)+',65%,58%,0.75)'),
+            borderColor:MONTHS_FR.map((_,i)=>'hsl('+(200+i*8)+',65%,58%)'),
+            borderWidth:2,borderRadius:8,borderSkipped:false}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
             scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{stepSize:1}},x:{grid:{display:false}}}}});
 
@@ -612,9 +633,12 @@ window.refreshCharts = function() {
     kill('p');
     const paxData=monthly(flt,'passengers').map((v,i)=>v+monthly(flt,'babies')[i]);
     const ctxP=document.getElementById('chartPaxMois').getContext('2d');
-    const gP=ctxP.createLinearGradient(0,0,0,260); gP.addColorStop(0,'rgba(212,175,55,0.35)'); gP.addColorStop(1,'rgba(212,175,55,0.01)');
+    const gP=ctxP.createLinearGradient(0,0,0,260);
+    gP.addColorStop(0,'rgba(212,175,55,0.35)'); gP.addColorStop(1,'rgba(212,175,55,0.01)');
     charts['p']=new Chart(ctxP,{type:'line',
-        data:{labels:MONTHS_FR,datasets:[{label:'Passagers',data:paxData,backgroundColor:gP,borderColor:'#D4AF37',borderWidth:2.5,fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#D4AF37',pointBorderColor:'#0a1628',pointBorderWidth:2}]},
+        data:{labels:MONTHS_FR,datasets:[{label:'Passagers',data:paxData,
+            backgroundColor:gP,borderColor:'#D4AF37',borderWidth:2.5,fill:true,tension:0.4,
+            pointRadius:4,pointBackgroundColor:'#D4AF37',pointBorderColor:'#0a1628',pointBorderWidth:2}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
             scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'}},x:{grid:{display:false}}}}});
 
@@ -622,10 +646,11 @@ window.refreshCharts = function() {
     kill('c');
     const cc={};flt.forEach(f=>{if(f.company)cc[f.company]=(cc[f.company]||0)+1;});
     const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    const CP=['#D4AF37','#4a90d9','#00c98d','#e84141','#ff8c42','#a78bfa','#38bdf8','#fb923c'];
     charts['c']=new Chart(document.getElementById('chartTopComp'),{type:'bar',
-        data:{labels:sc.map(([k])=>k.length>16?k.slice(0,16)+'…':k),datasets:[{label:'Vols',data:sc.map(([,v])=>v),
-            backgroundColor:sc.map((_,i)=>CP[i%CP.length]+'bb'),borderColor:sc.map((_,i)=>CP[i%CP.length]),borderWidth:2,borderRadius:6}]},
+        data:{labels:sc.map(([k])=>k.length>16?k.slice(0,16)+'…':k),
+              datasets:[{label:'Vols',data:sc.map(([,v])=>v),
+                backgroundColor:sc.map((_,i)=>CP[i%CP.length]+'bb'),
+                borderColor:sc.map((_,i)=>CP[i%CP.length]),borderWidth:2,borderRadius:6}]},
         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
             scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'}},y:{grid:{display:false}}}}});
 
@@ -644,14 +669,19 @@ window.refreshCharts = function() {
     const allY=[...new Set(all.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort();
     const yrs=y!=='ALL'?[y-1,+y]:allY.slice(-2);
     const LC=['#4a90d9','#D4AF37'];
-    const dsets=yrs.map((yr,i)=>{
+    const dsets=yrs.map(function(yr,i){
         const yf=all.filter(f=>f.date&&new Date(f.date).getFullYear()===+yr);
         const ctx2=document.getElementById('chartComparaison').getContext('2d');
-        const g=ctx2.createLinearGradient(0,0,0,300);g.addColorStop(0,LC[i]+'44');g.addColorStop(1,LC[i]+'00');
-        return{label:String(yr),data:monthly(yf),borderColor:LC[i],backgroundColor:g,borderWidth:2.5,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:LC[i],pointBorderColor:'#0a1628',pointBorderWidth:2};
+        const g=ctx2.createLinearGradient(0,0,0,300);
+        g.addColorStop(0,LC[i]+'44'); g.addColorStop(1,LC[i]+'00');
+        return{label:String(yr),data:monthly(yf),borderColor:LC[i],backgroundColor:g,
+               borderWidth:2.5,fill:true,tension:0.4,pointRadius:3,
+               pointBackgroundColor:LC[i],pointBorderColor:'#0a1628',pointBorderWidth:2};
     });
-    charts['k']=new Chart(document.getElementById('chartComparaison'),{type:'line',data:{labels:MONTHS_FR,datasets:dsets},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{padding:20,color:'#7a8ba8'}}},
+    charts['k']=new Chart(document.getElementById('chartComparaison'),{type:'line',
+        data:{labels:MONTHS_FR,datasets:dsets},
+        options:{responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{position:'top',labels:{padding:20,color:'#7a8ba8'}}},
             scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'}},x:{grid:{display:false}}}}});
 
     // Destinations cliquables
@@ -659,59 +689,60 @@ window.refreshCharts = function() {
 
     // Routes
     const routes={};
-    flt.forEach(f=>{if(f.from&&f.to){const k=f.from+' → '+f.to;routes[k]=(routes[k]||0)+1;}});
-    document.getElementById('routeList').innerHTML=Object.entries(routes).sort((a,b)=>b[1]-a[1]).slice(0,20)
-        .map(([r,n])=>'<span class="route-tag">'+r+' <span class="route-count">'+n+'</span></span>').join('');
+    flt.forEach(f=>{if(f.from&&f.to){var k=f.from+' → '+f.to;routes[k]=(routes[k]||0)+1;}});
+    document.getElementById('routeList').innerHTML=Object.entries(routes).sort(function(a,b){return b[1]-a[1];}).slice(0,20)
+        .map(function(e){return '<span class="route-tag">'+e[0]+' <span class="route-count">'+e[1]+'</span></span>';}).join('');
 }
 
-// ── Destinations cliquables ──
-const DEST_NAMES={'GQNO':'Nouakchott','GQPP':'Nouadhibou','GQNI':'Néma','GQPF':'Kiffa','GQPZ':'Zoueratt',
-    'DAAG':'Alger','DTTA':'Tunis','GMMN':'Casablanca','GOBD':'Dakar','GABS':'Bamako','GUCY':'Conakry',
-    'DIAP':'Abidjan','DBBP':'Lomé','GCLP':'Las Palmas','LFPG':'Paris CDG','LTFM':'Istanbul',
-    'OEMA':'Madinah','GBYD':'Banjul','GGOV':'Bissau','GFLL':'Freetown'};
-var selectedDest=null;
-
-function renderDestGrid(flt){
-    const dc={};
-    flt.forEach(f=>{
+function renderDestGrid(flt) {
+    var dc={};
+    flt.forEach(function(f){
         if(f.from&&f.from!=='GQNO'){if(!dc[f.from])dc[f.from]={v:0,dep:0,arr:0};dc[f.from].v++;dc[f.from].arr++;}
         if(f.to&&f.to!=='GQNO'){if(!dc[f.to])dc[f.to]={v:0,dep:0,arr:0};dc[f.to].v++;dc[f.to].dep++;}
     });
-    const sorted=Object.entries(dc).sort((a,b)=>b[1].v-a[1].v);
-    document.getElementById('destGrid').innerHTML=sorted.map(([code,d])=>
-        '<div class="dest-btn'+(selectedDest===code?' active':'')+'" data-code="'+code+'" onclick="selectDest(this.dataset.code)">'+
-        '<div class="dest-code">'+code+'</div>'+
-        '<div class="dest-name">'+(DEST_NAMES[code]||code)+'</div>'+
-        '<div class="dest-count">'+d.v+' vols</div></div>').join('');
+    var sorted=Object.entries(dc).sort(function(a,b){return b[1].v-a[1].v;});
+    document.getElementById('destGrid').innerHTML=sorted.map(function(entry){
+        var code=entry[0], d=entry[1];
+        var isActive=selectedDest===code;
+        return '<div class="dest-btn'+(isActive?' active':'')+'" data-code="'+code+'" onclick="selectDest(this.dataset.code)">'+
+               '<div class="dest-code">'+code+'</div>'+
+               '<div class="dest-name">'+(DEST_NAMES[code]||code)+'</div>'+
+               '<div class="dest-count">'+d.v+' vols</div></div>';
+    }).join('');
     if(selectedDest&&dc[selectedDest]) showDestDetail(selectedDest,dc[selectedDest],flt);
     else document.getElementById('destDetail').classList.remove('show');
 }
 
-window.selectDest = function(code){
+function selectDest(code) {
     selectedDest=(selectedDest===code)?null:code;
     renderDestGrid(filterFlights(getFlights()));
 }
 
-function showDestDetail(code,d,flt){
+function showDestDetail(code, d, flt) {
     document.getElementById('destDetail').classList.add('show');
     document.getElementById('destDetailTitle').textContent='✈ '+code+' — '+(DEST_NAMES[code]||code);
     document.getElementById('dStatVols').textContent=d.v;
     document.getElementById('dStatDep').textContent=d.dep;
     document.getElementById('dStatArr').textContent=d.arr;
     kill('dd');
-    const ctxD=document.getElementById('chartDestDetail').getContext('2d');
-    charts['dd']=new Chart(ctxD,{type:'bar',
+    var CP2=['#4a90d9','#D4AF37'];
+    charts['dd']=new Chart(document.getElementById('chartDestDetail'),{type:'bar',
         data:{labels:MONTHS_FR,datasets:[
-            {label:'Depuis NKC',data:monthly(flt.filter(f=>f.to===code)),backgroundColor:'rgba(74,144,217,0.75)',borderColor:'#4a90d9',borderWidth:2,borderRadius:5},
-            {label:'Vers NKC', data:monthly(flt.filter(f=>f.from===code)),backgroundColor:'rgba(212,175,55,0.75)',borderColor:'#D4AF37',borderWidth:2,borderRadius:5}
+            {label:'Depuis NKC',data:monthly(flt.filter(function(f){return f.to===code;})),
+             backgroundColor:'rgba(74,144,217,0.75)',borderColor:'#4a90d9',borderWidth:2,borderRadius:5},
+            {label:'Vers NKC', data:monthly(flt.filter(function(f){return f.from===code;})),
+             backgroundColor:'rgba(212,175,55,0.75)',borderColor:'#D4AF37',borderWidth:2,borderRadius:5}
         ]},
         options:{responsive:true,maintainAspectRatio:false,
             plugins:{legend:{position:'top',labels:{padding:12,color:'#7a8ba8',font:{size:11}}}},
             scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(255,255,255,0.05)'}}}}});
 }
+
+
+// ══════════════════════════════════════════
 // PDF EXPORT
 // ══════════════════════════════════════════
-window.exportPDF = async function() {
+async function exportPDF() {
     const btn = document.querySelector('.btn-pdf');
     btn.textContent = '⏳ Génération...'; btn.disabled = true;
     try {
@@ -1048,10 +1079,9 @@ function runRouteComparison() {
 }
 </script>
 <script>
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/ANAC-MR/sw.js',{scope:'/ANAC-MR/'}).catch(function(e){console.warn('[PWA]',e);});});}
-var deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;});
-window.installPWA=function(){if(!deferredPrompt)return;deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;});};
+if('serviceWorker' in navigator){window.addEventListener('load',function(){
+    navigator.serviceWorker.register('/ANAC-MR/sw.js',{scope:'/ANAC-MR/'}).catch(function(e){console.warn('[PWA]',e);});
+});}
 </script>
 </body>
 </html>
