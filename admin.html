@@ -2101,7 +2101,7 @@ window.loadLdmUsers = async function() {
         const list = document.getElementById('ldmUsersList');
         if (!list) return;
         if (!users.length) {
-            list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Aucun utilisateur LDM configuré. L'accès admin (DADY) est toujours valide.</div>';
+            list.innerHTML = "<div style=\"font-size:12px;color:var(--text-muted);padding:8px 0;\">Aucun utilisateur LDM configuré. L'accès admin (DADY) est toujours valide.</div>";
             return;
         }
         list.innerHTML = `
