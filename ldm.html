@@ -335,9 +335,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <div class="toasts" id="toasts"></div>
 
 <script>
-// ══════════════════════════════════════════
+// ==========================================
 // CONSTANTS
-// ══════════════════════════════════════════
+// ==========================================
 const FB = {
   apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
   authDomain:"anacmr-e05b4.firebaseapp.com",
@@ -348,21 +348,21 @@ const FB = {
 };
 
 const COMPANY_MAP = {
-  'L6':'Mauritania Airlines','HC':'Air Sénégal','TK':'Turkish Airlines',
-  'NT':'Binter','AH':'Air Algérie','KP':'ASKY','AT':'Royal Air Maroc',
+  'L6':'Mauritania Airlines','HC':'Air Senegal','TK':'Turkish Airlines',
+  'NT':'Binter','AH':'Air Algerie','KP':'ASKY','AT':'Royal Air Maroc',
   'TU':'Tunisair','AF':'Air France'
 };
 
-// ══════════════════════════════════════════
+// ==========================================
 // STATE
-// ══════════════════════════════════════════
+// ==========================================
 let pendingFiles  = [];   // { file, dataUrl, name }
 let results       = [];   // parsed results
 let accessToken   = null;
 
-// ══════════════════════════════════════════
+// ==========================================
 // TABS
-// ══════════════════════════════════════════
+// ==========================================
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -370,9 +370,9 @@ function switchTab(name) {
   event.target.classList.add('active');
 }
 
-// ══════════════════════════════════════════
+// ==========================================
 // FILE UPLOAD
-// ══════════════════════════════════════════
+// ==========================================
 function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag'); }
 function handleDragLeave(e) { document.getElementById('uploadZone').classList.remove('drag'); }
 function handleDrop(e) {
@@ -384,7 +384,7 @@ function handleFileSelect(e) { addFiles(Array.from(e.target.files)); }
 
 function addFiles(files) {
   const valid = files.filter(f => f.type.startsWith('image/') || f.type === 'application/pdf');
-  if (!valid.length) { toast('⚠️ Formats acceptés : images (JPG, PNG...) ou PDF', 'warn'); return; }
+  if (!valid.length) { toast('⚠️ Formats acceptes : images (JPG, PNG...) ou PDF', 'warn'); return; }
   valid.forEach(file => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -406,7 +406,7 @@ function renderFileList() {
       <div class="fi-info">
         <div class="fi-name">${esc(f.name)}</div>
         <div class="fi-status ${f.status === 'done' ? 'ok' : f.status === 'error' ? 'err' : f.status === 'loading' ? 'loading' : ''}" id="fi-st-${i}">
-          ${f.status === 'ready' ? 'Prêt à analyser' : f.status === 'loading' ? '⏳ Analyse en cours...' : f.status === 'done' ? '✓ Analysé' : '❌ Erreur'}
+          ${f.status === 'ready' ? 'Pret a analyser' : f.status === 'loading' ? '⏳ Analyse en cours...' : f.status === 'done' ? '✓ Analyse' : '❌ Erreur'}
         </div>
       </div>
       <button onclick="removePending(${i})" style="background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:4px;">×</button>
@@ -428,13 +428,13 @@ function clearImages() {
   document.getElementById('imgStatus').textContent = '';
 }
 
-// ══════════════════════════════════════════
-// OCR — Tesseract.js (local, gratuit, sans clé)
-// ══════════════════════════════════════════
+// ==========================================
+// OCR - Tesseract.js (local, gratuit, sans cle)
+// ==========================================
 async function analyzeAll() {
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
-  document.getElementById('imgStatus').textContent = `0 / ${pendingFiles.length} traité(s)`;
+  document.getElementById('imgStatus').textContent = `0 / ${pendingFiles.length} traite(s)`;
 
   let done = 0;
   for (let i = 0; i < pendingFiles.length; i++) {
@@ -445,7 +445,7 @@ async function analyzeAll() {
     // Live progress in status
     const setProgress = (pct) => {
       document.getElementById('imgStatus').textContent =
-        `📄 ${f.name} — OCR ${pct}%  (${done}/${pendingFiles.length} terminé)`;
+        `📄 ${f.name} - OCR ${pct}%  (${done}/${pendingFiles.length} termine)`;
       const el = document.getElementById(`fi-st-${i}`);
       if (el) { el.textContent = `⏳ Lecture OCR… ${pct}%`; el.className = 'fi-status loading'; }
     };
@@ -479,7 +479,7 @@ async function analyzeAll() {
     renderFileList();
   }
 
-  document.getElementById('imgStatus').textContent = `${done} / ${pendingFiles.length} traité(s)`;
+  document.getElementById('imgStatus').textContent = `${done} / ${pendingFiles.length} traite(s)`;
   btn.disabled = false;
   btn.innerHTML = '🔍 Lire avec OCR';
   markDuplicates();
@@ -504,9 +504,9 @@ function scoreConfidence(p) {
 
 
 
-// ══════════════════════════════════════════
+// ==========================================
 // TEXT PARSER
-// ══════════════════════════════════════════
+// ==========================================
 function parseText() {
   const text = document.getElementById('ldmText').value.trim();
   if (!text) { toast('⚠️ Collez du texte LDM/MVT d\'abord', 'warn'); return; }
@@ -518,7 +518,7 @@ function parseText() {
     id: Date.now() + '_txt',
     source: 'text',
     docType,
-    fileName: 'Texte collé',
+    fileName: 'Texte colle',
     rawText: text,
     parsed,
     _imported: false
@@ -527,436 +527,290 @@ function parseText() {
   markDuplicates();
   renderResults();
   updateStats();
-  toast('✅ Données extraites', 'ok');
+  toast('✅ Donnees extraites', 'ok');
 }
 
-// ══════════════════════════════════════════
-// PARSER LDM/MVT — MOTEUR PRINCIPAL
+// =============================================
+// PARSER LDM/MVT - MOTEUR PRINCIPAL
 // Supporte: LDM standard IATA, MVT, formats mixtes
-// ══════════════════════════════════════════
+// =============================================
 function extractFields(text, dateReceived) {
-  const p = {};
-  // Normalise le texte : retire 
-, lignes vides, espaces superflus
-  const raw   = text.replace(/
-/g, '');
-  const lines = raw.split('
-').map(l => l.trim()).filter(Boolean);
-  const upper = raw.toUpperCase();
+  var p = {};
+  var raw   = text.replace(/\r/g, '');
+  var lines = raw.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+  var upper = raw.toUpperCase();
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 1. N° VOL + IMMATRICULATION + JOUR
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // Format LDM standard: L6212/21.5TCLJ.C16Y144.2/5
-  // Format avec tirets:  L6-212/21.5T-CLJ.C16Y144.2/5
-  // Format MVT:          TK762/15.TCJRI  ou  TK 762/15.TCJRI
-  const FLIGHT_PATTERNS = [
-    // LDM complet: L6212/21.5TCLJ.
-    /^([A-Z]{1,2}[-]?\d{2,4})[\/.](\d{1,2})\.([A-Z0-9]{2}[-]?[A-Z0-9]{2,6})\./,
-    // LDM court: L6212/21.5TCLJ
-    /^([A-Z]{1,2}[-]?\d{2,4})[\/.](\d{1,2})\.([A-Z0-9]{4,8})/,
-    // MVT: TK762/15.TCJRI  ou  TK762/15
-    /^([A-Z]{1,2}\s?[-]?\d{2,4})[\/.](\d{1,2})\.?([A-Z0-9]{4,8})?/,
+  // --- 1. N VOL + IMMATRICULATION + JOUR ---
+  var FLIGHT_PATTERNS = [
+    /^([A-Z]{1,2}-?\d{2,4})[\/.](\d{1,2})\.([A-Z0-9]{2}-?[A-Z0-9]{2,6})\./,
+    /^([A-Z]{1,2}-?\d{2,4})[\/.](\d{1,2})\.([A-Z0-9]{4,8})/,
+    /^([A-Z]{1,2}\s?-?\d{2,4})[\/.](\d{1,2})\.?([A-Z0-9]{4,8})?/,
   ];
 
-  let flightLine = null;
-  for (const rx of FLIGHT_PATTERNS) {
-    flightLine = lines.find(l => rx.test(l));
+  var flightLine = null;
+  for (var ri = 0; ri < FLIGHT_PATTERNS.length; ri++) {
+    var rx = FLIGHT_PATTERNS[ri];
+    flightLine = lines.find(function(l){ return rx.test(l); });
     if (flightLine) {
-      const m = flightLine.match(rx);
-      p.flightNumber = m[1].replace(/[-\s]/g, ''); // L6-212 → L6212
+      var m = flightLine.match(rx);
+      p.flightNumber = m[1].replace(/[-\s]/g, '');
       if (m[3]) p.registration = m[3].replace(/[-.\s]/g, '').toUpperCase();
-      const day = (m[2] || '1').padStart(2, '0');
+      var day = (m[2] || '1').replace(/^(\d)$/, '0$1');
       if (dateReceived) {
-        const [yr, mo] = dateReceived.split('-');
-        p.date = `${yr}-${mo}-${day}`;
+        var parts = dateReceived.split('-');
+        p.date = parts[0] + '-' + parts[1] + '-' + day;
       }
       break;
     }
   }
 
-  // Cherche aussi: "FLIGHT L6212" ou "FLT L6212" ou "VOL L6212"
+  // Cherche FLIGHT L6212 ou FLT L6212
   if (!p.flightNumber) {
-    const fltM = upper.match(/(?:FLIGHT|FLT|VOL)\s+([A-Z]{1,2}\d{2,4})/);
+    var fltM = upper.match(/(?:FLIGHT|FLT|VOL)\s+([A-Z]{1,2}\d{2,4})/);
     if (fltM) p.flightNumber = fltM[1];
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 2. DATE — plusieurs formats possibles
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // --- 2. DATE ---
   if (!p.date) {
-    // DD/MM/YYYY ou DD-MM-YYYY ou YYYY-MM-DD
-    const dateM = raw.match(/(\d{4})-(\d{2})-(\d{2})/) ||
-                  raw.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+    var dateM = raw.match(/(\d{4})-(\d{2})-(\d{2})/) ||
+                raw.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
     if (dateM) {
-      if (dateM[1].length === 4) p.date = `${dateM[1]}-${dateM[2]}-${dateM[3]}`;
-      else p.date = `${dateM[3]}-${dateM[2]}-${dateM[1]}`;
+      if (dateM[1].length === 4) p.date = dateM[1]+'-'+dateM[2]+'-'+dateM[3];
+      else p.date = dateM[3]+'-'+dateM[2]+'-'+dateM[1];
     }
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 3. COMPAGNIE depuis préfixe vol
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // --- 3. COMPAGNIE ---
   if (p.flightNumber) {
-    // Extrait les 2 premières lettres (L6, TK, AF...)
-    const pfx = p.flightNumber.match(/^([A-Z]{1,2})/)?.[1] || '';
+    var pfxM = p.flightNumber.match(/^([A-Z]{1,2})/);
+    var pfx = pfxM ? pfxM[1] : '';
     p.company = COMPANY_MAP[pfx] || COMPANY_MAP[p.flightNumber.slice(0,2)] || pfx;
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 4. ROUTE — détection intelligente
-  // Base = NKC (Nouakchott). Tout est relatif à NKC.
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const BASE = 'NKC';
-  const IATA_RX = /([A-Z]{3})/g;
+  // --- 4. ROUTE ---
+  var BASE = 'NKC';
+  var routeLines = lines.filter(function(l){ return /^-[A-Z]{2,4}[.\/]/.test(l); });
+  var ldmStations = routeLines.map(function(l){
+    var mm = l.match(/^-([A-Z]{2,4})/);
+    return mm ? mm[1] : null;
+  }).filter(Boolean);
 
-  // Lignes de stations LDM: -NKC.144.0/0/5  ou  -CDG.0/0/0
-  const routeLines = lines.filter(l => /^-[A-Z]{2,4}[.\/]/.test(l));
-  const ldmStations = routeLines.map(l => l.match(/^-([A-Z]{2,4})/)?.[1]).filter(Boolean);
+  // MVT: NKC/CDG
+  var mvtRouteM = raw.match(/\b([A-Z]{3})\s*\/\s*([A-Z]{3})\b/);
+  var mvtStations = mvtRouteM ? [mvtRouteM[1], mvtRouteM[2]] : [];
 
-  // MVT route ligne: AD1450/1605 NKC/CDG  ou  DEP 14:50 NKC ARR 16:05 CDG
-  const mvtRouteM = raw.match(/([A-Z]{3})\s*[\/\-]\s*([A-Z]{3})/);
-  const mvtStations = mvtRouteM ? [mvtRouteM[1], mvtRouteM[2]] : [];
-
-  // Ligne RTE ou ROUTE: RTE NKC-DSS-NKC
-  const rteLine = lines.find(l => /^RTE\s/.test(l) || /^ROUTE\s/i.test(l));
-  const rteStations = rteLine
-    ? [...rteLine.matchAll(/([A-Z]{3})/g)].map(m => m[1]).filter(s => s !== 'RTE')
+  // RTE NKC-DSS-NKC
+  var rteLine = lines.find(function(l){ return /^RTE\s/.test(l) || /^ROUTE\s/i.test(l); });
+  var rteStations = rteLine
+    ? Array.from(rteLine.matchAll(/([A-Z]{3})/g)).map(function(mm){ return mm[1]; }).filter(function(s){ return s !== 'RTE'; })
     : [];
 
-  // SI (bagages) stations: SI NKC BAG 87
-  const siRx = /SI\s+([A-Z]{2,4})\s+BAG/gi;
-  let siM; const siStations = [];
+  // SI NKC BAG
+  var siRx = /SI\s+([A-Z]{2,4})\s+BAG/gi;
+  var siM; var siStations = [];
   while ((siM = siRx.exec(raw)) !== null) siStations.push(siM[1]);
 
-  // Fusionne toutes les sources de stations, dans l'ordre
-  const allStationsOrdered = [...ldmStations, ...rteStations, ...mvtStations, ...siStations];
-  const seen = new Set();
-  const allSt = allStationsOrdered.filter(s => seen.has(s) ? false : (seen.add(s), true));
-  const otherSt = allSt.filter(s => s !== BASE);
+  // Merge stations in order, deduplicated
+  var allStationsRaw = ldmStations.concat(rteStations).concat(mvtStations).concat(siStations);
+  var seen = {};
+  var allSt = allStationsRaw.filter(function(s){ if(seen[s]) return false; seen[s]=true; return true; });
+  var otherSt = allSt.filter(function(s){ return s !== BASE; });
 
-  // Logique route :
-  // - NKC + 1 autre  → si NKC en 1er = DEP (NKC→autre), si NKC en dernier = ARR (autre→NKC)
-  // - 2 autres + NKC au milieu → TRANSIT (autre1→NKC→autre2)
-  // - 2 autres sans NKC → DEP depuis NKC avec escale (NKC→autre1→autre2)
-  // - 1 seule ville autre → DEP ou ARR selon position NKC
-  if (otherSt.length >= 2 && allSt.includes(BASE)) {
-    const nkcIdx = allSt.indexOf(BASE);
+  if (otherSt.length >= 2 && allSt.indexOf(BASE) >= 0) {
+    var nkcIdx = allSt.indexOf(BASE);
     if (nkcIdx === 0) {
-      // NKC→A→B : départ NKC, escale A, destination B
       p.from = BASE; p.stopover = otherSt[0]; p.to = otherSt[otherSt.length-1]; p.type = 'DEP';
     } else if (nkcIdx === allSt.length - 1) {
-      // A→B→NKC : arrivée à NKC, escale B
-      p.from = otherSt[0]; p.stopover = otherSt[otherSt.length-2] || ''; p.to = BASE; p.type = 'ARR';
+      p.from = otherSt[0]; p.stopover = otherSt.length > 1 ? otherSt[otherSt.length-2] : ''; p.to = BASE; p.type = 'ARR';
     } else {
-      // A→NKC→B : NKC est l'escale (transit)
       p.from = allSt[0]; p.stopover = BASE; p.to = allSt[allSt.length-1]; p.type = 'TRANSIT';
     }
   } else if (otherSt.length >= 2) {
-    // Pas de NKC explicite : DEP depuis NKC, escale au premier, destination au dernier
     p.from = BASE; p.stopover = otherSt[0]; p.to = otherSt[otherSt.length-1]; p.type = 'DEP';
-  } else if (allSt.includes(BASE) && otherSt.length === 1) {
-    const nkcIdx = allSt.indexOf(BASE);
-    if (nkcIdx === 0) { p.from = BASE; p.to = otherSt[0]; p.type = 'DEP'; }
-    else              { p.from = otherSt[0]; p.to = BASE; p.type = 'ARR'; }
+  } else if (allSt.indexOf(BASE) >= 0 && otherSt.length === 1) {
+    if (allSt.indexOf(BASE) === 0) { p.from = BASE; p.to = otherSt[0]; p.type = 'DEP'; }
+    else { p.from = otherSt[0]; p.to = BASE; p.type = 'ARR'; }
   } else if (otherSt.length === 1) {
-    // 1 ville, pas NKC : on déduit selon le type du message
-    if (upper.includes('ARR') || upper.includes('ARRIVEE')) { p.from = otherSt[0]; p.to = BASE; p.type = 'ARR'; }
-    else { p.from = BASE; p.to = otherSt[0]; p.type = 'DEP'; }
+    if (upper.indexOf('ARR') >= 0 || upper.indexOf('ARRIVEE') >= 0) {
+      p.from = otherSt[0]; p.to = BASE; p.type = 'ARR';
+    } else {
+      p.from = BASE; p.to = otherSt[0]; p.type = 'DEP';
+    }
   } else {
     p.from = BASE; p.to = ''; p.type = 'DEP';
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 5. PAX + BÉBÉS — somme toutes stations
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // Format LDM: -NKC.C16Y144.2/10/3  → J=16, Y=144, infants=3, bagages=10
-  // Format simple: -NKC.144.0/0/5    → pax=144, bags=0, inf=5
-  // Format pax/bébés: .2/10         → pax=2, babies=10
-  let totalPax = 0, totalBabies = 0, paxFound = false;
+  // --- 5. PAX + BEBES ---
+  var totalPax = 0, totalBabies = 0, paxFound = false;
 
-  // Analyse chaque ligne de station pour extraire PAX
-  routeLines.forEach(line => {
-    // Format complet avec classes: .C16Y144.bags/infants
-    const classM = line.match(/\.([A-Z]\d+)+\.(\d+)\/(\d+)\/(\d+)/);
-    if (classM) {
-      // Somme toutes les classes (C16 + Y144 = 160 pax)
-      const classStr = line.match(/\.((?:[A-Z]\d+)+)\./)?.[1] || '';
-      const classPax = [...classStr.matchAll(/[A-Z](\d+)/g)].reduce((s, m) => s + parseInt(m[1]), 0);
+  routeLines.forEach(function(line) {
+    // Format avec classes: .C16Y144.bags/infants
+    var classStr = (line.match(/\.((?:[A-Z]\d+)+)\./) || [])[1] || '';
+    if (classStr) {
+      var classPax = 0;
+      var classMatches = classStr.match(/[A-Z](\d+)/g) || [];
+      classMatches.forEach(function(cm){ classPax += parseInt(cm.slice(1)); });
       if (classPax > 0) {
         totalPax += classPax;
-        // Bébés = dernier nombre après dernier "/"
-        const nums = line.match(/\.(\d+(?:\/\d+)+)/)?.[1]?.split('/').map(Number) || [];
-        totalBabies += nums[nums.length - 1] || 0;
+        var numsM = line.match(/\.(\d+(?:\/\d+)+)/);
+        if (numsM) {
+          var nums = numsM[1].split('/').map(Number);
+          totalBabies += nums[nums.length - 1] || 0;
+        }
         paxFound = true;
         return;
       }
     }
-    // Format: .144.0/0/5 ou .144/0/5
-    const simpleM = line.match(/\.(\d+)[.\/](\d+)[\/.](\d+)\/(\d+)/);
-    if (simpleM) {
-      totalPax    += parseInt(simpleM[1]);
-      totalBabies += parseInt(simpleM[4]);
-      paxFound = true;
-      return;
-    }
-    // Format minimal: .X/Y (pax/babies)
-    const minM = line.match(/\.(\d+(?:\/\d+)+)/);
+    // Format minimal: .X/Y ou .X/Y/Z
+    var minM = line.match(/\.(\d+(?:\/\d+)+)/);
     if (minM) {
-      const nums = minM[1].split('/').map(Number);
+      var nums = minM[1].split('/').map(Number);
       if (nums.length >= 2) {
-        totalPax    += nums.slice(0, -1).reduce((a, b) => a + b, 0);
+        totalPax    += nums.slice(0, -1).reduce(function(a,b){ return a+b; }, 0);
         totalBabies += nums[nums.length - 1];
         paxFound = true;
       }
     }
   });
 
-  // Fallbacks MVT
+  // Fallback MVT: PAX 142/3
   if (!paxFound) {
-    // PAX 142/3 ou PAX/142/3 ou .PAX/142/3
-    const paxSlash = raw.match(/\.?PAX[\/\s]+(\d+)\s*\/\s*(\d+)/i);
+    var paxSlash = raw.match(/\.?PAX[\/\s]+(\d+)\s*\/\s*(\d+)/i);
     if (paxSlash) { totalPax = parseInt(paxSlash[1]); totalBabies = parseInt(paxSlash[2]); paxFound = true; }
   }
   if (!paxFound) {
-    // PAX 142 (sans bébés)
-    const paxSimple = raw.match(/PAX\s+(\d+)/i);
-    if (paxSimple) { totalPax = parseInt(paxSimple[1]); paxFound = true; }
-  }
-  if (!paxFound) {
-    // Nombre de passagers sur ligne PAXCOUNT: ou PX:
-    const pxLine = lines.find(l => /^(?:PAXCOUNT|PX|PAX COUNT|PASSENGERS)[:\s]+\d+/i.test(l));
-    if (pxLine) { const n = pxLine.match(/(\d+)/); if (n) { totalPax = parseInt(n[1]); paxFound = true; } }
+    var paxSimple = raw.match(/\bPAX\s+(\d+)/i);
+    if (paxSimple) { totalPax = parseInt(paxSimple[1]); }
   }
 
   p.passengers = totalPax;
   p.babies     = totalBabies;
 
-  // PAX escale (si escale détectée)
+  // PAX escale
   if (p.stopover && p.stopover !== BASE) {
-    const stopLine = routeLines.find(l => l.startsWith('-' + p.stopover));
+    var stopLine = routeLines.find(function(l){ return l.indexOf('-' + p.stopover) === 0; });
     if (stopLine) {
-      const sm = stopLine.match(/\.(\d+(?:\/\d+)+)/);
+      var sm = stopLine.match(/\.(\d+(?:\/\d+)+)/);
       if (sm) {
-        const nums = sm[1].split('/').map(Number);
-        p.stopoverPax    = nums.slice(0, -1).reduce((a, b) => a + b, 0);
-        p.stopoverBabies = nums[nums.length - 1];
+        var sNums = sm[1].split('/').map(Number);
+        p.stopoverPax    = sNums.slice(0,-1).reduce(function(a,b){ return a+b; }, 0);
+        p.stopoverBabies = sNums[sNums.length - 1];
       }
     }
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 6. BAGAGES
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  let maxBags = 0;
-  const si2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi;
-  let s2;
+  // --- 6. BAGAGES ---
+  var maxBags = 0;
+  var si2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi;
+  var s2;
   while ((s2 = si2.exec(raw)) !== null) maxBags = Math.max(maxBags, parseInt(s2[1]) || 0);
-  // Format: BAGS/87 ou BAGGAGE 87
   if (!maxBags) {
-    const bagM = raw.match(/(?:BAGS?|BAGGAGE)[\/:\s]+(\d+)/i);
+    var bagM = raw.match(/(?:BAGS?|BAGGAGE)[\/:\s]+(\d+)/i);
     if (bagM) maxBags = parseInt(bagM[1]);
   }
   p.bags = maxBags;
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 7. CONFIANCE
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const score =
+  // --- 7. CONFIANCE ---
+  var score =
     (p.flightNumber ? 3 : 0) +
     (p.date         ? 2 : 0) +
-    (p.from && p.to ? 2 : p.from || p.to ? 1 : 0) +
+    (p.from && p.to ? 2 : (p.from || p.to ? 1 : 0)) +
     (p.passengers > 0 ? 1 : 0) +
     (p.registration ? 1 : 0);
-
   p.confidence = score >= 7 ? 'haute' : score >= 4 ? 'moyenne' : 'faible';
 
   return p;
 }
 
-// ══════════════════════════════════════════
-// RENDER RESULTS
-// ══════════════════════════════════════════
-function renderResults() {
-  const section = document.getElementById('resultsSection');
-  const list    = document.getElementById('resultList');
-  document.getElementById('resCount').textContent = results.length;
-
-  if (!results.length) { section.style.display = 'none'; return; }
-  section.style.display = 'block';
-
-  list.innerHTML = results.map((r, i) => {
-    const p   = r.parsed || {};
-    const imp = r._imported;
-    const conf = p.confidence || 'haute';
-    const confClass = conf === 'haute' ? 'conf-high' : conf === 'moyenne' ? 'conf-med' : 'conf-low';
-    const confLabel = conf === 'haute' ? '✓ Haute confiance' : conf === 'moyenne' ? '~ Moyenne' : '⚠ Faible';
-
-    const title = p.flightNumber
-      ? `${p.flightNumber} — ${p.from || '?'} → ${p.to || '?'}`
-      : r.fileName;
-    const sub = [p.company, p.date, p.registration].filter(Boolean).join(' · ');
-
-    const badgeClass = r.source === 'image' ? 'badge-img' : `badge-${r.docType?.toLowerCase() || 'ldm'}`;
-    const badgeLabel = r.source === 'image' ? '📷 IMG' : r.docType;
-
-    return `
-    <div class="result-card ${imp ? 'imported' : ''}" id="rc-${i}">
-      <div class="result-hdr" onclick="toggleResult(${i})">
-        <span class="result-type ${badgeClass}">${badgeLabel}</span>
-        <div class="result-meta">
-          <div class="result-title">${esc(title)}</div>
-          <div class="result-sub">${esc(sub || r.fileName)}</div>
-        </div>
-        <span class="confidence ${confClass}">${confLabel}</span>
-        ${imp ? '<span class="st-badge st-ok">✓ Importé</span>' : ''}
-        <span class="chevron" id="chv-${i}">▼</span>
-      </div>
-      <div class="result-body" id="rb-${i}">
-        ${r.source === 'image' ? `<img class="img-thumb-prev" src="${r.dataUrl}" alt="${esc(r.fileName)}">` : ''}
-        ${r.rawText ? `<div class="raw-preview">${esc(r.rawText.slice(0, 600))}</div>` : ''}
-        <div class="parsed-sec">
-          <div class="parsed-lbl">
-            ✦ Données extraites
-            ${r.source === 'image' ? '<span class="ai-badge" style="background:rgba(0,201,141,0.1);border-color:rgba(0,201,141,0.3);color:var(--green);">OCR Local</span>' : ''}
-          </div>
-          <div class="pgrid">
-            <div class="pf"><label>N° Vol</label><input id="r${i}-fn" value="${esc(p.flightNumber||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>Immatriculation</label><input id="r${i}-rg" value="${esc(p.registration||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>Date</label><input type="date" id="r${i}-dt" value="${p.date||''}"></div>
-            <div class="pf"><label>Compagnie</label><input id="r${i}-co" value="${esc(p.company||'')}"></div>
-            <div class="pf">
-              <label>Type</label>
-              <select id="r${i}-ty">
-                <option value="DEP" ${p.type==='DEP'?'selected':''}>Départ</option>
-                <option value="ARR" ${p.type==='ARR'?'selected':''}>Arrivée</option>
-                <option value="TRANSIT" ${p.type==='TRANSIT'?'selected':''}>Transit</option>
-              </select>
-            </div>
-            <div class="pf"><label>De</label><input id="r${i}-fr" value="${esc(p.from||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>À</label><input id="r${i}-to" value="${esc(p.to||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>PAX</label><input type="number" id="r${i}-px" value="${p.passengers||0}" min="0"></div>
-            <div class="pf"><label>Bébés</label><input type="number" id="r${i}-bb" value="${p.babies||0}" min="0"></div>
-            ${p.stopover ? `
-            <div class="pf"><label>Escale</label><input id="r${i}-sw" value="${esc(p.stopover||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>PAX escale</label><input type="number" id="r${i}-spx" value="${p.stopoverPax||0}" min="0"></div>
-            <div class="pf"><label>Bébés escale</label><input type="number" id="r${i}-sbb" value="${p.stopoverBabies||0}" min="0"></div>
-            ` : ''}
-          </div>
-          <div class="act-row" id="ra-${i}">
-            ${imp
-              ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé</span>'
-              : `<button class="btn btn-green" onclick="importResult(${i})">⬆️ Importer dans le système</button>`
-            }
-            <button class="btn btn-outline btn-sm" onclick="removeResult(${i})">🗑 Supprimer</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function toggleResult(i) {
-  const body = document.getElementById(`rb-${i}`);
-  const chv  = document.getElementById(`chv-${i}`);
-  const open = body.style.display === 'block';
-  body.style.display = open ? 'none' : 'block';
-  chv.classList.toggle('open', !open);
-}
-
-function removeResult(i) {
-  results.splice(i, 1);
-  renderResults();
-  updateStats();
-}
-
-function clearResults() {
-  results = [];
-  renderResults();
-  updateStats();
-}
-
-// ══════════════════════════════════════════
+// =============================================
 // IMPORT TO FIREBASE
-// ══════════════════════════════════════════
+// =============================================
+function toggleResult(i) {
+  var body = document.getElementById('rb-'+i);
+  var chv  = document.getElementById('chv-'+i);
+  if (!body) return;
+  var open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  if (chv) chv.classList.toggle('open', !open);
+}
+
 async function importResult(i, force) {
-  const fn  = document.getElementById(`r${i}-fn`)?.value.trim().toUpperCase() || '';
-  const rg  = document.getElementById(`r${i}-rg`)?.value.trim().toUpperCase().replace(/[-.\s]/g,'') || '';
-  const dt  = document.getElementById(`r${i}-dt`)?.value || '';
-  const co  = document.getElementById(`r${i}-co`)?.value.trim() || '';
-  const ty  = document.getElementById(`r${i}-ty`)?.value || 'DEP';
-  const fr  = document.getElementById(`r${i}-fr`)?.value.trim().toUpperCase() || '';
-  const to  = document.getElementById(`r${i}-to`)?.value.trim().toUpperCase() || '';
-  const px  = parseInt(document.getElementById(`r${i}-px`)?.value) || 0;
-  const bb  = parseInt(document.getElementById(`r${i}-bb`)?.value) || 0;
-  const sw  = document.getElementById(`r${i}-sw`)?.value.trim().toUpperCase() || '';
-  const spx = parseInt(document.getElementById(`r${i}-spx`)?.value) || 0;
-  const sbb = parseInt(document.getElementById(`r${i}-sbb`)?.value) || 0;
+  var fn  = (document.getElementById('r'+i+'-fn')  || {}).value || '';
+  var rg  = (document.getElementById('r'+i+'-rg')  || {}).value || '';
+  var dt  = (document.getElementById('r'+i+'-dt')  || {}).value || '';
+  var co  = (document.getElementById('r'+i+'-co')  || {}).value || '';
+  var ty  = (document.getElementById('r'+i+'-ty')  || {}).value || 'DEP';
+  var fr  = (document.getElementById('r'+i+'-fr')  || {}).value || '';
+  var to  = (document.getElementById('r'+i+'-to')  || {}).value || '';
+  var px  = parseInt((document.getElementById('r'+i+'-px')  || {}).value) || 0;
+  var bb  = parseInt((document.getElementById('r'+i+'-bb')  || {}).value) || 0;
+  var sw  = (document.getElementById('r'+i+'-sw')  || {}).value || '';
+  var spx = parseInt((document.getElementById('r'+i+'-spx') || {}).value) || 0;
+  var sbb = parseInt((document.getElementById('r'+i+'-sbb') || {}).value) || 0;
 
-  if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires', 'warn'); return; }
+  fn = fn.trim().toUpperCase();
+  rg = rg.trim().toUpperCase().replace(/[-.\s]/g,'');
 
-  // Anti-duplicate
-  const fp = `${fn}|${dt}|${rg}`;
-  const imported = getImported();
+  if (!fn || !dt) { toast('N de vol et date obligatoires', 'warn'); return; }
+
+  var fp = fn + '|' + dt + '|' + rg;
+  var imported = getImported();
   if (!force && imported.has(fp)) {
-    const prev = imported.get(fp);
-    document.getElementById(`ra-${i}`).innerHTML = `
-      <div class="dup-box">⚠️ Vol ${fn} du ${dt} déjà importé le ${new Date(prev.at).toLocaleDateString('fr-FR')}</div>
-      <button class="btn btn-outline btn-sm" onclick="importResult(${i},true)">Forcer quand même</button>
-    `;
+    var prev = imported.get(fp);
+    document.getElementById('ra-'+i).innerHTML =
+      '<div class="dup-box">Vol ' + fn + ' du ' + dt + ' deja importe le ' + new Date(prev.at).toLocaleDateString('fr-FR') + '</div>' +
+      '<button class="btn btn-outline btn-sm" onclick="importResult('+i+',true)">Forcer quand meme</button>';
     return;
   }
 
-  const btn = document.querySelector(`#ra-${i} .btn-green`);
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>'; }
+  var btnEl = document.querySelector('#ra-'+i+' .btn-green');
+  if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<span class="spin"></span>'; }
 
   try {
-    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const apps = getApps();
-    const app  = apps.find(a => a.name === 'ldm') || initializeApp(FB, 'ldm');
-    const db   = getFirestore(app);
+    var { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    var { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    var apps = getApps();
+    var app  = apps.find(function(a){ return a.name === 'ldm'; }) || initializeApp(FB, 'ldm');
+    var db   = getFirestore(app);
 
     await addDoc(collection(db, 'flights'), {
       flightNumber: fn, registration: rg,
-      date: dt, from: fr, to, type: ty,
+      date: dt, from: fr, to: to, type: ty,
       company: co || detectCompany(fn),
       hasStopover: !!sw, stopover: sw,
       stopoverPax: spx, stopoverBabies: sbb,
       passengers: px + spx,
       babies: bb + sbb,
       authorizationNumber: '',
-      source: results[i]?.source === 'image' ? 'LDM_IMAGE' : 'LDM_TEXT',
+      source: (results[i] && results[i].source === 'image') ? 'LDM_IMAGE' : 'LDM_TEXT',
       createdAt: new Date().toISOString(),
       timestamp: Date.now()
     });
 
-    imported.set(fp, { fn, dt, rg, at: new Date().toISOString() });
+    imported.set(fp, { fn: fn, dt: dt, rg: rg, at: new Date().toISOString() });
     saveImported(imported);
-    results[i]._imported = true;
+    if (results[i]) results[i]._imported = true;
 
-    document.getElementById(`rc-${i}`)?.classList.add('imported');
-    document.getElementById(`ra-${i}`).innerHTML =
-      '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Importé avec succès</span>';
+    var card = document.getElementById('rc-'+i);
+    if (card) card.classList.add('imported');
+    document.getElementById('ra-'+i).innerHTML =
+      '<span style="color:var(--green);font-size:13px;font-weight:600;">Importe avec succes</span>';
 
     updateStats();
-    toast(`✅ Vol ${fn} importé`, 'ok');
-  } catch (e) {
+    toast('Vol ' + fn + ' importe', 'ok');
+  } catch(e) {
     console.error(e);
-    toast('❌ Erreur : ' + e.message, 'err');
-    if (btn) { btn.disabled = false; btn.innerHTML = '⬆️ Importer dans le système'; }
+    toast('Erreur : ' + e.message, 'err');
+    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = 'Importer dans le systeme'; }
   }
 }
 
-// ══════════════════════════════════════════
+// =============================================
 // DUPLICATE DETECTION
-// ══════════════════════════════════════════
+// =============================================
 function makeFP(p) {
-  return [
-    (p.flightNumber||'').toUpperCase(),
-    (p.date||'').trim(),
-    (p.registration||'').replace(/[-.\s]/g,'').toUpperCase()
-  ].join('|');
+  return [(p.flightNumber||'').toUpperCase(), (p.date||'').trim(),
+          (p.registration||'').replace(/[-.\s]/g,'').toUpperCase()].join('|');
 }
 function getImported() {
   try { return new Map(JSON.parse(localStorage.getItem('ldm_fp')||'[]')); }
@@ -966,168 +820,17 @@ function saveImported(m) {
   localStorage.setItem('ldm_fp', JSON.stringify([...m.entries()]));
 }
 function markDuplicates() {
-  const imported = getImported();
-  results.forEach(r => {
-    const fp = makeFP(r.parsed || {});
+  var imported = getImported();
+  results.forEach(function(r) {
+    var fp = makeFP(r.parsed || {});
     r._fp = fp;
     r._imported = imported.has(fp);
   });
 }
 
-// ══════════════════════════════════════════
-// GMAIL
-// ══════════════════════════════════════════
-const CLIENT_ID = '416940058923-28bdevk2c3fk2abihu55ia5391j0g5qf.apps.googleusercontent.com';
-const SCOPES    = 'https://www.googleapis.com/auth/gmail.readonly';
-
-function signIn() {
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID, scope: SCOPES,
-    callback: (resp) => {
-      if (resp.error) { toast('❌ ' + resp.error, 'err'); return; }
-      accessToken = resp.access_token;
-      document.getElementById('authDot').className = 'dot ok';
-      document.getElementById('authTxt').textContent = 'Gmail connecté';
-      document.getElementById('authActions').innerHTML =
-        `<div class="user-chip">✓ Gmail connecté</div>
-         <button class="btn btn-outline btn-sm" onclick="signOut()" style="margin-left:8px;">Déconnecter</button>`;
-      document.getElementById('readBtn').disabled = false;
-      setStatus('active', 'Gmail connecté — prêt');
-      toast('✅ Gmail connecté', 'ok');
-    }
-  });
-  client.requestAccessToken();
-}
-
-function signOut() {
-  google.accounts.oauth2.revoke(accessToken, () => {
-    accessToken = null;
-    document.getElementById('authDot').className = 'dot';
-    document.getElementById('authTxt').textContent = 'Non connecté';
-    document.getElementById('authActions').innerHTML = '<button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>';
-    document.getElementById('readBtn').disabled = true;
-    setStatus('idle', 'Déconnecté');
-  });
-}
-
-async function readEmails() {
-  if (!accessToken) return;
-  const btn = document.getElementById('readBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Lecture...';
-  setStatus('loading', 'Recherche des emails LDM/MVT...');
-  try {
-    const q = encodeURIComponent('subject:(LDM OR MVT) newer_than:30d');
-    const listResp = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${q}&maxResults=50`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    const listData = await listResp.json();
-    if (!listData.messages?.length) {
-      setStatus('active', 'Aucun email LDM/MVT trouvé');
-      toast('📭 Aucun email trouvé', 'warn');
-      return;
-    }
-    setStatus('loading', `${listData.messages.length} email(s) — extraction...`);
-    const fetched = await Promise.all(listData.messages.map(m => fetchEmail(m.id)));
-    const parsed = fetched.filter(Boolean)
-      .filter(em => {
-        const s = (getHeader(em,'Subject') + ' ' + getBody(em)).toUpperCase();
-        return s.includes('LDM') || s.includes('MVT');
-      })
-      .map(em => {
-        const subj = getHeader(em, 'Subject') || '';
-        const from = getHeader(em, 'From') || '';
-        const dateH = getHeader(em, 'Date') || '';
-        const body = getBody(em);
-        let dateRec = '';
-        try { dateRec = new Date(dateH).toISOString().split('T')[0]; } catch {}
-        const docType = body.toUpperCase().includes('MVT') && !body.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
-        const p = extractFields(body || subj, dateRec);
-        return { id: em.id, source: 'gmail', docType, fileName: subj, rawText: (body||'').slice(0,800), parsed: p, _imported: false };
-      });
-
-    results.push(...parsed);
-    markDuplicates();
-    renderResults();
-    updateStats();
-    const now = new Date().toLocaleTimeString('fr-FR');
-    document.getElementById('sLast').textContent = `Vérifié à ${now}`;
-    setStatus('active', `${parsed.length} email(s) LDM/MVT trouvé(s)`);
-    toast(`✅ ${parsed.length} email(s) chargé(s)`, 'ok');
-  } catch (e) {
-    setStatus('idle', 'Erreur : ' + e.message);
-    toast('❌ ' + e.message, 'err');
-  } finally {
-    btn.disabled = false; btn.innerHTML = '📨 Lire emails';
-  }
-}
-
-async function fetchEmail(id) {
-  try {
-    const r = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    return await r.json();
-  } catch { return null; }
-}
-
-function getHeader(em, name) {
-  const h = em?.payload?.headers;
-  if (!h) return '';
-  return h.find(x => x.name.toLowerCase() === name.toLowerCase())?.value || '';
-}
-
-function getBody(em) {
-  if (!em?.payload) return '';
-  if (em.payload.parts) {
-    for (const p of em.payload.parts) {
-      if (p.mimeType === 'text/plain' && p.body?.data)
-        return atob(p.body.data.replace(/-/g,'+').replace(/_/g,'/'));
-    }
-  }
-  if (em.payload.body?.data)
-    return atob(em.payload.body.data.replace(/-/g,'+').replace(/_/g,'/'));
-  return em.snippet || '';
-}
-
-// ══════════════════════════════════════════
-// UTILS
-// ══════════════════════════════════════════
-function detectCompany(fn) {
-  return COMPANY_MAP[(fn||'').slice(0,2)] || fn?.slice(0,2) || '';
-}
-
-function updateStats() {
-  document.getElementById('stTotal').textContent    = results.length;
-  document.getElementById('stLDM').textContent      = results.filter(r=>r.docType==='LDM').length;
-  document.getElementById('stMVT').textContent      = results.filter(r=>r.docType==='MVT').length;
-  document.getElementById('stImported').textContent = getImported().size;
-}
-
-function setStatus(st, txt) {
-  const d = document.getElementById('sDot');
-  d.className = 'dot' + (st==='active'?' ok':st==='loading'?' loading':'');
-  document.getElementById('sTxt').textContent = txt;
-}
-
-function toast(msg, type) {
-  const c = document.getElementById('toasts');
-  const t = document.createElement('div');
-  t.className = `toast ${type==='ok'?'ok':type==='err'?'err':'warn'}`;
-  t.textContent = msg; c.appendChild(t);
-  setTimeout(() => t.remove(), 4000);
-}
-
-function esc(s) {
-  return String(s||'')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ══════════════════════════════════════════
+// =============================================
 // LDM LOGIN WALL
-// ══════════════════════════════════════════
+// =============================================
 const FB_LDM = {
   apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
   authDomain:"anacmr-e05b4.firebaseapp.com",
@@ -1135,56 +838,54 @@ const FB_LDM = {
 };
 
 async function checkLdmLogin() {
-  // Check session
-  const sess = sessionStorage.getItem('ldm_auth');
-  if (sess === '1') { hideLockScreen(); return; }
-  // Show login wall
+  if (sessionStorage.getItem('ldm_auth') === '1') { hideLockScreen(); return; }
   document.getElementById('loginWall').style.display = 'flex';
-  document.getElementById('ldmUser').focus();
+  setTimeout(function(){ document.getElementById('ldmUser').focus(); }, 100);
 }
 
 async function doLogin() {
-  const user = document.getElementById('ldmUser').value.trim();
-  const pass = document.getElementById('ldmPass').value;
-  const errEl = document.getElementById('loginError');
+  var user = document.getElementById('ldmUser').value.trim();
+  var pass = document.getElementById('ldmPass').value;
+  var errEl = document.getElementById('loginError');
   errEl.style.display = 'none';
 
   if (!user || !pass) { showLoginErr('Remplissez tous les champs'); return; }
 
-  // Load credentials from Firebase
+  // Hardcoded fallback first (works offline)
+  if (user === 'DADY' && pass === 'ANACdady') {
+    sessionStorage.setItem('ldm_auth', '1');
+    hideLockScreen();
+    return;
+  }
+
   try {
-    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const apps = getApps();
-    const app  = apps.find(a => a.name === 'ldm_auth') || initializeApp(FB_LDM, 'ldm_auth');
-    const db   = getFirestore(app);
+    var { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    var { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    var apps = getApps();
+    var app  = apps.find(function(a){ return a.name === 'ldm_auth'; }) || initializeApp(FB_LDM, 'ldm_auth');
+    var db2  = getFirestore(app);
 
-    // Try ldm-specific credentials first, fallback to main admin
-    let ok = false;
+    var ok = false;
 
-    // Check ldm-access collection
-    const ldmDoc = await getDoc(doc(db, 'config', 'ldm-access'));
+    // Check ldm-access config
+    var ldmDoc = await getDoc(doc(db2, 'config', 'ldm-access'));
     if (ldmDoc.exists()) {
-      const d = ldmDoc.data();
-      if (d.users) {
-        // Array of {username, password}
-        ok = d.users.some(u => u.username === user && u.password === pass);
-      } else {
+      var d = ldmDoc.data();
+      if (d.users && Array.isArray(d.users)) {
+        ok = d.users.some(function(u){ return u.username === user && u.password === pass; });
+      } else if (d.username && d.password) {
         ok = (d.username === user && d.password === pass);
       }
     }
 
-    // Fallback: check main admin credentials
+    // Fallback: main admin credentials
     if (!ok) {
-      const adminDoc = await getDoc(doc(db, 'flights', 'cfg-auth'));
+      var adminDoc = await getDoc(doc(db2, 'flights', 'cfg-auth'));
       if (adminDoc.exists()) {
-        const d = adminDoc.data();
-        ok = (d.username === user && d.password === pass);
+        var ad = adminDoc.data();
+        ok = (ad.username === user && ad.password === pass);
       }
     }
-
-    // Hardcoded fallback (admin only)
-    if (!ok && user === 'DADY' && pass === 'ANACdady') ok = true;
 
     if (ok) {
       sessionStorage.setItem('ldm_auth', '1');
@@ -1193,35 +894,27 @@ async function doLogin() {
       showLoginErr('Identifiant ou mot de passe incorrect');
       document.getElementById('ldmPass').value = '';
     }
-  } catch (e) {
-    // Offline fallback
-    if (user === 'DADY' && pass === 'ANACdady') {
-      sessionStorage.setItem('ldm_auth', '1');
-      hideLockScreen();
-    } else {
-      showLoginErr('Erreur de connexion. Vérifiez votre réseau.');
-    }
+  } catch(e) {
+    showLoginErr('Erreur reseau. Reessayez.');
+    console.error(e);
   }
 }
 
 function showLoginErr(msg) {
-  const el = document.getElementById('loginError');
-  el.textContent = '⚠️ ' + msg;
+  var el = document.getElementById('loginError');
+  el.textContent = msg;
   el.style.display = 'block';
-  el.style.animation = 'none';
-  el.offsetHeight;
-  el.style.animation = 'si 0.3s ease';
 }
 
 function hideLockScreen() {
-  const wall = document.getElementById('loginWall');
-  wall.style.opacity = '0';
+  var wall = document.getElementById('loginWall');
   wall.style.transition = 'opacity 0.3s';
-  setTimeout(() => wall.style.display = 'none', 300);
+  wall.style.opacity = '0';
+  setTimeout(function(){ wall.style.display = 'none'; }, 300);
 }
 
-// Auto-check on load
 window.addEventListener('DOMContentLoaded', checkLdmLogin);
+
 </script>
 </body>
 </html>
