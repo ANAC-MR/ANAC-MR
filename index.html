@@ -335,30 +335,6 @@
 
             <!-- KPIs -->
             <div class="kpi-row">
-                <div class="kpi-card">
-                    <div class="kpi-value" id="kpi-vols">–</div>
-                    <div class="kpi-label">Total vols</div>
-                    <div class="kpi-sub"  id="kpi-vols-sub"></div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-value" id="kpi-pax">–</div>
-                    <div class="kpi-label">Total passagers</div>
-                    <div class="kpi-sub"  id="kpi-pax-sub"></div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-value" id="kpi-comp">–</div>
-                    <div class="kpi-label">Compagnies actives</div>
-                    <div class="kpi-sub"  id="kpi-comp-sub"></div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-value" id="kpi-dest">–</div>
-                    <div class="kpi-label">Destinations</div>
-                    <div class="kpi-sub"  id="kpi-dest-sub"></div>
-                </div>
-            </div>
-
-            <!-- KPIs -->
-            <div class="kpi-row">
                 <div class="kpi-card"><div class="kpi-value" id="kpi-vols">—</div><div class="kpi-label">Total vols</div><div class="kpi-sub" id="kpi-vols-sub"></div></div>
                 <div class="kpi-card"><div class="kpi-value" id="kpi-pax">—</div><div class="kpi-label">Passagers</div><div class="kpi-sub" id="kpi-pax-sub"></div></div>
                 <div class="kpi-card"><div class="kpi-value" id="kpi-comp">—</div><div class="kpi-label">Compagnies</div><div class="kpi-sub" id="kpi-comp-sub"></div></div>
@@ -372,25 +348,41 @@
                 <div class="chart-card full">
                     <h3>🏢 Vols par compagnie</h3>
                     <div class="chart-subtitle">Sélectionnez une compagnie pour voir ses vols par mois</div>
-                    <div style="margin-bottom:14px;">
-                        <select id="filterCompagnieChart" onchange="renderCompagnieChart()" style="padding:9px 16px;border-radius:8px;background:#1e3a5f;border:2px solid #D4AF37;color:#e8edf5;font-size:13px;font-weight:600;cursor:pointer;outline:none;min-width:220px;">
+                    <div style="margin-bottom:18px;">
+                        <select id="filterCompagnieChart" onchange="renderCompagnieChart()"
+                            style="width:100%;max-width:400px;padding:12px 18px;border-radius:10px;
+                                   background:#0d2240;border:2px solid #D4AF37;color:#e8edf5;
+                                   font-size:15px;font-weight:700;cursor:pointer;outline:none;
+                                   appearance:none;-webkit-appearance:none;
+                                   background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 viewBox=%220 0 12 8%22><path fill=%22%23D4AF37%22 d=%22M6 8L0 0h12z%22/></svg>');
+                                   background-repeat:no-repeat;background-position:right 14px center;
+                                   padding-right:40px;">
                             <option value="">— Choisir une compagnie —</option>
                         </select>
                     </div>
                     <div class="chart-wrap" id="wrapCompagnie" style="display:none;"><canvas id="chartCompagnie"></canvas></div>
-                    <div id="msgCompagnie" style="color:#7a8ba8;font-size:13px;padding:20px 0;">Sélectionnez une compagnie pour afficher son graphe</div>
+                    <div id="msgCompagnie" style="color:#7a8ba8;font-size:14px;padding:30px 0;text-align:center;">☝️ Sélectionnez une compagnie pour afficher son graphe</div>
                 </div>
 
                 <div class="chart-card full">
                     <h3>🗺️ Vols par destination</h3>
-                    <div class="chart-subtitle">Sélectionnez une destination pour voir ses vols par mois</div>
-                    <div style="margin-bottom:14px;">
-                        <select id="filterDestChart" onchange="renderDestChart()" style="padding:9px 16px;border-radius:8px;background:#1e3a5f;border:2px solid #D4AF37;color:#e8edf5;font-size:13px;font-weight:600;cursor:pointer;outline:none;min-width:220px;">
+                    <div class="chart-subtitle">Sélectionnez une destination pour voir ses vols par mois (départs et arrivées)</div>
+                    <div style="margin-bottom:18px;">
+                        <select id="filterDestChart" onchange="renderDestChart()"
+                            style="width:100%;max-width:400px;padding:12px 18px;border-radius:10px;
+                                   background:#0d2240;border:2px solid #D4AF37;color:#e8edf5;
+                                   font-size:15px;font-weight:700;cursor:pointer;outline:none;
+                                   appearance:none;-webkit-appearance:none;
+                                   background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 viewBox=%220 0 12 8%22><path fill=%22%23D4AF37%22 d=%22M6 8L0 0h12z%22/></svg>');
+                                   background-repeat:no-repeat;background-position:right 14px center;
+                                   padding-right:40px;">
                             <option value="">— Choisir une destination —</option>
                         </select>
                     </div>
-                    <div class="chart-wrap" id="wrapDest" style="display:none;"><canvas id="chartDestFilter"></canvas></div>
-                    <div id="msgDest" style="color:#7a8ba8;font-size:13px;padding:20px 0;">Sélectionnez une destination pour afficher son graphe</div>
+                    <div class="chart-wrap" id="wrapDest" style="display:none;height:280px;"><canvas id="chartDestFilter"></canvas></div>
+                    <div id="msgDest" style="color:#7a8ba8;font-size:14px;padding:30px 0;text-align:center;">
+                        ☝️ Sélectionnez une destination pour afficher son graphe
+                    </div>
                 </div>
                 <div class="chart-card full"><h3>📈 Comparaison mois en mois</h3><div class="chart-subtitle">Évolution des vols — comparaison avec l'année précédente</div><div class="chart-wrap tall"><canvas id="chartComparaison"></canvas></div></div>
                 <div class="chart-card full">
