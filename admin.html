@@ -1230,32 +1230,47 @@
                 <div class="card">
                     <div class="card-title">📡 Accès LDM/MVT Reader</div>
                     <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">
-                        Modifiez l'identifiant et le mot de passe d'acces au LDM/MVT Reader.
-                        Apres modification, tous les appareils utilisant l'ancien identifiant seront deconnectes.
+                        Chaque modification deconnecte immediatement tous les appareils connectes au LDM Reader.
                     </p>
-                    <div class="form-grid" style="grid-template-columns:1fr;gap:14px;max-width:420px;">
-                        <div class="field-group">
-                            <label>Nouvel identifiant</label>
-                            <input type="text" id="ldmNewUsername" placeholder="Identifiant LDM" style="text-transform:uppercase;" autocomplete="off">
-                        </div>
-                        <div class="field-group">
-                            <label>Nouveau mot de passe</label>
-                            <div style="position:relative;">
-                                <input type="password" id="ldmNewPass" placeholder="Nouveau mot de passe" style="padding-right:42px;" autocomplete="new-password">
-                                <button type="button" onclick="togglePwd('ldmNewPass','eyeC')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;" id="eyeC">👁</button>
+
+                    <!-- Bloc 1: Changer identifiant -->
+                    <div style="border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:18px;margin-bottom:16px;">
+                        <div style="font-size:12px;font-weight:700;color:var(--accent,#D4AF37);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:14px;">Changer l'identifiant</div>
+                        <div style="max-width:360px;">
+                            <div class="field-group" style="margin-bottom:12px;">
+                                <label>Nouvel identifiant</label>
+                                <input type="text" id="ldmNewUsername" placeholder="Nouvel identifiant" style="text-transform:uppercase;" autocomplete="off">
                             </div>
                         </div>
-                        <div class="field-group">
-                            <label>Confirmer le mot de passe</label>
-                            <div style="position:relative;">
-                                <input type="password" id="ldmConfirmPass" placeholder="Confirmer le mot de passe" style="padding-right:42px;" autocomplete="new-password">
-                                <button type="button" onclick="togglePwd('ldmConfirmPass','eyeD')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;" id="eyeD">👁</button>
-                            </div>
+                        <div id="ldmUserMsg" style="display:none;margin-top:8px;font-size:13px;"></div>
+                        <div style="margin-top:12px;">
+                            <button class="btn-primary" onclick="changeLdmUsername()">Changer l'identifiant</button>
                         </div>
                     </div>
-                    <div id="ldmCredMsg" style="display:none;margin-top:10px;font-size:13px;"></div>
-                    <div style="margin-top:16px;">
-                        <button class="btn-primary" onclick="changeLdmCredentials()">🔒 Changer l'identifiant LDM</button>
+
+                    <!-- Bloc 2: Changer mot de passe -->
+                    <div style="border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:18px;">
+                        <div style="font-size:12px;font-weight:700;color:var(--accent,#D4AF37);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:14px;">Changer le mot de passe</div>
+                        <div style="max-width:360px;">
+                            <div class="field-group" style="margin-bottom:12px;">
+                                <label>Nouveau mot de passe</label>
+                                <div style="position:relative;">
+                                    <input type="password" id="ldmNewPass" placeholder="Nouveau mot de passe" style="padding-right:42px;" autocomplete="new-password">
+                                    <button type="button" onclick="togglePwd('ldmNewPass','eyeC')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;" id="eyeC">👁</button>
+                                </div>
+                            </div>
+                            <div class="field-group">
+                                <label>Confirmer le mot de passe</label>
+                                <div style="position:relative;">
+                                    <input type="password" id="ldmConfirmPass" placeholder="Confirmer le mot de passe" style="padding-right:42px;" autocomplete="new-password">
+                                    <button type="button" onclick="togglePwd('ldmConfirmPass','eyeD')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;" id="eyeD">👁</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="ldmPassMsg" style="display:none;margin-top:8px;font-size:13px;"></div>
+                        <div style="margin-top:12px;">
+                            <button class="btn-primary" onclick="changeLdmPassword()">Changer le mot de passe</button>
+                        </div>
                     </div>
                 </div>
 
@@ -2145,43 +2160,55 @@ window.changePassword = async function() {
     }
 };
 
-// ── CHANGER IDENTIFIANT + MOT DE PASSE LDM ──
-window.changeLdmCredentials = async function() {
+// ── LDM: CHANGER IDENTIFIANT SEUL ──
+async function getLdmDoc() {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const fbCfg = {apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
+    const apps = getApps();
+    const app2 = apps.find(a => a.name === 'sec-ldm') || initializeApp(fbCfg, 'sec-ldm');
+    const db2  = getFirestore(app2);
+    return { db2, doc, getDoc, setDoc };
+}
+
+window.changeLdmUsername = async function() {
     var newUser = (document.getElementById('ldmNewUsername').value || '').trim().toUpperCase();
+    if (!newUser)           { showSecMsg('ldmUserMsg', 'Entrez un nouvel identifiant', true); return; }
+    if (newUser.length < 2) { showSecMsg('ldmUserMsg', 'Identifiant trop court', true); return; }
+    try {
+        var r = await getLdmDoc();
+        var snap = await r.getDoc(r.doc(r.db2, 'config', 'ldm-access'));
+        var currentPass = snap.exists() ? (snap.data().password || 'ANACdady') : 'ANACdady';
+        await r.setDoc(r.doc(r.db2, 'config', 'ldm-access'), {
+            username: newUser, password: currentPass,
+            sessionToken: Date.now().toString(), updatedAt: new Date().toISOString()
+        });
+        document.getElementById('ldmNewUsername').value = '';
+        showSecMsg('ldmUserMsg', 'Identifiant change : ' + newUser + ' — tous les appareils deconnectes', false);
+        logActivity('Changement identifiant LDM: ' + newUser, 'security');
+    } catch(e) { showSecMsg('ldmUserMsg', 'Erreur: ' + e.message, true); }
+};
+
+// ── LDM: CHANGER MOT DE PASSE SEUL ──
+window.changeLdmPassword = async function() {
     var newPass = (document.getElementById('ldmNewPass').value || '').trim();
     var confirm = (document.getElementById('ldmConfirmPass').value || '').trim();
-
-    if (!newUser)            { showSecMsg('ldmCredMsg', 'Entrez un identifiant', true); return; }
-    if (!newPass)            { showSecMsg('ldmCredMsg', 'Entrez un mot de passe', true); return; }
-    if (newPass.length < 4)  { showSecMsg('ldmCredMsg', 'Mot de passe trop court (min 4 caracteres)', true); return; }
-    if (newPass !== confirm)  { showSecMsg('ldmCredMsg', 'Les deux mots de passe ne correspondent pas', true); return; }
-
+    if (!newPass)           { showSecMsg('ldmPassMsg', 'Entrez un nouveau mot de passe', true); return; }
+    if (newPass.length < 4) { showSecMsg('ldmPassMsg', 'Mot de passe trop court (min 4 caracteres)', true); return; }
+    if (newPass !== confirm) { showSecMsg('ldmPassMsg', 'Les deux mots de passe ne correspondent pas', true); return; }
     try {
-        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const fbCfg = {apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
-        const apps = getApps();
-        const app2 = apps.find(a => a.name === 'sec-ldm') || initializeApp(fbCfg, 'sec-ldm');
-        const db2  = getFirestore(app2);
-
-        // Nouveau token = invalide toutes les sessions ldm.html avec ancien identifiant/mdp
-        await setDoc(doc(db2, 'config', 'ldm-access'), {
-            username: newUser,
-            password: newPass,
-            sessionToken: Date.now().toString(),
-            updatedAt: new Date().toISOString()
+        var r = await getLdmDoc();
+        var snap = await r.getDoc(r.doc(r.db2, 'config', 'ldm-access'));
+        var currentUser = snap.exists() ? (snap.data().username || 'DADY') : 'DADY';
+        await r.setDoc(r.doc(r.db2, 'config', 'ldm-access'), {
+            username: currentUser, password: newPass,
+            sessionToken: Date.now().toString(), updatedAt: new Date().toISOString()
         });
-
-        document.getElementById('ldmNewUsername').value = '';
         document.getElementById('ldmNewPass').value = '';
         document.getElementById('ldmConfirmPass').value = '';
-
-        showSecMsg('ldmCredMsg', 'Identifiant LDM mis a jour ! Nouvel identifiant: ' + newUser, false);
-        logActivity('Changement identifiant LDM: ' + newUser, 'security');
-
-    } catch(e) {
-        showSecMsg('ldmCredMsg', 'Erreur: ' + e.message, true);
-    }
+        showSecMsg('ldmPassMsg', 'Mot de passe LDM change — tous les appareils deconnectes', false);
+        logActivity('Changement mot de passe LDM', 'security');
+    } catch(e) { showSecMsg('ldmPassMsg', 'Erreur: ' + e.message, true); }
 };
 
 window.clearAllSessions = function() {
