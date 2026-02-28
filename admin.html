@@ -1226,6 +1226,29 @@
                     </div>
                 </div>
 
+                <!-- ── LDM ACCESS CREDENTIALS ── -->
+                <div class="card">
+                    <div class="card-title">📡 Accès LDM/MVT Reader</div>
+                    <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">
+                        Gérez les identifiants de connexion au LDM/MVT Reader. Ces credentials sont indépendants du mot de passe admin.
+                    </p>
+                    <div id="ldmUsersList" style="margin-bottom:18px;"></div>
+                    <div class="form-grid" style="margin-bottom:14px;">
+                        <div class="field-group">
+                            <label>Nom d'utilisateur LDM</label>
+                            <input type="text" id="ldmNewUser" placeholder="ex: OPERATEUR1" style="text-transform:uppercase;">
+                        </div>
+                        <div class="field-group">
+                            <label>Mot de passe LDM</label>
+                            <input type="password" id="ldmNewPass" placeholder="Mot de passe">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn-primary" onclick="addLdmUser()">➕ Ajouter utilisateur</button>
+                        <button class="btn-secondary" onclick="loadLdmUsers()">🔄 Actualiser</button>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-title">🔓 Réinitialiser la session</div>
                     <p style="font-size:13px; color:var(--text-dim); margin-bottom:16px; line-height:1.7;">
@@ -2067,6 +2090,69 @@ window.checkPasswordStrength = function() {
     fill.style.background = lvl.bg;
     label.textContent = lvl.txt;
     label.style.color = lvl.bg;
+};
+
+// ══ LDM USER MANAGEMENT ══
+window.loadLdmUsers = async function() {
+    try {
+        const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const snap = await getDoc(doc(db, 'config', 'ldm-access'));
+        const users = snap.exists() ? (snap.data().users || []) : [];
+        const list = document.getElementById('ldmUsersList');
+        if (!list) return;
+        if (!users.length) {
+            list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Aucun utilisateur LDM configuré. L'accès admin (DADY) est toujours valide.</div>';
+            return;
+        }
+        list.innerHTML = `
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Utilisateurs autorisés</div>
+            ${users.map((u, i) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:6px;">
+                <span style="font-size:13px;font-weight:700;flex:1;">👤 ${u.username}</span>
+                <span style="font-size:11px;color:var(--text-muted);">••••••••</span>
+                <button onclick="removeLdmUser(${i})" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.25);color:#fc8181;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Supprimer</button>
+            </div>`).join('')}
+        `;
+    } catch(e) { console.error('LDM users load error:', e); }
+};
+
+window.addLdmUser = async function() {
+    const user = document.getElementById('ldmNewUser')?.value.trim().toUpperCase();
+    const pass = document.getElementById('ldmNewPass')?.value;
+    if (!user || !pass) { showNotification('Remplissez nom et mot de passe', 'error'); return; }
+    if (pass.length < 4) { showNotification('Mot de passe trop court (min 4 car.)', 'error'); return; }
+    try {
+        const { doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const snap = await getDoc(doc(db, 'config', 'ldm-access'));
+        const users = snap.exists() ? (snap.data().users || []) : [];
+        if (users.find(u => u.username === user)) { showNotification('Cet utilisateur existe déjà', 'error'); return; }
+        users.push({ username: user, password: pass, createdAt: new Date().toISOString() });
+        await setDoc(doc(db, 'config', 'ldm-access'), { users, updatedAt: new Date().toISOString() });
+        document.getElementById('ldmNewUser').value = '';
+        document.getElementById('ldmNewPass').value = '';
+        showNotification(`✅ Utilisateur ${user} ajouté`, 'success');
+        window.loadLdmUsers();
+    } catch(e) { showNotification('Erreur: ' + e.message, 'error'); }
+};
+
+window.removeLdmUser = async function(idx) {
+    if (!confirm('Supprimer cet utilisateur LDM ?')) return;
+    try {
+        const { doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const snap = await getDoc(doc(db, 'config', 'ldm-access'));
+        const users = snap.exists() ? (snap.data().users || []) : [];
+        users.splice(idx, 1);
+        await setDoc(doc(db, 'config', 'ldm-access'), { users, updatedAt: new Date().toISOString() });
+        showNotification('Utilisateur supprimé', 'success');
+        window.loadLdmUsers();
+    } catch(e) { showNotification('Erreur: ' + e.message, 'error'); }
+};
+
+// Load LDM users when security tab is shown
+const origShowTab = window.showSection;
+window.showSection = function(name) {
+    if (origShowTab) origShowTab(name);
+    if (name === 'securite') setTimeout(window.loadLdmUsers, 200);
 };
 
 window.changePassword = async function() {
