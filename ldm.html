@@ -134,13 +134,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div id="loginError" style="display:none;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#fc8181;margin-bottom:16px;text-align:left;"></div>
     <div style="text-align:left;margin-bottom:14px;">
       <label style="font-size:11px;font-weight:700;color:#7a8ba8;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Identifiant</label>
-      <input id="ldmUser" type="text" placeholder="Nom d'utilisateur"
+      <input id="ldmUser" type="text" placeholder="Nom d'utilisateur" autocomplete="off"
         style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(212,175,55,0.2);border-radius:9px;color:#e8edf5;font-family:'Sora',sans-serif;font-size:14px;outline:none;"
         onkeydown="if(event.key==='Enter')document.getElementById('ldmPass').focus()">
     </div>
     <div style="text-align:left;margin-bottom:22px;">
       <label style="font-size:11px;font-weight:700;color:#7a8ba8;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Mot de passe</label>
-      <input id="ldmPass" type="password" placeholder="Mot de passe"
+      <input id="ldmPass" type="password" placeholder="Mot de passe" autocomplete="new-password"
         style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(212,175,55,0.2);border-radius:9px;color:#e8edf5;font-family:'Sora',sans-serif;font-size:14px;outline:none;"
         onkeydown="if(event.key==='Enter')doLogin()">
     </div>
