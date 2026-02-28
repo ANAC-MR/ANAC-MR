@@ -710,7 +710,7 @@ function showDestDetail(code,d,flt){
 }
 // PDF EXPORT
 // ══════════════════════════════════════════
-async window.exportPDF = function() {
+window.exportPDF = async function() {
     const btn = document.querySelector('.btn-pdf');
     btn.textContent = '⏳ Génération...'; btn.disabled = true;
     try {
