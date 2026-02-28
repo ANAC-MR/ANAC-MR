@@ -369,7 +369,29 @@
                 <div class="chart-card full"><h3>✈️ Vols par mois</h3><div class="chart-subtitle">Nombre de vols enregistrés chaque mois</div><div class="chart-wrap"><canvas id="chartVolsMois"></canvas></div></div>
                 <div class="chart-card full"><h3>👥 Passagers par mois</h3><div class="chart-subtitle">Total passagers (PAX + Bébés) par mois</div><div class="chart-wrap"><canvas id="chartPaxMois"></canvas></div></div>
                 <div class="chart-card"><h3>🏆 Top compagnies</h3><div class="chart-subtitle">Classement par nombre de vols</div><div class="chart-wrap"><canvas id="chartTopComp"></canvas></div></div>
-                <div class="chart-card"><h3>📊 Départs vs Arrivées</h3><div class="chart-subtitle">Répartition DEP / ARR sur la période</div><div class="chart-wrap"><canvas id="chartDepArr"></canvas></div></div>
+                <div class="chart-card full">
+                    <h3>🏢 Vols par compagnie</h3>
+                    <div class="chart-subtitle">Sélectionnez une compagnie pour voir ses vols par mois</div>
+                    <div style="margin-bottom:14px;">
+                        <select id="filterCompagnieChart" onchange="renderCompagnieChart()" style="padding:9px 16px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#e8edf5;font-size:13px;font-weight:600;cursor:pointer;outline:none;min-width:220px;">
+                            <option value="">— Choisir une compagnie —</option>
+                        </select>
+                    </div>
+                    <div class="chart-wrap" id="wrapCompagnie" style="display:none;"><canvas id="chartCompagnie"></canvas></div>
+                    <div id="msgCompagnie" style="color:#7a8ba8;font-size:13px;padding:20px 0;">Sélectionnez une compagnie pour afficher son graphe</div>
+                </div>
+
+                <div class="chart-card full">
+                    <h3>🗺️ Vols par destination</h3>
+                    <div class="chart-subtitle">Sélectionnez une destination pour voir ses vols par mois</div>
+                    <div style="margin-bottom:14px;">
+                        <select id="filterDestChart" onchange="renderDestChart()" style="padding:9px 16px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#e8edf5;font-size:13px;font-weight:600;cursor:pointer;outline:none;min-width:220px;">
+                            <option value="">— Choisir une destination —</option>
+                        </select>
+                    </div>
+                    <div class="chart-wrap" id="wrapDest" style="display:none;"><canvas id="chartDestFilter"></canvas></div>
+                    <div id="msgDest" style="color:#7a8ba8;font-size:13px;padding:20px 0;">Sélectionnez une destination pour afficher son graphe</div>
+                </div>
                 <div class="chart-card full"><h3>📈 Comparaison mois en mois</h3><div class="chart-subtitle">Évolution des vols — comparaison avec l'année précédente</div><div class="chart-wrap tall"><canvas id="chartComparaison"></canvas></div></div>
                 <div class="chart-card full">
                     <h3>🗺️ Destinations — appuyez pour voir les détails</h3>
@@ -654,15 +676,12 @@ function refreshCharts() {
         options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
             scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'}},y:{grid:{display:false}}}}});
 
-    // Chart 4 — DEP vs ARR donut
-    kill('da');
-    const nD=flt.filter(f=>f.type==='DEP').length, nA=flt.filter(f=>f.type==='ARR').length;
-    charts['da']=new Chart(document.getElementById('chartDepArr'),{type:'doughnut',
-        data:{labels:['Départs','Arrivées'],datasets:[{data:[nD,nA],
-            backgroundColor:['rgba(74,144,217,0.8)','rgba(212,175,55,0.8)'],
-            borderColor:['#4a90d9','#D4AF37'],borderWidth:2,hoverOffset:8}]},
-        options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
-            plugins:{legend:{position:'bottom',labels:{padding:16,color:'#7a8ba8'}}}}});
+    // Peupler les filtres compagnie + destination
+    populateCompagnieChartFilter(flt);
+    populateDestChartFilter(flt);
+    // Rafraichir si une selection existe deja
+    if(document.getElementById('filterCompagnieChart').value) renderCompagnieChart();
+    if(document.getElementById('filterDestChart').value) renderDestChart();
 
     // Chart 5 — Comparaison années
     kill('k');
@@ -716,6 +735,90 @@ function renderDestGrid(flt) {
 function selectDest(code) {
     selectedDest=(selectedDest===code)?null:code;
     renderDestGrid(filterFlights(getFlights()));
+}
+
+
+function populateCompagnieChartFilter(flt) {
+    var sel = document.getElementById('filterCompagnieChart');
+    var cur = sel.value;
+    var companies = [...new Set(flt.map(f=>f.company).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">— Choisir une compagnie —</option>';
+    companies.forEach(function(c) {
+        var o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        if(c === cur) o.selected = true;
+        sel.appendChild(o);
+    });
+}
+
+function populateDestChartFilter(flt) {
+    var sel = document.getElementById('filterDestChart');
+    var cur = sel.value;
+    var dests = [...new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(d=>d&&d!=='GQNO'))].sort();
+    sel.innerHTML = '<option value="">— Choisir une destination —</option>';
+    dests.forEach(function(d) {
+        var o = document.createElement('option');
+        o.value = d; o.textContent = d + (DEST_NAMES[d] ? ' — '+DEST_NAMES[d] : '');
+        if(d === cur) o.selected = true;
+        sel.appendChild(o);
+    });
+}
+
+function renderCompagnieChart() {
+    var company = document.getElementById('filterCompagnieChart').value;
+    var wrap = document.getElementById('wrapCompagnie');
+    var msg  = document.getElementById('msgCompagnie');
+    if(!company) { wrap.style.display='none'; msg.style.display='block'; return; }
+    wrap.style.display='block'; msg.style.display='none';
+    var flt = filterFlights(getFlights()).filter(function(f){return f.company===company;});
+    var CP = ['#4a90d9','#D4AF37'];
+    kill('comp');
+    var ctx = document.getElementById('chartCompagnie').getContext('2d');
+    var g = ctx.createLinearGradient(0,0,0,260);
+    g.addColorStop(0,'rgba(74,144,217,0.35)'); g.addColorStop(1,'rgba(74,144,217,0.01)');
+    charts['comp'] = new Chart(ctx, {type:'line',
+        data:{labels:MONTHS_FR, datasets:[
+            {label:'Vols totaux', data:monthly(flt),
+             backgroundColor:g, borderColor:'#4a90d9', borderWidth:2.5,
+             fill:true, tension:0.4, pointRadius:4,
+             pointBackgroundColor:'#4a90d9', pointBorderColor:'#0a1628', pointBorderWidth:2},
+            {label:'Passagers', data:monthly(flt,'passengers').map(function(v,i){return v+monthly(flt,'babies')[i];}),
+             backgroundColor:'rgba(212,175,55,0.0)', borderColor:'#D4AF37', borderWidth:2,
+             fill:false, tension:0.4, pointRadius:3, pointBackgroundColor:'#D4AF37',
+             yAxisID:'y2'}
+        ]},
+        options:{responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{position:'top', labels:{padding:20, color:'#7a8ba8'}}},
+            scales:{
+                y:{beginAtZero:true, grid:{color:'rgba(255,255,255,0.05)'}, title:{display:true,text:'Vols',color:'#7a8ba8'}},
+                y2:{beginAtZero:true, position:'right', grid:{display:false}, title:{display:true,text:'PAX',color:'#D4AF37'}, ticks:{color:'#D4AF37'}},
+                x:{grid:{display:false}}
+            }}});
+}
+
+function renderDestChart() {
+    var dest = document.getElementById('filterDestChart').value;
+    var wrap = document.getElementById('wrapDest');
+    var msg  = document.getElementById('msgDest');
+    if(!dest) { wrap.style.display='none'; msg.style.display='block'; return; }
+    wrap.style.display='block'; msg.style.display='none';
+    var flt = filterFlights(getFlights());
+    var dep = flt.filter(function(f){return f.to===dest;});   // vols depuis NKC vers dest
+    var arr = flt.filter(function(f){return f.from===dest;});  // vols de dest vers NKC
+    kill('destf');
+    charts['destf'] = new Chart(document.getElementById('chartDestFilter'), {type:'bar',
+        data:{labels:MONTHS_FR, datasets:[
+            {label:'NKC → '+dest, data:monthly(dep),
+             backgroundColor:'rgba(74,144,217,0.75)', borderColor:'#4a90d9', borderWidth:2, borderRadius:6},
+            {label:dest+' → NKC', data:monthly(arr),
+             backgroundColor:'rgba(212,175,55,0.75)', borderColor:'#D4AF37', borderWidth:2, borderRadius:6}
+        ]},
+        options:{responsive:true, maintainAspectRatio:false,
+            plugins:{legend:{position:'top', labels:{padding:20, color:'#7a8ba8'}}},
+            scales:{
+                x:{grid:{display:false}},
+                y:{beginAtZero:true, ticks:{stepSize:1}, grid:{color:'rgba(255,255,255,0.05)'}}
+            }}});
 }
 
 function showDestDetail(code, d, flt) {
