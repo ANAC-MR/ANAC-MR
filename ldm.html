@@ -355,7 +355,7 @@ var results = [];
 var accessToken = null;
 
 // ---- LOGIN ----
-async function doLogin() {
+window.doLogin = async function() {
   var user = document.getElementById('ldmUser').value.trim();
   var pass = document.getElementById('ldmPass').value;
   var errEl = document.getElementById('loginError');
@@ -388,7 +388,7 @@ async function doLogin() {
     else { errEl.textContent='Identifiant ou mot de passe incorrect'; errEl.style.display='block'; document.getElementById('ldmPass').value=''; }
   } catch(e) { errEl.textContent='Erreur reseau — reessayez'; errEl.style.display='block'; }
 }
-function hideLock() {
+window.hideLock = function() {
   var w = document.getElementById('loginWall');
   w.style.opacity='0'; w.style.transition='opacity 0.3s';
   setTimeout(function(){w.style.display='none';},300);
@@ -487,7 +487,7 @@ async function runOCR(dataUrl, onProgress) {
 }
 
 // ---- TEXT PARSER ----
-function parseText() {
+async function parseText() {
   var text = document.getElementById('ldmText').value.trim();
   if (!text) { toast('Collez du texte LDM/MVT','warn'); return; }
   var today = new Date().toISOString().split('T')[0];
