@@ -475,7 +475,7 @@ async function analyzeAll() {
   }
   document.getElementById('imgStatus').textContent=done+'/'+pendingFiles.length+' traite(s)';
   btn.disabled=false; btn.innerHTML='Lire avec OCR';
-  markDuplicates(); renderResults(); updateStats();
+  await markDuplicates(); renderResults(); updateStats();
 }
 async function runOCR(dataUrl, onProgress) {
   var worker = await Tesseract.createWorker('eng', 1, {
@@ -495,7 +495,7 @@ function parseText() {
   var up = text.toUpperCase();
   var docType = (up.indexOf('MVT')>=0 && up.indexOf('LDM')<0) ? 'MVT' : 'LDM';
   results.push({id:Date.now()+'_txt',source:'text',docType:docType,fileName:'Texte colle',rawText:text,parsed:parsed,_imported:false});
-  markDuplicates(); renderResults(); updateStats();
+  await markDuplicates(); renderResults(); updateStats();
   toast('Donnees extraites','ok');
 }
 
@@ -773,13 +773,6 @@ async function importResult(i, force) {
   var spx=parseInt(g('r'+i+'-spx'))||0;
   var sbb=parseInt(g('r'+i+'-sbb'))||0;
   if(!fn||!dt){toast('N de vol et date obligatoires','warn');return;}
-  var fp=fn+'|'+dt+'|'+rg;
-  var imp=getImported();
-  if(!force&&imp.has(fp)){
-    var prev=imp.get(fp);
-    document.getElementById('ra-'+i).innerHTML='<div class="dup-box">Vol '+fn+' deja importe le '+new Date(prev.at).toLocaleDateString('fr-FR')+'</div><button class="btn btn-outline btn-sm" onclick="importResult('+i+',true)">Forcer quand meme</button>';
-    return;
-  }
   var btnEl=document.querySelector('#ra-'+i+' .btn-green');
   if(btnEl){btnEl.disabled=true;btnEl.innerHTML='<span class="spin"></span>';}
   try {
@@ -788,6 +781,19 @@ async function importResult(i, force) {
     var apps=fbm.getApps();
     var app=apps.find(function(a){return a.name==='ldm';})||fbm.initializeApp(FB,'ldm');
     var db=fsm.getFirestore(app);
+
+    // Verifie dans Firebase si le vol existe encore
+    if (!force) {
+      var q=fsm.query(fsm.collection(db,'flights'),fsm.where('flightNumber','==',fn),fsm.where('date','==',dt));
+      var chk=await fsm.getDocs(q);
+      if (!chk.empty) {
+        if(btnEl){btnEl.disabled=false;btnEl.innerHTML='Importer dans le systeme';}
+        document.getElementById('ra-'+i).innerHTML=
+          '<div class="dup-box">Vol '+fn+' du '+dt+' existe deja dans le systeme</div>'+
+          '<button class="btn btn-outline btn-sm" onclick="importResult('+i+',true)">Importer quand meme</button>';
+        results[i]._imported=true; renderResults(); return;
+      }
+    }
     // Conversion IATA -> ICAO pour from/to/stopover
     await loadAirportTable();
     var frIcao  = iataToIcao(fr);
@@ -803,8 +809,6 @@ async function importResult(i, force) {
       source:(results[i]&&results[i].source==='image')?'LDM_IMAGE':'LDM_TEXT',
       createdAt:new Date().toISOString(),timestamp:Date.now()
     });
-    imp.set(fp,{fn:fn,dt:dt,rg:rg,at:new Date().toISOString()});
-    saveImported(imp);
     if(results[i])results[i]._imported=true;
     var card=document.getElementById('rc-'+i);if(card)card.classList.add('imported');
     document.getElementById('ra-'+i).innerHTML='<span style="color:var(--green);font-size:13px;font-weight:600;">Importe avec succes</span>';
@@ -814,9 +818,48 @@ async function importResult(i, force) {
 
 // ---- DUPLICATES ----
 function makeFP(p){return[(p.flightNumber||'').toUpperCase(),(p.date||''),(p.registration||'').replace(/[-.\s]/g,'').toUpperCase()].join('|');}
-function getImported(){try{return new Map(JSON.parse(localStorage.getItem('ldm_fp')||'[]'));}catch(e){return new Map();}}
-function saveImported(m){localStorage.setItem('ldm_fp',JSON.stringify([...m.entries()]));}
-function markDuplicates(){var imp=getImported();results.forEach(function(r){r._fp=makeFP(r.parsed||{});r._imported=imp.has(r._fp);});}
+
+// Verifie dans Firebase si le vol existe deja (flightNumber + date + registration)
+async function existsInFirebase(fn, dt, rg) {
+  try {
+    var fbm = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    var fsm = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    var apps = fbm.getApps();
+    var app  = apps.find(function(a){return a.name==='ldm';});
+    if (!app) app = fbm.initializeApp(FB,'ldm');
+    var db = fsm.getFirestore(app);
+    // Cherche un vol avec meme flightNumber + date
+    var q = fsm.query(
+      fsm.collection(db,'flights'),
+      fsm.where('flightNumber','==',fn),
+      fsm.where('date','==',dt)
+    );
+    var snap = await fsm.getDocs(q);
+    if (snap.empty) return false;
+    // Si registration fournie, verifie aussi
+    if (rg) {
+      var found = false;
+      snap.forEach(function(d){ if(d.data().registration===rg) found=true; });
+      return found;
+    }
+    return true;
+  } catch(e) { return false; }
+}
+
+// markDuplicates: verifie Firebase pour chaque resultat
+async function markDuplicates() {
+  for (var i=0; i<results.length; i++) {
+    var p = results[i].parsed || {};
+    var fn = (p.flightNumber||'').toUpperCase();
+    var dt = p.date||'';
+    var rg = (p.registration||'').replace(/[-.\s]/g,'').toUpperCase();
+    if (fn && dt) {
+      results[i]._imported = await existsInFirebase(fn, dt, rg);
+    } else {
+      results[i]._imported = false;
+    }
+  }
+}
 
 // ---- GMAIL ----
 function signIn() {
@@ -871,7 +914,7 @@ async function readEmails(){
       parsed.push({id:em.id,source:'gmail',docType:dt,fileName:subj||'Email',rawText:(body||'').slice(0,800),parsed:p,_imported:false});
     });
     results=results.concat(parsed);
-    markDuplicates();renderResults();updateStats();
+    await markDuplicates();renderResults();updateStats();
     document.getElementById('sLast').textContent='Verifie a '+new Date().toLocaleTimeString('fr-FR');
     setStatus('active',parsed.length+' email(s) charges');
     toast(parsed.length+' email(s) charges','ok');
@@ -895,7 +938,7 @@ function updateStats(){
   document.getElementById('stTotal').textContent=results.length;
   document.getElementById('stLDM').textContent=results.filter(function(r){return r.docType==='LDM';}).length;
   document.getElementById('stMVT').textContent=results.filter(function(r){return r.docType==='MVT';}).length;
-  document.getElementById('stImported').textContent=getImported().size;
+  document.getElementById('stImported').textContent=results.filter(function(r){return r._imported;}).length;
 }
 function setStatus(st,txt){
   var d=document.getElementById('sDot');
