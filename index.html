@@ -8,11 +8,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ANAC">
-    <meta name="description" content="Suivi des vols et autorisations — ANAC Mauritanie">
-    <title>ANAC Mauritanie – Suivi des Vols</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
+    <title>ANAC Mauritanie – Suivi Mensuel des Vols</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -43,76 +41,68 @@
         .tab-content.active { display: block; }
 
         /* ── CHARTS ── */
-        .charts-header {
-            display: flex; align-items: flex-start;
-            justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
-        }
-        .charts-header h2 { font-size: 20px; font-weight: 700; color: #2d3748; margin: 0; }
-        .charts-header p  { font-size: 13px; color: #718096; margin: 4px 0 0; }
-
-        .btn-pdf {
-            background: linear-gradient(135deg, #C8102E, #e53e3e);
-            color: #fff; border: none; border-radius: 8px;
-            padding: 10px 22px; font-family: inherit; font-size: 13px; font-weight: 700;
-            cursor: pointer; box-shadow: 0 4px 12px rgba(200,16,46,0.3);
-            transition: opacity 0.2s, transform 0.15s;
-        }
-        .btn-pdf:hover { opacity: 0.85; transform: translateY(-1px); }
-        .btn-pdf:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
+        /* ══ CHARTS — Design sombre moderne ══ */
+        .charts-header { margin-bottom:24px; }
+        .charts-header h2 { font-size:22px; font-weight:800; color:#e8edf5; margin:0; }
+        .charts-header p  { font-size:13px; color:#7a8ba8; margin:5px 0 0; }
         .charts-filter-bar {
-            display: flex; gap: 16px; align-items: center;
-            background: rgba(43,90,142,0.05); border: 1px solid rgba(43,90,142,0.15);
-            border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; flex-wrap: wrap;
+            display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+            margin-bottom:26px; padding:14px 18px;
+            background:rgba(255,255,255,0.03);
+            border:1px solid rgba(255,255,255,0.07); border-radius:14px;
         }
-        .charts-filter-bar label { font-size: 12px; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: 0.4px; }
+        .charts-filter-bar label { font-size:11px; font-weight:700; color:#7a8ba8; text-transform:uppercase; letter-spacing:0.5px; }
         .charts-filter-bar select {
-            padding: 6px 12px; border-radius: 7px; border: 1px solid rgba(43,90,142,0.2);
-            background: #fff; font-family: inherit; font-size: 13px; color: #2d3748; cursor: pointer;
+            padding:8px 14px; border-radius:8px;
+            background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+            color:#e8edf5; font-size:13px; font-weight:600; cursor:pointer; outline:none;
         }
-
-        /* KPI */
-        .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
-        .kpi-card {
-            background: #fff; border-radius: 12px; padding: 18px 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid;
-        }
-        .kpi-card:nth-child(1) { border-color: #2B5A8E; }
-        .kpi-card:nth-child(2) { border-color: #00b67a; }
-        .kpi-card:nth-child(3) { border-color: #D4AF37; }
-        .kpi-card:nth-child(4) { border-color: #C8102E; }
-        .kpi-value { font-size: 30px; font-weight: 800; color: #2d3748; }
-        .kpi-label { font-size: 12px; color: #718096; font-weight: 500; margin-top: 2px; }
-        .kpi-sub   { font-size: 11px; color: #a0aec0; margin-top: 3px; }
-
+        .charts-filter-bar select:focus { border-color:#D4AF37; }
+        .btn-cf { padding:8px 18px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:700; transition:all 0.2s; }
+        .btn-cf.pri { background:#D4AF37; color:#0a1628; }
+        .btn-cf.sec { background:rgba(255,255,255,0.07); color:#7a8ba8; border:1px solid rgba(255,255,255,0.1); }
+        .btn-cf:hover { transform:translateY(-1px); opacity:0.9; }
+        /* KPIs */
+        .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:26px; }
+        .kpi-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:18px 20px; transition:border-color 0.2s,transform 0.2s; }
+        .kpi-card:hover { border-color:rgba(212,175,55,0.3); transform:translateY(-2px); }
+        .kpi-value { font-size:30px; font-weight:900; color:#e8edf5; line-height:1; margin-bottom:4px; }
+        .kpi-label { font-size:11px; font-weight:700; color:#7a8ba8; text-transform:uppercase; letter-spacing:0.5px; }
+        .kpi-sub   { font-size:11px; color:#4a5568; margin-top:4px; }
         /* Charts grid */
-        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .chart-card {
-            background: #fff; border-radius: 14px; padding: 22px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.07); border: 1px solid rgba(43,90,142,0.1);
-        }
-        .chart-card.full { grid-column: 1 / -1; }
-        .chart-card h3 {
-            font-size: 13px; font-weight: 700; color: #2d3748; margin: 0 0 3px;
-            text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .chart-subtitle { font-size: 12px; color: #718096; margin-bottom: 14px; }
-        .chart-wrap { position: relative; height: 260px; }
-        .chart-wrap.tall { height: 320px; }
-
+        .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        .chart-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:16px; padding:22px; transition:border-color 0.25s; }
+        .chart-card:hover { border-color:rgba(212,175,55,0.2); }
+        .chart-card.full { grid-column:1/-1; }
+        .chart-card h3 { font-size:14px; font-weight:800; color:#e8edf5; margin:0 0 4px; }
+        .chart-subtitle { font-size:11px; color:#7a8ba8; margin-bottom:16px; }
+        .chart-wrap { position:relative; height:260px; }
+        .chart-wrap.tall { height:300px; }
+        /* Destinations cliquables */
+        .dest-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:16px; }
+        .dest-btn { display:flex; flex-direction:column; align-items:center; padding:14px 8px; border-radius:12px; cursor:pointer; background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.08); transition:all 0.2s; text-align:center; }
+        .dest-btn:hover { transform:translateY(-3px); border-color:rgba(212,175,55,0.5); background:rgba(212,175,55,0.08); }
+        .dest-btn.active { border-color:#D4AF37; background:rgba(212,175,55,0.12); }
+        .dest-code { font-size:17px; font-weight:900; color:#D4AF37; letter-spacing:1px; }
+        .dest-name { font-size:10px; color:#7a8ba8; margin-top:3px; line-height:1.3; }
+        .dest-count { font-size:11px; font-weight:700; color:#00c98d; margin-top:5px; }
+        .dest-detail { margin-top:18px; padding:18px; background:rgba(212,175,55,0.05); border:1px solid rgba(212,175,55,0.2); border-radius:14px; display:none; }
+        .dest-detail.show { display:block; animation:fadeSlide 0.25s ease; }
+        .dest-detail-title { font-size:15px; font-weight:800; color:#D4AF37; margin-bottom:14px; }
+        .dest-stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+        .dest-stat { text-align:center; }
+        .dest-stat-val { font-size:22px; font-weight:900; color:#e8edf5; }
+        .dest-stat-lbl { font-size:10px; color:#7a8ba8; text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; }
         /* Route tags */
-        .route-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
-        .route-tag {
-            background: rgba(43,90,142,0.08); border: 1px solid rgba(43,90,142,0.18);
-            color: #2B5A8E; font-size: 12px; font-weight: 600;
-            padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;
+        .route-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+        .route-tag { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; background:rgba(43,90,142,0.15); border:1px solid rgba(43,90,142,0.3); font-size:12px; font-weight:600; color:#7ab3e0; cursor:pointer; transition:all 0.15s; }
+        .route-tag:hover { background:rgba(43,90,142,0.3); }
+        .route-count { background:#2B5A8E; color:#fff; border-radius:10px; padding:1px 7px; font-size:10px; font-weight:800; }
+        @keyframes fadeSlide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+        @media(max-width:768px){
+            .charts-grid{grid-template-columns:1fr;} .chart-card.full{grid-column:1;}
+            .kpi-row{grid-template-columns:1fr 1fr;} .dest-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));}
         }
-        .route-count {
-            background: #2B5A8E; color: #fff; border-radius: 10px;
-            padding: 1px 7px; font-size: 10px;
-        }
-
-        /* ── COMPARISON ── */
         .compare-section {
             background: #fff; border-radius: 14px; padding: 24px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.07);
@@ -198,7 +188,7 @@
             <img src="assets/ANAC-logo.png" alt="ANAC Logo" class="logo">
             <h1>ANAC Mauritanie – Suivi Mensuel des Vols</h1>
             <div style="position:absolute;top:10px;right:10px;display:flex;gap:8px;align-items:center;">
-                <a href="ldm.html" style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.55);text-decoration:none;background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);">📡 LDM/MVT</a>
+                <a href="ldm.html" style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.55);text-decoration:none;background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);">📨 LDM/MVT</a>
                 <a href="admin.html" class="admin-link" title="Administration" style="font-size:20px;opacity:0.4;text-decoration:none;position:static;">⚙️</a>
             </div>
         </div>
@@ -325,25 +315,8 @@
                 <select id="chartCompanyFilter">
                     <option value="ALL">Toutes les compagnies</option>
                 </select>
-                <button onclick="refreshCharts()" style="
-                    margin-left:16px; padding:8px 22px;
-                    background:linear-gradient(135deg,#2B5A8E,#4a90d9);
-                    color:#fff; border:none; border-radius:8px;
-                    font-family:inherit; font-size:13px; font-weight:700;
-                    cursor:pointer; box-shadow:0 3px 10px rgba(43,90,142,0.3);
-                    transition:opacity 0.2s,transform 0.15s;
-                " onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-                    🔍 Générer
-                </button>
-                <button onclick="resetChartFilters()" style="
-                    margin-left:6px; padding:8px 16px;
-                    background:transparent; color:#718096;
-                    border:1px solid #cbd5e0; border-radius:8px;
-                    font-family:inherit; font-size:13px;
-                    cursor:pointer; transition:all 0.2s;
-                " onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='transparent'">
-                    ↺ Réinitialiser
-                </button>
+                <button onclick="refreshCharts()" class="btn-cf pri">🔍 Appliquer</button>
+                <button onclick="resetChartFilters()" class="btn-cf sec">↺ Réinitialiser</button>
             </div>
 
             <!-- KPIs -->
@@ -370,42 +343,35 @@
                 </div>
             </div>
 
+            <!-- KPIs -->
+            <div class="kpi-row">
+                <div class="kpi-card"><div class="kpi-value" id="kpi-vols">—</div><div class="kpi-label">Total vols</div><div class="kpi-sub" id="kpi-vols-sub"></div></div>
+                <div class="kpi-card"><div class="kpi-value" id="kpi-pax">—</div><div class="kpi-label">Passagers</div><div class="kpi-sub" id="kpi-pax-sub"></div></div>
+                <div class="kpi-card"><div class="kpi-value" id="kpi-comp">—</div><div class="kpi-label">Compagnies</div><div class="kpi-sub" id="kpi-comp-sub"></div></div>
+                <div class="kpi-card"><div class="kpi-value" id="kpi-dest">—</div><div class="kpi-label">Destinations</div><div class="kpi-sub" id="kpi-dest-sub"></div></div>
+            </div>
             <!-- Charts -->
             <div class="charts-grid">
-
+                <div class="chart-card full"><h3>✈️ Vols par mois</h3><div class="chart-subtitle">Nombre de vols enregistrés chaque mois</div><div class="chart-wrap"><canvas id="chartVolsMois"></canvas></div></div>
+                <div class="chart-card full"><h3>👥 Passagers par mois</h3><div class="chart-subtitle">Total passagers (PAX + Bébés) par mois</div><div class="chart-wrap"><canvas id="chartPaxMois"></canvas></div></div>
+                <div class="chart-card"><h3>🏆 Top compagnies</h3><div class="chart-subtitle">Classement par nombre de vols</div><div class="chart-wrap"><canvas id="chartTopComp"></canvas></div></div>
+                <div class="chart-card"><h3>📊 Départs vs Arrivées</h3><div class="chart-subtitle">Répartition DEP / ARR sur la période</div><div class="chart-wrap"><canvas id="chartDepArr"></canvas></div></div>
+                <div class="chart-card full"><h3>📈 Comparaison mois en mois</h3><div class="chart-subtitle">Évolution des vols — comparaison avec l'année précédente</div><div class="chart-wrap tall"><canvas id="chartComparaison"></canvas></div></div>
                 <div class="chart-card full">
-                    <h3>✈️ Vols par mois</h3>
-                    <div class="chart-subtitle">Nombre de vols enregistrés chaque mois</div>
-                    <div class="chart-wrap"><canvas id="chartVolsMois"></canvas></div>
-                </div>
-
-                <div class="chart-card full">
-                    <h3>👥 Passagers par mois</h3>
-                    <div class="chart-subtitle">Total passagers (PAX + Bébés) par mois</div>
-                    <div class="chart-wrap"><canvas id="chartPaxMois"></canvas></div>
-                </div>
-
-
-
-                <div class="chart-card">
-                    <h3>🏆 Top compagnies</h3>
-                    <div class="chart-subtitle">Classement par nombre de vols</div>
-                    <div class="chart-wrap"><canvas id="chartTopComp"></canvas></div>
-                </div>
-
-                <div class="chart-card full">
-                    <h3>📈 Comparaison mois en mois</h3>
-                    <div class="chart-subtitle">Évolution des vols sur l'année — comparaison avec l'année précédente</div>
-                    <div class="chart-wrap tall"><canvas id="chartComparaison"></canvas></div>
-                </div>
-
-                <div class="chart-card full">
-                    <h3>🗺️ Destinations les plus fréquentées</h3>
-                    <div class="chart-subtitle">Routes actives et nombre de passages par destination</div>
-                    <div class="chart-wrap"><canvas id="chartDestinations"></canvas></div>
+                    <h3>🗺️ Destinations — appuyez pour voir les détails</h3>
+                    <div class="chart-subtitle">Toutes les destinations actives — cliquez sur une pour voir ses statistiques</div>
+                    <div class="dest-grid" id="destGrid"></div>
+                    <div class="dest-detail" id="destDetail">
+                        <div class="dest-detail-title" id="destDetailTitle"></div>
+                        <div class="dest-stats-row">
+                            <div class="dest-stat"><div class="dest-stat-val" id="dStatVols">—</div><div class="dest-stat-lbl">Vols totaux</div></div>
+                            <div class="dest-stat"><div class="dest-stat-val" id="dStatDep">—</div><div class="dest-stat-lbl">Depuis NKC</div></div>
+                            <div class="dest-stat"><div class="dest-stat-val" id="dStatArr">—</div><div class="dest-stat-lbl">Vers NKC</div></div>
+                        </div>
+                        <div class="chart-wrap" style="height:200px;"><canvas id="chartDestDetail"></canvas></div>
+                    </div>
                     <div class="route-list" id="routeList"></div>
                 </div>
-
             </div>
         <!-- ═══ COMPARAISON 2 COMPAGNIES ═══ -->
         <div class="compare-section" id="compareSection">
@@ -463,148 +429,63 @@
 
 <!-- MODAL VOL -->
 <div class="modal" id="flightModal">
-    <div class="modal-content" style="max-width:560px;padding:0;border-radius:16px;overflow:visible;max-height:90vh;overflow-y:auto;">
-
-        <!-- En-tête modal -->
-        <div style="background:linear-gradient(135deg,#1a3a6b,#2B5A8E);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
-            <div>
-                <h2 style="margin:0;font-size:17px;font-weight:800;color:#fff;" id="modalTitle">✈ Ajouter un vol</h2>
-                <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:3px;" id="modalSubtitle">Remplissez les informations du vol</div>
+    <div class="modal-content">
+        <h2>Ajouter un vol</h2>
+        <form id="flightForm">
+            <div class="form-group">
+                <label for="fAuthNumber">Numéro d'autorisation</label>
+                <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
+                <small class="field-hint">Format: SNA26-XXXX (ex: SNA26-0001)</small>
             </div>
-            <button onclick="closeModal()" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
-        </div>
-
-        <form id="flightForm" style="padding:20px 24px;">
-
-            <!-- ① COMPAGNIE — premier champ, tout dépend d'elle -->
-            <div style="background:rgba(43,90,142,0.06);border:2px solid rgba(43,90,142,0.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
-                <label style="font-size:11px;font-weight:700;color:#2B5A8E;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">🏢 Compagnie aérienne</label>
-                <select id="fCompany" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(43,90,142,0.25);font-family:inherit;font-size:14px;font-weight:600;color:#2d3748;background:#fff;cursor:pointer;"></select>
-                <!-- Ligne info compagnie : préfixe vol + immat -->
-                <div id="companyInfoBar" style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;"></div>
+            <div class="form-group">
+                <label for="fDate">Date</label>
+                <input type="date" id="fDate" required>
             </div>
-
-            <!-- ② AUTH + DATE sur 2 colonnes -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-                <div class="form-group" style="margin:0;">
-                    <label for="fAuthNumber" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">🔖 N° autorisation</label>
-                    <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;">
-                    <small class="field-hint" style="font-size:10px;color:#a0aec0;">Format: SNA26-XXXX</small>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label for="fDate" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">📅 Date du vol</label>
-                    <input type="date" id="fDate" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;">
-                </div>
+            <div class="form-group">
+                <label for="fCompany">Compagnie</label>
+                <select id="fCompany" required></select>
             </div>
-
-            <!-- ③ IMMAT + N° VOL sur 2 colonnes (auto-remplis selon compagnie) -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-                <div class="form-group" style="margin:0;">
-                    <label for="fImm" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">🛩 Immatriculation</label>
-                    <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;font-weight:600;">
-                    <div style="margin-top:4px;" id="immHint"></div>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label for="fVol" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">✈ N° de vol</label>
-                    <input type="text" id="fVol" placeholder="Ex: L6-100" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;font-weight:600;">
-                    <div style="margin-top:4px;" id="volHint"></div>
-                </div>
+            <div class="form-group">
+                <label for="fImm">Immatriculation</label>
+                <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
             </div>
-
-            <!-- ④ TYPE — DEP ou ARR, change From/To -->
-            <div style="margin-bottom:14px;">
-                <label style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:8px;">🔄 Type du vol</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <button type="button" id="btnDEP" onclick="selectType('DEP')"
-                        style="padding:11px;border-radius:9px;border:2px solid #2B5A8E;background:#2B5A8E;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;">
-                        ↗ Départ (NKC →)
-                    </button>
-                    <button type="button" id="btnARR" onclick="selectType('ARR')"
-                        style="padding:11px;border-radius:9px;border:2px solid #e2e8f0;background:#f7fafc;color:#718096;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;">
-                        ↙ Arrivée (→ NKC)
-                    </button>
-                </div>
-                <input type="hidden" id="fType" value="DEP">
+            <div class="form-group">
+                <label for="fVol">N° Vol</label>
+                <input type="text" id="fVol" placeholder="Ex: L6-123" required>
             </div>
-
-            <!-- ⑤ ROUTE : De → À avec flèche visuelle -->
-            <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
-                <label style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:10px;">🗺 Route</label>
-                <div style="display:grid;grid-template-columns:1fr 32px 1fr;gap:6px;align-items:center;">
-                    <div>
-                        <div style="font-size:10px;color:#718096;font-weight:600;margin-bottom:4px;">DÉPART DE</div>
-                        <select id="fFrom" required style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;font-weight:600;background:#fff;"></select>
-                    </div>
-                    <div style="text-align:center;font-size:18px;color:#2B5A8E;padding-top:16px;">→</div>
-                    <div>
-                        <div style="font-size:10px;color:#718096;font-weight:600;margin-bottom:4px;">ARRIVÉE À</div>
-                        <select id="fTo" required style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;font-weight:600;background:#fff;"></select>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label for="fFrom">Départ de</label>
+                <select id="fFrom" required></select>
             </div>
-
-            <!-- ⑥ ESCALE checkbox -->
-            <div style="margin-bottom:10px;">
-                <label style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;background:#f7fafc;user-select:none;">
-                    <input type="checkbox" id="hasStopover" onchange="toggleStopoverField()" style="width:16px;height:16px;accent-color:#2B5A8E;cursor:pointer;">
-                    <span style="font-size:13px;font-weight:600;color:#4a5568;">✈ Ce vol a une escale intermédiaire</span>
-                </label>
+            <div class="form-group">
+                <label for="fTo">Arrivée à</label>
+                <select id="fTo" required></select>
             </div>
-            <div id="stopoverGroup" style="display:none;background:rgba(43,90,142,0.05);border:1px solid rgba(43,90,142,0.18);border-radius:10px;padding:14px;margin-bottom:10px;">
-                <div style="font-size:11px;font-weight:700;color:#2B5A8E;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">🛑 Escale intermédiaire</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:10px;font-weight:700;color:#718096;display:block;margin-bottom:4px;">AÉROPORT</label>
-                        <select id="fStopover" style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;background:#fff;"><option value="">— Choisir —</option></select>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:10px;font-weight:700;color:#718096;display:block;margin-bottom:4px;">PAX À L'ESCALE</label>
-                        <input type="number" id="fStopoverPax" min="0" value="0" oninput="updatePaxTotal()"
-                            style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid rgba(43,90,142,0.3);font-family:inherit;font-size:15px;font-weight:700;text-align:center;background:#fff;">
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:10px;font-weight:700;color:#718096;display:block;margin-bottom:4px;">BÉBÉS À L'ESCALE</label>
-                        <input type="number" id="fStopoverBabies" min="0" value="0" oninput="updatePaxTotal()"
-                            style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid rgba(43,90,142,0.3);font-family:inherit;font-size:15px;font-weight:700;text-align:center;background:#fff;">
-                    </div>
-                </div>
+            <div class="form-group" id="stopoverGroup" style="display:none;">
+                <label for="fStopover">✈ Escale (optionnel)</label>
+                <select id="fStopover">
+                    <option value="">— Aucune escale —</option>
+                </select>
             </div>
-
-            <!-- ⑦ PAX + BÉBÉS -->
-            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                    <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.4px;">👥 Passagers du vol</div>
-                    <div id="paxTotalBadge" style="display:none;background:#166534;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;"></div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div>
-                        <label for="fPassengers" style="font-size:11px;font-weight:700;color:#4a5568;display:block;margin-bottom:5px;">PAX (adultes + enfants)</label>
-                        <input type="number" id="fPassengers" min="0" value="0" required oninput="updatePaxTotal()"
-                            style="width:100%;padding:10px 12px;border-radius:8px;border:2px solid #86efac;font-family:inherit;font-size:18px;font-weight:800;text-align:center;background:#fff;color:#166534;">
-                    </div>
-                    <div>
-                        <label for="fBabies" style="font-size:11px;font-weight:700;color:#4a5568;display:block;margin-bottom:5px;">Bébés (&lt; 2 ans)</label>
-                        <input type="number" id="fBabies" min="0" value="0" required oninput="updatePaxTotal()"
-                            style="width:100%;padding:10px 12px;border-radius:8px;border:2px solid #86efac;font-family:inherit;font-size:18px;font-weight:800;text-align:center;background:#fff;color:#166534;">
-                    </div>
-                </div>
-                <!-- Total en temps réel quand escale cochée -->
-                <div id="paxTotalRow" style="display:none;margin-top:10px;padding:8px 12px;background:#dcfce7;border-radius:8px;border:1px solid #86efac;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-size:12px;font-weight:600;color:#166534;">PAX vol + escale</span>
-                        <span id="paxTotalVal" style="font-size:16px;font-weight:800;color:#166534;"></span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-                        <span style="font-size:12px;font-weight:600;color:#166534;">Bébés vol + escale</span>
-                        <span id="babTotalVal" style="font-size:16px;font-weight:800;color:#166534;"></span>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label for="fType">Type du vol</label>
+                <select id="fType" required>
+                    <option value="DEP">Départ</option>
+                    <option value="ARR">Arrivée</option>
+                    <option value="TRANSIT">Transit (escale NKC)</option>
+                </select>
             </div>
-
-            <!-- ⑧ BOUTONS -->
-            <div class="modal-buttons" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0;">
-                <button type="button" class="btn-secondary" id="cancelBtn" style="padding:12px;border-radius:9px;font-size:14px;font-weight:700;">Annuler</button>
-                <button type="submit" class="btn-success" style="padding:12px;border-radius:9px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#006B3F,#00b67a);border:none;color:#fff;cursor:pointer;">✔ Enregistrer</button>
+            <div class="form-group">
+                <label for="fPassengers">PAX (Passagers)</label>
+                <input type="number" id="fPassengers" min="0" value="0" required>
+            </div>
+            <div class="form-group">
+                <label for="fBabies">Bébés</label>
+                <input type="number" id="fBabies" min="0" value="0" required>
+            </div>
+            <div class="modal-buttons">
+                <button type="submit" class="btn-success">Enregistrer</button>
+                <button type="button" class="btn-secondary" id="cancelBtn">Annuler</button>
             </div>
         </form>
     </div>
@@ -695,108 +576,138 @@ function monthly(flights, field) {
 }
 
 function refreshCharts() {
+    Chart.defaults.color = '#7a8ba8';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
     const all = getFlights();
-    if (!all.length) {
-        document.getElementById('chartsSubtitle').textContent = 'Aucune donnée disponible';
-        return;
-    }
-    populateYearFilter(all);
-    populateCompanyFilter(all);
+    if (!all.length) { document.getElementById('chartsSubtitle').textContent='Aucune donnée disponible'; return; }
+    populateYearFilter(all); populateCompanyFilter(all);
     const flt = filterFlights(all);
 
     // KPIs
-    const pax  = flt.reduce((s,f) => s + (+f.passengers||0) + (+f.babies||0), 0);
+    const pax = flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
     const comp = new Set(flt.map(f=>f.company).filter(Boolean));
-    const dest = new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(Boolean));
+    const dest = new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(d=>d&&d!=='GQNO'));
+    document.getElementById('kpi-vols').textContent = flt.length;
+    document.getElementById('kpi-pax').textContent  = pax.toLocaleString('fr-FR');
+    document.getElementById('kpi-comp').textContent = comp.size;
+    document.getElementById('kpi-dest').textContent = dest.size;
+    document.getElementById('kpi-vols-sub').textContent = flt.filter(f=>f.type==='DEP').length+' DEP / '+flt.filter(f=>f.type==='ARR').length+' ARR';
+    document.getElementById('kpi-pax-sub').textContent  = flt.reduce((s,f)=>s+(+f.babies||0),0)+' bébés';
+    document.getElementById('kpi-comp-sub').textContent = [...comp].slice(0,2).join(', ')+(comp.size>2?'…':'');
+    document.getElementById('kpi-dest-sub').textContent = 'hors NKC';
+    const y=document.getElementById('chartYearFilter').value, m=document.getElementById('chartMonthFilter').value;
+    document.getElementById('chartsSubtitle').textContent=flt.length+' vol(s)'+(y!=='ALL'?' — '+y:'')+(m!=='ALL'?' — '+MONTHS_FR[+m]:'');
 
+    // Chart 1 — Vols/mois
+    kill('v');
+    charts['v']=new Chart(document.getElementById('chartVolsMois'),{type:'bar',
+        data:{labels:MONTHS_FR,datasets:[{label:'Vols',data:monthly(flt),
+            backgroundColor:MONTHS_FR.map((_,i)=>`hsla(${200+i*8},65%,58%,0.75)`),
+            borderColor:MONTHS_FR.map((_,i)=>`hsl(${200+i*8},65%,58%)`),borderWidth:2,borderRadius:8,borderSkipped:false}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+            scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{stepSize:1}},x:{grid:{display:false}}}}});
 
-    document.getElementById('kpi-vols').textContent      = flt.length;
-    document.getElementById('kpi-pax').textContent       = pax.toLocaleString('fr-FR');
-    document.getElementById('kpi-comp').textContent      = comp.size;
-    document.getElementById('kpi-dest').textContent      = dest.size;
-    document.getElementById('kpi-vols-sub').textContent  = '';
-    document.getElementById('kpi-pax-sub').textContent   = `dont ${flt.reduce((s,f)=>s+(+f.babies||0),0)} bébés`;
-    document.getElementById('kpi-comp-sub').textContent  = [...comp].slice(0,2).join(', ') + (comp.size>2?'…':'');
-    document.getElementById('kpi-dest-sub').textContent  = `codes ICAO distincts`;
+    // Chart 2 — PAX/mois
+    kill('p');
+    const paxData=monthly(flt,'passengers').map((v,i)=>v+monthly(flt,'babies')[i]);
+    const ctxP=document.getElementById('chartPaxMois').getContext('2d');
+    const gP=ctxP.createLinearGradient(0,0,0,260); gP.addColorStop(0,'rgba(212,175,55,0.35)'); gP.addColorStop(1,'rgba(212,175,55,0.01)');
+    charts['p']=new Chart(ctxP,{type:'line',
+        data:{labels:MONTHS_FR,datasets:[{label:'Passagers',data:paxData,backgroundColor:gP,borderColor:'#D4AF37',borderWidth:2.5,fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#D4AF37',pointBorderColor:'#0a1628',pointBorderWidth:2}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+            scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'}},x:{grid:{display:false}}}}});
 
-    const y = document.getElementById('chartYearFilter').value;
-    const m = document.getElementById('chartMonthFilter').value;
-    const mn = m!=='ALL' ? ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][+m] : '';
-    document.getElementById('chartsSubtitle').textContent = `${flt.length} vol(s) analysé(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
+    // Chart 3 — Top compagnies
+    kill('c');
+    const cc={};flt.forEach(f=>{if(f.company)cc[f.company]=(cc[f.company]||0)+1;});
+    const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const CP=['#D4AF37','#4a90d9','#00c98d','#e84141','#ff8c42','#a78bfa','#38bdf8','#fb923c'];
+    charts['c']=new Chart(document.getElementById('chartTopComp'),{type:'bar',
+        data:{labels:sc.map(([k])=>k.length>16?k.slice(0,16)+'…':k),datasets:[{label:'Vols',data:sc.map(([,v])=>v),
+            backgroundColor:sc.map((_,i)=>CP[i%CP.length]+'bb'),borderColor:sc.map((_,i)=>CP[i%CP.length]),borderWidth:2,borderRadius:6}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+            scales:{x:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'}},y:{grid:{display:false}}}}});
 
-    // Chart 1 — Vols par mois
-    kill('v'); charts['v'] = new Chart(document.getElementById('chartVolsMois'), {
-        type:'bar', data:{ labels:MONTHS_FR, datasets:[{
-            label:'Vols', data:monthly(flt),
-            backgroundColor: PALETTE[0]+'bb', borderColor:PALETTE[0], borderWidth:2, borderRadius:6
-        }]},
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,ticks:{stepSize:1}}} }
-    });
+    // Chart 4 — DEP vs ARR donut
+    kill('da');
+    const nD=flt.filter(f=>f.type==='DEP').length, nA=flt.filter(f=>f.type==='ARR').length;
+    charts['da']=new Chart(document.getElementById('chartDepArr'),{type:'doughnut',
+        data:{labels:['Départs','Arrivées'],datasets:[{data:[nD,nA],
+            backgroundColor:['rgba(74,144,217,0.8)','rgba(212,175,55,0.8)'],
+            borderColor:['#4a90d9','#D4AF37'],borderWidth:2,hoverOffset:8}]},
+        options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+            plugins:{legend:{position:'bottom',labels:{padding:16,color:'#7a8ba8'}}}}});
 
-    // Chart 2 — PAX par mois
-    kill('p'); const paxData = monthly(flt,'passengers').map((v,i)=>v+monthly(flt,'babies')[i]);
-    charts['p'] = new Chart(document.getElementById('chartPaxMois'), {
-        type:'line', data:{ labels:MONTHS_FR, datasets:[{
-            label:'Passagers', data:paxData,
-            backgroundColor:PALETTE[1]+'33', borderColor:PALETTE[1], borderWidth:3,
-            fill:true, tension:0.4, pointRadius:5, pointBackgroundColor:PALETTE[1]
-        }]},
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-    });
-
-
-
-    // Chart 4 — Top compagnies
-    kill('c'); const cc={};
-    flt.forEach(f=>{ if(f.company) cc[f.company]=(cc[f.company]||0)+1; });
-    const sc = Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    charts['c'] = new Chart(document.getElementById('chartTopComp'), {
-        type:'bar',
-        data:{ labels:sc.map(([k])=>k.length>14?k.slice(0,14)+'…':k),
-               datasets:[{ label:'Vols', data:sc.map(([,v])=>v),
-                   backgroundColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]+'bb'),
-                   borderColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]),
-                   borderWidth:2, borderRadius:5 }] },
-        options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true}} }
-    });
-
-    // Chart 5 — Comparaison mois en mois
+    // Chart 5 — Comparaison années
     kill('k');
-    const allYears = [...new Set(all.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort();
-    const yrs = y!=='ALL' ? [y-1,+y] : allYears.slice(-2);
-    const dsets = yrs.map((yr,i) => {
-        const yf = all.filter(f=>f.date&&new Date(f.date).getFullYear()===+yr);
-        return { label:String(yr), data:monthly(yf), borderColor:PALETTE[i*2],
-                 backgroundColor:PALETTE[i*2]+'22', borderWidth:2.5, fill:false, tension:0.4, pointRadius:4 };
+    const allY=[...new Set(all.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort();
+    const yrs=y!=='ALL'?[y-1,+y]:allY.slice(-2);
+    const LC=['#4a90d9','#D4AF37'];
+    const dsets=yrs.map((yr,i)=>{
+        const yf=all.filter(f=>f.date&&new Date(f.date).getFullYear()===+yr);
+        const ctx2=document.getElementById('chartComparaison').getContext('2d');
+        const g=ctx2.createLinearGradient(0,0,0,300);g.addColorStop(0,LC[i]+'44');g.addColorStop(1,LC[i]+'00');
+        return{label:String(yr),data:monthly(yf),borderColor:LC[i],backgroundColor:g,borderWidth:2.5,fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:LC[i],pointBorderColor:'#0a1628',pointBorderWidth:2};
     });
-    charts['k'] = new Chart(document.getElementById('chartComparaison'), {
-        type:'line', data:{ labels:MONTHS_FR, datasets:dsets },
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}} }
-    });
+    charts['k']=new Chart(document.getElementById('chartComparaison'),{type:'line',data:{labels:MONTHS_FR,datasets:dsets},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{padding:20,color:'#7a8ba8'}}},
+            scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'}},x:{grid:{display:false}}}}});
 
-    // Chart 6 — Destinations
-    kill('t'); const dc={};
-    flt.forEach(f=>{ if(f.from) dc[f.from]=(dc[f.from]||0)+1; if(f.to) dc[f.to]=(dc[f.to]||0)+1; });
-    const sd = Object.entries(dc).sort((a,b)=>b[1]-a[1]).slice(0,12);
-    charts['t'] = new Chart(document.getElementById('chartDestinations'), {
-        type:'bar',
-        data:{ labels:sd.map(([k])=>k),
-               datasets:[{ label:'Passages', data:sd.map(([,v])=>v),
-                   backgroundColor:sd.map((_,i)=>PALETTE[i%PALETTE.length]+'bb'),
-                   borderColor:sd.map((_,i)=>PALETTE[i%PALETTE.length]),
-                   borderWidth:2, borderRadius:5 }] },
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-    });
+    // Destinations cliquables
+    renderDestGrid(flt);
 
-    // Route tags
+    // Routes
     const routes={};
-    flt.forEach(f=>{ if(f.from&&f.to){ const k=`${f.from} → ${f.to}`; routes[k]=(routes[k]||0)+1; } });
-    document.getElementById('routeList').innerHTML =
-        Object.entries(routes).sort((a,b)=>b[1]-a[1]).slice(0,16)
-        .map(([r,n])=>`<span class="route-tag">${r} <span class="route-count">${n}</span></span>`).join('');
+    flt.forEach(f=>{if(f.from&&f.to){const k=f.from+' → '+f.to;routes[k]=(routes[k]||0)+1;}});
+    document.getElementById('routeList').innerHTML=Object.entries(routes).sort((a,b)=>b[1]-a[1]).slice(0,20)
+        .map(([r,n])=>'<span class="route-tag">'+r+' <span class="route-count">'+n+'</span></span>').join('');
 }
 
-// ══════════════════════════════════════════
+// ── Destinations cliquables ──
+const DEST_NAMES={'GQNO':'Nouakchott','GQPP':'Nouadhibou','GQNI':'Néma','GQPF':'Kiffa','GQPZ':'Zoueratt',
+    'DAAG':'Alger','DTTA':'Tunis','GMMN':'Casablanca','GOBD':'Dakar','GABS':'Bamako','GUCY':'Conakry',
+    'DIAP':'Abidjan','DBBP':'Lomé','GCLP':'Las Palmas','LFPG':'Paris CDG','LTFM':'Istanbul',
+    'OEMA':'Madinah','GBYD':'Banjul','GGOV':'Bissau','GFLL':'Freetown'};
+var selectedDest=null;
+
+function renderDestGrid(flt){
+    const dc={};
+    flt.forEach(f=>{
+        if(f.from&&f.from!=='GQNO'){if(!dc[f.from])dc[f.from]={v:0,dep:0,arr:0};dc[f.from].v++;dc[f.from].arr++;}
+        if(f.to&&f.to!=='GQNO'){if(!dc[f.to])dc[f.to]={v:0,dep:0,arr:0};dc[f.to].v++;dc[f.to].dep++;}
+    });
+    const sorted=Object.entries(dc).sort((a,b)=>b[1].v-a[1].v);
+    document.getElementById('destGrid').innerHTML=sorted.map(([code,d])=>
+        '<div class="dest-btn'+(selectedDest===code?' active':'')+'" onclick="selectDest(''+code+'')">'+
+        '<div class="dest-code">'+code+'</div>'+
+        '<div class="dest-name">'+(DEST_NAMES[code]||code)+'</div>'+
+        '<div class="dest-count">'+d.v+' vols</div></div>').join('');
+    if(selectedDest&&dc[selectedDest]) showDestDetail(selectedDest,dc[selectedDest],flt);
+    else document.getElementById('destDetail').classList.remove('show');
+}
+
+function selectDest(code){
+    selectedDest=(selectedDest===code)?null:code;
+    renderDestGrid(filterFlights(getFlights()));
+}
+
+function showDestDetail(code,d,flt){
+    document.getElementById('destDetail').classList.add('show');
+    document.getElementById('destDetailTitle').textContent='✈ '+code+' — '+(DEST_NAMES[code]||code);
+    document.getElementById('dStatVols').textContent=d.v;
+    document.getElementById('dStatDep').textContent=d.dep;
+    document.getElementById('dStatArr').textContent=d.arr;
+    kill('dd');
+    const ctxD=document.getElementById('chartDestDetail').getContext('2d');
+    charts['dd']=new Chart(ctxD,{type:'bar',
+        data:{labels:MONTHS_FR,datasets:[
+            {label:'Depuis NKC',data:monthly(flt.filter(f=>f.to===code)),backgroundColor:'rgba(74,144,217,0.75)',borderColor:'#4a90d9',borderWidth:2,borderRadius:5},
+            {label:'Vers NKC', data:monthly(flt.filter(f=>f.from===code)),backgroundColor:'rgba(212,175,55,0.75)',borderColor:'#D4AF37',borderWidth:2,borderRadius:5}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{position:'top',labels:{padding:12,color:'#7a8ba8',font:{size:11}}}},
+            scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(255,255,255,0.05)'}}}}});
+}
 // PDF EXPORT
 // ══════════════════════════════════════════
 async function exportPDF() {
@@ -888,35 +799,9 @@ async function exportPDF() {
 }
 
 function toggleStopoverField() {
-    const cb  = document.getElementById('hasStopover');
-    const grp = document.getElementById('stopoverGroup');
-    if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
-    updatePaxTotal();
-}
-
-function updatePaxTotal() {
-    const hasStop    = document.getElementById('hasStopover')?.checked;
-    const volPax     = parseInt(document.getElementById('fPassengers')?.value)    || 0;
-    const volBab     = parseInt(document.getElementById('fBabies')?.value)         || 0;
-    const stopPax    = parseInt(document.getElementById('fStopoverPax')?.value)   || 0;
-    const stopBab    = parseInt(document.getElementById('fStopoverBabies')?.value) || 0;
-    const totalPax   = volPax + (hasStop ? stopPax : 0);
-    const totalBab   = volBab + (hasStop ? stopBab : 0);
-
-    const row   = document.getElementById('paxTotalRow');
-    const badge = document.getElementById('paxTotalBadge');
-    const paxEl = document.getElementById('paxTotalVal');
-    const babEl = document.getElementById('babTotalVal');
-
-    if (hasStop && (stopPax > 0 || stopBab > 0)) {
-        if (row)   { row.style.display = ''; }
-        if (badge) { badge.style.display = ''; badge.textContent = `Total : ${totalPax} PAX + ${totalBab} bébés`; }
-        if (paxEl) paxEl.textContent = `${volPax} + ${stopPax} = ${totalPax}`;
-        if (babEl) babEl.textContent = `${volBab} + ${stopBab} = ${totalBab}`;
-    } else {
-        if (row)   row.style.display = 'none';
-        if (badge) badge.style.display = 'none';
-    }
+    const type = document.getElementById('fType').value;
+    const grp  = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
 }
 
 // Called from app.js when flights are loaded/updated
@@ -1161,56 +1046,11 @@ function runRouteComparison() {
     `;
 }
 </script>
-
 <script>
-// ── PWA: Enregistrement du Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/ANAC-MR/sw.js', { scope: '/ANAC-MR/' })
-      .then(function(reg) {
-        console.log('[PWA] Service Worker enregistre:', reg.scope);
-        // Detecte une mise a jour disponible
-        reg.addEventListener('updatefound', function() {
-          var newWorker = reg.installing;
-          newWorker.addEventListener('statechange', function() {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[PWA] Mise a jour disponible — rechargement');
-              window.location.reload();
-            }
-          });
-        });
-      })
-      .catch(function(err) { console.warn('[PWA] Service Worker echec:', err); });
-  });
-}
-
-// ── PWA: Bouton d'installation personnalise (Android)
-var deferredPrompt = null;
-window.addEventListener('beforeinstallprompt', function(e) {
-  e.preventDefault();
-  deferredPrompt = e;
-  // Affiche le bouton d'installation si present dans le HTML
-  var btn = document.getElementById('pwaInstallBtn');
-  if (btn) btn.style.display = 'flex';
-});
-
-window.installPWA = function() {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(function(result) {
-    if (result.outcome === 'accepted') {
-      console.log('[PWA] App installee');
-      var btn = document.getElementById('pwaInstallBtn');
-      if (btn) btn.style.display = 'none';
-    }
-    deferredPrompt = null;
-  });
-};
-
-window.addEventListener('appinstalled', function() {
-  console.log('[PWA] App installee avec succes');
-  deferredPrompt = null;
-});
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/ANAC-MR/sw.js',{scope:'/ANAC-MR/'}).catch(function(e){console.warn('[PWA]',e);});});}
+var deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;});
+window.installPWA=function(){if(!deferredPrompt)return;deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;});};
 </script>
 </body>
 </html>
