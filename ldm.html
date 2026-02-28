@@ -258,6 +258,96 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <script>
 var FB = {apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
 var COMPANY_MAP = {'L6':'Mauritania Airlines','HC':'Air Senegal','TK':'Turkish Airlines','NT':'Binter','AH':'Air Algerie','KP':'ASKY','AT':'Royal Air Maroc','TU':'Tunisair','AF':'Air France'};
+
+// Table de conversion IATA (3 lettres) -> ICAO (4 lettres)
+// Source: aeroports utilises sur les routes ANAC Mauritanie
+var IATA_TO_ICAO = {
+  'NKC':'GQNO', // Nouakchott Oumtounsy
+  'NDB':'GQPP', // Nouadhibou
+  'ATR':'GQPA', // Atar
+  'TMB':'GQPM', // Tidjikja
+  'KFA':'GQPF', // Kiffa
+  'SEY':'GQNS', // Selibabi
+  'OUZ':'GQNZ', // Zouerate
+  'EMN':'GQNI', // Nema
+  'AEO':'GQNA', // Aioun el Atrouss
+  'DSS':'GOBD', // Dakar Blaise Diagne (Senegal)
+  'DKR':'GOOY', // Dakar Yoff (ancien)
+  'ZIG':'GOGZ', // Ziguinchor
+  'NKT':'GOGS', // Saint-Louis
+  'BXE':'GOTB', // Bakel
+  'TBJ':'DTTJ', // Tabarka (Tunisie)
+  'TUN':'DTTA', // Tunis Carthage
+  'SFA':'DTMB', // Sfax
+  'ALG':'DAAG', // Alger Houari Boumediene
+  'ORN':'DAOO', // Oran Ahmed Ben Bella
+  'CZL':'DABC', // Constantine
+  'AAE':'DABB', // Annaba
+  'TLM':'DAON', // Tlemcen
+  'BSK':'DAUB', // Biskra
+  'CMN':'GMMN', // Casablanca Mohammed V
+  'RAK':'GMMX', // Marrakech
+  'AGA':'GMAD', // Agadir
+  'OZZ':'GMMZ', // Ouarzazate
+  'NDR':'GMMH', // Nador
+  'FEZ':'GMFF', // Fes
+  'RBA':'GMME', // Rabat
+  'TNG':'GMTT', // Tanger
+  'CDG':'LFPG', // Paris Charles de Gaulle
+  'ORY':'LFPO', // Paris Orly
+  'LYS':'LFLL', // Lyon
+  'MRS':'LFML', // Marseille
+  'NCE':'LFMN', // Nice
+  'IST':'LTFM', // Istanbul Nouveau
+  'SAW':'LTFJ', // Istanbul Sabiha
+  'ADD':'HAAB', // Addis Abeba
+  'CAI':'HECA', // Le Caire
+  'LOS':'DNMM', // Lagos
+  'ABV':'DNAA', // Abuja
+  'ACC':'DGAA', // Accra
+  'CKY':'GUCY', // Conakry
+  'BJL':'GBYD', // Banjul
+  'OXB':'GGOV', // Bissau
+  'FNA':'GFLL', // Freetown
+  'ABJ':'DIAP', // Abidjan
+  'COO':'DBBB', // Cotonou
+  'LFW':'DXXX', // Lome
+  'BZV':'FCBB', // Brazzaville
+  'LBV':'FOOL', // Libreville
+  'DLA':'FKKD', // Douala
+  'MLW':'GLMR', // Monrovia
+  'JED':'OEJN', // Djeddah
+  'RUH':'OERK', // Riyad
+  'DXB':'OMDB', // Dubai
+  'DOH':'OTHH', // Doha
+};
+
+// Charge la table depuis Firebase (aeroports configures dans admin)
+var _airportTableLoaded = false;
+async function loadAirportTable() {
+  if (_airportTableLoaded) return;
+  try {
+    var fbm = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    var fsm = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    var apps = fbm.getApps();
+    var app = apps.find(function(a){return a.name==='ldm';});
+    if (!app) return;
+    var db = fsm.getFirestore(app);
+    var snap = await fsm.getDoc(fsm.doc(db,'flights','cfg-airports'));
+    if (snap.exists() && snap.data().list) {
+      snap.data().list.forEach(function(ap) {
+        if (ap.iata && ap.icao) IATA_TO_ICAO[ap.iata.toUpperCase()] = ap.icao.toUpperCase();
+      });
+    }
+    _airportTableLoaded = true;
+  } catch(e) { /* utilise la table statique */ }
+}
+
+function iataToIcao(code) {
+  if (!code) return code;
+  var upper = code.trim().toUpperCase();
+  return IATA_TO_ICAO[upper] || upper; // retourne ICAO ou le code original si inconnu
+}
 var CLIENT_ID = '416940058923-28bdevk2c3fk2abihu55ia5391j0g5qf.apps.googleusercontent.com';
 var SCOPES = 'https://www.googleapis.com/auth/gmail.readonly';
 var pendingFiles = [];
@@ -458,18 +548,24 @@ function extractFields(text, dateReceived) {
   var isMVT = (upperRaw.indexOf('MVT') >= 0 && upperRaw.indexOf('LDM') < 0);
 
   if (isMVT) {
-    // ---- MVT: cherche "PAX T" ou ".PAX/T" ou "PAX/T" ----
-    // On cherche le nombre apres PAX sur n'importe quelle ligne
+    // ---- MVT: format PX sur une ligne, nombre sur la ligne suivante ----
+    // Exemple:
+    //   PX
+    //   142
     var paxMVT = null;
     for (var i=0; i<lines.length; i++) {
-      // Format: ".PAX/142" ou "PAX 142" ou "PAX/142" ou ".142" apres mot PAX
-      var pm = lines[i].match(/\.?PAX[\/\s]+(\d+)/i);
-      if (pm) { paxMVT = parseInt(pm[1]); break; }
-      // Format: "PAX" seul sur la ligne, nombre sur la ligne suivante
-      if (lines[i].toUpperCase() === 'PAX' && i+1 < lines.length) {
+      var lup = lines[i].toUpperCase().trim();
+      // Format principal: "PX" seul -> nombre sur ligne suivante
+      if (lup === 'PX' && i+1 < lines.length) {
         var nm = lines[i+1].match(/^(\d+)/);
         if (nm) { paxMVT = parseInt(nm[1]); break; }
       }
+      // Format alternatif sur meme ligne: "PX 142" ou "PX/142"
+      var pm = lines[i].match(/^\.?PX[\/\s]+(\d+)/i);
+      if (pm) { paxMVT = parseInt(pm[1]); break; }
+      // Fallback legacy: "PAX 142" ou "PAX/142"
+      var pm2 = lines[i].match(/^\.?PAX[\/\s]+(\d+)/i);
+      if (pm2) { paxMVT = parseInt(pm2[1]); break; }
     }
     if (paxMVT !== null) { p.passengers = paxMVT; p.babies = 0; }
 
@@ -612,8 +708,8 @@ function renderResults() {
         '<option value="ARR"'+(p.type==='ARR'?' selected':'')+'>Arrivee</option>'+
         '<option value="TRANSIT"'+(p.type==='TRANSIT'?' selected':'')+'>Transit</option>'+
       '</select></div>'+
-      '<div class="pf"><label>De</label><input id="r'+i+'-fr" value="'+esc(p.from||'')+'" oninput="this.value=this.value.toUpperCase()"></div>'+
-      '<div class="pf"><label>A</label><input id="r'+i+'-to" value="'+esc(p.to||'')+'" oninput="this.value=this.value.toUpperCase()"></div>'+
+      '<div class="pf"><label>De (IATA)</label><input id="r'+i+'-fr" value="'+esc(p.from||'')+'" oninput="this.value=this.value.toUpperCase()"><div style="font-size:10px;color:var(--dim);margin-top:3px;">ICAO: '+iataToIcao(p.from||'')+'</div></div>'+
+      '<div class="pf"><label>A (IATA)</label><input id="r'+i+'-to" value="'+esc(p.to||'')+'" oninput="this.value=this.value.toUpperCase()"><div style="font-size:10px;color:var(--dim);margin-top:3px;">ICAO: '+iataToIcao(p.to||'')+'</div></div>'+
       '<div class="pf"><label>PAX</label><input type="number" id="r'+i+'-px" value="'+(p.passengers||0)+'" min="0"></div>'+
       '<div class="pf"><label>Bebes</label><input type="number" id="r'+i+'-bb" value="'+(p.babies||0)+'" min="0"></div>'+
       stopF+
@@ -658,10 +754,17 @@ async function importResult(i, force) {
     var apps=fbm.getApps();
     var app=apps.find(function(a){return a.name==='ldm';})||fbm.initializeApp(FB,'ldm');
     var db=fsm.getFirestore(app);
+    // Conversion IATA -> ICAO pour from/to/stopover
+    await loadAirportTable();
+    var frIcao  = iataToIcao(fr);
+    var toIcao  = iataToIcao(to);
+    var swIcao  = sw ? iataToIcao(sw) : '';
+
     await fsm.addDoc(fsm.collection(db,'flights'),{
-      flightNumber:fn,registration:rg,date:dt,from:fr,to:to,type:ty,
+      flightNumber:fn,registration:rg,date:dt,
+      from:frIcao, to:toIcao, type:ty,
       company:co||(COMPANY_MAP[(fn||'').slice(0,2)]||''),
-      hasStopover:!!sw,stopover:sw,stopoverPax:spx,stopoverBabies:sbb,
+      hasStopover:!!swIcao,stopover:swIcao,stopoverPax:spx,stopoverBabies:sbb,
       passengers:px+spx,babies:bb+sbb,authorizationNumber:'',
       source:(results[i]&&results[i].source==='image')?'LDM_IMAGE':'LDM_TEXT',
       createdAt:new Date().toISOString(),timestamp:Date.now()
