@@ -12,8 +12,8 @@ const STATIC_ASSETS = [
   '/ANAC-MR/app.js',
   '/ANAC-MR/firebase.js',
   '/ANAC-MR/manifest.json',
-  '/ANAC-MR/icons/icon-192.png',
-  '/ANAC-MR/icons/icon-512.png',
+  '/ANAC-MR/assets/icon-192.png',
+  '/ANAC-MR/assets/icon-512.png',
 ];
 
 // ── INSTALLATION : met en cache les fichiers statiques
@@ -58,6 +58,9 @@ self.addEventListener('activate', function(event) {
 // ── FETCH : stratégie Network First pour Firebase, Cache First pour statique
 self.addEventListener('fetch', function(event) {
   var url = event.request.url;
+
+  // Ignore chrome-extension et autres schemas non-HTTP
+  if (!url.startsWith('http')) return;
 
   // Firebase et APIs externes → toujours réseau (pas de cache)
   if (
