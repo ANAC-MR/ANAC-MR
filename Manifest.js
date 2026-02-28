@@ -1,0 +1,81 @@
+{
+  "name": "ANAC Mauritanie",
+  "short_name": "ANAC",
+  "description": "Suivi des vols et autorisation — ANAC Mauritanie",
+  "start_url": "/ANAC-MR/index.html",
+  "scope": "/ANAC-MR/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Suivi des vols",
+      "url": "/ANAC-MR/index.html",
+      "description": "Tableau de bord des vols"
+    },
+    {
+      "name": "LDM / MVT Reader",
+      "url": "/ANAC-MR/ldm.html",
+      "description": "Lecture et import LDM/MVT"
+    },
+    {
+      "name": "Panneau Admin",
+      "url": "/ANAC-MR/admin.html",
+      "description": "Administration"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": []
+}
