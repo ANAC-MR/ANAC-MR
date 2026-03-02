@@ -1441,10 +1441,8 @@ window.fctGenApercu = function() {
             <div class="doc-periode">Passagers internationaux embarqués au ${periode}</div>
 
             <table class="doc-mini-tbl">
-                <tr>
-                    <td class="lbl">DESTINATAIRE</td><td>Direction Financière</td>
-                    <td class="lbl">EMETTEUR</td><td>Direction de Transport Aérien / SEES</td>
-                </tr>
+                <tr><td class="lbl">DESTINATAIRE</td><td>Direction Financière</td></tr>
+                <tr><td class="lbl">EMETTEUR</td><td>Direction de Transport Aérien / SEES</td></tr>
             </table>
 
             <table class="doc-data-tbl">
@@ -1546,15 +1544,15 @@ window.fctTelecharger = async function() {
                     new TableCell({ borders: noBd, width: { size: colL, type: WidthType.DXA },
                         verticalAlign: VerticalAlign.CENTER, margins: { top: 80, bottom: 80, left: 0, right: 80 },
                         children: [
-                            fr('République Islamique de Mauritanie'),
-                            fr("Ministère de l'Equipement et des Transports"),
-                            fr("AGENCE NATIONALE DE L'AVIATION CIVILE", true),
+                            fr('République Islamique de Mauritanie', false, 18),
+                            fr("Ministère de l'Equipement et des Transports", false, 18),
+                            fr("AGENCE NATIONALE DE L'AVIATION CIVILE", true, 18),
                         ]
                     }),
                     new TableCell({ borders: noBd, width: { size: colC, type: WidthType.DXA },
                         verticalAlign: VerticalAlign.CENTER, margins: { top: 0, bottom: 0, left: 0, right: 0 },
                         children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 },
-                            children: [new ImageRun({ data: logoData, type: 'png', transformation: { width: 1486, height: 1008 } })]
+                            children: [new ImageRun({ data: logoData, type: 'png', transformation: { width: 99, height: 67 } })]
                         })]
                     }),
                     new TableCell({ borders: noBd, width: { size: colR, type: WidthType.DXA },
@@ -1606,14 +1604,18 @@ window.fctTelecharger = async function() {
                 children: [new TextRun({ text: 'Passagers internationaux embarqués au ' + periode, font: 'Arial', size: 22, bold: true })]
             }),
 
-            // ── Tableau DESTINATAIRE / EMETTEUR (1 ligne, 4 col) ─
-            new Table({ width: { size: contentW, type: WidthType.DXA }, columnWidths: [1400, 3319, 1400, 3519],
-                rows: [new TableRow({ children: [
-                    mCell('DESTINATAIRE', 1400, true, 'E8F0FA'),
-                    mCell('Direction Financière', 3319),
-                    mCell('EMETTEUR', 1400, true, 'E8F0FA'),
-                    mCell('Direction de Transport Aérien / SEES', 3519),
-                ]})]
+            // ── Tableau DESTINATAIRE / EMETTEUR (2 lignes) ─
+            new Table({ width: { size: 6000, type: WidthType.DXA }, columnWidths: [1700, 4300],
+                rows: [
+                    new TableRow({ children: [
+                        mCell('DESTINATAIRE', 1700, true, 'E8F0FA'),
+                        mCell('Direction Financière', 4300),
+                    ]}),
+                    new TableRow({ children: [
+                        mCell('EMETTEUR', 1700, true, 'E8F0FA'),
+                        mCell('Direction de Transport Aérien / SEES', 4300),
+                    ]}),
+                ]
             }),
 
             new Paragraph({ children: [] }), new Paragraph({ children: [] }),
