@@ -2147,11 +2147,7 @@ window.changeCredentials = async function() {
     const finalPass = newPass  || creds.pass;
 
     try {
-        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const apps = getApps();
-        const app  = apps.find(a=>a.name==='auth-reader') || initializeApp({apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"},'auth-reader');
-        const db = getFirestore(app);
+        // Utiliser le db global
         await setDoc(doc(db,'flights','cfg-auth'), {
             username: finalUser,
             password: finalPass,
@@ -2180,11 +2176,7 @@ window.changePassword = window.changeCredentials;
 window.forceLogoutAll = async function() {
     if (!confirm('Déconnecter tous les appareils connectés au site ?')) return;
     try {
-        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const apps = getApps();
-        const app  = apps.find(a=>a.name==='auth-reader') || initializeApp({apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"},'auth-reader');
-        const db = getFirestore(app);
+        // Utiliser le db global
         const snap = await getDoc(doc(db,'flights','cfg-auth'));
         const data = snap.exists() ? snap.data() : {};
         await setDoc(doc(db,'flights','cfg-auth'), { ...data, sessionReset: Date.now() });
@@ -2199,11 +2191,8 @@ window.clearAllSessions = window.forceLogoutAll;
 
 // ── Utilisateurs secondaires ──────────────────────────────────
 async function _usersDB() {
-    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const apps = getApps();
-    const app  = apps.find(a=>a.name==='auth-reader') || initializeApp({apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"},'auth-reader');
-    return getFirestore(app);
+    // Réutiliser l'instance db principale déjà initialisée
+    return db;
 }
 
 async function loadUsers() {
@@ -2257,13 +2246,12 @@ window.saveNewUser = async function() {
     if (pass1!==pass2)  { showNotif('Les mots de passe ne correspondent pas','error'); return; }
     if (pass1.length<6) { showNotif('Mot de passe trop court (min 6)','error'); return; }
     try {
-        const db = await _usersDB();
-        const { collection, addDoc, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const q    = query(collection(db,'anac_users'),where('username','==',uname));
+        const _db = await _usersDB();
+        const q    = query(collection(_db,'anac_users'),where('username','==',uname));
         const snap = await getDocs(q);
         if (!snap.empty) { showNotif('Identifiant déjà existant','error'); return; }
         const creds = await getStoredCredentials();
-        await addDoc(collection(db,'anac_users'),{
+        await addDoc(collection(_db,'anac_users'),{
             username:uname, password:pass1, role:'admin',
             createdAt:new Date().toISOString(), createdBy:creds.user
         });
@@ -2276,9 +2264,8 @@ window.saveNewUser = async function() {
 window.deleteSecUser = async function(id, uname) {
     if (!confirm(`Supprimer le compte "${uname}" ?`)) return;
     try {
-        const db = await _usersDB();
-        const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        await deleteDoc(doc(db,'anac_users',id));
+        const _db2 = await _usersDB();
+        await deleteDoc(doc(_db2,'anac_users',id));
         showNotif(`Compte "${uname}" supprimé`,'success');
         loadUsers();
     } catch(e) { showNotif('Erreur: '+e.message,'error'); }
