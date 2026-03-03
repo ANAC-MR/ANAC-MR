@@ -1,0 +1,108 @@
+// ═══════════════════════════════════════════════════
+//  ANAC AUTH — Module partagé
+//  Stocke les comptes dans Firestore: collection 'anac_users'
+//  Chaque doc: { username, password, role:'admin', createdAt, createdBy }
+//  Session: sessionStorage 'anac_auth' = { username, role }
+// ═══════════════════════════════════════════════════
+
+const FB_CONFIG = {
+  apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+  authDomain:"anacmr-e05b4.firebaseapp.com",
+  projectId:"anacmr-e05b4",
+  storageBucket:"anacmr-e05b4.firebasestorage.app",
+  messagingSenderId:"857117390430",
+  appId:"1:857117390430:web:0231614b880df3196e26cf"
+};
+const AUTH_SESSION_KEY = 'anac_auth_v2';
+const DEFAULT_USER = 'DADY';
+const DEFAULT_PASS = 'ANACdady';
+
+let _db = null;
+
+async function getDB() {
+  if (_db) return _db;
+  const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+  const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const apps = getApps();
+  const app  = apps.find(a => a.name === 'anac-auth') || initializeApp(FB_CONFIG, 'anac-auth');
+  _db = getFirestore(app);
+  return _db;
+}
+
+// ── Vérifier identifiants ──────────────────────────────────────
+export async function checkCredentials(username, password) {
+  try {
+    const db = await getDB();
+    const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    // Chercher dans anac_users
+    const q    = query(collection(db,'anac_users'), where('username','==',username.toUpperCase()));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const user = snap.docs[0].data();
+      return user.password === password ? { ok:true, role:user.role||'admin', username:user.username } : { ok:false };
+    }
+    // Fallback: compte admin par défaut (legacy DADY/ANACdady depuis cfg-auth)
+    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const cfg = await getDoc(doc(db,'flights','cfg-auth'));
+    const storedUser = cfg.exists() ? (cfg.data().username || DEFAULT_USER) : DEFAULT_USER;
+    const storedPass = cfg.exists() ? (cfg.data().password || DEFAULT_PASS) : DEFAULT_PASS;
+    if (username.toUpperCase() === storedUser.toUpperCase() && password === storedPass) {
+      return { ok:true, role:'admin', username: storedUser };
+    }
+    return { ok:false };
+  } catch(e) {
+    console.error('Auth error:', e);
+    return { ok:false, error: e.message };
+  }
+}
+
+// ── Session ────────────────────────────────────────────────────
+export function saveSession(username, role) {
+  sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ username, role, ts: Date.now() }));
+}
+export function getSession() {
+  try { return JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)); }
+  catch { return null; }
+}
+export function clearSession() {
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
+}
+export function isLoggedIn() {
+  return !!getSession();
+}
+
+// ── Gestion utilisateurs (admin seulement) ────────────────────
+export async function listUsers() {
+  const db = await getDB();
+  const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const snap = await getDocs(collection(db,'anac_users'));
+  return snap.docs.map(d => ({ id:d.id, ...d.data() }));
+}
+
+export async function createUser(username, password, createdBy) {
+  const db = await getDB();
+  const { collection, addDoc, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  // Vérifier que le username n'existe pas déjà
+  const q    = query(collection(db,'anac_users'), where('username','==',username.toUpperCase()));
+  const snap = await getDocs(q);
+  if (!snap.empty) throw new Error('Utilisateur déjà existant');
+  await addDoc(collection(db,'anac_users'), {
+    username: username.toUpperCase(),
+    password,
+    role: 'admin',
+    createdAt: new Date().toISOString(),
+    createdBy: createdBy || 'SYSTEM'
+  });
+}
+
+export async function deleteUser(userId) {
+  const db = await getDB();
+  const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  await deleteDoc(doc(db,'anac_users',userId));
+}
+
+export async function changeUserPassword(userId, newPassword) {
+  const db = await getDB();
+  const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  await updateDoc(doc(db,'anac_users',userId), { password: newPassword, updatedAt: new Date().toISOString() });
+}
