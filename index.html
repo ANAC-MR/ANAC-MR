@@ -237,7 +237,33 @@
         .doc-signature { text-align:right; margin-top:18px; font-weight:800; font-size:13px; color:#1a202c; }
         .fact-empty-msg { text-align:center; color:#718096; font-size:13px; padding:30px 0; }
         
-    </style>
+    
+/* ══ LOGIN OVERLAY ══════════════════════════════════════ */
+#authOverlay{position:fixed;inset:0;background:#0a1628;z-index:9999;display:flex;align-items:center;justify-content:center;}
+#authOverlay.hidden{display:none;}
+.auth-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:36px 40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.auth-logo{text-align:center;margin-bottom:24px;}
+.auth-logo div{font-size:32px;margin-bottom:6px;}
+.auth-logo h2{font-size:16px;font-weight:800;color:#D4AF37;margin:0;}
+.auth-logo p{font-size:12px;color:#7a8ba8;margin:4px 0 0;}
+.auth-field{margin-bottom:14px;}
+.auth-field label{display:block;font-size:11px;font-weight:700;color:#7a8ba8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+.auth-field input{width:100%;padding:11px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#e8edf5;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;}
+.auth-field input:focus{border-color:#D4AF37;}
+.auth-btn{width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#D4AF37,#b8942a);color:#0a1628;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;margin-top:4px;}
+.auth-btn:hover{opacity:0.9;}
+.auth-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.auth-err{color:#fc8181;font-size:12px;margin-top:10px;text-align:center;display:none;}
+.auth-user-badge{position:fixed;top:12px;right:16px;background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:#D4AF37;z-index:1000;display:flex;align-items:center;gap:10px;}
+.auth-user-badge button{background:none;border:none;color:#7a8ba8;font-size:11px;cursor:pointer;font-family:inherit;padding:0;}
+.auth-user-badge button:hover{color:#fc8181;}
+
+/* ══ FACT AUTH ══ */
+#tab-facturation.locked { display:none !important; }
+#factLoginWall { display:none; padding:60px 20px; text-align:center; }
+#factLoginWall.show { display:block; }
+#factLoginWall .auth-box { margin:0 auto; }
+</style>
 </head>
 <body>
 <div class="container">
@@ -510,7 +536,28 @@
 
         <!-- ═══ TAB: FACTURATION ═══ -->
         <div class="tab-content" id="tab-facturation">
-            <div class="fact-section">
+
+<div id="factLoginWall">
+  <div class="auth-box" style="background:#fff;border:1px solid #e2e8f0;">
+    <div class="auth-logo">
+      <div>🧾</div>
+      <h2 style="color:#1a365d;">Facturation</h2>
+      <p style="color:#718096;">Connexion requise pour accéder à la facturation</p>
+    </div>
+    <div class="auth-field">
+      <label style="color:#718096;">Nom d'utilisateur</label>
+      <input type="text" id="factAuthUser" style="background:#f8fafc;border:1.5px solid #e2e8f0;color:#1a202c;" placeholder="ex: DADY" onkeydown="if(event.key==='Enter')doFactLogin()">
+    </div>
+    <div class="auth-field">
+      <label style="color:#718096;">Mot de passe</label>
+      <input type="password" id="factAuthPass" style="background:#f8fafc;border:1.5px solid #e2e8f0;color:#1a202c;" placeholder="••••••••" onkeydown="if(event.key==='Enter')doFactLogin()">
+    </div>
+    <button class="auth-btn" id="factAuthBtn" onclick="doFactLogin()">Se connecter</button>
+    <div class="auth-err" id="factAuthErr" style="color:#e53e3e;">Identifiants incorrects</div>
+  </div>
+</div>
+
+            <div class="fact-section" id="factContent" style="display:none;">
 
                 <div style="margin-bottom:20px;">
                     <h2 style="font-size:20px;font-weight:800;color:#1a365d;margin:0 0 4px;">🧾 Ordre d'Émission de Facture</h2>
@@ -1668,6 +1715,90 @@ window.switchTab = function(tab) {
             setTimeout(fctInit, 80);
         }
     }
+};
+
+
+// ── AUTH FACTURATION ────────────────────────────────────────────
+const _FAB_KEY = 'anac_auth_v2';
+const _FAB_DEF_U = 'DADY', _FAB_DEF_P = 'ANACdady';
+let _fabDB = null;
+
+async function _fabGetDB() {
+  if (_fabDB) return _fabDB;
+  const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+  const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const apps = getApps();
+  const app  = apps.find(a=>a.name==='anac-auth') || initializeApp({
+    apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+    authDomain:"anacmr-e05b4.firebaseapp.com",
+    projectId:"anacmr-e05b4",
+    storageBucket:"anacmr-e05b4.firebasestorage.app",
+    messagingSenderId:"857117390430",
+    appId:"1:857117390430:web:0231614b880df3196e26cf"
+  },'anac-auth');
+  _fabDB = getFirestore(app);
+  return _fabDB;
+}
+
+async function _fabCheck(username, password) {
+  try {
+    const db = await _fabGetDB();
+    const { collection, query, where, getDocs, doc, getDoc }
+      = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const q    = query(collection(db,'anac_users'), where('username','==',username.toUpperCase()));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const u = snap.docs[0].data();
+      return u.password === password;
+    }
+    const cfg = await getDoc(doc(db,'flights','cfg-auth'));
+    const su  = cfg.exists() ? (cfg.data().username||_FAB_DEF_U) : _FAB_DEF_U;
+    const sp  = cfg.exists() ? (cfg.data().password||_FAB_DEF_P) : _FAB_DEF_P;
+    return username.toUpperCase()===su.toUpperCase() && password===sp;
+  } catch(e) { return false; }
+}
+
+function _fabSession() {
+  try { return JSON.parse(sessionStorage.getItem(_FAB_KEY)); } catch { return null; }
+}
+
+window.doFactLogin = async function() {
+  const user = document.getElementById('factAuthUser').value.trim();
+  const pass = document.getElementById('factAuthPass').value;
+  if (!user||!pass) return;
+  const btn = document.getElementById('factAuthBtn');
+  btn.disabled=true; btn.textContent='Vérification...';
+  document.getElementById('factAuthErr').style.display='none';
+  const ok = await _fabCheck(user, pass);
+  btn.disabled=false; btn.textContent='Se connecter';
+  if (ok) {
+    sessionStorage.setItem(_FAB_KEY, JSON.stringify({ username:user.toUpperCase(), ts:Date.now() }));
+    _showFactContent();
+  } else {
+    document.getElementById('factAuthErr').style.display='block';
+    document.getElementById('factAuthPass').value='';
+  }
+};
+
+function _showFactContent() {
+  document.getElementById('factLoginWall').classList.remove('show');
+  document.getElementById('factLoginWall').style.display='none';
+  document.getElementById('factContent').style.display='block';
+  if (!window._fctInited) { window._fctInited=true; setTimeout(fctInit,80); }
+}
+
+// Hook switchTab pour vérifier auth facturation
+const _origST = window.switchTab;
+window.switchTab = function(tab) {
+  _origST(tab);
+  if (tab==='facturation') {
+    if (_fabSession()) { _showFactContent(); }
+    else {
+      document.getElementById('factLoginWall').style.display='block';
+      document.getElementById('factLoginWall').classList.add('show');
+      document.getElementById('factContent').style.display='none';
+    }
+  }
 };
 
 </script>
