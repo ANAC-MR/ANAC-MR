@@ -1281,15 +1281,15 @@
         <div class="form-grid">
             <div class="field-group form-full">
                 <label>Identifiant *</label>
-                <input type="text" id="newUname" autocomplete="new-password" placeholder="Ex: AHMED" style="text-transform:uppercase;">
+                <input type="text" id="newUname" autocomplete="off" placeholder="" style="text-transform:uppercase;" onfocus="this.removeAttribute('readonly')" readonly>
             </div>
             <div class="field-group form-full">
                 <label>Mot de passe *</label>
-                <input type="password" id="newUpass" autocomplete="new-password" placeholder="Min 6 caractères">
+                <input type="password" id="newUpass" autocomplete="off" placeholder="" onfocus="this.removeAttribute('readonly')" readonly>
             </div>
             <div class="field-group form-full">
                 <label>Confirmer *</label>
-                <input type="password" id="newUpass2" autocomplete="new-password" placeholder="••••••••">
+                <input type="password" id="newUpass2" autocomplete="off" placeholder="" onfocus="this.removeAttribute('readonly')" readonly>
             </div>
         </div>
         <div class="modal-footer">
@@ -2244,8 +2244,9 @@ async function loadUsers() {
 }
 
 window.showAddUserModal = function() {
-    ['newUname','newUpass','newUpass2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['newUname','newUpass','newUpass2'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.removeAttribute('readonly');}});
     openModal('userModal');
+    setTimeout(()=>{ ['newUname','newUpass','newUpass2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); }, 50);
 };
 
 window.saveNewUser = async function() {
