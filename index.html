@@ -181,89 +181,19 @@
             .compare-chart-row { grid-template-columns: 1fr; }
         }
 
-        /* ══ FACTURATION ══════════════════════════════════════════ */
-        .fact-section { padding:24px 0; }
-        .fact-config { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:20px; }
-        .fact-config h3 { font-size:13px; font-weight:800; color:#2B5A8E; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 16px; }
-        .fact-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; margin-bottom:16px; }
-        .fact-field label { display:block; font-size:11px; font-weight:700; color:#718096; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:5px; }
-        .fact-field select, .fact-field input {
-            width:100%; padding:9px 12px; border-radius:8px; border:1.5px solid #e2e8f0;
-            background:#fff; color:#1a202c; font-size:13px; font-family:inherit;
-            outline:none; box-sizing:border-box; cursor:pointer;
-        }
-        .fact-field select:focus, .fact-field input:focus { border-color:#2B5A8E; }
-        .fact-col-bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
-        .fact-toggle { padding:7px 16px; border-radius:20px; border:1.5px solid #e2e8f0;
-            background:#fff; font-size:12px; font-weight:700; color:#718096;
-            cursor:pointer; user-select:none; transition:all 0.2s; }
-        .fact-toggle.on { background:#2B5A8E; border-color:#2B5A8E; color:#fff; }
-        .fact-airlines-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:7px; }
-        .fact-airline { display:flex; align-items:center; gap:8px; padding:7px 12px;
-            border-radius:8px; border:1.5px solid #e2e8f0; background:#fff;
-            font-size:13px; color:#1a202c; cursor:pointer; user-select:none; transition:all 0.15s; }
-        .fact-airline.on { border-color:#2B5A8E; background:rgba(43,90,142,0.06); }
-        .fact-airline .chk { width:14px; height:14px; border-radius:3px; border:2px solid #cbd5e0;
-            display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
-        .fact-airline.on .chk { background:#2B5A8E; border-color:#2B5A8E; color:#fff; font-size:10px; }
-        .fact-actions { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
-        .btn-apercu { padding:10px 22px; border-radius:8px; border:none; cursor:pointer;
-            background:#2B5A8E; color:#fff; font-size:13px; font-weight:700; font-family:inherit; }
-        .btn-dl-docx { padding:10px 22px; border-radius:8px; border:none; cursor:pointer;
-            background:#276749; color:#fff; font-size:13px; font-weight:700; font-family:inherit; display:none; }
-        .btn-apercu:hover, .btn-dl-docx:hover { opacity:0.87; }
-        .fact-preview-box { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:24px; }
-        .fact-preview-box h3 { font-size:13px; font-weight:800; color:#718096; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 16px; }
-        /* Aperçu style document */
-        .doc-header-row { display:flex; justify-content:space-between; align-items:flex-end;
-            border-bottom:2px solid #1a202c; padding-bottom:6px; margin-bottom:4px; }
-        .doc-direction { font-size:13px; font-weight:800; text-decoration:underline; color:#1a202c; }
-        .doc-date { font-size:12px; color:#1a202c; }
-        .doc-service { font-size:11px; color:#555; margin-bottom:22px; }
-        .doc-title { text-align:center; font-size:15px; font-weight:900; text-decoration:underline; color:#1a202c; margin-bottom:4px; }
-        .doc-numero { text-align:center; font-size:12px; color:#1a202c; margin-bottom:22px; }
-        .doc-periode { text-align:center; font-size:13px; font-weight:700; color:#1a202c; margin-bottom:14px; }
-        .doc-mini-tbl { border-collapse:collapse; font-size:12px; margin-bottom:20px; width:auto; }
-        .doc-mini-tbl td { border:1px solid #aaa; padding:5px 12px; }
-        .doc-mini-tbl .lbl { font-weight:800; background:#f0f4f8; }
-        .doc-data-tbl { width:100%; border-collapse:collapse; font-size:12px; }
-        .doc-data-tbl th { background:#0d2240; color:#D4AF37; padding:8px 10px; font-weight:800;
-            font-size:11px; text-transform:uppercase; border:1px solid #aaa; text-align:center; }
-        .doc-data-tbl th:first-child { text-align:left; }
-        .doc-data-tbl td { padding:7px 10px; border:1px solid #ddd; color:#1a202c; text-align:center; }
-        .doc-data-tbl td:first-child { text-align:left; font-weight:600; }
-        .doc-data-tbl tr:nth-child(even) td { background:#f8fafc; }
-        .doc-data-tbl tr.tbl-total td { background:#f0f4f8; font-weight:800; border-top:2px solid #aaa; }
-        .doc-signature { text-align:right; margin-top:18px; font-weight:800; font-size:13px; color:#1a202c; }
-        .fact-empty-msg { text-align:center; color:#718096; font-size:13px; padding:30px 0; }
-        
-    
-/* ══ LOGIN OVERLAY ══════════════════════════════════════ */
-#authOverlay{position:fixed;inset:0;background:#0a1628;z-index:9999;display:flex;align-items:center;justify-content:center;}
-#authOverlay.hidden{display:none;}
-.auth-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:36px 40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
-.auth-logo{text-align:center;margin-bottom:24px;}
-.auth-logo div{font-size:32px;margin-bottom:6px;}
-.auth-logo h2{font-size:16px;font-weight:800;color:#D4AF37;margin:0;}
-.auth-logo p{font-size:12px;color:#7a8ba8;margin:4px 0 0;}
-.auth-field{margin-bottom:14px;}
-.auth-field label{display:block;font-size:11px;font-weight:700;color:#7a8ba8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
-.auth-field input{width:100%;padding:11px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#e8edf5;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;}
-.auth-field input:focus{border-color:#D4AF37;}
-.auth-btn{width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#D4AF37,#b8942a);color:#0a1628;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;margin-top:4px;}
-.auth-btn:hover{opacity:0.9;}
-.auth-btn:disabled{opacity:0.5;cursor:not-allowed;}
-.auth-err{color:#fc8181;font-size:12px;margin-top:10px;text-align:center;display:none;}
-.auth-user-badge{position:fixed;top:12px;right:16px;background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:#D4AF37;z-index:1000;display:flex;align-items:center;gap:10px;}
-.auth-user-badge button{background:none;border:none;color:#7a8ba8;font-size:11px;cursor:pointer;font-family:inherit;padding:0;}
-.auth-user-badge button:hover{color:#fc8181;}
+/* AUTH WALL FACTURATION */
+#factWall{display:none;padding:60px 20px;text-align:center;background:#f0f4f8;}
+#factWall .fbox{margin:0 auto;max-width:340px;padding:36px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
+#factWall h3{color:#1a365d;font-size:16px;font-weight:800;margin:0 0 4px;}
+#factWall p{color:#718096;font-size:12px;margin:0 0 20px;}
+#factWall .af{margin-bottom:14px;text-align:left;}
+#factWall .af label{display:block;font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;margin-bottom:5px;}
+#factWall .af input{width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#1a202c;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;}
+#factWall .af input:focus{border-color:#2B5A8E;}
+#factWall .abtn{width:100%;padding:12px;border:none;border-radius:8px;background:#2B5A8E;color:#fff;font-size:14px;font-weight:800;cursor:pointer;}
+#factWall .aerr{color:#e53e3e;font-size:12px;margin-top:8px;min-height:16px;}
 
-/* ══ FACT AUTH ══ */
-#tab-facturation.locked { display:none !important; }
-#factLoginWall { display:none; padding:60px 20px; text-align:center; }
-#factLoginWall.show { display:block; }
-#factLoginWall .auth-box { margin:0 auto; }
-</style>
+    </style>
 </head>
 <body>
 <div class="container">
@@ -321,11 +251,11 @@
                         </div>
                         <div class="filter-group">
                             <label for="searchImm">Immatriculation</label>
-                            <input type="text" id="searchImm" placeholder="Rechercher...">
+                            <input type="text" id="searchImm" placeholder="Rechercher..." autocomplete="off">
                         </div>
                         <div class="filter-group">
                             <label for="searchVol">N° Vol</label>
-                            <input type="text" id="searchVol" placeholder="Rechercher...">
+                            <input type="text" id="searchVol" placeholder="Rechercher..." autocomplete="off">
                         </div>
                     </div>
                     <div class="filter-row">
@@ -533,34 +463,30 @@
         </div>
 
         </div><!-- end tab-rapports -->
-
-        <!-- ═══ TAB: FACTURATION ═══ -->
-        <div class="tab-content" id="tab-facturation">
-
-<div id="factLoginWall">
-  <div class="auth-box" style="background:#fff;border:1px solid #e2e8f0;">
-    <div class="auth-logo">
-      <div>🧾</div>
-      <h2 style="color:#1a365d;">Facturation</h2>
-      <p style="color:#718096;">Connexion requise pour accéder à la facturation</p>
-    </div>
-    <div class="auth-field">
-      <label style="color:#718096;">Nom d'utilisateur</label>
-      <input type="text" id="factAuthUser" style="background:#f8fafc;border:1.5px solid #e2e8f0;color:#1a202c;" placeholder="ex: DADY" onkeydown="if(event.key==='Enter')doFactLogin()">
-    </div>
-    <div class="auth-field">
-      <label style="color:#718096;">Mot de passe</label>
-      <input type="password" id="factAuthPass" style="background:#f8fafc;border:1.5px solid #e2e8f0;color:#1a202c;" placeholder="••••••••" onkeydown="if(event.key==='Enter')doFactLogin()">
-    </div>
-    <button class="auth-btn" id="factAuthBtn" onclick="doFactLogin()">Se connecter</button>
-    <div class="auth-err" id="factAuthErr" style="color:#e53e3e;">Identifiants incorrects</div>
+    
+    <!-- ═══ TAB FACTURATION ═══ -->
+    
+<div id="factWall">
+  <div class="fbox">
+    <div style="font-size:30px;margin-bottom:8px;">🧾</div>
+    <h3>Facturation</h3>
+    <p>Connexion requise pour accéder à cet onglet</p>
+    <div class="af"><label>Identifiant</label>
+      <input type="text" id="factU" autocomplete="new-password" spellcheck="false"></div>
+    <div class="af"><label>Mot de passe</label>
+      <input type="password" id="factP" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter')_doFactLogin()"></div>
+    <button class="abtn" id="factBtn" onclick="_doFactLogin()">Connexion</button>
+    <div class="aerr" id="factErr"></div>
   </div>
 </div>
 
-            <div class="fact-section" id="factContent" style="display:none;">
+    <div id="factContent" style="display:none;">
+        <div class="tab-content" id="tab-facturation">
+            <div class="fact-section">
 
                 <div style="margin-bottom:20px;">
-                    <h2 style="font-size:20px;font-weight:800;color:#1a365d;margin:0 0 4px;">🧾 Ordre d'Émission de Facture</h2>
+                    <h2 style="font-size:20px;font-weight:800;color:#1a365d;margin:0 0 4px;">?? Ordre d'Émission de Facture</h2>
                     <p style="font-size:13px;color:#718096;margin:0;">Générez le document officiel ANAC</p>
                 </div>
 
@@ -627,7 +553,7 @@
                 </div>
 
                 <div class="fact-actions">
-                    <button class="btn-apercu" onclick="fctGenApercu()">👁 Générer l'aperçu</button>
+                    <button class="btn-apercu" onclick="fctGenApercu()">?? Générer l'aperçu</button>
                     <button class="btn-dl-docx" id="btnFctDocx" onclick="fctTelecharger()">⬇ Télécharger .docx</button>
                 </div>
 
@@ -637,153 +563,74 @@
                 </div>
             </div>
         </div><!-- end tab-facturation -->
+    </main>'''
+
+content = content.replace('        </div>
+    </div>
+
     </main>
+
 </div>
 
 <!-- MODAL VOL -->
 <div class="modal" id="flightModal">
-    <div class="modal-content" style="max-width:560px;padding:0;border-radius:16px;overflow:visible;max-height:90vh;overflow-y:auto;">
-
-        <!-- En-tête modal -->
-        <div style="background:linear-gradient(135deg,#1a3a6b,#2B5A8E);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
-            <div>
-                <h2 style="margin:0;font-size:17px;font-weight:800;color:#fff;" id="modalTitle">✈ Ajouter un vol</h2>
-                <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:3px;" id="modalSubtitle">Remplissez les informations du vol</div>
+    <div class="modal-content">
+        <h2>Ajouter un vol</h2>
+        <form id="flightForm">
+            <div class="form-group">
+                <label for="fAuthNumber">Numéro d'autorisation</label>
+                <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
+                <small class="field-hint">Format: SNA26-XXXX (ex: SNA26-0001)</small>
             </div>
-            <button onclick="closeModal()" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
-        </div>
-
-        <form id="flightForm" style="padding:20px 24px;">
-
-            <!-- ① COMPAGNIE — premier champ, tout dépend d'elle -->
-            <div style="background:rgba(43,90,142,0.06);border:2px solid rgba(43,90,142,0.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
-                <label style="font-size:11px;font-weight:700;color:#2B5A8E;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">🏢 Compagnie aérienne</label>
-                <select id="fCompany" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(43,90,142,0.25);font-family:inherit;font-size:14px;font-weight:600;color:#2d3748;background:#fff;cursor:pointer;"></select>
-                <!-- Ligne info compagnie : préfixe vol + immat -->
-                <div id="companyInfoBar" style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;"></div>
+            <div class="form-group">
+                <label for="fDate">Date</label>
+                <input type="date" id="fDate" required>
             </div>
-
-            <!-- ② AUTH + DATE sur 2 colonnes -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-                <div class="form-group" style="margin:0;">
-                    <label for="fAuthNumber" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">🔖 N° autorisation</label>
-                    <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;">
-                    <small class="field-hint" style="font-size:10px;color:#a0aec0;">Format: SNA26-XXXX</small>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label for="fDate" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">📅 Date du vol</label>
-                    <input type="date" id="fDate" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;">
-                </div>
+            <div class="form-group">
+                <label for="fCompany">Compagnie</label>
+                <select id="fCompany" required></select>
             </div>
-
-            <!-- ③ IMMAT + N° VOL sur 2 colonnes (auto-remplis selon compagnie) -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-                <div class="form-group" style="margin:0;">
-                    <label for="fImm" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">🛩 Immatriculation</label>
-                    <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;font-weight:600;">
-                    <div style="margin-top:4px;" id="immHint"></div>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label for="fVol" style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;">✈ N° de vol</label>
-                    <input type="text" id="fVol" placeholder="Ex: L6-100" required style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;font-family:inherit;font-size:13px;margin-top:5px;font-weight:600;">
-                    <div style="margin-top:4px;" id="volHint"></div>
-                </div>
+            <div class="form-group">
+                <label for="fImm">Immatriculation</label>
+                <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
             </div>
-
-            <!-- ④ TYPE — DEP ou ARR, change From/To -->
-            <div style="margin-bottom:14px;">
-                <label style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:8px;">🔄 Type du vol</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <button type="button" id="btnDEP" onclick="selectType('DEP')"
-                        style="padding:11px;border-radius:9px;border:2px solid #2B5A8E;background:#2B5A8E;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;">
-                        ↗ Départ (NKC →)
-                    </button>
-                    <button type="button" id="btnARR" onclick="selectType('ARR')"
-                        style="padding:11px;border-radius:9px;border:2px solid #e2e8f0;background:#f7fafc;color:#718096;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;">
-                        ↙ Arrivée (→ NKC)
-                    </button>
-                </div>
-                <input type="hidden" id="fType" value="DEP">
+            <div class="form-group">
+                <label for="fVol">N° Vol</label>
+                <input type="text" id="fVol" placeholder="Ex: L6-123" required>
             </div>
-
-            <!-- ⑤ ROUTE : De → À avec flèche visuelle -->
-            <div style="background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
-                <label style="font-size:11px;font-weight:700;color:#4a5568;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:10px;">🗺 Route</label>
-                <div style="display:grid;grid-template-columns:1fr 32px 1fr;gap:6px;align-items:center;">
-                    <div>
-                        <div style="font-size:10px;color:#718096;font-weight:600;margin-bottom:4px;">DÉPART DE</div>
-                        <select id="fFrom" required style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;font-weight:600;background:#fff;"></select>
-                    </div>
-                    <div style="text-align:center;font-size:18px;color:#2B5A8E;padding-top:16px;">→</div>
-                    <div>
-                        <div style="font-size:10px;color:#718096;font-weight:600;margin-bottom:4px;">ARRIVÉE À</div>
-                        <select id="fTo" required style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;font-weight:600;background:#fff;"></select>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label for="fFrom">Départ de</label>
+                <select id="fFrom" required></select>
             </div>
-
-            <!-- ⑥ ESCALE checkbox -->
-            <div style="margin-bottom:10px;">
-                <label style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;background:#f7fafc;user-select:none;">
-                    <input type="checkbox" id="hasStopover" onchange="toggleStopoverField()" style="width:16px;height:16px;accent-color:#2B5A8E;cursor:pointer;">
-                    <span style="font-size:13px;font-weight:600;color:#4a5568;">✈ Ce vol a une escale intermédiaire</span>
-                </label>
+            <div class="form-group">
+                <label for="fTo">Arrivée à</label>
+                <select id="fTo" required></select>
             </div>
-            <div id="stopoverGroup" style="display:none;background:rgba(43,90,142,0.05);border:1px solid rgba(43,90,142,0.18);border-radius:10px;padding:14px;margin-bottom:10px;">
-                <div style="font-size:11px;font-weight:700;color:#2B5A8E;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">🛑 Escale intermédiaire</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:10px;font-weight:700;color:#718096;display:block;margin-bottom:4px;">AÉROPORT</label>
-                        <select id="fStopover" style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid #e2e8f0;font-family:inherit;font-size:12px;background:#fff;"><option value="">— Choisir —</option></select>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:10px;font-weight:700;color:#718096;display:block;margin-bottom:4px;">PAX À L'ESCALE</label>
-                        <input type="number" id="fStopoverPax" min="0" value="0" oninput="updatePaxTotal()"
-                            style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid rgba(43,90,142,0.3);font-family:inherit;font-size:15px;font-weight:700;text-align:center;background:#fff;">
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:10px;font-weight:700;color:#718096;display:block;margin-bottom:4px;">BÉBÉS À L'ESCALE</label>
-                        <input type="number" id="fStopoverBabies" min="0" value="0" oninput="updatePaxTotal()"
-                            style="width:100%;padding:7px 9px;border-radius:7px;border:1px solid rgba(43,90,142,0.3);font-family:inherit;font-size:15px;font-weight:700;text-align:center;background:#fff;">
-                    </div>
-                </div>
+            <div class="form-group" id="stopoverGroup" style="display:none;">
+                <label for="fStopover">✈ Escale (optionnel)</label>
+                <select id="fStopover">
+                    <option value="">— Aucune escale —</option>
+                </select>
             </div>
-
-            <!-- ⑦ PAX + BÉBÉS -->
-            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                    <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.4px;">👥 Passagers du vol</div>
-                    <div id="paxTotalBadge" style="display:none;background:#166534;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;"></div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div>
-                        <label for="fPassengers" style="font-size:11px;font-weight:700;color:#4a5568;display:block;margin-bottom:5px;">PAX (adultes + enfants)</label>
-                        <input type="number" id="fPassengers" min="0" value="0" required oninput="updatePaxTotal()"
-                            style="width:100%;padding:10px 12px;border-radius:8px;border:2px solid #86efac;font-family:inherit;font-size:18px;font-weight:800;text-align:center;background:#fff;color:#166534;">
-                    </div>
-                    <div>
-                        <label for="fBabies" style="font-size:11px;font-weight:700;color:#4a5568;display:block;margin-bottom:5px;">Bébés (&lt; 2 ans)</label>
-                        <input type="number" id="fBabies" min="0" value="0" required oninput="updatePaxTotal()"
-                            style="width:100%;padding:10px 12px;border-radius:8px;border:2px solid #86efac;font-family:inherit;font-size:18px;font-weight:800;text-align:center;background:#fff;color:#166534;">
-                    </div>
-                </div>
-                <!-- Total en temps réel quand escale cochée -->
-                <div id="paxTotalRow" style="display:none;margin-top:10px;padding:8px 12px;background:#dcfce7;border-radius:8px;border:1px solid #86efac;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-size:12px;font-weight:600;color:#166534;">PAX vol + escale</span>
-                        <span id="paxTotalVal" style="font-size:16px;font-weight:800;color:#166534;"></span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-                        <span style="font-size:12px;font-weight:600;color:#166534;">Bébés vol + escale</span>
-                        <span id="babTotalVal" style="font-size:16px;font-weight:800;color:#166534;"></span>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label for="fType">Type du vol</label>
+                <select id="fType" required>
+                    <option value="DEP">Départ</option>
+                    <option value="ARR">Arrivée</option>
+                    <option value="TRANSIT">Transit (escale NKC)</option>
+                </select>
             </div>
-
-            <!-- ⑧ BOUTONS -->
-            <div class="modal-buttons" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0;">
-                <button type="button" class="btn-secondary" id="cancelBtn" style="padding:12px;border-radius:9px;font-size:14px;font-weight:700;">Annuler</button>
-                <button type="submit" class="btn-success" style="padding:12px;border-radius:9px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#006B3F,#00b67a);border:none;color:#fff;cursor:pointer;">✔ Enregistrer</button>
+            <div class="form-group">
+                <label for="fPassengers">PAX (Passagers)</label>
+                <input type="number" id="fPassengers" min="0" value="0" required>
+            </div>
+            <div class="form-group">
+                <label for="fBabies">Bébés</label>
+                <input type="number" id="fBabies" min="0" value="0" required>
+            </div>
+            <div class="modal-buttons">
+                <button type="submit" class="btn-success">Enregistrer</button>
+                <button type="button" class="btn-secondary" id="cancelBtn">Annuler</button>
             </div>
         </form>
     </div>
@@ -1067,35 +914,9 @@ async function exportPDF() {
 }
 
 function toggleStopoverField() {
-    const cb  = document.getElementById('hasStopover');
-    const grp = document.getElementById('stopoverGroup');
-    if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
-    updatePaxTotal();
-}
-
-function updatePaxTotal() {
-    const hasStop    = document.getElementById('hasStopover')?.checked;
-    const volPax     = parseInt(document.getElementById('fPassengers')?.value)    || 0;
-    const volBab     = parseInt(document.getElementById('fBabies')?.value)         || 0;
-    const stopPax    = parseInt(document.getElementById('fStopoverPax')?.value)   || 0;
-    const stopBab    = parseInt(document.getElementById('fStopoverBabies')?.value) || 0;
-    const totalPax   = volPax + (hasStop ? stopPax : 0);
-    const totalBab   = volBab + (hasStop ? stopBab : 0);
-
-    const row   = document.getElementById('paxTotalRow');
-    const badge = document.getElementById('paxTotalBadge');
-    const paxEl = document.getElementById('paxTotalVal');
-    const babEl = document.getElementById('babTotalVal');
-
-    if (hasStop && (stopPax > 0 || stopBab > 0)) {
-        if (row)   { row.style.display = ''; }
-        if (badge) { badge.style.display = ''; badge.textContent = `Total : ${totalPax} PAX + ${totalBab} bébés`; }
-        if (paxEl) paxEl.textContent = `${volPax} + ${stopPax} = ${totalPax}`;
-        if (babEl) babEl.textContent = `${volBab} + ${stopBab} = ${totalBab}`;
-    } else {
-        if (row)   row.style.display = 'none';
-        if (badge) badge.style.display = 'none';
-    }
+    const type = document.getElementById('fType').value;
+    const grp  = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
 }
 
 // Called from app.js when flights are loaded/updated
@@ -1339,13 +1160,7 @@ function runRouteComparison() {
         </table>
     `;
 }
-// ═══════════════════════════════════════════════════════════════
-//  MODULE FACTURATION
-// ═══════════════════════════════════════════════════════════════
-const FCT_MOIS = ['','Janvier','Février','Mars','Avril','Mai','Juin',
-                  'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
-// ── Init (appelé au 1er clic sur l'onglet) ──────────────────────
 function fctInit() {
     // Années depuis les données Firebase
     const all = getFlights();
@@ -1488,8 +1303,10 @@ window.fctGenApercu = function() {
             <div class="doc-periode">Passagers internationaux embarqués au ${periode}</div>
 
             <table class="doc-mini-tbl">
-                <tr><td class="lbl">DESTINATAIRE</td><td>Direction Financière</td></tr>
-                <tr><td class="lbl">EMETTEUR</td><td>Direction de Transport Aérien / SEES</td></tr>
+                <tr>
+                    <td class="lbl">DESTINATAIRE</td><td>Direction Financière</td>
+                    <td class="lbl">EMETTEUR</td><td>Direction de Transport Aérien / SEES</td>
+                </tr>
             </table>
 
             <table class="doc-data-tbl">
@@ -1591,15 +1408,15 @@ window.fctTelecharger = async function() {
                     new TableCell({ borders: noBd, width: { size: colL, type: WidthType.DXA },
                         verticalAlign: VerticalAlign.CENTER, margins: { top: 80, bottom: 80, left: 0, right: 80 },
                         children: [
-                            fr('République Islamique de Mauritanie', false, 18),
-                            fr("Ministère de l'Equipement et des Transports", false, 18),
-                            fr("AGENCE NATIONALE DE L'AVIATION CIVILE", true, 18),
+                            fr('République Islamique de Mauritanie'),
+                            fr("Ministère de l'Equipement et des Transports"),
+                            fr("AGENCE NATIONALE DE L'AVIATION CIVILE", true),
                         ]
                     }),
                     new TableCell({ borders: noBd, width: { size: colC, type: WidthType.DXA },
                         verticalAlign: VerticalAlign.CENTER, margins: { top: 0, bottom: 0, left: 0, right: 0 },
                         children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 },
-                            children: [new ImageRun({ data: logoData, type: 'png', transformation: { width: 99, height: 67 } })]
+                            children: [new ImageRun({ data: logoData, type: 'png', transformation: { width: 1486, height: 1008 } })]
                         })]
                     }),
                     new TableCell({ borders: noBd, width: { size: colR, type: WidthType.DXA },
@@ -1625,7 +1442,7 @@ window.fctTelecharger = async function() {
                 tabStops: [{ type: TabStopType.RIGHT, position: 9638 }],
                 children: [
                     new TextRun({ text: 'DIRECTION DU TRANSPORT AERIEN', font: 'Arial', size: 22, bold: true, underline: {} }),
-                    new TextRun({ text: '\t' }),
+                    new TextRun({ text: '	' }),
                     new TextRun({ text: dateFmt, font: 'Arial', size: 22 }),
                 ]
             }),
@@ -1638,10 +1455,10 @@ window.fctTelecharger = async function() {
 
             // ── ORDRE D'EMISSION ──────────────────────────────────
             new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 80 },
-                children: [new TextRun({ text: "ORDRE D\u2019EMISSION DE FACTURE", font: 'Arial', size: 24, bold: true, underline: {} })]
+                children: [new TextRun({ text: "ORDRE D\’EMISSION DE FACTURE", font: 'Arial', size: 24, bold: true, underline: {} })]
             }),
             new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 400 },
-                children: [new TextRun({ text: 'N\u00B0 ' + numero, font: 'Arial', size: 22 })]
+                children: [new TextRun({ text: 'N\° ' + numero, font: 'Arial', size: 22 })]
             }),
 
             new Paragraph({ children: [] }), new Paragraph({ children: [] }),
@@ -1651,18 +1468,14 @@ window.fctTelecharger = async function() {
                 children: [new TextRun({ text: 'Passagers internationaux embarqués au ' + periode, font: 'Arial', size: 22, bold: true })]
             }),
 
-            // ── Tableau DESTINATAIRE / EMETTEUR (2 lignes) ─
-            new Table({ width: { size: 6000, type: WidthType.DXA }, columnWidths: [1700, 4300],
-                rows: [
-                    new TableRow({ children: [
-                        mCell('DESTINATAIRE', 1700, true, 'E8F0FA'),
-                        mCell('Direction Financière', 4300),
-                    ]}),
-                    new TableRow({ children: [
-                        mCell('EMETTEUR', 1700, true, 'E8F0FA'),
-                        mCell('Direction de Transport Aérien / SEES', 4300),
-                    ]}),
-                ]
+            // ── Tableau DESTINATAIRE / EMETTEUR (1 ligne, 4 col) ─
+            new Table({ width: { size: contentW, type: WidthType.DXA }, columnWidths: [1400, 3319, 1400, 3519],
+                rows: [new TableRow({ children: [
+                    mCell('DESTINATAIRE', 1400, true, 'E8F0FA'),
+                    mCell('Direction Financière', 3319),
+                    mCell('EMETTEUR', 1400, true, 'E8F0FA'),
+                    mCell('Direction de Transport Aérien / SEES', 3519),
+                ]})]
             }),
 
             new Paragraph({ children: [] }), new Paragraph({ children: [] }),
@@ -1716,88 +1529,47 @@ window.switchTab = function(tab) {
         }
     }
 };
+"""
 
+# Insérer juste avant </script> final
+assert '
+</script>
+</body>' in content, "Marker not found"
+content = content.replace('
+</script>
+</body>', FACT_JS + '
+</script>
+</body>')
 
-// ── AUTH FACTURATION ────────────────────────────────────────────
-const _FAB_KEY = 'anac_auth_v2';
-const _FAB_DEF_U = 'DADY', _FAB_DEF_P = 'ANACdady';
-let _fabDB = null;
-
-async function _fabGetDB() {
-  if (_fabDB) return _fabDB;
-  const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-  const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-  const apps = getApps();
-  const app  = apps.find(a=>a.name==='anac-auth') || initializeApp({
-    apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
-    authDomain:"anacmr-e05b4.firebaseapp.com",
-    projectId:"anacmr-e05b4",
-    storageBucket:"anacmr-e05b4.firebasestorage.app",
-    messagingSenderId:"857117390430",
-    appId:"1:857117390430:web:0231614b880df3196e26cf"
-  },'anac-auth');
-  _fabDB = getFirestore(app);
-  return _fabDB;
-}
-
-async function _fabCheck(username, password) {
-  try {
-    const db = await _fabGetDB();
-    const { collection, query, where, getDocs, doc, getDoc }
-      = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const q    = query(collection(db,'anac_users'), where('username','==',username.toUpperCase()));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const u = snap.docs[0].data();
-      return u.password === password;
-    }
-    const cfg = await getDoc(doc(db,'flights','cfg-auth'));
-    const su  = cfg.exists() ? (cfg.data().username||_FAB_DEF_U) : _FAB_DEF_U;
-    const sp  = cfg.exists() ? (cfg.data().password||_FAB_DEF_P) : _FAB_DEF_P;
-    return username.toUpperCase()===su.toUpperCase() && password===sp;
-  } catch(e) { return false; }
-}
-
-function _fabSession() {
-  try { return JSON.parse(sessionStorage.getItem(_FAB_KEY)); } catch { return null; }
-}
-
-window.doFactLogin = async function() {
-  const user = document.getElementById('factAuthUser').value.trim();
-  const pass = document.getElementById('factAuthPass').value;
-  if (!user||!pass) return;
-  const btn = document.getElementById('factAuthBtn');
-  btn.disabled=true; btn.textContent='Vérification...';
-  document.getElementById('factAuthErr').style.display='none';
-  const ok = await _fabCheck(user, pass);
-  btn.disabled=false; btn.textContent='Se connecter';
-  if (ok) {
-    sessionStorage.setItem(_FAB_KEY, JSON.stringify({ username:user.toUpperCase(), ts:Date.now() }));
-    _showFactContent();
-  } else {
-    document.getElementById('factAuthErr').style.display='block';
-    document.getElementById('factAuthPass').value='';
-  }
+// ══ AUTH FACTURATION ══════════════════════════════════
+const _FS='anac_sess';
+const _FC={apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
+let _fdb=null;
+async function _fDB(){if(_fdb)return _fdb;const{initializeApp,getApps}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');const{getFirestore}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const a=getApps().find(x=>x.name==='_fa')||initializeApp(_FC,'_fa');_fdb=getFirestore(a);return _fdb;}
+async function _fChk(u,p){try{const db=await _fDB();const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));const s=await getDocs(q);if(!s.empty){const x=s.docs[0].data();return x.password===p;}const c=await getDoc(doc(db,'flights','cfg-auth'));const su=c.exists()?(c.data().username||'DADY'):'DADY';const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';return u.toUpperCase()===su.toUpperCase()&&p===sp;}catch(e){return false;}}
+async function _fValid(ts){try{const db=await _fDB();const{doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const c=await getDoc(doc(db,'flights','cfg-auth'));if(c.exists()&&(c.data().sessionReset||0)>ts)return false;}catch(e){}return true;}
+function _fSess(){try{return JSON.parse(sessionStorage.getItem(_FS));}catch{return null;}}
+function _showFact(){document.getElementById('factWall').style.display='none';document.getElementById('factContent').style.display='block';if(!window._fctInited){window._fctInited=true;setTimeout(fctInit,80);}}
+window._doFactLogin=async function(){
+  const u=(document.getElementById('factU').value||'').trim();
+  const p=document.getElementById('factP').value||'';
+  const err=document.getElementById('factErr');
+  const btn=document.getElementById('factBtn');
+  err.textContent='';
+  if(!u||!p){err.textContent='Remplissez tous les champs';return;}
+  btn.disabled=true;btn.textContent='...';
+  const ok=await _fChk(u,p);
+  btn.disabled=false;btn.textContent='Connexion';
+  if(ok){sessionStorage.setItem(_FS,JSON.stringify({u:u.toUpperCase(),ts:Date.now()}));_showFact();}
+  else{err.textContent='Identifiants incorrects';document.getElementById('factP').value='';}
 };
-
-function _showFactContent() {
-  document.getElementById('factLoginWall').classList.remove('show');
-  document.getElementById('factLoginWall').style.display='none';
-  document.getElementById('factContent').style.display='block';
-  if (!window._fctInited) { window._fctInited=true; setTimeout(fctInit,80); }
-}
-
-// Hook switchTab pour vérifier auth facturation
-const _origST = window.switchTab;
-window.switchTab = function(tab) {
-  _origST(tab);
-  if (tab==='facturation') {
-    if (_fabSession()) { _showFactContent(); }
-    else {
-      document.getElementById('factLoginWall').style.display='block';
-      document.getElementById('factLoginWall').classList.add('show');
-      document.getElementById('factContent').style.display='none';
-    }
+const _oST=window.switchTab;
+window.switchTab=async function(tab){
+  _oST(tab);
+  if(tab==='facturation'){
+    const s=_fSess();
+    if(s&&await _fValid(s.ts)){_showFact();}
+    else{sessionStorage.removeItem(_FS);document.getElementById('factContent').style.display='none';document.getElementById('factWall').style.display='block';setTimeout(()=>document.getElementById('factU')?.focus(),100);}
   }
 };
 
