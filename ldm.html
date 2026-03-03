@@ -2,41 +2,49 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0a1628">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ANAC LDM">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>ANAC - Lecteur LDM/MVT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANAC – Lecteur LDM/MVT</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--navy:#0a1628;--navy2:#0f1f3d;--blue:#1a3a6b;--accent:#D4AF37;--green:#00c98d;--red:#e53e3e;--orange:#f97316;--text:#e8edf5;--dim:#7a8ba8;--border:rgba(212,175,55,0.15);--card:rgba(255,255,255,0.04);}
+:root{
+  --navy:#0a1628;--navy2:#0f1f3d;--blue:#1a3a6b;
+  --accent:#D4AF37;--green:#00c98d;--red:#e53e3e;--orange:#f97316;
+  --text:#e8edf5;--dim:#7a8ba8;
+  --border:rgba(212,175,55,0.15);--card:rgba(255,255,255,0.04);
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Sora',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(212,175,55,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(212,175,55,0.03)1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,0.03)1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* HEADER */
 .header{position:relative;z-index:10;background:linear-gradient(135deg,var(--navy2),var(--blue));border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;}
 .header-left{display:flex;align-items:center;gap:14px;}
-.hlogo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#b8942a);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#0a1628;}
+.hlogo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#b8942a);display:flex;align-items:center;justify-content:center;font-size:20px;}
 .htitle{font-size:18px;font-weight:800;color:var(--accent);}
 .hsub{font-size:12px;color:var(--dim);margin-top:1px;}
 .nav{display:flex;gap:8px;}
 .nav a{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;color:var(--dim);border:1px solid transparent;transition:all 0.2s;}
 .nav a:hover{color:var(--text);border-color:var(--border);}
 .nav a.active{color:var(--accent);border-color:var(--border);background:rgba(212,175,55,0.08);}
+
+/* MAIN */
 .main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px;}
-.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid rgba(212,175,55,0.1);}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid rgba(212,175,55,0.1);padding-bottom:0;}
 .tab{padding:10px 22px;border:none;background:transparent;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:var(--dim);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;transition:all 0.2s;}
 .tab:hover{color:var(--text);background:rgba(255,255,255,0.03);}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(212,175,55,0.05);}
 .tab-pane{display:none;}
 .tab-pane.active{display:block;}
+
+/* CARDS */
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:18px;}
 .card-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+
+/* UPLOAD ZONE */
 .upload-zone{border:2px dashed rgba(212,175,55,0.3);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;background:rgba(212,175,55,0.02);}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(212,175,55,0.06);}
 .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
@@ -45,21 +53,33 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .upload-sub{font-size:12px;color:var(--dim);}
 .upload-formats{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;}
 .fmt-badge{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--dim);}
+
+/* PREVIEW */
+.img-preview{display:none;margin-top:16px;border-radius:10px;overflow:hidden;border:1px solid var(--border);position:relative;}
+.img-preview img{width:100%;max-height:320px;object-fit:contain;background:#000;}
+.img-preview-bar{padding:10px 14px;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:space-between;}
+.img-name{font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace;}
+
+/* MULTI-FILE LIST */
 .file-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
 .file-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;}
-.fi-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;}
-.fi-info{flex:1;min-width:0;}
-.fi-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.fi-status{font-size:11px;color:var(--dim);margin-top:2px;}
-.fi-status.ok{color:var(--green);}
-.fi-status.err{color:var(--red);}
-.fi-status.loading{color:var(--accent);}
-.ldm-textarea{width:100%;min-height:200px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);resize:vertical;outline:none;transition:border-color 0.2s;line-height:1.7;}
+.file-item .fi-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;}
+.file-item .fi-info{flex:1;min-width:0;}
+.file-item .fi-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-item .fi-status{font-size:11px;color:var(--dim);margin-top:2px;}
+.file-item .fi-status.ok{color:var(--green);}
+.file-item .fi-status.err{color:var(--red);}
+.file-item .fi-status.loading{color:var(--accent);}
+
+/* TEXTAREA */
+.ldm-textarea{width:100%;min-height:180px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);resize:vertical;outline:none;transition:border-color 0.2s;line-height:1.7;}
 .ldm-textarea:focus{border-color:var(--accent);}
 .ldm-textarea::placeholder{color:var(--dim);opacity:0.6;}
+
+/* BUTTONS */
 .btn{padding:9px 18px;border-radius:8px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all 0.2s;white-space:nowrap;}
 .btn-gold{background:linear-gradient(135deg,var(--accent),#b8942a);color:#0a1628;box-shadow:0 4px 14px rgba(212,175,55,0.3);}
-.btn-gold:hover{transform:translateY(-1px);}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(212,175,55,0.4);}
 .btn-gold:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
 .btn-outline{background:transparent;color:var(--dim);border:1px solid rgba(255,255,255,0.1);}
 .btn-outline:hover{color:var(--text);border-color:rgba(255,255,255,0.25);}
@@ -67,42 +87,54 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .btn-green:hover{background:rgba(0,201,141,0.25);}
 .btn-sm{padding:6px 14px;font-size:12px;}
 .btn-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;}
+
+/* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
 .stat-val{font-size:26px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace;}
 .stat-label{font-size:11px;color:var(--dim);margin-top:3px;}
+
+/* RESULT CARDS */
 .result-list{display:flex;flex-direction:column;gap:12px;}
-.result-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.result-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color 0.2s;}
+.result-card:hover{border-color:rgba(212,175,55,0.3);}
 .result-card.imported{border-color:rgba(0,201,141,0.3);background:rgba(0,201,141,0.025);}
 .result-hdr{display:flex;align-items:center;gap:12px;padding:13px 18px;cursor:pointer;}
-.result-hdr:hover{background:rgba(255,255,255,0.02);}
-.rtype{font-size:10px;font-weight:800;padding:3px 9px;border-radius:5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+.result-type{font-size:10px;font-weight:800;padding:3px 9px;border-radius:5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
 .badge-ldm{background:rgba(26,58,107,0.6);color:#93c5fd;border:1px solid rgba(147,197,253,0.2);}
 .badge-mvt{background:rgba(212,175,55,0.15);color:var(--accent);border:1px solid var(--border);}
 .badge-img{background:rgba(249,115,22,0.15);color:var(--orange);border:1px solid rgba(249,115,22,0.3);}
 .result-meta{flex:1;min-width:0;}
 .result-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .result-sub{font-size:11px;color:var(--dim);margin-top:2px;font-family:'JetBrains Mono',monospace;}
-.st-ok{font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.25);flex-shrink:0;}
-.conf{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;flex-shrink:0;}
-.conf-h{background:rgba(0,201,141,0.15);color:var(--green);}
-.conf-m{background:rgba(212,175,55,0.15);color:var(--accent);}
-.conf-l{background:rgba(229,62,62,0.12);color:#fc8181;}
-.chv{color:var(--dim);font-size:14px;margin-left:4px;transition:transform 0.2s;flex-shrink:0;}
-.chv.open{transform:rotate(180deg);}
+.result-date{font-size:11px;color:var(--dim);flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+.st-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;flex-shrink:0;}
+.st-ok{background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.25);}
+.chevron{color:var(--dim);font-size:14px;margin-left:4px;transition:transform 0.2s;flex-shrink:0;}
+.chevron.open{transform:rotate(180deg);}
+
+/* RESULT BODY */
 .result-body{border-top:1px solid var(--border);display:none;}
-.raw-pre{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);background:rgba(0,0,0,0.3);padding:12px 18px;line-height:1.7;max-height:140px;overflow-y:auto;white-space:pre-wrap;border-bottom:1px solid var(--border);}
-.img-prev{max-height:180px;width:100%;object-fit:contain;background:#000;border-bottom:1px solid var(--border);}
+.raw-preview{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);background:rgba(0,0,0,0.3);padding:12px 18px;line-height:1.7;max-height:140px;overflow-y:auto;white-space:pre-wrap;border-bottom:1px solid var(--border);}
+.img-thumb-prev{max-height:160px;width:100%;object-fit:contain;background:#000;border-bottom:1px solid var(--border);}
 .parsed-sec{padding:16px 18px;}
-.parsed-lbl{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;}
+.parsed-lbl{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.confidence{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;}
+.conf-high{background:rgba(0,201,141,0.15);color:var(--green);}
+.conf-med{background:rgba(212,175,55,0.15);color:var(--accent);}
+.conf-low{background:rgba(229,62,62,0.12);color:#fc8181;}
+
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:14px;}
 .pf{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;}
 .pf label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;}
-.pf input,.pf select{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:5px 8px;border-radius:6px;width:100%;outline:none;}
+.pf input,.pf select{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:5px 8px;border-radius:6px;width:100%;outline:none;transition:border-color 0.2s;}
 .pf input:focus,.pf select:focus{border-color:var(--accent);}
 .pf select option{background:var(--navy2);}
+
 .act-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .dup-box{background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#ffa500;width:100%;margin-bottom:8px;}
+
+/* AUTH */
 .auth-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px;}
 .auth-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
 .auth-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.8px;}
@@ -114,130 +146,155 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .user-chip{background:rgba(0,201,141,0.1);border:1px solid rgba(0,201,141,0.25);border-radius:20px;padding:5px 13px;font-size:12px;font-weight:600;color:var(--green);display:inline-flex;align-items:center;gap:7px;}
 .auth-info{background:rgba(26,58,107,0.3);border:1px solid rgba(147,197,253,0.15);border-radius:8px;padding:11px 15px;font-size:12px;color:#93c5fd;line-height:1.7;margin-top:12px;}
 .auth-info code{background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;}
+
+/* STATUS */
 .status-bar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 18px;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
 .status-ind{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
 .status-right{display:flex;align-items:center;gap:8px;}
 .mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+
+/* SPINNER */
 .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(212,175,55,0.3);border-top-color:var(--accent);border-radius:50%;animation:sp 0.7s linear infinite;}
 @keyframes sp{to{transform:rotate(360deg)}}
+
+/* TOASTS */
 .toasts{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
-.toast{background:var(--navy2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:600;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;animation:tsi 0.3s ease;max-width:340px;}
+.toast{background:var(--navy2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:600;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;animation:si 0.3s ease;max-width:340px;}
 .toast.ok{border-color:rgba(0,201,141,0.3);}
 .toast.err{border-color:rgba(229,62,62,0.3);}
 .toast.warn{border-color:rgba(255,165,0,0.3);}
-@keyframes tsi{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
-.ocr-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,201,141,0.1);border:1px solid rgba(0,201,141,0.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--green);}
-@media(max-width:680px){.stats-row{grid-template-columns:1fr 1fr;}.nav{display:none;}}
+@keyframes si{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;color:var(--dim);}
+.empty .ico{font-size:48px;margin-bottom:14px;opacity:0.4;}
+.empty h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
+
+/* AI INDICATOR */
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(59,130,246,0.15));border:1px solid rgba(139,92,246,0.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#a78bfa;}
+.ai-badge::before{content:'✦';font-size:9px;}
+
+@media(max-width:680px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .header{padding:14px 16px;flex-wrap:wrap;gap:10px;}
+  .nav{display:none;}
+}
 </style>
 </head>
 <body>
 
-<!-- LOGIN WALL -->
-<div id="loginWall" style="display:flex;position:fixed;inset:0;z-index:9999;background:rgba(10,22,40,0.97);align-items:center;justify-content:center;">
-  <div style="background:#0f1f3d;border:1px solid rgba(212,175,55,0.3);border-radius:18px;padding:36px 40px;width:100%;max-width:380px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
-    <div style="font-size:24px;font-weight:900;color:#D4AF37;margin-bottom:6px;">LDM/MVT</div>
-    <div style="font-size:18px;font-weight:700;color:#e8edf5;margin-bottom:4px;">ANAC Mauritanie</div>
-    <div style="font-size:12px;color:#7a8ba8;margin-bottom:28px;">Acces securise</div>
-    <div id="loginError" style="display:none;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#fc8181;margin-bottom:16px;text-align:left;"></div>
-    <div style="text-align:left;margin-bottom:14px;">
-      <label style="font-size:11px;font-weight:700;color:#7a8ba8;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Identifiant</label>
-      <input id="ldmUser" type="text" placeholder="Nom d'utilisateur" autocomplete="off"
-        style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(212,175,55,0.2);border-radius:9px;color:#e8edf5;font-family:'Sora',sans-serif;font-size:14px;outline:none;"
-        onkeydown="if(event.key==='Enter')document.getElementById('ldmPass').focus()">
-    </div>
-    <div style="text-align:left;margin-bottom:22px;">
-      <label style="font-size:11px;font-weight:700;color:#7a8ba8;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Mot de passe</label>
-      <input id="ldmPass" type="password" placeholder="Mot de passe" autocomplete="new-password"
-        style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(212,175,55,0.2);border-radius:9px;color:#e8edf5;font-family:'Sora',sans-serif;font-size:14px;outline:none;"
-        onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <button onclick="doLogin()" style="width:100%;padding:13px;background:linear-gradient(135deg,#D4AF37,#b8942a);border:none;border-radius:10px;font-family:'Sora',sans-serif;font-size:14px;font-weight:800;color:#0a1628;cursor:pointer;">
-      Se connecter
-    </button>
-    <div style="margin-top:14px;font-size:11px;color:#7a8ba8;">Identifiants geres dans le panneau Admin</div>
-  </div>
-</div>
-
 <div class="header">
   <div class="header-left">
-    <div class="hlogo">LDM</div>
+    <div class="hlogo">📨</div>
     <div>
       <div class="htitle">LDM / MVT Reader</div>
-      <div class="hsub">Extraction des donnees de vol</div>
+      <div class="hsub">Lecture automatique des LDM/MVT — OCR intégré</div>
     </div>
   </div>
   <div class="nav">
-    <a href="index.html">Suivi des vols</a>
-    <a href="admin.html">Admin</a>
-    <a href="ldm.html" class="active">LDM/MVT</a>
+    <a href="index.html">📋 Suivi des vols</a>
+    <a href="admin.html">⚙️ Admin</a>
+    <a href="ldm.html" class="active">📨 LDM/MVT</a>
   </div>
 </div>
 
 <div class="main">
+
+  <!-- STATS -->
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-label">Traites</div></div>
+    <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-label">Documents traités</div></div>
     <div class="stat-card"><div class="stat-val" id="stLDM">0</div><div class="stat-label">LDM</div></div>
     <div class="stat-card"><div class="stat-val" id="stMVT">0</div><div class="stat-label">MVT</div></div>
-    <div class="stat-card"><div class="stat-val" id="stImported">0</div><div class="stat-label">Importes</div></div>
+    <div class="stat-card"><div class="stat-val" id="stImported">0</div><div class="stat-label">Importés</div></div>
   </div>
 
+  <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('image',this)">Image / PDF</button>
-    <button class="tab" onclick="switchTab('text',this)">Coller Texte</button>
-    <button class="tab" onclick="switchTab('gmail',this)">Gmail</button>
+    <button class="tab active" onclick="switchTab('image')">🖼 Upload Image/PDF</button>
+    <button class="tab" onclick="switchTab('text')">📝 Coller Texte</button>
+    <button class="tab" onclick="switchTab('gmail')">📧 Gmail</button>
   </div>
 
+  <!-- ══ TAB IMAGE ══ -->
   <div class="tab-pane active" id="tab-image">
     <div class="card">
-      <div class="card-title">Importer images LDM/MVT <span class="ocr-badge">OCR Local</span></div>
+      <div class="card-title">
+        🖼 Importer des images LDM/MVT
+        <span class="ai-badge" style="background:rgba(0,201,141,0.1);border-color:rgba(0,201,141,0.3);color:var(--green);">OCR Local</span>
+      </div>
+
       <div class="upload-zone" id="uploadZone"
            ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
         <input type="file" id="fileInput" accept="image/*,.pdf" multiple onchange="handleFileSelect(event)">
-        <div class="upload-icon">&#128193;</div>
-        <div class="upload-title">Glisse tes images ici ou clique pour selectionner</div>
-        <div class="upload-sub">OCR lit automatiquement le texte et extrait les donnees LDM/MVT</div>
+        <div class="upload-icon">📁</div>
+        <div class="upload-title">Glisse tes images ici ou clique pour sélectionner</div>
+        <div class="upload-sub">L'IA lit et extrait automatiquement toutes les données du LDM/MVT</div>
         <div class="upload-formats">
-          <span class="fmt-badge">JPG</span><span class="fmt-badge">PNG</span>
-          <span class="fmt-badge">WEBP</span><span class="fmt-badge">PDF</span>
+          <span class="fmt-badge">JPG</span>
+          <span class="fmt-badge">PNG</span>
+          <span class="fmt-badge">WEBP</span>
+          <span class="fmt-badge">PDF</span>
+          <span class="fmt-badge">TIFF</span>
         </div>
       </div>
+
       <div class="file-list" id="fileList"></div>
+
       <div class="btn-row">
-        <button class="btn btn-gold" id="analyzeBtn" onclick="analyzeAll()" disabled>Lire avec OCR</button>
-        <button class="btn btn-outline btn-sm" onclick="clearImages()">Effacer</button>
+        <button class="btn btn-gold" id="analyzeBtn" onclick="analyzeAll()" disabled>
+          🔍 Lire avec OCR
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="clearImages()">🗑 Effacer</button>
         <span class="mono" id="imgStatus"></span>
       </div>
     </div>
   </div>
 
+  <!-- ══ TAB TEXT ══ -->
   <div class="tab-pane" id="tab-text">
     <div class="card">
-      <div class="card-title">Coller le texte LDM/MVT</div>
-      <textarea class="ldm-textarea" id="ldmText" placeholder="Collez ici le texte brut du LDM ou MVT..."></textarea>
+      <div class="card-title">📝 Coller le texte LDM/MVT</div>
+      <textarea class="ldm-textarea" id="ldmText"
+        placeholder="Collez ici le texte brut du LDM ou MVT...
+
+Exemple LDM:
+LDM
+L6212/21.5TCLJ.C16Y144.2/5
+-NKC.144.0/0/5
+-CDG.0/0/0
+SI NKC BAG 87
+
+Exemple MVT:
+MVT
+TK762/15.TCJRI
+AD1450/1605 NKC/CDG
+PAX 142/3"></textarea>
       <div class="btn-row">
-        <button class="btn btn-gold" onclick="parseText()">Extraire les donnees</button>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('ldmText').value=''">Effacer</button>
+        <button class="btn btn-gold" onclick="parseText()">⚡ Extraire les données</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('ldmText').value=''">🗑 Effacer</button>
       </div>
     </div>
   </div>
 
+  <!-- ══ TAB GMAIL ══ -->
   <div class="tab-pane" id="tab-gmail">
     <div class="auth-card">
       <div class="auth-top">
-        <div class="auth-title">Connexion Gmail</div>
+        <div class="auth-title">🔑 Connexion Gmail</div>
         <div class="auth-status">
           <div class="dot" id="authDot"></div>
-          <span id="authTxt">Non connecte</span>
+          <span id="authTxt">Non connecté</span>
         </div>
       </div>
       <div id="authActions">
-        <button class="btn btn-gold" onclick="signIn()">Connecter mon Gmail</button>
+        <button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>
       </div>
       <div class="auth-info">
-        Connecte ton Gmail pour lire automatiquement les emails LDM/MVT.<br>
-        Recherche les emails contenant <code>LDM</code> ou <code>MVT</code> dans les 30 derniers jours.
+        💡 Connecte ton Gmail pour lire automatiquement les emails LDM/MVT.<br>
+        Le système cherche les emails contenant <code>LDM</code> ou <code>MVT</code> dans les 30 derniers jours.
       </div>
     </div>
+
     <div class="status-bar">
       <div class="status-ind">
         <div class="dot" id="sDot"></div>
@@ -245,729 +302,711 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
       <div class="status-right">
         <span class="mono" id="sLast"></span>
-        <button class="btn btn-gold btn-sm" id="readBtn" onclick="readEmails()" disabled>Lire emails</button>
+        <button class="btn btn-gold btn-sm" id="readBtn" onclick="readEmails()" disabled>📨 Lire emails</button>
       </div>
     </div>
   </div>
 
+  <!-- RESULTS -->
   <div id="resultsSection" style="display:none;margin-top:8px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <div style="font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;">
-        Resultats <span id="resCount" style="background:rgba(212,175,55,0.15);color:var(--accent);font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;">0</span>
+        Résultats <span style="background:rgba(212,175,55,0.15);color:var(--accent);font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;" id="resCount">0</span>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="clearResults()">Effacer resultats</button>
+      <button class="btn btn-outline btn-sm" onclick="clearResults()">🗑 Effacer résultats</button>
     </div>
     <div class="result-list" id="resultList"></div>
   </div>
+
 </div>
 <div class="toasts" id="toasts"></div>
 
 <script>
-var FB = {apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
-var COMPANY_MAP = {'L6':'Mauritania Airlines','HC':'Air Senegal','TK':'Turkish Airlines','NT':'Binter','AH':'Air Algerie','KP':'ASKY','AT':'Royal Air Maroc','TU':'Tunisair','AF':'Air France'};
-
-// Table de conversion IATA (3 lettres) -> ICAO (4 lettres)
-// Source: aeroports utilises sur les routes ANAC Mauritanie
-var IATA_TO_ICAO = {
-  'NKC':'GQNO', // Nouakchott Oumtounsy
-  'NDB':'GQPP', // Nouadhibou
-  'ATR':'GQPA', // Atar
-  'TMB':'GQPM', // Tidjikja
-  'KFA':'GQPF', // Kiffa
-  'SEY':'GQNS', // Selibabi
-  'OUZ':'GQNZ', // Zouerate
-  'EMN':'GQNI', // Nema
-  'AEO':'GQNA', // Aioun el Atrouss
-  'DSS':'GOBD', // Dakar Blaise Diagne (Senegal)
-  'DKR':'GOOY', // Dakar Yoff (ancien)
-  'ZIG':'GOGZ', // Ziguinchor
-  'NKT':'GOGS', // Saint-Louis
-  'BXE':'GOTB', // Bakel
-  'TBJ':'DTTJ', // Tabarka (Tunisie)
-  'TUN':'DTTA', // Tunis Carthage
-  'SFA':'DTMB', // Sfax
-  'ALG':'DAAG', // Alger Houari Boumediene
-  'ORN':'DAOO', // Oran Ahmed Ben Bella
-  'CZL':'DABC', // Constantine
-  'AAE':'DABB', // Annaba
-  'TLM':'DAON', // Tlemcen
-  'BSK':'DAUB', // Biskra
-  'CMN':'GMMN', // Casablanca Mohammed V
-  'RAK':'GMMX', // Marrakech
-  'AGA':'GMAD', // Agadir
-  'OZZ':'GMMZ', // Ouarzazate
-  'NDR':'GMMH', // Nador
-  'FEZ':'GMFF', // Fes
-  'RBA':'GMME', // Rabat
-  'TNG':'GMTT', // Tanger
-  'CDG':'LFPG', // Paris Charles de Gaulle
-  'ORY':'LFPO', // Paris Orly
-  'LYS':'LFLL', // Lyon
-  'MRS':'LFML', // Marseille
-  'NCE':'LFMN', // Nice
-  'IST':'LTFM', // Istanbul Nouveau
-  'SAW':'LTFJ', // Istanbul Sabiha
-  'ADD':'HAAB', // Addis Abeba
-  'CAI':'HECA', // Le Caire
-  'LOS':'DNMM', // Lagos
-  'ABV':'DNAA', // Abuja
-  'ACC':'DGAA', // Accra
-  'CKY':'GUCY', // Conakry
-  'BJL':'GBYD', // Banjul
-  'OXB':'GGOV', // Bissau
-  'FNA':'GFLL', // Freetown
-  'ABJ':'DIAP', // Abidjan
-  'COO':'DBBB', // Cotonou
-  'LFW':'DXXX', // Lome
-  'BZV':'FCBB', // Brazzaville
-  'LBV':'FOOL', // Libreville
-  'DLA':'FKKD', // Douala
-  'MLW':'GLMR', // Monrovia
-  'JED':'OEJN', // Djeddah
-  'RUH':'OERK', // Riyad
-  'DXB':'OMDB', // Dubai
-  'DOH':'OTHH', // Doha
+// ══════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════
+const FB = {
+  apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+  authDomain:"anacmr-e05b4.firebaseapp.com",
+  projectId:"anacmr-e05b4",
+  storageBucket:"anacmr-e05b4.firebasestorage.app",
+  messagingSenderId:"857117390430",
+  appId:"1:857117390430:web:0231614b880df3196e26cf"
 };
 
-// Charge la table depuis Firebase (aeroports configures dans admin)
-var _airportTableLoaded = false;
-async function loadAirportTable() {
-  if (_airportTableLoaded) return;
-  try {
-    var fbm = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    var fsm = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    var apps = fbm.getApps();
-    var app = apps.find(function(a){return a.name==='ldm';});
-    if (!app) return;
-    var db = fsm.getFirestore(app);
-    var snap = await fsm.getDoc(fsm.doc(db,'flights','cfg-airports'));
-    if (snap.exists() && snap.data().list) {
-      snap.data().list.forEach(function(ap) {
-        if (ap.iata && ap.icao) IATA_TO_ICAO[ap.iata.toUpperCase()] = ap.icao.toUpperCase();
-      });
-    }
-    _airportTableLoaded = true;
-  } catch(e) { /* utilise la table statique */ }
+const COMPANY_MAP = {
+  'L6':'Mauritania Airlines','HC':'Air Sénégal','TK':'Turkish Airlines',
+  'NT':'Binter','AH':'Air Algérie','KP':'ASKY','AT':'Royal Air Maroc',
+  'TU':'Tunisair','AF':'Air France'
+};
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let pendingFiles  = [];   // { file, dataUrl, name }
+let results       = [];   // parsed results
+let accessToken   = null;
+
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
 }
 
-function iataToIcao(code) {
-  if (!code) return code;
-  var upper = code.trim().toUpperCase();
-  return IATA_TO_ICAO[upper] || upper; // retourne ICAO ou le code original si inconnu
-}
-var CLIENT_ID = '416940058923-28bdevk2c3fk2abihu55ia5391j0g5qf.apps.googleusercontent.com';
-var SCOPES = 'https://www.googleapis.com/auth/gmail.readonly';
-var pendingFiles = [];
-var results = [];
-var accessToken = null;
-
-// ---- LOGIN ----
-window.doLogin = async function() {
-  var user = document.getElementById('ldmUser').value.trim();
-  var pass = document.getElementById('ldmPass').value;
-  var errEl = document.getElementById('loginError');
-  errEl.style.display = 'none';
-  if (!user || !pass) { errEl.textContent='Remplissez tous les champs'; errEl.style.display='block'; return; }
-  if (user === 'DADY' && pass === 'ANACdady') { sessionStorage.setItem('ldm_auth','1'); hideLock(); return; }
-  try {
-    var fbMod = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    var fsMod = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    var apps = fbMod.getApps();
-    var fbApp = apps.find(function(a){return a.name==='lauth';}) || fbMod.initializeApp(FB,'lauth');
-    var db2 = fsMod.getFirestore(fbApp);
-    var ok = false;
-    try {
-      var snap1 = await fsMod.getDoc(fsMod.doc(db2,'config','ldm-access'));
-      if (snap1.exists()) {
-        var d = snap1.data();
-        var ulist = Array.isArray(d.users) ? d.users : [];
-        ok = ulist.some(function(u){return u.username===user && u.password===pass;});
-        if (!ok && d.username) ok = (d.username===user && d.password===pass);
-      }
-    } catch(e2){}
-    if (!ok) {
-      try {
-        var snap2 = await fsMod.getDoc(fsMod.doc(db2,'flights','cfg-auth'));
-        if (snap2.exists()) { var ad=snap2.data(); ok=(ad.username===user && ad.password===pass); }
-      } catch(e3){}
-    }
-    if (ok) { sessionStorage.setItem('ldm_auth','1'); hideLock(); }
-    else { errEl.textContent='Identifiant ou mot de passe incorrect'; errEl.style.display='block'; document.getElementById('ldmPass').value=''; }
-  } catch(e) { errEl.textContent='Erreur reseau — reessayez'; errEl.style.display='block'; }
-}
-window.hideLock = function() {
-  var w = document.getElementById('loginWall');
-  w.style.opacity='0'; w.style.transition='opacity 0.3s';
-  setTimeout(function(){w.style.display='none';},300);
-}
-window.addEventListener('DOMContentLoaded', function(){
-  if (sessionStorage.getItem('ldm_auth')==='1') hideLock();
-  else { setTimeout(function(){document.getElementById('ldmUser').focus();},100); }
-});
-
-// ---- TABS ----
-function switchTab(name, btn) {
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
-  document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('active');});
-  document.getElementById('tab-'+name).classList.add('active');
-  btn.classList.add('active');
-}
-
-// ---- FILE UPLOAD ----
+// ══════════════════════════════════════════
+// FILE UPLOAD
+// ══════════════════════════════════════════
 function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag'); }
 function handleDragLeave(e) { document.getElementById('uploadZone').classList.remove('drag'); }
-function handleDrop(e) { e.preventDefault(); document.getElementById('uploadZone').classList.remove('drag'); addFiles(Array.from(e.dataTransfer.files)); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag');
+  addFiles(Array.from(e.dataTransfer.files));
+}
 function handleFileSelect(e) { addFiles(Array.from(e.target.files)); }
+
 function addFiles(files) {
-  var valid = files.filter(function(f){return f.type.startsWith('image/') || f.type==='application/pdf';});
-  if (!valid.length) { toast('Formats acceptes: JPG, PNG, PDF','warn'); return; }
-  valid.forEach(function(file) {
-    var reader = new FileReader();
-    reader.onload = function(ev) {
-      pendingFiles.push({file:file,dataUrl:ev.target.result,name:file.name,status:'ready'});
+  const valid = files.filter(f => f.type.startsWith('image/') || f.type === 'application/pdf');
+  if (!valid.length) { toast('⚠️ Formats acceptés : images (JPG, PNG...) ou PDF', 'warn'); return; }
+  valid.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const item = { file, dataUrl: e.target.result, name: file.name, status: 'ready' };
+      pendingFiles.push(item);
       renderFileList();
       document.getElementById('analyzeBtn').disabled = false;
     };
     reader.readAsDataURL(file);
   });
 }
-function renderFileList() {
-  var list = document.getElementById('fileList');
-  if (!pendingFiles.length) { list.innerHTML=''; return; }
-  list.innerHTML = pendingFiles.map(function(f,i){
-    var thumb = f.file.type.startsWith('image/')
-      ? '<img class="fi-thumb" src="'+f.dataUrl+'" alt="">'
-      : '<div style="width:40px;height:40px;background:rgba(249,115,22,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--orange);border:1px solid rgba(249,115,22,0.3);">PDF</div>';
-    var sc = f.status==='done'?'ok':f.status==='error'?'err':f.status==='loading'?'loading':'';
-    var st = f.status==='ready'?'Pret':f.status==='loading'?'OCR en cours...':f.status==='done'?'Analyse':'Erreur';
-    return '<div class="file-item" id="fi-'+i+'">'+thumb+
-      '<div class="fi-info"><div class="fi-name">'+esc(f.name)+'</div>'+
-      '<div class="fi-status '+sc+'" id="fi-st-'+i+'">'+st+'</div></div>'+
-      '<button onclick="removePending('+i+')" style="background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:18px;padding:4px;">x</button></div>';
-  }).join('');
-}
-function removePending(i) { pendingFiles.splice(i,1); renderFileList(); if(!pendingFiles.length)document.getElementById('analyzeBtn').disabled=true; }
-function clearImages() { pendingFiles=[];renderFileList();document.getElementById('analyzeBtn').disabled=true;document.getElementById('fileInput').value='';document.getElementById('imgStatus').textContent=''; }
 
-// ---- OCR ----
+function renderFileList() {
+  const list = document.getElementById('fileList');
+  if (!pendingFiles.length) { list.innerHTML = ''; return; }
+  list.innerHTML = pendingFiles.map((f, i) => `
+    <div class="file-item" id="fi-${i}">
+      ${f.file.type.startsWith('image/') ? `<img class="fi-thumb" src="${f.dataUrl}" alt="">` : '<div style="width:40px;height:40px;background:rgba(249,115,22,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(249,115,22,0.3);">📄</div>'}
+      <div class="fi-info">
+        <div class="fi-name">${esc(f.name)}</div>
+        <div class="fi-status ${f.status === 'done' ? 'ok' : f.status === 'error' ? 'err' : f.status === 'loading' ? 'loading' : ''}" id="fi-st-${i}">
+          ${f.status === 'ready' ? 'Prêt à analyser' : f.status === 'loading' ? '⏳ Analyse en cours...' : f.status === 'done' ? '✓ Analysé' : '❌ Erreur'}
+        </div>
+      </div>
+      <button onclick="removePending(${i})" style="background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:4px;">×</button>
+    </div>
+  `).join('');
+}
+
+function removePending(i) {
+  pendingFiles.splice(i, 1);
+  renderFileList();
+  if (!pendingFiles.length) document.getElementById('analyzeBtn').disabled = true;
+}
+
+function clearImages() {
+  pendingFiles = [];
+  renderFileList();
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('imgStatus').textContent = '';
+}
+
+// ══════════════════════════════════════════
+// OCR — Tesseract.js (local, gratuit, sans clé)
+// ══════════════════════════════════════════
 async function analyzeAll() {
-  var btn = document.getElementById('analyzeBtn');
+  const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
-  var done = 0;
-  for (var i=0; i<pendingFiles.length; i++) {
-    var f = pendingFiles[i];
+  document.getElementById('imgStatus').textContent = `0 / ${pendingFiles.length} traité(s)`;
+
+  let done = 0;
+  for (let i = 0; i < pendingFiles.length; i++) {
+    const f = pendingFiles[i];
     pendingFiles[i].status = 'loading';
     renderFileList();
-    btn.innerHTML = '<span class="spin"></span> OCR '+(i+1)+'/'+pendingFiles.length;
-    var idx = i;
+
+    // Live progress in status
+    const setProgress = (pct) => {
+      document.getElementById('imgStatus').textContent =
+        `📄 ${f.name} — OCR ${pct}%  (${done}/${pendingFiles.length} terminé)`;
+      const el = document.getElementById(`fi-st-${i}`);
+      if (el) { el.textContent = `⏳ Lecture OCR… ${pct}%`; el.className = 'fi-status loading'; }
+    };
+
     try {
-      var text = await runOCR(f.dataUrl, function(pct){
-        var el = document.getElementById('fi-st-'+idx);
-        if (el) { el.textContent='OCR '+pct+'%'; el.className='fi-status loading'; }
-        document.getElementById('imgStatus').textContent='OCR '+pct+'% ('+done+'/'+pendingFiles.length+')';
-      });
-      var today = new Date().toISOString().split('T')[0];
-      var parsed = extractFields(text, today);
-      var up = text.toUpperCase();
-      var docType = (up.indexOf('MVT')>=0 && up.indexOf('LDM')<0) ? 'MVT' : 'LDM';
+      btn.innerHTML = `<span class="spin"></span> OCR ${i+1}/${pendingFiles.length}…`;
+      const text = await runOCR(f.dataUrl, setProgress);
+      const today = new Date().toISOString().split('T')[0];
+      const parsed = extractFields(text, today);
+      // Detect LDM vs MVT from OCR text
+      const up = text.toUpperCase();
+      const docType = (up.includes('MVT') && !up.includes('LDM')) ? 'MVT' : 'LDM';
+      parsed.confidence = scoreConfidence(parsed);
+
       pendingFiles[i].status = 'done';
-      results.push({id:Date.now()+'_'+i,source:'image',docType:docType,fileName:f.name,dataUrl:f.dataUrl,rawText:text.slice(0,800),parsed:parsed,_imported:false});
+      results.push({
+        id: Date.now() + '_' + Math.random(),
+        source: 'image',
+        docType,
+        fileName: f.name,
+        dataUrl: f.dataUrl,
+        rawText: text.slice(0, 1000),
+        parsed
+      });
       done++;
-      toast(f.name+' lu','ok');
-    } catch(err) {
-      pendingFiles[i].status='error';
-      toast(f.name+': '+err.message,'err');
+      toast(`✅ ${f.name} lu`, 'ok');
+    } catch (e) {
+      pendingFiles[i].status = 'error';
+      toast(`❌ ${f.name} : ${e.message}`, 'err');
     }
     renderFileList();
   }
-  document.getElementById('imgStatus').textContent=done+'/'+pendingFiles.length+' traite(s)';
-  btn.disabled=false; btn.innerHTML='Lire avec OCR';
-  await markDuplicates(); renderResults(); updateStats();
+
+  document.getElementById('imgStatus').textContent = `${done} / ${pendingFiles.length} traité(s)`;
+  btn.disabled = false;
+  btn.innerHTML = '🔍 Lire avec OCR';
+  markDuplicates();
+  renderResults();
+  updateStats();
 }
+
 async function runOCR(dataUrl, onProgress) {
-  var worker = await Tesseract.createWorker('eng', 1, {
-    logger: function(m){ if(m.status==='recognizing text') onProgress(Math.round(m.progress*100)); }
+  const worker = await Tesseract.createWorker('eng', 1, {
+    logger: m => { if (m.status === 'recognizing text') onProgress(Math.round(m.progress * 100)); }
   });
-  var result = await worker.recognize(dataUrl);
+  const { data: { text } } = await worker.recognize(dataUrl);
   await worker.terminate();
-  return result.data.text;
+  return text;
 }
 
-// ---- TEXT PARSER ----
-async function parseText() {
-  var text = document.getElementById('ldmText').value.trim();
-  if (!text) { toast('Collez du texte LDM/MVT','warn'); return; }
-  var today = new Date().toISOString().split('T')[0];
-  var parsed = extractFields(text, today);
-  var up = text.toUpperCase();
-  var docType = (up.indexOf('MVT')>=0 && up.indexOf('LDM')<0) ? 'MVT' : 'LDM';
-  results.push({id:Date.now()+'_txt',source:'text',docType:docType,fileName:'Texte colle',rawText:text,parsed:parsed,_imported:false});
-  await markDuplicates(); renderResults(); updateStats();
-  toast('Donnees extraites','ok');
+function scoreConfidence(p) {
+  if (p.flightNumber && p.from && p.to && p.date) return 'haute';
+  if (p.flightNumber && (p.from || p.to)) return 'moyenne';
+  return 'faible';
 }
 
-// ---- EXTRACT FIELDS ----
-// LDM: line1 = VOL/DAY.REG...
-//   line2 = -NKC.A/B/C/D  -> 4 champs: pax=A+B+C, bebes=D
-//           -NKC.A/B/C    -> 3 champs: pax=A+B,   bebes=C
-//   stopover = 2 station lines: pax=sum all sauf dernier de chaque, bebes=sum derniers
-// MVT: line1 = VOL/DAY.REG  somewhere below: PAX T -> pax=T, bebes=0
+
+
+// ══════════════════════════════════════════
+// TEXT PARSER
+// ══════════════════════════════════════════
+function parseText() {
+  const text = document.getElementById('ldmText').value.trim();
+  if (!text) { toast('⚠️ Collez du texte LDM/MVT d\'abord', 'warn'); return; }
+
+  const parsed = extractFields(text, new Date().toISOString().split('T')[0]);
+  const docType = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
+
+  results.push({
+    id: Date.now() + '_txt',
+    source: 'text',
+    docType,
+    fileName: 'Texte collé',
+    rawText: text,
+    parsed,
+    _imported: false
+  });
+
+  markDuplicates();
+  renderResults();
+  updateStats();
+  toast('✅ Données extraites', 'ok');
+}
+
 function extractFields(text, dateReceived) {
-  var p = { passengers:0, babies:0 };
-  var raw   = text.replace(/\r/g,'');
-  var lines = raw.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+  const p = { confidence: 'haute' };
+  const lines = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
 
-  // ---------- 1. NUMERO DE VOL + DATE + IMMATRICULATION ----------
-  // Format LDM: L6212/21.5TCLJ.C16Y144.2/5
-  // Format MVT: TK762/15.TCJRI  (tout sur une ligne)
-  var PATS = [
-    /^([A-Z]{1,2}\d{2,4})\/(\d{1,2})\.([A-Z0-9\-]{4,8})\./,
-    /^([A-Z]{1,2}\d{2,4})\/(\d{1,2})\.([A-Z0-9\-]{4,8})/,
-    /^([A-Z]{1,2}\d{2,4})\/(\d{1,2})/
-  ];
-  var flIdx = -1;
-  for (var ri=0; ri<PATS.length && flIdx<0; ri++) {
-    for (var li=0; li<lines.length; li++) {
-      if (PATS[ri].test(lines[li])) { flIdx=li; break; }
-    }
-  }
-  if (flIdx >= 0) {
-    var m = lines[flIdx].match(PATS[0]) || lines[flIdx].match(PATS[1]) || lines[flIdx].match(PATS[2]);
-    if (m) {
-      p.flightNumber = m[1];
-      var day = m[2]; if (day.length===1) day='0'+day;
-      if (dateReceived) { var pts=dateReceived.split('-'); p.date=pts[0]+'-'+pts[1]+'-'+day; }
-      if (m[3]) p.registration = m[3].replace(/[-.\s]/g,'').toUpperCase();
+  // ── N° vol + immat + jour
+  const flightRx = /^([A-Z]{1,2}\d{2,4})\/(\d{1,2})\.([A-Z0-9]{4,8})\./;
+  const flLine = lines.find(l => flightRx.test(l));
+  if (flLine) {
+    const m = flLine.match(flightRx);
+    p.flightNumber = m[1];
+    p.registration = m[3].replace(/[-.\s]/g, '');
+    const day = m[2].padStart(2, '0');
+    if (dateReceived) {
+      const [yr, mo] = dateReceived.split('-');
+      p.date = `${yr}-${mo}-${day}`;
     }
   }
 
-  // Fallback date
-  if (!p.date && dateReceived) p.date = dateReceived;
-
-  // Compagnie
-  if (p.flightNumber) {
-    var pfx = p.flightNumber.slice(0,2);
-    p.company = {'L6':'Mauritania Airlines','HC':'Air Senegal','TK':'Turkish Airlines','NT':'Binter','AH':'Air Algerie','KP':'ASKY','AT':'Royal Air Maroc','TU':'Tunisair','AF':'Air France'}[pfx] || pfx;
-  }
-
-  // ---------- 2. DETECTER LDM vs MVT ----------
-  var upperRaw = raw.toUpperCase();
-  var isMVT = (upperRaw.indexOf('MVT') >= 0 && upperRaw.indexOf('LDM') < 0);
-
-  if (isMVT) {
-    // ---- MVT: extraction PAX ----
-    // Format unique: PX colle avec le nombre, ex: PX50
-    var paxMVT = null;
-    for (var i=0; i<lines.length; i++) {
-      var pm = lines[i].toUpperCase().trim().match(/^PX(\d+)$/);
-      if (pm) { paxMVT = parseInt(pm[1]); break; }
-    }
-    if (paxMVT !== null) { p.passengers = paxMVT; p.babies = 0; }
-
-    // ---- MVT: extraction ROUTE ----
-    // Format ligne vol: NT1805/26.ECNPU.NKC
-    //   -> NKC est la destination (derniere ville sur la ligne vol)
-    // Format ligne AD:  AD260128/260138 EA0317 LPA
-    //   -> LPA est l'origine (dernier code IATA 3 lettres sur cette ligne)
-    // Logique: si NKC est dans la ligne vol ET une autre ville dans ligne AD -> ARR (LPA->NKC)
-    //          si NKC absent de la ligne vol -> cherche slash NKC/CDG ou CDG/NKC
-    var BASE = 'NKC';
-    var volLine = flIdx >= 0 ? lines[flIdx] : '';
-    // Villes sur la ligne du vol (apres le . final)
-    var volCities = [];
-    var volParts = volLine.split('.');
-    for (var vi=0; vi<volParts.length; vi++) {
-      var part = volParts[vi].trim().toUpperCase();
-      if (/^[A-Z]{3,4}$/.test(part)) volCities.push(part);
-    }
-    // Ligne AD: cherche la derniere ville IATA (3 lettres) = origine
-    var adLine = null;
-    for (var i=0; i<lines.length; i++) {
-      if (/^AD\d/.test(lines[i].toUpperCase())) { adLine = lines[i]; break; }
-    }
-    var adCities = [];
-    if (adLine) {
-      var adTokens = adLine.split(/\s+/);
-      for (var ai=0; ai<adTokens.length; ai++) {
-        var tok = adTokens[ai].trim().toUpperCase();
-        if (/^[A-Z]{3}$/.test(tok)) adCities.push(tok);
-      }
-    }
-    // Determine route
-    var nkcInVol = volCities.indexOf(BASE) >= 0;
-    var nkcInAd  = adCities.indexOf(BASE) >= 0;
-    if (nkcInVol && adCities.length > 0 && !nkcInAd) {
-      // NKC dans ligne vol = destination, ville AD = origine -> ARR
-      p.from = adCities[adCities.length-1]; p.to = BASE; p.type = 'ARR';
-    } else if (!nkcInVol && adCities.indexOf(BASE) >= 0) {
-      // NKC dans ligne AD = origine -> DEP depuis NKC
-      var dest = volCities.filter(function(c){return c!==BASE;})[0] || adCities.filter(function(c){return c!==BASE;})[0] || '';
-      p.from = BASE; p.to = dest; p.type = 'DEP';
-    } else if (nkcInVol && nkcInAd) {
-      // NKC dans les deux = transit ou erreur, garde DEP par defaut
-      var other = adCities.filter(function(c){return c!==BASE;})[0] || '';
-      p.from = BASE; p.to = other; p.type = 'DEP';
-    } else {
-      // Fallback: cherche slash NKC/CDG
-      var rm = raw.match(/\b([A-Z]{3})\/([A-Z]{3})\b/);
-      if (rm) {
-        if (rm[1]===BASE)       { p.from=BASE; p.to=rm[2]; p.type='DEP'; }
-        else if (rm[2]===BASE)  { p.from=rm[1]; p.to=BASE; p.type='ARR'; }
-        else                    { p.from=rm[1]; p.to=rm[2]; p.type='TRANSIT'; }
-      } else {
-        p.from=''; p.to=''; p.type='DEP';
-      }
-    }
-
-  } else {
-    // ---- LDM: lignes de stations -NKC.A/B/C/D ----
-    // Trouve toutes les lignes qui commencent par -IATA.chiffres
-    var stationLines = [];
-    for (var i=0; i<lines.length; i++) {
-      if (/^-[A-Z]{2,4}[.\/ ]/.test(lines[i])) {
-        var st = lines[i].match(/^-([A-Z]{2,4})/);
-        var nums = lines[i].match(/(\d+(?:\/\d+)+)/);
-        if (st && nums) {
-          var fields = nums[1].split('/').map(Number);
-          stationLines.push({ city: st[1], fields: fields });
+  // MVT style: TK762/15.TCJRI
+  if (!p.flightNumber) {
+    const mvtFl = lines.find(l => /^[A-Z]{2}\d{3,4}\/\d{1,2}/.test(l));
+    if (mvtFl) {
+      const m = mvtFl.match(/^([A-Z]{2}\d{3,4})\/(\d{1,2})\.?([A-Z0-9]{4,8})?/);
+      if (m) {
+        p.flightNumber = m[1];
+        if (m[3]) p.registration = m[3].replace(/[-.\s]/g, '');
+        const day = m[2].padStart(2, '0');
+        if (dateReceived) {
+          const [yr, mo] = dateReceived.split('-');
+          p.date = `${yr}-${mo}-${day}`;
         }
       }
     }
-
-    // Additionne PAX et bebes de toutes les stations
-    var totalPax = 0, totalBabies = 0;
-    stationLines.forEach(function(st) {
-      var f = st.fields;
-      if (f.length >= 4) {
-        // 4 champs: A/B/C/D -> pax=A+B+C, bebes=D
-        totalPax   += f[0] + f[1] + f[2];
-        totalBabies += f[f.length - 1];
-      } else if (f.length === 3) {
-        // 3 champs: A/B/C -> pax=A+B, bebes=C
-        totalPax   += f[0] + f[1];
-        totalBabies += f[2];
-      } else if (f.length === 2) {
-        // 2 champs: A/B -> pax=A, bebes=B
-        totalPax   += f[0];
-        totalBabies += f[1];
-      } else if (f.length === 1) {
-        totalPax += f[0];
-      }
-    });
-
-    p.passengers = totalPax;
-    p.babies     = totalBabies;
-
-    // Route depuis les stations
-    var BASE = 'NKC';
-    var cities = stationLines.map(function(s){return s.city;});
-    var others = cities.filter(function(c){return c !== BASE;});
-    var nkcPos = cities.indexOf(BASE);
-
-    if (others.length === 0) {
-      p.from = BASE; p.to = BASE; p.type = 'DEP';
-    } else if (cities.length === 1) {
-      if (cities[0] === BASE) { p.from = BASE; p.to = ''; p.type = 'DEP'; }
-      else { p.from = BASE; p.to = cities[0]; p.type = 'DEP'; }
-    } else if (nkcPos === 0) {
-      // NKC en premier: depart NKC
-      p.from = BASE; p.to = others[others.length-1]; p.type = 'DEP';
-      if (others.length > 1) p.stopover = others[0];
-    } else if (nkcPos === cities.length - 1) {
-      // NKC en dernier: arrivee NKC
-      p.from = others[0]; p.to = BASE; p.type = 'ARR';
-      if (others.length > 1) p.stopover = others[others.length-2];
-    } else if (nkcPos > 0) {
-      // NKC au milieu: transit
-      p.from = cities[0]; p.stopover = BASE; p.to = cities[cities.length-1]; p.type = 'TRANSIT';
-    } else {
-      // Pas de NKC explicite
-      p.from = BASE; p.to = others[others.length-1]; p.type = 'DEP';
-      if (others.length > 1) p.stopover = others[0];
-    }
-
-    // Donnees escale separees (premiere ville non-NKC si stopover)
-    if (p.stopover && stationLines.length >= 2) {
-      var stopSt = stationLines.find(function(s){return s.city === p.stopover;});
-      if (stopSt) {
-        var f = stopSt.fields;
-        if (f.length >= 4)      { p.stopoverPax = f[0]+f[1]+f[2]; p.stopoverBabies = f[f.length-1]; }
-        else if (f.length === 3) { p.stopoverPax = f[0]+f[1];      p.stopoverBabies = f[2]; }
-        else if (f.length === 2) { p.stopoverPax = f[0];           p.stopoverBabies = f[1]; }
-      }
-    }
   }
 
-  // Route MVT: geree dans le bloc isMVT ci-dessus
+  // ── Compagnie
+  if (p.flightNumber) {
+    const pfx = p.flightNumber.slice(0, 2);
+    p.company = COMPANY_MAP[pfx] || pfx;
+  }
 
-  // Confiance
-  var score = (p.flightNumber?3:0)+(p.date?2:0)+(p.from&&p.to?2:(p.from||p.to?1:0))+(p.passengers>0?1:0)+(p.registration?1:0);
-  p.confidence = score>=7?'haute':score>=4?'moyenne':'faible';
+  // ── Route (stations)
+  const BASE = 'NKC';
+  const routeLines = lines.filter(l => /^-[A-Z]{2,4}[./]/.test(l));
+  const stations = routeLines.map(l => l.match(/^-([A-Z]{2,4})/)?.[1]).filter(Boolean);
+
+  // MVT route: AD1450/1605 NKC/CDG
+  if (!stations.length) {
+    const mvtRoute = text.match(/[A-Z]{2}\d{4}\/\d{4}\s+([A-Z]{3})\/([A-Z]{3})/);
+    if (mvtRoute) { stations.push(mvtRoute[1]); stations.push(mvtRoute[2]); }
+  }
+
+  // SI stations
+  const siRx = /SI\s+([A-Z]{2,4})\s+BAG/gi;
+  let siM; const siStations = [];
+  while ((siM = siRx.exec(text)) !== null) siStations.push(siM[1]);
+
+  const allSt = [...new Set([...stations, ...siStations])];
+  const otherSt = allSt.filter(s => s !== BASE);
+
+  if (otherSt.length >= 2) {
+    if (allSt.includes(BASE)) {
+      p.from = otherSt[0]; p.to = otherSt[otherSt.length - 1];
+      p.stopover = BASE; p.type = 'TRANSIT';
+    } else {
+      p.from = BASE; p.stopover = otherSt[0];
+      p.to = otherSt[otherSt.length - 1]; p.type = 'DEP';
+    }
+  } else if (allSt.includes(BASE)) {
+    p.from = otherSt[0] || ''; p.to = BASE; p.type = 'ARR';
+  } else {
+    p.from = BASE; p.to = otherSt[0] || ''; p.type = 'DEP';
+  }
+
+  // ── PAX + Bébés (somme toutes stations)
+  let totalPax = 0, totalBabies = 0, found = false;
+  routeLines.forEach(line => {
+    const nm = line.match(/\.(\d+(?:\/\d+)+)/);
+    if (!nm) return;
+    const nums = nm[1].split('/').map(Number);
+    if (nums.length >= 2) {
+      totalBabies += nums[nums.length - 1];
+      totalPax    += nums.slice(0, -1).reduce((a, b) => a + b, 0);
+      found = true;
+    }
+  });
+  if (!found) {
+    const paxM = text.match(/PAX[\/\s]+(\d+)(?:\/(\d+))?/i);
+    if (paxM) { totalPax = parseInt(paxM[1]); totalBabies = paxM[2] ? parseInt(paxM[2]) : 0; }
+  }
+  p.passengers = totalPax;
+  p.babies = totalBabies;
+
+  // ── Bagages
+  let maxBags = 0;
+  const si2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi;
+  let s2;
+  while ((s2 = si2.exec(text)) !== null) maxBags = Math.max(maxBags, parseInt(s2[1]) || 0);
+  p.bags = maxBags;
+
+  if (!p.flightNumber) p.confidence = 'faible';
+  else if (!p.from || !p.to) p.confidence = 'moyenne';
+
   return p;
 }
-// ---- RENDER RESULTS ----
+
+// ══════════════════════════════════════════
+// RENDER RESULTS
+// ══════════════════════════════════════════
 function renderResults() {
-  var sec=document.getElementById('resultsSection');
-  var list=document.getElementById('resultList');
-  document.getElementById('resCount').textContent=results.length;
-  if(!results.length){sec.style.display='none';return;}
-  sec.style.display='block';
-  list.innerHTML=results.map(function(r,i){
-    var p=r.parsed||{};
-    var conf=p.confidence||'haute';
-    var cc=conf==='haute'?'conf-h':conf==='moyenne'?'conf-m':'conf-l';
-    var ct=conf==='haute'?'Haute':conf==='moyenne'?'Moyenne':'Faible';
-    var title=p.flightNumber?p.flightNumber+' — '+(p.from||'?')+' > '+(p.to||'?'):r.fileName;
-    var sub=[p.company,p.date,p.registration].filter(Boolean).join(' - ');
-    var bc=r.source==='image'?'badge-img':(r.docType==='MVT'?'badge-mvt':'badge-ldm');
-    var bl=r.source==='image'?'IMG':r.docType;
-    var stopF=p.stopover?
-      '<div class="pf"><label>Escale</label><input id="r'+i+'-sw" value="'+esc(p.stopover||'')+'" oninput="this.value=this.value.toUpperCase()"></div>'+
-      '<div class="pf"><label>PAX escale</label><input type="number" id="r'+i+'-spx" value="'+(p.stopoverPax||0)+'" min="0"></div>'+
-      '<div class="pf"><label>Bebes escale</label><input type="number" id="r'+i+'-sbb" value="'+(p.stopoverBabies||0)+'" min="0"></div>':'';
-    var imgP=r.source==='image'?'<img class="img-prev" src="'+r.dataUrl+'" alt="">':'';
-    var rawP=r.rawText?'<div class="raw-pre">'+esc(r.rawText.slice(0,500))+'</div>':'';
-    var act=r._imported
-      ?'<span style="color:var(--green);font-size:13px;font-weight:600;">Deja importe</span>'
-      :'<button class="btn btn-green" onclick="importResult('+i+')">Importer dans le systeme</button>';
-    return '<div class="result-card'+(r._imported?' imported':'')+'" id="rc-'+i+'">'+
-      '<div class="result-hdr" onclick="toggleResult('+i+')">'+
-      '<span class="rtype '+bc+'">'+bl+'</span>'+
-      '<div class="result-meta"><div class="result-title">'+esc(title)+'</div><div class="result-sub">'+esc(sub)+'</div></div>'+
-      '<span class="conf '+cc+'">'+ct+'</span>'+
-      (r._imported?'<span class="st-ok">Importe</span>':'')+
-      '<span class="chv" id="chv-'+i+'">&#9660;</span></div>'+
-      '<div class="result-body" id="rb-'+i+'">'+imgP+rawP+
-      '<div class="parsed-sec"><div class="parsed-lbl">Donnees extraites — verifiez et corrigez si necessaire</div>'+
-      '<div class="pgrid">'+
-      '<div class="pf"><label>N Vol</label><input id="r'+i+'-fn" value="'+esc(p.flightNumber||'')+'" oninput="this.value=this.value.toUpperCase()"></div>'+
-      '<div class="pf"><label>Immat</label><input id="r'+i+'-rg" value="'+esc(p.registration||'')+'" oninput="this.value=this.value.toUpperCase()"></div>'+
-      '<div class="pf"><label>Date</label><input type="date" id="r'+i+'-dt" value="'+(p.date||'')+'"></div>'+
-      '<div class="pf"><label>Compagnie</label><input id="r'+i+'-co" value="'+esc(p.company||'')+'"></div>'+
-      '<div class="pf"><label>Type</label><select id="r'+i+'-ty">'+
-        '<option value="DEP"'+(p.type==='DEP'?' selected':'')+'>Depart</option>'+
-        '<option value="ARR"'+(p.type==='ARR'?' selected':'')+'>Arrivee</option>'+
-        '<option value="TRANSIT"'+(p.type==='TRANSIT'?' selected':'')+'>Transit</option>'+
-      '</select></div>'+
-      '<div class="pf"><label>De (IATA)</label><input id="r'+i+'-fr" value="'+esc(p.from||'')+'" oninput="this.value=this.value.toUpperCase()"><div style="font-size:10px;color:var(--dim);margin-top:3px;">ICAO: '+iataToIcao(p.from||'')+'</div></div>'+
-      '<div class="pf"><label>A (IATA)</label><input id="r'+i+'-to" value="'+esc(p.to||'')+'" oninput="this.value=this.value.toUpperCase()"><div style="font-size:10px;color:var(--dim);margin-top:3px;">ICAO: '+iataToIcao(p.to||'')+'</div></div>'+
-      '<div class="pf"><label>PAX</label><input type="number" id="r'+i+'-px" value="'+(p.passengers||0)+'" min="0"></div>'+
-      '<div class="pf"><label>Bebes</label><input type="number" id="r'+i+'-bb" value="'+(p.babies||0)+'" min="0"></div>'+
-      stopF+
-      '</div>'+
-      '<div class="act-row" id="ra-'+i+'">'+act+
-      '<button class="btn btn-outline btn-sm" onclick="removeResult('+i+')">Supprimer</button></div>'+
-      '</div></div></div>';
+  const section = document.getElementById('resultsSection');
+  const list    = document.getElementById('resultList');
+  document.getElementById('resCount').textContent = results.length;
+
+  if (!results.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  list.innerHTML = results.map((r, i) => {
+    const p   = r.parsed || {};
+    const imp = r._imported;
+    const conf = p.confidence || 'haute';
+    const confClass = conf === 'haute' ? 'conf-high' : conf === 'moyenne' ? 'conf-med' : 'conf-low';
+    const confLabel = conf === 'haute' ? '✓ Haute confiance' : conf === 'moyenne' ? '~ Moyenne' : '⚠ Faible';
+
+    const title = p.flightNumber
+      ? `${p.flightNumber} — ${p.from || '?'} → ${p.to || '?'}`
+      : r.fileName;
+    const sub = [p.company, p.date, p.registration].filter(Boolean).join(' · ');
+
+    const badgeClass = r.source === 'image' ? 'badge-img' : `badge-${r.docType?.toLowerCase() || 'ldm'}`;
+    const badgeLabel = r.source === 'image' ? '📷 IMG' : r.docType;
+
+    return `
+    <div class="result-card ${imp ? 'imported' : ''}" id="rc-${i}">
+      <div class="result-hdr" onclick="toggleResult(${i})">
+        <span class="result-type ${badgeClass}">${badgeLabel}</span>
+        <div class="result-meta">
+          <div class="result-title">${esc(title)}</div>
+          <div class="result-sub">${esc(sub || r.fileName)}</div>
+        </div>
+        <span class="confidence ${confClass}">${confLabel}</span>
+        ${imp ? '<span class="st-badge st-ok">✓ Importé</span>' : ''}
+        <span class="chevron" id="chv-${i}">▼</span>
+      </div>
+      <div class="result-body" id="rb-${i}">
+        ${r.source === 'image' ? `<img class="img-thumb-prev" src="${r.dataUrl}" alt="${esc(r.fileName)}">` : ''}
+        ${r.rawText ? `<div class="raw-preview">${esc(r.rawText.slice(0, 600))}</div>` : ''}
+        <div class="parsed-sec">
+          <div class="parsed-lbl">
+            ✦ Données extraites
+            ${r.source === 'image' ? '<span class="ai-badge" style="background:rgba(0,201,141,0.1);border-color:rgba(0,201,141,0.3);color:var(--green);">OCR Local</span>' : ''}
+          </div>
+          <div class="pgrid">
+            <div class="pf"><label>N° Vol</label><input id="r${i}-fn" value="${esc(p.flightNumber||'')}" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Immatriculation</label><input id="r${i}-rg" value="${esc(p.registration||'')}" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Date</label><input type="date" id="r${i}-dt" value="${p.date||''}"></div>
+            <div class="pf"><label>Compagnie</label><input id="r${i}-co" value="${esc(p.company||'')}"></div>
+            <div class="pf">
+              <label>Type</label>
+              <select id="r${i}-ty">
+                <option value="DEP" ${p.type==='DEP'?'selected':''}>Départ</option>
+                <option value="ARR" ${p.type==='ARR'?'selected':''}>Arrivée</option>
+                <option value="TRANSIT" ${p.type==='TRANSIT'?'selected':''}>Transit</option>
+              </select>
+            </div>
+            <div class="pf"><label>De</label><input id="r${i}-fr" value="${esc(p.from||'')}" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>À</label><input id="r${i}-to" value="${esc(p.to||'')}" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>PAX</label><input type="number" id="r${i}-px" value="${p.passengers||0}" min="0"></div>
+            <div class="pf"><label>Bébés</label><input type="number" id="r${i}-bb" value="${p.babies||0}" min="0"></div>
+            ${p.stopover ? `
+            <div class="pf"><label>Escale</label><input id="r${i}-sw" value="${esc(p.stopover||'')}" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>PAX escale</label><input type="number" id="r${i}-spx" value="${p.stopoverPax||0}" min="0"></div>
+            <div class="pf"><label>Bébés escale</label><input type="number" id="r${i}-sbb" value="${p.stopoverBabies||0}" min="0"></div>
+            ` : ''}
+          </div>
+          <div class="act-row" id="ra-${i}">
+            ${imp
+              ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé</span>'
+              : `<button class="btn btn-green" onclick="importResult(${i})">⬆️ Importer dans le système</button>`
+            }
+            <button class="btn btn-outline btn-sm" onclick="removeResult(${i})">🗑 Supprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
   }).join('');
 }
-function toggleResult(i){var b=document.getElementById('rb-'+i);var c=document.getElementById('chv-'+i);if(!b)return;var open=b.style.display==='block';b.style.display=open?'none':'block';if(c)c.classList.toggle('open',!open);}
-function removeResult(i){results.splice(i,1);renderResults();updateStats();}
-function clearResults(){results=[];renderResults();updateStats();}
 
-// ---- IMPORT FIREBASE ----
+function toggleResult(i) {
+  const body = document.getElementById(`rb-${i}`);
+  const chv  = document.getElementById(`chv-${i}`);
+  const open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  chv.classList.toggle('open', !open);
+}
+
+function removeResult(i) {
+  results.splice(i, 1);
+  renderResults();
+  updateStats();
+}
+
+function clearResults() {
+  results = [];
+  renderResults();
+  updateStats();
+}
+
+// ══════════════════════════════════════════
+// IMPORT TO FIREBASE
+// ══════════════════════════════════════════
 async function importResult(i, force) {
-  var g=function(id){return (document.getElementById(id)||{}).value||'';};
-  var fn=g('r'+i+'-fn').trim().toUpperCase();
-  var rg=g('r'+i+'-rg').trim().toUpperCase().replace(/[-.\s]/g,'');
-  var dt=g('r'+i+'-dt');
-  var co=g('r'+i+'-co').trim();
-  var ty=g('r'+i+'-ty')||'DEP';
-  var fr=g('r'+i+'-fr').trim().toUpperCase();
-  var to=g('r'+i+'-to').trim().toUpperCase();
-  var px=parseInt(g('r'+i+'-px'))||0;
-  var bb=parseInt(g('r'+i+'-bb'))||0;
-  var sw=g('r'+i+'-sw').trim().toUpperCase();
-  var spx=parseInt(g('r'+i+'-spx'))||0;
-  var sbb=parseInt(g('r'+i+'-sbb'))||0;
-  if(!fn||!dt){toast('N de vol et date obligatoires','warn');return;}
-  var btnEl=document.querySelector('#ra-'+i+' .btn-green');
-  if(btnEl){btnEl.disabled=true;btnEl.innerHTML='<span class="spin"></span>';}
+  const fn  = document.getElementById(`r${i}-fn`)?.value.trim().toUpperCase() || '';
+  const rg  = document.getElementById(`r${i}-rg`)?.value.trim().toUpperCase().replace(/[-.\s]/g,'') || '';
+  const dt  = document.getElementById(`r${i}-dt`)?.value || '';
+  const co  = document.getElementById(`r${i}-co`)?.value.trim() || '';
+  const ty  = document.getElementById(`r${i}-ty`)?.value || 'DEP';
+  const fr  = document.getElementById(`r${i}-fr`)?.value.trim().toUpperCase() || '';
+  const to  = document.getElementById(`r${i}-to`)?.value.trim().toUpperCase() || '';
+  const px  = parseInt(document.getElementById(`r${i}-px`)?.value) || 0;
+  const bb  = parseInt(document.getElementById(`r${i}-bb`)?.value) || 0;
+  const sw  = document.getElementById(`r${i}-sw`)?.value.trim().toUpperCase() || '';
+  const spx = parseInt(document.getElementById(`r${i}-spx`)?.value) || 0;
+  const sbb = parseInt(document.getElementById(`r${i}-sbb`)?.value) || 0;
+
+  if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires', 'warn'); return; }
+
+  // Anti-duplicate
+  const fp = `${fn}|${dt}|${rg}`;
+  const imported = getImported();
+  if (!force && imported.has(fp)) {
+    const prev = imported.get(fp);
+    document.getElementById(`ra-${i}`).innerHTML = `
+      <div class="dup-box">⚠️ Vol ${fn} du ${dt} déjà importé le ${new Date(prev.at).toLocaleDateString('fr-FR')}</div>
+      <button class="btn btn-outline btn-sm" onclick="importResult(${i},true)">Forcer quand même</button>
+    `;
+    return;
+  }
+
+  const btn = document.querySelector(`#ra-${i} .btn-green`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>'; }
+
   try {
-    var fbm=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    var fsm=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    var apps=fbm.getApps();
-    var app=apps.find(function(a){return a.name==='ldm';})||fbm.initializeApp(FB,'ldm');
-    var db=fsm.getFirestore(app);
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const apps = getApps();
+    const app  = apps.find(a => a.name === 'ldm') || initializeApp(FB, 'ldm');
+    const db   = getFirestore(app);
 
-    // Verifie dans Firebase si le vol existe encore
-    if (!force) {
-      var q=fsm.query(fsm.collection(db,'flights'),fsm.where('flightNumber','==',fn),fsm.where('date','==',dt));
-      var chk=await fsm.getDocs(q);
-      if (!chk.empty) {
-        if(btnEl){btnEl.disabled=false;btnEl.innerHTML='Importer dans le systeme';}
-        document.getElementById('ra-'+i).innerHTML=
-          '<div class="dup-box">Vol '+fn+' du '+dt+' existe deja dans le systeme</div>'+
-          '<button class="btn btn-outline btn-sm" onclick="importResult('+i+',true)">Importer quand meme</button>';
-        results[i]._imported=true; renderResults(); return;
-      }
-    }
-    // Conversion IATA -> ICAO pour from/to/stopover
-    await loadAirportTable();
-    var frIcao  = iataToIcao(fr);
-    var toIcao  = iataToIcao(to);
-    var swIcao  = sw ? iataToIcao(sw) : '';
-
-    await fsm.addDoc(fsm.collection(db,'flights'),{
-      flightNumber:fn,registration:rg,date:dt,
-      from:frIcao, to:toIcao, type:ty,
-      company:co||(COMPANY_MAP[(fn||'').slice(0,2)]||''),
-      hasStopover:!!swIcao,stopover:swIcao,stopoverPax:spx,stopoverBabies:sbb,
-      passengers:px+spx,babies:bb+sbb,authorizationNumber:'',
-      source:(results[i]&&results[i].source==='image')?'LDM_IMAGE':'LDM_TEXT',
-      createdAt:new Date().toISOString(),timestamp:Date.now()
+    await addDoc(collection(db, 'flights'), {
+      flightNumber: fn, registration: rg,
+      date: dt, from: fr, to, type: ty,
+      company: co || detectCompany(fn),
+      hasStopover: !!sw, stopover: sw,
+      stopoverPax: spx, stopoverBabies: sbb,
+      passengers: px + spx,
+      babies: bb + sbb,
+      authorizationNumber: '',
+      source: results[i]?.source === 'image' ? 'LDM_IMAGE' : 'LDM_TEXT',
+      createdAt: new Date().toISOString(),
+      timestamp: Date.now()
     });
-    if(results[i])results[i]._imported=true;
-    var card=document.getElementById('rc-'+i);if(card)card.classList.add('imported');
-    document.getElementById('ra-'+i).innerHTML='<span style="color:var(--green);font-size:13px;font-weight:600;">Importe avec succes</span>';
-    updateStats();toast('Vol '+fn+' importe','ok');
-  } catch(e){toast('Erreur: '+e.message,'err');if(btnEl){btnEl.disabled=false;btnEl.innerHTML='Importer dans le systeme';}}
-}
 
-// ---- DUPLICATES ----
-function makeFP(p){return[(p.flightNumber||'').toUpperCase(),(p.date||''),(p.registration||'').replace(/[-.\s]/g,'').toUpperCase()].join('|');}
+    imported.set(fp, { fn, dt, rg, at: new Date().toISOString() });
+    saveImported(imported);
+    results[i]._imported = true;
 
-// Verifie dans Firebase si le vol existe deja (flightNumber + date + registration)
-async function existsInFirebase(fn, dt, rg) {
-  try {
-    var fbm = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    var fsm = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    var apps = fbm.getApps();
-    var app  = apps.find(function(a){return a.name==='ldm';});
-    if (!app) app = fbm.initializeApp(FB,'ldm');
-    var db = fsm.getFirestore(app);
-    // Cherche un vol avec meme flightNumber + date
-    var q = fsm.query(
-      fsm.collection(db,'flights'),
-      fsm.where('flightNumber','==',fn),
-      fsm.where('date','==',dt)
-    );
-    var snap = await fsm.getDocs(q);
-    if (snap.empty) return false;
-    // Si registration fournie, verifie aussi
-    if (rg) {
-      var found = false;
-      snap.forEach(function(d){ if(d.data().registration===rg) found=true; });
-      return found;
-    }
-    return true;
-  } catch(e) { return false; }
-}
+    document.getElementById(`rc-${i}`)?.classList.add('imported');
+    document.getElementById(`ra-${i}`).innerHTML =
+      '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Importé avec succès</span>';
 
-// markDuplicates: verifie Firebase pour chaque resultat
-async function markDuplicates() {
-  for (var i=0; i<results.length; i++) {
-    var p = results[i].parsed || {};
-    var fn = (p.flightNumber||'').toUpperCase();
-    var dt = p.date||'';
-    var rg = (p.registration||'').replace(/[-.\s]/g,'').toUpperCase();
-    if (fn && dt) {
-      results[i]._imported = await existsInFirebase(fn, dt, rg);
-    } else {
-      results[i]._imported = false;
-    }
+    updateStats();
+    toast(`✅ Vol ${fn} importé`, 'ok');
+  } catch (e) {
+    console.error(e);
+    toast('❌ Erreur : ' + e.message, 'err');
+    if (btn) { btn.disabled = false; btn.innerHTML = '⬆️ Importer dans le système'; }
   }
 }
 
-// ---- GMAIL ----
+// ══════════════════════════════════════════
+// DUPLICATE DETECTION
+// ══════════════════════════════════════════
+function makeFP(p) {
+  return [
+    (p.flightNumber||'').toUpperCase(),
+    (p.date||'').trim(),
+    (p.registration||'').replace(/[-.\s]/g,'').toUpperCase()
+  ].join('|');
+}
+function getImported() {
+  try { return new Map(JSON.parse(localStorage.getItem('ldm_fp')||'[]')); }
+  catch { return new Map(); }
+}
+function saveImported(m) {
+  localStorage.setItem('ldm_fp', JSON.stringify([...m.entries()]));
+}
+function markDuplicates() {
+  const imported = getImported();
+  results.forEach(r => {
+    const fp = makeFP(r.parsed || {});
+    r._fp = fp;
+    r._imported = imported.has(fp);
+  });
+}
+
+// ══════════════════════════════════════════
+// GMAIL
+// ══════════════════════════════════════════
+const CLIENT_ID = '416940058923-28bdevk2c3fk2abihu55ia5391j0g5qf.apps.googleusercontent.com';
+const SCOPES    = 'https://www.googleapis.com/auth/gmail.readonly';
+
 function signIn() {
-  var client = google.accounts.oauth2.initTokenClient({
-    client_id:CLIENT_ID, scope:SCOPES,
-    callback:function(resp){
-      if(resp.error){toast('Erreur: '+resp.error,'err');return;}
-      accessToken=resp.access_token;
-      document.getElementById('authDot').className='dot ok';
-      document.getElementById('authTxt').textContent='Gmail connecte';
-      document.getElementById('authActions').innerHTML='<div class="user-chip">Gmail connecte</div><button class="btn btn-outline btn-sm" onclick="signOut()" style="margin-left:8px;">Deconnecter</button>';
-      document.getElementById('readBtn').disabled=false;
-      setStatus('active','Gmail connecte — pret');
-      toast('Gmail connecte','ok');
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES,
+    callback: (resp) => {
+      if (resp.error) { toast('❌ ' + resp.error, 'err'); return; }
+      accessToken = resp.access_token;
+      document.getElementById('authDot').className = 'dot ok';
+      document.getElementById('authTxt').textContent = 'Gmail connecté';
+      document.getElementById('authActions').innerHTML =
+        `<div class="user-chip">✓ Gmail connecté</div>
+         <button class="btn btn-outline btn-sm" onclick="signOut()" style="margin-left:8px;">Déconnecter</button>`;
+      document.getElementById('readBtn').disabled = false;
+      setStatus('active', 'Gmail connecté — prêt');
+      toast('✅ Gmail connecté', 'ok');
     }
   });
   client.requestAccessToken();
 }
-function signOut(){
-  google.accounts.oauth2.revoke(accessToken,function(){
-    accessToken=null;
-    document.getElementById('authDot').className='dot';
-    document.getElementById('authTxt').textContent='Non connecte';
-    document.getElementById('authActions').innerHTML='<button class="btn btn-gold" onclick="signIn()">Connecter mon Gmail</button>';
-    document.getElementById('readBtn').disabled=true;
-    setStatus('idle','Deconnecte');
+
+function signOut() {
+  google.accounts.oauth2.revoke(accessToken, () => {
+    accessToken = null;
+    document.getElementById('authDot').className = 'dot';
+    document.getElementById('authTxt').textContent = 'Non connecté';
+    document.getElementById('authActions').innerHTML = '<button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>';
+    document.getElementById('readBtn').disabled = true;
+    setStatus('idle', 'Déconnecté');
   });
 }
-async function readEmails(){
-  if(!accessToken)return;
-  var btn=document.getElementById('readBtn');
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span> Lecture...';
-  setStatus('loading','Recherche emails...');
-  try{
-    var q=encodeURIComponent('subject:(LDM OR MVT) newer_than:30d');
-    var resp=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?q='+q+'&maxResults=50',{headers:{Authorization:'Bearer '+accessToken}});
-    var data=await resp.json();
-    if(!data.messages||!data.messages.length){setStatus('active','Aucun email LDM/MVT');toast('Aucun email','warn');return;}
-    setStatus('loading',data.messages.length+' emails — extraction...');
-    var fetched=await Promise.all(data.messages.map(function(m){return fetchEmail(m.id);}));
-    var parsed=[];
-    fetched.filter(Boolean).forEach(function(em){
-      var subj=getHdr(em,'Subject')||'';
-      var body=getEmailBody(em);
-      var combined=(subj+' '+body).toUpperCase();
-      if(combined.indexOf('LDM')<0&&combined.indexOf('MVT')<0)return;
-      var dh=getHdr(em,'Date')||'';
-      var dr='';try{dr=new Date(dh).toISOString().split('T')[0];}catch(e){}
-      var up=body.toUpperCase();
-      var dt=(up.indexOf('MVT')>=0&&up.indexOf('LDM')<0)?'MVT':'LDM';
-      var p=extractFields(body||subj,dr);
-      parsed.push({id:em.id,source:'gmail',docType:dt,fileName:subj||'Email',rawText:(body||'').slice(0,800),parsed:p,_imported:false});
-    });
-    results=results.concat(parsed);
-    await markDuplicates();renderResults();updateStats();
-    document.getElementById('sLast').textContent='Verifie a '+new Date().toLocaleTimeString('fr-FR');
-    setStatus('active',parsed.length+' email(s) charges');
-    toast(parsed.length+' email(s) charges','ok');
-  }catch(e){setStatus('idle','Erreur: '+e.message);toast('Erreur: '+e.message,'err');}
-  finally{btn.disabled=false;btn.innerHTML='Lire emails';}
-}
-async function fetchEmail(id){
-  try{var r=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+id+'?format=full',{headers:{Authorization:'Bearer '+accessToken}});return await r.json();}
-  catch(e){return null;}
-}
-function getHdr(em,name){var h=em&&em.payload&&em.payload.headers;if(!h)return'';for(var i=0;i<h.length;i++)if(h[i].name.toLowerCase()===name.toLowerCase())return h[i].value;return'';}
-function getEmailBody(em){
-  if(!em||!em.payload)return'';
-  if(em.payload.parts){for(var i=0;i<em.payload.parts.length;i++){var p=em.payload.parts[i];if(p.mimeType==='text/plain'&&p.body&&p.body.data)return atob(p.body.data.replace(/-/g,'+').replace(/_/g,'/'));}}
-  if(em.payload.body&&em.payload.body.data)return atob(em.payload.body.data.replace(/-/g,'+').replace(/_/g,'/'));
-  return em.snippet||'';
+
+async function readEmails() {
+  if (!accessToken) return;
+  const btn = document.getElementById('readBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Lecture...';
+  setStatus('loading', 'Lecture de la boîte de réception...');
+  try {
+    // ── Récupérer TOUS les emails de l'INBOX (toutes pages) ──────
+    let allIds = [];
+    let pageToken = null;
+    do {
+      const url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages'
+        + '?labelIds=INBOX'
+        + '&maxResults=100'
+        + (pageToken ? '&pageToken=' + pageToken : '');
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const data = await resp.json();
+      if (data.messages?.length) allIds.push(...data.messages.map(m => m.id));
+      pageToken = data.nextPageToken || null;
+    } while (pageToken);
+
+    if (!allIds.length) {
+      setStatus('active', 'Boîte de réception vide');
+      toast('📭 Aucun email dans la boîte de réception', 'warn');
+      return;
+    }
+    setStatus('loading', `${allIds.length} email(s) en boîte — analyse du contenu...`);
+
+    // ── Télécharger chaque email complet ─────────────────────────
+    const fetched = await Promise.all(allIds.map(id => fetchEmail(id)));
+
+    // ── Filtrer : LDM ou MVT dans le subject OU dans le body ─────
+    const parsed = fetched.filter(Boolean)
+      .filter(em => {
+        const subj = getHeader(em, 'Subject') || '';
+        const body = getBody(em);
+        const combined = (subj + ' ' + body).toUpperCase();
+        return combined.includes('LDM') || combined.includes('MVT');
+      })
+      .map(em => {
+        const subj    = getHeader(em, 'Subject') || '(sans objet)';
+        const dateH   = getHeader(em, 'Date') || '';
+        const body    = getBody(em);
+        let dateRec   = '';
+        try { dateRec = new Date(dateH).toISOString().split('T')[0]; } catch {}
+        const fullText = (body && body.trim()) ? body : subj;
+        const up       = fullText.toUpperCase();
+        const docType  = up.includes('MVT') && !up.includes('LDM') ? 'MVT' : 'LDM';
+        const p        = extractFields(fullText, dateRec);
+        return { id: em.id, source: 'gmail', docType, fileName: subj,
+                 rawText: fullText.slice(0, 1200), parsed: p, _imported: false };
+      });
+
+    results.push(...parsed);
+    markDuplicates();
+    renderResults();
+    updateStats();
+    const now = new Date().toLocaleTimeString('fr-FR');
+    document.getElementById('sLast').textContent = `Vérifié à ${now}`;
+    setStatus('active', `${parsed.length} email(s) LDM/MVT trouvé(s)`);
+    toast(`✅ ${parsed.length} email(s) chargé(s)`, 'ok');
+  } catch (e) {
+    setStatus('idle', 'Erreur : ' + e.message);
+    toast('❌ ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '📨 Lire emails';
+  }
 }
 
-// ---- UTILS ----
-function updateStats(){
-  document.getElementById('stTotal').textContent=results.length;
-  document.getElementById('stLDM').textContent=results.filter(function(r){return r.docType==='LDM';}).length;
-  document.getElementById('stMVT').textContent=results.filter(function(r){return r.docType==='MVT';}).length;
-  document.getElementById('stImported').textContent=results.filter(function(r){return r._imported;}).length;
+async function fetchEmail(id) {
+  try {
+    const r = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    return await r.json();
+  } catch { return null; }
 }
-function setStatus(st,txt){
-  var d=document.getElementById('sDot');
-  d.className='dot'+(st==='active'?' ok':st==='loading'?' loading':'');
-  document.getElementById('sTxt').textContent=txt;
-}
-function toast(msg,type){
-  var c=document.getElementById('toasts');
-  var t=document.createElement('div');
-  t.className='toast '+(type==='ok'?'ok':type==='err'?'err':'warn');
-  t.textContent=msg;c.appendChild(t);
-  setTimeout(function(){t.remove();},4000);
-}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-</script>
 
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/ANAC-MR/sw.js', { scope: '/ANAC-MR/' })
-      .catch(function(err) { console.warn('[PWA] SW:', err); });
-  });
+function getHeader(em, name) {
+  const h = em?.payload?.headers;
+  if (!h) return '';
+  return h.find(x => x.name.toLowerCase() === name.toLowerCase())?.value || '';
+}
+
+function getBody(em) {
+  if (!em?.payload) return em?.snippet || '';
+  // Décoder un bloc body base64url
+  function decode(data) {
+    try { return atob(data.replace(/-/g,'+').replace(/_/g,'/')); }
+    catch { return ''; }
+  }
+  // Chercher text/plain récursivement dans toutes les parts imbriquées
+  function findText(parts) {
+    if (!parts) return '';
+    for (const p of parts) {
+      if (p.mimeType === 'text/plain' && p.body?.data) return decode(p.body.data);
+      if (p.parts) { const r = findText(p.parts); if (r) return r; }
+    }
+    // Fallback: text/html si pas de plain
+    for (const p of parts) {
+      if (p.mimeType === 'text/html' && p.body?.data) {
+        const html = decode(p.body.data);
+        return html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+      }
+      if (p.parts) { const r = findText(p.parts); if (r) return r; }
+    }
+    return '';
+  }
+  if (em.payload.parts) {
+    const t = findText(em.payload.parts);
+    if (t) return t;
+  }
+  if (em.payload.body?.data) return decode(em.payload.body.data);
+  return em.snippet || '';
+}
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function detectCompany(fn) {
+  return COMPANY_MAP[(fn||'').slice(0,2)] || fn?.slice(0,2) || '';
+}
+
+function updateStats() {
+  document.getElementById('stTotal').textContent    = results.length;
+  document.getElementById('stLDM').textContent      = results.filter(r=>r.docType==='LDM').length;
+  document.getElementById('stMVT').textContent      = results.filter(r=>r.docType==='MVT').length;
+  document.getElementById('stImported').textContent = getImported().size;
+}
+
+function setStatus(st, txt) {
+  const d = document.getElementById('sDot');
+  d.className = 'dot' + (st==='active'?' ok':st==='loading'?' loading':'');
+  document.getElementById('sTxt').textContent = txt;
+}
+
+function toast(msg, type) {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type==='ok'?'ok':type==='err'?'err':'warn'}`;
+  t.textContent = msg; c.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 </body>
