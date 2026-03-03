@@ -5,238 +5,148 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ANAC – Lecteur LDM/MVT</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --navy:#0a1628;--navy2:#0f1f3d;--blue:#1a3a6b;
-  --accent:#D4AF37;--green:#00c98d;--red:#e53e3e;--orange:#f97316;
-  --text:#e8edf5;--dim:#7a8ba8;
-  --border:rgba(212,175,55,0.15);--card:rgba(255,255,255,0.04);
-}
+:root{--navy:#0a1628;--navy2:#0f1f3d;--blue:#1a3a6b;--accent:#D4AF37;--green:#00c98d;--red:#e53e3e;--text:#e8edf5;--dim:#7a8ba8;--border:rgba(212,175,55,0.15);--card:rgba(255,255,255,0.04);}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Sora',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(212,175,55,0.03)1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,0.03)1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
-
-/* HEADER */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(212,175,55,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
 .header{position:relative;z-index:10;background:linear-gradient(135deg,var(--navy2),var(--blue));border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;}
 .header-left{display:flex;align-items:center;gap:14px;}
-.hlogo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#b8942a);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.hlogo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#b8942a);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .htitle{font-size:18px;font-weight:800;color:var(--accent);}
 .hsub{font-size:12px;color:var(--dim);margin-top:1px;}
 .nav{display:flex;gap:8px;}
 .nav a{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;color:var(--dim);border:1px solid transparent;transition:all 0.2s;}
 .nav a:hover{color:var(--text);border-color:var(--border);}
 .nav a.active{color:var(--accent);border-color:var(--border);background:rgba(212,175,55,0.08);}
-
-/* MAIN */
 .main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px;}
-
-/* TABS */
-.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:2px solid rgba(212,175,55,0.1);padding-bottom:0;}
-.tab{padding:10px 22px;border:none;background:transparent;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:var(--dim);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;transition:all 0.2s;}
-.tab:hover{color:var(--text);background:rgba(255,255,255,0.03);}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(212,175,55,0.05);}
-.tab-pane{display:none;}
-.tab-pane.active{display:block;}
-
-/* CARDS */
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:18px;}
-.card-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-
-/* UPLOAD ZONE */
-.upload-zone{border:2px dashed rgba(212,175,55,0.3);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;background:rgba(212,175,55,0.02);}
-.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(212,175,55,0.06);}
-.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.upload-icon{font-size:48px;margin-bottom:12px;opacity:0.7;}
-.upload-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
-.upload-sub{font-size:12px;color:var(--dim);}
-.upload-formats{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;}
-.fmt-badge{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--dim);}
-
-/* PREVIEW */
-.img-preview{display:none;margin-top:16px;border-radius:10px;overflow:hidden;border:1px solid var(--border);position:relative;}
-.img-preview img{width:100%;max-height:320px;object-fit:contain;background:#000;}
-.img-preview-bar{padding:10px 14px;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:space-between;}
-.img-name{font-size:12px;color:var(--dim);font-family:'JetBrains Mono',monospace;}
-
-/* MULTI-FILE LIST */
-.file-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
-.file-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;}
-.file-item .fi-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;}
-.file-item .fi-info{flex:1;min-width:0;}
-.file-item .fi-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.file-item .fi-status{font-size:11px;color:var(--dim);margin-top:2px;}
-.file-item .fi-status.ok{color:var(--green);}
-.file-item .fi-status.err{color:var(--red);}
-.file-item .fi-status.loading{color:var(--accent);}
-
-/* TEXTAREA */
-.ldm-textarea{width:100%;min-height:180px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);resize:vertical;outline:none;transition:border-color 0.2s;line-height:1.7;}
-.ldm-textarea:focus{border-color:var(--accent);}
-.ldm-textarea::placeholder{color:var(--dim);opacity:0.6;}
-
-/* BUTTONS */
-.btn{padding:9px 18px;border-radius:8px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all 0.2s;white-space:nowrap;}
-.btn-gold{background:linear-gradient(135deg,var(--accent),#b8942a);color:#0a1628;box-shadow:0 4px 14px rgba(212,175,55,0.3);}
-.btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(212,175,55,0.4);}
-.btn-gold:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
-.btn-outline{background:transparent;color:var(--dim);border:1px solid rgba(255,255,255,0.1);}
-.btn-outline:hover{color:var(--text);border-color:rgba(255,255,255,0.25);}
-.btn-green{background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.3);}
-.btn-green:hover{background:rgba(0,201,141,0.25);}
-.btn-sm{padding:6px 14px;font-size:12px;}
-.btn-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;}
-
-/* STATS */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
-.stat-val{font-size:26px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace;}
-.stat-label{font-size:11px;color:var(--dim);margin-top:3px;}
-
-/* RESULT CARDS */
-.result-list{display:flex;flex-direction:column;gap:12px;}
-.result-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color 0.2s;}
-.result-card:hover{border-color:rgba(212,175,55,0.3);}
-.result-card.imported{border-color:rgba(0,201,141,0.3);background:rgba(0,201,141,0.025);}
-.result-hdr{display:flex;align-items:center;gap:12px;padding:13px 18px;cursor:pointer;}
-.result-type{font-size:10px;font-weight:800;padding:3px 9px;border-radius:5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
-.badge-ldm{background:rgba(26,58,107,0.6);color:#93c5fd;border:1px solid rgba(147,197,253,0.2);}
-.badge-mvt{background:rgba(212,175,55,0.15);color:var(--accent);border:1px solid var(--border);}
-.badge-img{background:rgba(249,115,22,0.15);color:var(--orange);border:1px solid rgba(249,115,22,0.3);}
-.result-meta{flex:1;min-width:0;}
-.result-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.result-sub{font-size:11px;color:var(--dim);margin-top:2px;font-family:'JetBrains Mono',monospace;}
-.result-date{font-size:11px;color:var(--dim);flex-shrink:0;font-family:'JetBrains Mono',monospace;}
-.st-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;flex-shrink:0;}
-.st-ok{background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.25);}
-.chevron{color:var(--dim);font-size:14px;margin-left:4px;transition:transform 0.2s;flex-shrink:0;}
-.chevron.open{transform:rotate(180deg);}
-
-/* RESULT BODY */
-.result-body{border-top:1px solid var(--border);display:none;}
-.raw-preview{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);background:rgba(0,0,0,0.3);padding:12px 18px;line-height:1.7;max-height:140px;overflow-y:auto;white-space:pre-wrap;border-bottom:1px solid var(--border);}
-.img-thumb-prev{max-height:160px;width:100%;object-fit:contain;background:#000;border-bottom:1px solid var(--border);}
-.parsed-sec{padding:16px 18px;}
-.parsed-lbl{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.confidence{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;}
-.conf-high{background:rgba(0,201,141,0.15);color:var(--green);}
-.conf-med{background:rgba(212,175,55,0.15);color:var(--accent);}
-.conf-low{background:rgba(229,62,62,0.12);color:#fc8181;}
-
-.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:14px;}
-.pf{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;}
-.pf label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;}
-.pf input,.pf select{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:5px 8px;border-radius:6px;width:100%;outline:none;transition:border-color 0.2s;}
-.pf input:focus,.pf select:focus{border-color:var(--accent);}
-.pf select option{background:var(--navy2);}
-
-.act-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.dup-box{background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#ffa500;width:100%;margin-bottom:8px;}
-
 /* AUTH */
-.auth-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px;}
-.auth-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
+.auth-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px;}
+.auth-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
 .auth-title{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.8px;}
 .auth-status{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex-shrink:0;transition:background 0.3s;}
 .dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
 .dot.loading{background:var(--accent);animation:pulse 0.8s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-.user-chip{background:rgba(0,201,141,0.1);border:1px solid rgba(0,201,141,0.25);border-radius:20px;padding:5px 13px;font-size:12px;font-weight:600;color:var(--green);display:inline-flex;align-items:center;gap:7px;}
-.auth-info{background:rgba(26,58,107,0.3);border:1px solid rgba(147,197,253,0.15);border-radius:8px;padding:11px 15px;font-size:12px;color:#93c5fd;line-height:1.7;margin-top:12px;}
+.auth-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.user-chip{background:rgba(0,201,141,0.1);border:1px solid rgba(0,201,141,0.25);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--green);display:flex;align-items:center;gap:7px;}
+.auth-info{background:rgba(26,58,107,0.3);border:1px solid rgba(147,197,253,0.15);border-radius:8px;padding:12px 16px;font-size:12px;color:#93c5fd;line-height:1.7;margin-top:14px;}
 .auth-info code{background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;}
-
-/* STATUS */
-.status-bar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 18px;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
+.stat-val{font-size:24px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace;}
+.stat-label{font-size:11px;color:var(--dim);margin-top:3px;}
+/* STATUS BAR */
+.status-bar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
 .status-ind{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
 .status-right{display:flex;align-items:center;gap:8px;}
 .mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
-
-/* SPINNER */
+/* AUTO BAR */
+.auto-bar{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;margin-bottom:20px;flex-wrap:wrap;}
+.albl{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:0.4px;}
+.toggle-wrap{display:flex;align-items:center;gap:8px;cursor:pointer;}
+.track{width:38px;height:20px;border-radius:10px;background:rgba(255,255,255,0.1);position:relative;transition:background 0.2s;flex-shrink:0;}
+.track.on{background:var(--green);}
+.thumb{position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;}
+.track.on .thumb{transform:translateX(18px);}
+.int-sel{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;font-size:13px;padding:6px 10px;border-radius:7px;cursor:pointer;}
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:8px;border:none;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all 0.2s;white-space:nowrap;}
+.btn-gold{background:linear-gradient(135deg,var(--accent),#b8942a);color:#0a1628;box-shadow:0 4px 14px rgba(212,175,55,0.3);}
+.btn-gold:hover{transform:translateY(-1px);}
+.btn-gold:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.btn-outline{background:transparent;color:var(--dim);border:1px solid rgba(255,255,255,0.1);}
+.btn-outline:hover{color:var(--text);border-color:rgba(255,255,255,0.25);}
+.btn-green{background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.3);}
+.btn-green:hover{background:rgba(0,201,141,0.25);}
+.btn-red{background:rgba(229,62,62,0.12);color:#fc8181;border:1px solid rgba(229,62,62,0.25);}
+.btn-sm{padding:6px 14px;font-size:12px;}
+/* SECTION */
+.sec-title{font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.sec-badge{background:rgba(212,175,55,0.15);color:var(--accent);font-size:11px;padding:2px 8px;border-radius:10px;}
+/* EMAIL CARDS */
+.email-list{display:flex;flex-direction:column;gap:10px;}
+.email-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color 0.2s;}
+.email-card:hover{border-color:rgba(212,175,55,0.3);}
+.email-card.imported{border-color:rgba(0,201,141,0.3);background:rgba(0,201,141,0.025);}
+.email-card.duplicate{border-color:rgba(255,165,0,0.35);}
+.email-hdr{display:flex;align-items:center;gap:12px;padding:13px 18px;cursor:pointer;}
+.type-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:0.5px;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+.badge-ldm{background:rgba(26,58,107,0.6);color:#93c5fd;border:1px solid rgba(147,197,253,0.2);}
+.badge-mvt{background:rgba(212,175,55,0.15);color:var(--accent);border:1px solid var(--border);}
+.email-meta{flex:1;min-width:0;}
+.email-subj{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.email-from{font-size:11px;color:var(--dim);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+.email-date2{font-size:11px;color:var(--dim);flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+.st-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;flex-shrink:0;}
+.st-ok{background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.25);}
+.st-dup{background:rgba(255,165,0,0.15);color:#ffa500;border:1px solid rgba(255,165,0,0.25);}
+.email-body{border-top:1px solid var(--border);}
+.raw-text{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);background:rgba(0,0,0,0.25);padding:12px 18px;line-height:1.7;max-height:150px;overflow-y:auto;white-space:pre-wrap;border-bottom:1px solid var(--border);}
+.parsed-sec{padding:16px 18px;}
+.parsed-lbl{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-bottom:14px;}
+.pf{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:10px 12px;}
+.pf label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;}
+.pf input{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:5px 8px;border-radius:6px;width:100%;outline:none;transition:border-color 0.2s;}
+.pf input:focus{border-color:var(--accent);}
+.act-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.dup-box{background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#ffa500;width:100%;margin-bottom:8px;}
+.empty{text-align:center;padding:50px 20px;color:var(--dim);}
+.empty .ico{font-size:48px;margin-bottom:14px;opacity:0.4;}
+.empty h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(212,175,55,0.3);border-top-color:var(--accent);border-radius:50%;animation:sp 0.7s linear infinite;}
 @keyframes sp{to{transform:rotate(360deg)}}
-
-/* TOASTS */
 .toasts{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
-.toast{background:var(--navy2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:600;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;animation:si 0.3s ease;max-width:340px;}
+.toast{background:var(--navy2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:600;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,0.4);display:flex;align-items:center;gap:8px;animation:si 0.3s ease;max-width:320px;}
 .toast.ok{border-color:rgba(0,201,141,0.3);}
 .toast.err{border-color:rgba(229,62,62,0.3);}
 .toast.warn{border-color:rgba(255,165,0,0.3);}
 @keyframes si{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@media(max-width:680px){.stats-row{grid-template-columns:1fr 1fr;}}
 
-/* EMPTY */
-.empty{text-align:center;padding:50px 20px;color:var(--dim);}
-.empty .ico{font-size:48px;margin-bottom:14px;opacity:0.4;}
-.empty h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
-
-/* AI INDICATOR */
-.ai-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(59,130,246,0.15));border:1px solid rgba(139,92,246,0.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#a78bfa;}
-.ai-badge::before{content:'✦';font-size:9px;}
-
-@media(max-width:680px){
-  .stats-row{grid-template-columns:1fr 1fr;}
-  .header{padding:14px 16px;flex-wrap:wrap;gap:10px;}
-  .nav{display:none;}
-}
-
-/* ══ LOGIN OVERLAY ══════════════════════════════════════ */
-#authOverlay{position:fixed;inset:0;background:#0a1628;z-index:9999;display:flex;align-items:center;justify-content:center;}
-#authOverlay.hidden{display:none;}
-.auth-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:36px 40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
-.auth-logo{text-align:center;margin-bottom:24px;}
-.auth-logo div{font-size:32px;margin-bottom:6px;}
-.auth-logo h2{font-size:16px;font-weight:800;color:#D4AF37;margin:0;}
-.auth-logo p{font-size:12px;color:#7a8ba8;margin:4px 0 0;}
-.auth-field{margin-bottom:14px;}
-.auth-field label{display:block;font-size:11px;font-weight:700;color:#7a8ba8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
-.auth-field input{width:100%;padding:11px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#e8edf5;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;}
-.auth-field input:focus{border-color:#D4AF37;}
-.auth-btn{width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#D4AF37,#b8942a);color:#0a1628;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;margin-top:4px;}
-.auth-btn:hover{opacity:0.9;}
-.auth-btn:disabled{opacity:0.5;cursor:not-allowed;}
-.auth-err{color:#fc8181;font-size:12px;margin-top:10px;text-align:center;display:none;}
-.auth-user-badge{position:fixed;top:12px;right:16px;background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:#D4AF37;z-index:1000;display:flex;align-items:center;gap:10px;}
-.auth-user-badge button{background:none;border:none;color:#7a8ba8;font-size:11px;cursor:pointer;font-family:inherit;padding:0;}
-.auth-user-badge button:hover{color:#fc8181;}
+/* ══ LDM AUTH OVERLAY ══ */
+#ldmAuth{position:fixed;inset:0;background:#0a1628;z-index:9999;display:flex;align-items:center;justify-content:center;}
+#ldmAuth.hidden{display:none;}
+.la-box{width:100%;max-width:340px;padding:40px 36px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:18px;}
+.la-box .ico{font-size:36px;text-align:center;margin-bottom:8px;}
+.la-box h2{text-align:center;font-size:17px;font-weight:800;color:#D4AF37;margin:0 0 4px;}
+.la-box p{text-align:center;font-size:12px;color:#7a8ba8;margin:0 0 24px;}
+.la-f{margin-bottom:14px;}
+.la-f label{display:block;font-size:11px;font-weight:700;color:#7a8ba8;text-transform:uppercase;margin-bottom:6px;}
+.la-f input{width:100%;padding:12px 14px;border-radius:9px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:#e8edf5;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;}
+.la-f input:focus{border-color:#D4AF37;}
+.la-btn{width:100%;padding:13px;border:none;border-radius:9px;background:linear-gradient(135deg,#D4AF37,#b8942a);color:#0a1628;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;}
+.la-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.la-err{color:#fc8181;font-size:12px;text-align:center;margin-top:10px;min-height:18px;}
 
 </style>
 </head>
 <body>
-
-<!-- AUTH OVERLAY -->
-<div id="authOverlay">
-  <div class="auth-box">
-    <div class="auth-logo">
-      <div>✈</div>
-      <h2>ANAC Mauritanie</h2>
-      <p>LDM / MVT Reader</p>
-    </div>
-    <div class="auth-field">
-      <label>Nom d'utilisateur</label>
-      <input type="text" id="authUser" placeholder="ex: DADY" autocomplete="username" autofocus>
-    </div>
-    <div class="auth-field">
-      <label>Mot de passe</label>
-      <input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <button class="auth-btn" id="authBtn" onclick="doLogin()">Se connecter</button>
-    <div class="auth-err" id="authErr">Identifiants incorrects</div>
+<div id="ldmAuth">
+  <div class="la-box">
+    <div class="ico">📡</div>
+    <h2>LDM / MVT Reader</h2>
+    <p>ANAC Mauritanie — Connexion requise</p>
+    <div class="la-f"><label>Identifiant</label>
+      <input type="text" id="laUser" autocomplete="new-password" spellcheck="false"></div>
+    <div class="la-f"><label>Mot de passe</label>
+      <input type="password" id="laPass" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter')_laLogin()"></div>
+    <button class="la-btn" id="laBtn" onclick="_laLogin()">Connexion</button>
+    <div class="la-err" id="laErr"></div>
   </div>
 </div>
-<!-- USER BADGE (affiché après login) -->
-<div class="auth-user-badge" id="userBadge" style="display:none">
-  <span id="badgeUsername">—</span>
-  <button onclick="doLogout()">Déconnexion</button>
-</div>
-
 
 <div class="header">
   <div class="header-left">
     <div class="hlogo">📨</div>
     <div>
       <div class="htitle">LDM / MVT Reader</div>
-      <div class="hsub">Lecture automatique des LDM/MVT — OCR intégré</div>
+      <div class="hsub">Lecture automatique des messages de vol depuis Gmail</div>
     </div>
   </div>
   <div class="nav">
@@ -248,131 +158,81 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 <div class="main">
 
+  <!-- AUTH -->
+  <div class="auth-card">
+    <div class="auth-top">
+      <div class="auth-title">🔑 Connexion Gmail</div>
+      <div class="auth-status">
+        <div class="dot" id="authDot"></div>
+        <span id="authTxt">Non connecté</span>
+      </div>
+    </div>
+    <div class="auth-actions" id="authActions">
+      <button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>
+    </div>
+    <div class="auth-info">
+      💡 Clique sur <strong>"Connecter mon Gmail"</strong> et autorise l'accès en lecture.
+      Le système lira automatiquement les emails contenant <code>LDM</code> ou <code>MVT</code> dans l'objet ou le corps.
+      Transfère tes emails LDM/MVT vers ce compte Gmail pour qu'ils soient détectés.
+    </div>
+  </div>
+
   <!-- STATS -->
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-val" id="stTotal">0</div><div class="stat-label">Documents traités</div></div>
-    <div class="stat-card"><div class="stat-val" id="stLDM">0</div><div class="stat-label">LDM</div></div>
-    <div class="stat-card"><div class="stat-val" id="stMVT">0</div><div class="stat-label">MVT</div></div>
-    <div class="stat-card"><div class="stat-val" id="stImported">0</div><div class="stat-label">Importés</div></div>
+    <div class="stat-card"><div class="stat-val" id="stTotal">–</div><div class="stat-label">Emails trouvés</div></div>
+    <div class="stat-card"><div class="stat-val" id="stLDM">–</div><div class="stat-label">LDM</div></div>
+    <div class="stat-card"><div class="stat-val" id="stMVT">–</div><div class="stat-label">MVT</div></div>
+    <div class="stat-card"><div class="stat-val" id="stImported">–</div><div class="stat-label">Importés</div></div>
   </div>
 
-  <!-- TABS -->
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('image')">🖼 Upload Image/PDF</button>
-    <button class="tab" onclick="switchTab('text')">📝 Coller Texte</button>
-    <button class="tab" onclick="switchTab('gmail')">📧 Gmail</button>
-  </div>
-
-  <!-- ══ TAB IMAGE ══ -->
-  <div class="tab-pane active" id="tab-image">
-    <div class="card">
-      <div class="card-title">
-        🖼 Importer des images LDM/MVT
-        <span class="ai-badge" style="background:rgba(0,201,141,0.1);border-color:rgba(0,201,141,0.3);color:var(--green);">OCR Local</span>
-      </div>
-
-      <div class="upload-zone" id="uploadZone"
-           ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
-        <input type="file" id="fileInput" accept="image/*,.pdf" multiple onchange="handleFileSelect(event)">
-        <div class="upload-icon">📁</div>
-        <div class="upload-title">Glisse tes images ici ou clique pour sélectionner</div>
-        <div class="upload-sub">L'IA lit et extrait automatiquement toutes les données du LDM/MVT</div>
-        <div class="upload-formats">
-          <span class="fmt-badge">JPG</span>
-          <span class="fmt-badge">PNG</span>
-          <span class="fmt-badge">WEBP</span>
-          <span class="fmt-badge">PDF</span>
-          <span class="fmt-badge">TIFF</span>
-        </div>
-      </div>
-
-      <div class="file-list" id="fileList"></div>
-
-      <div class="btn-row">
-        <button class="btn btn-gold" id="analyzeBtn" onclick="analyzeAll()" disabled>
-          🔍 Lire avec OCR
-        </button>
-        <button class="btn btn-outline btn-sm" onclick="clearImages()">🗑 Effacer</button>
-        <span class="mono" id="imgStatus"></span>
-      </div>
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-ind">
+      <div class="dot" id="sDot"></div>
+      <span id="sTxt">Connectez votre Gmail pour commencer</span>
+    </div>
+    <div class="status-right">
+      <span class="mono" id="sLast"></span>
+      <button class="btn btn-outline btn-sm" onclick="clearAll()">🗑 Effacer</button>
+      <button class="btn btn-gold btn-sm" id="readBtn" onclick="readEmails()" disabled>📨 Lire emails</button>
     </div>
   </div>
 
-  <!-- ══ TAB TEXT ══ -->
-  <div class="tab-pane" id="tab-text">
-    <div class="card">
-      <div class="card-title">📝 Coller le texte LDM/MVT</div>
-      <textarea class="ldm-textarea" id="ldmText"
-        placeholder="Collez ici le texte brut du LDM ou MVT...
-
-Exemple LDM:
-LDM
-L6212/21.5TCLJ.C16Y144.2/5
--NKC.144.0/0/5
--CDG.0/0/0
-SI NKC BAG 87
-
-Exemple MVT:
-MVT
-TK762/15.TCJRI
-AD1450/1605 NKC/CDG
-PAX 142/3"></textarea>
-      <div class="btn-row">
-        <button class="btn btn-gold" onclick="parseText()">⚡ Extraire les données</button>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('ldmText').value=''">🗑 Effacer</button>
-      </div>
-    </div>
+  <!-- AUTO -->
+  <div class="auto-bar">
+    <span class="albl">Auto-actualisation :</span>
+    <label class="toggle-wrap" onclick="toggleAuto()">
+      <div class="track" id="autoTrack"><div class="thumb"></div></div>
+      <span id="autoLbl" style="font-size:13px;font-weight:600;color:var(--dim);">Désactivé</span>
+    </label>
+    <span class="albl" style="margin-left:10px;">Intervalle :</span>
+    <select class="int-sel" id="intSel" onchange="updateInterval()">
+      <option value="5">5 min</option>
+      <option value="10" selected>10 min</option>
+      <option value="15">15 min</option>
+      <option value="30">30 min</option>
+      <option value="60">1 heure</option>
+    </select>
+    <span class="mono" id="sNext" style="margin-left:auto;"></span>
   </div>
 
-  <!-- ══ TAB GMAIL ══ -->
-  <div class="tab-pane" id="tab-gmail">
-    <div class="auth-card">
-      <div class="auth-top">
-        <div class="auth-title">🔑 Connexion Gmail</div>
-        <div class="auth-status">
-          <div class="dot" id="authDot"></div>
-          <span id="authTxt">Non connecté</span>
-        </div>
-      </div>
-      <div id="authActions">
-        <button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>
-      </div>
-      <div class="auth-info">
-        💡 Connecte ton Gmail pour lire automatiquement les emails LDM/MVT.<br>
-        Le système cherche les emails contenant <code>LDM</code> ou <code>MVT</code> dans les 30 derniers jours.
-      </div>
+  <!-- EMAIL LIST -->
+  <div class="sec-title">Emails LDM/MVT <span class="sec-badge" id="eCount">0</span></div>
+  <div class="email-list" id="emailList">
+    <div class="empty">
+      <div class="ico">📭</div>
+      <h3>Aucun email chargé</h3>
+      <p>Connectez votre Gmail puis cliquez sur "Lire emails"</p>
     </div>
-
-    <div class="status-bar">
-      <div class="status-ind">
-        <div class="dot" id="sDot"></div>
-        <span id="sTxt">Connectez Gmail pour commencer</span>
-      </div>
-      <div class="status-right">
-        <span class="mono" id="sLast"></span>
-        <button class="btn btn-gold btn-sm" id="readBtn" onclick="readEmails()" disabled>📨 Lire emails</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- RESULTS -->
-  <div id="resultsSection" style="display:none;margin-top:8px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;">
-        Résultats <span style="background:rgba(212,175,55,0.15);color:var(--accent);font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px;" id="resCount">0</span>
-      </div>
-      <button class="btn btn-outline btn-sm" onclick="clearResults()">🗑 Effacer résultats</button>
-    </div>
-    <div class="result-list" id="resultList"></div>
   </div>
 
 </div>
 <div class="toasts" id="toasts"></div>
 
 <script>
-// ══════════════════════════════════════════
-// CONSTANTS
-// ══════════════════════════════════════════
+// ── CONSTANTS ──
+const CLIENT_ID = '416940058923-28bdevk2c3fk2abihu55ia5391j0g5qf.apps.googleusercontent.com';
+const SCOPES    = 'https://www.googleapis.com/auth/gmail.readonly';
 const FB = {
   apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
   authDomain:"anacmr-e05b4.firebaseapp.com",
@@ -382,499 +242,19 @@ const FB = {
   appId:"1:857117390430:web:0231614b880df3196e26cf"
 };
 
-const COMPANY_MAP = {
-  'L6':'Mauritania Airlines','HC':'Air Sénégal','TK':'Turkish Airlines',
-  'NT':'Binter','AH':'Air Algérie','KP':'ASKY','AT':'Royal Air Maroc',
-  'TU':'Tunisair','AF':'Air France'
-};
+// ── STATE ──
+let accessToken = null;
+let emails      = [];
+let autoOn      = false;
+let timer       = null;
 
-// ══════════════════════════════════════════
-// STATE
-// ══════════════════════════════════════════
-let pendingFiles  = [];   // { file, dataUrl, name }
-let results       = [];   // parsed results
-let accessToken   = null;
-
-// ══════════════════════════════════════════
-// TABS
-// ══════════════════════════════════════════
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  event.target.classList.add('active');
-}
-
-// ══════════════════════════════════════════
-// FILE UPLOAD
-// ══════════════════════════════════════════
-function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag'); }
-function handleDragLeave(e) { document.getElementById('uploadZone').classList.remove('drag'); }
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('uploadZone').classList.remove('drag');
-  addFiles(Array.from(e.dataTransfer.files));
-}
-function handleFileSelect(e) { addFiles(Array.from(e.target.files)); }
-
-function addFiles(files) {
-  const valid = files.filter(f => f.type.startsWith('image/') || f.type === 'application/pdf');
-  if (!valid.length) { toast('⚠️ Formats acceptés : images (JPG, PNG...) ou PDF', 'warn'); return; }
-  valid.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const item = { file, dataUrl: e.target.result, name: file.name, status: 'ready' };
-      pendingFiles.push(item);
-      renderFileList();
-      document.getElementById('analyzeBtn').disabled = false;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function renderFileList() {
-  const list = document.getElementById('fileList');
-  if (!pendingFiles.length) { list.innerHTML = ''; return; }
-  list.innerHTML = pendingFiles.map((f, i) => `
-    <div class="file-item" id="fi-${i}">
-      ${f.file.type.startsWith('image/') ? `<img class="fi-thumb" src="${f.dataUrl}" alt="">` : '<div style="width:40px;height:40px;background:rgba(249,115,22,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(249,115,22,0.3);">📄</div>'}
-      <div class="fi-info">
-        <div class="fi-name">${esc(f.name)}</div>
-        <div class="fi-status ${f.status === 'done' ? 'ok' : f.status === 'error' ? 'err' : f.status === 'loading' ? 'loading' : ''}" id="fi-st-${i}">
-          ${f.status === 'ready' ? 'Prêt à analyser' : f.status === 'loading' ? '⏳ Analyse en cours...' : f.status === 'done' ? '✓ Analysé' : '❌ Erreur'}
-        </div>
-      </div>
-      <button onclick="removePending(${i})" style="background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:16px;padding:4px;">×</button>
-    </div>
-  `).join('');
-}
-
-function removePending(i) {
-  pendingFiles.splice(i, 1);
-  renderFileList();
-  if (!pendingFiles.length) document.getElementById('analyzeBtn').disabled = true;
-}
-
-function clearImages() {
-  pendingFiles = [];
-  renderFileList();
-  document.getElementById('analyzeBtn').disabled = true;
-  document.getElementById('fileInput').value = '';
-  document.getElementById('imgStatus').textContent = '';
-}
-
-// ══════════════════════════════════════════
-// OCR — Tesseract.js (local, gratuit, sans clé)
-// ══════════════════════════════════════════
-async function analyzeAll() {
-  const btn = document.getElementById('analyzeBtn');
-  btn.disabled = true;
-  document.getElementById('imgStatus').textContent = `0 / ${pendingFiles.length} traité(s)`;
-
-  let done = 0;
-  for (let i = 0; i < pendingFiles.length; i++) {
-    const f = pendingFiles[i];
-    pendingFiles[i].status = 'loading';
-    renderFileList();
-
-    // Live progress in status
-    const setProgress = (pct) => {
-      document.getElementById('imgStatus').textContent =
-        `📄 ${f.name} — OCR ${pct}%  (${done}/${pendingFiles.length} terminé)`;
-      const el = document.getElementById(`fi-st-${i}`);
-      if (el) { el.textContent = `⏳ Lecture OCR… ${pct}%`; el.className = 'fi-status loading'; }
-    };
-
-    try {
-      btn.innerHTML = `<span class="spin"></span> OCR ${i+1}/${pendingFiles.length}…`;
-      const text = await runOCR(f.dataUrl, setProgress);
-      const today = new Date().toISOString().split('T')[0];
-      const parsed = extractFields(text, today);
-      // Detect LDM vs MVT from OCR text
-      const up = text.toUpperCase();
-      const docType = (up.includes('MVT') && !up.includes('LDM')) ? 'MVT' : 'LDM';
-      parsed.confidence = scoreConfidence(parsed);
-
-      pendingFiles[i].status = 'done';
-      results.push({
-        id: Date.now() + '_' + Math.random(),
-        source: 'image',
-        docType,
-        fileName: f.name,
-        dataUrl: f.dataUrl,
-        rawText: text.slice(0, 1000),
-        parsed
-      });
-      done++;
-      toast(`✅ ${f.name} lu`, 'ok');
-    } catch (e) {
-      pendingFiles[i].status = 'error';
-      toast(`❌ ${f.name} : ${e.message}`, 'err');
-    }
-    renderFileList();
-  }
-
-  document.getElementById('imgStatus').textContent = `${done} / ${pendingFiles.length} traité(s)`;
-  btn.disabled = false;
-  btn.innerHTML = '🔍 Lire avec OCR';
-  markDuplicates();
-  renderResults();
-  updateStats();
-}
-
-async function runOCR(dataUrl, onProgress) {
-  const worker = await Tesseract.createWorker('eng', 1, {
-    logger: m => { if (m.status === 'recognizing text') onProgress(Math.round(m.progress * 100)); }
-  });
-  const { data: { text } } = await worker.recognize(dataUrl);
-  await worker.terminate();
-  return text;
-}
-
-function scoreConfidence(p) {
-  if (p.flightNumber && p.from && p.to && p.date) return 'haute';
-  if (p.flightNumber && (p.from || p.to)) return 'moyenne';
-  return 'faible';
-}
-
-
-
-// ══════════════════════════════════════════
-// TEXT PARSER
-// ══════════════════════════════════════════
-function parseText() {
-  const text = document.getElementById('ldmText').value.trim();
-  if (!text) { toast('⚠️ Collez du texte LDM/MVT d\'abord', 'warn'); return; }
-
-  const parsed = extractFields(text, new Date().toISOString().split('T')[0]);
-  const docType = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
-
-  results.push({
-    id: Date.now() + '_txt',
-    source: 'text',
-    docType,
-    fileName: 'Texte collé',
-    rawText: text,
-    parsed,
-    _imported: false
-  });
-
-  markDuplicates();
-  renderResults();
-  updateStats();
-  toast('✅ Données extraites', 'ok');
-}
-
-function extractFields(text, dateReceived) {
-  const p = { confidence: 'haute' };
-  const lines = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
-
-  // ── N° vol + immat + jour
-  const flightRx = /^([A-Z0-9]{1,2}\d{2,4})\/(\d{1,2})\.([A-Z0-9]{4,8})\./;
-  const flLine = lines.find(l => flightRx.test(l));
-  if (flLine) {
-    const m = flLine.match(flightRx);
-    p.flightNumber = m[1];
-    p.registration = m[3].replace(/[-.\s]/g, '');
-    const day = m[2].padStart(2, '0');
-    if (dateReceived) {
-      const [yr, mo] = dateReceived.split('-');
-      p.date = `${yr}-${mo}-${day}`;
-    }
-  }
-
-  // MVT style: TK762/15.TCJRI
-  if (!p.flightNumber) {
-    const mvtFl = lines.find(l => /^[A-Z0-9]{1,2}\d{2,4}\/\d{1,2}/.test(l));
-    if (mvtFl) {
-      const m = mvtFl.match(/^([A-Z0-9]{1,2}\d{2,4})\/(\d{1,2})\.?([A-Z0-9]{4,8})?/);
-      if (m) {
-        p.flightNumber = m[1];
-        if (m[3]) p.registration = m[3].replace(/[-.\s]/g, '');
-        const day = m[2].padStart(2, '0');
-        if (dateReceived) {
-          const [yr, mo] = dateReceived.split('-');
-          p.date = `${yr}-${mo}-${day}`;
-        }
-      }
-    }
-  }
-
-  // ── Compagnie
-  if (p.flightNumber) {
-    const pfx = p.flightNumber.slice(0, 2);
-    p.company = COMPANY_MAP[pfx] || pfx;
-  }
-
-  // ── Route (stations)
-  const BASE = 'NKC';
-  const routeLines = lines.filter(l => /^-[A-Z]{2,4}[./]/.test(l));
-  const stations = routeLines.map(l => l.match(/^-([A-Z]{2,4})/)?.[1]).filter(Boolean);
-
-  // MVT route: AD1450/1605 NKC/CDG
-  if (!stations.length) {
-    const mvtRoute = text.match(/[A-Z0-9]{1,2}\d{3,4}\/\d{4}\s+([A-Z]{3})\/([A-Z]{3})/);
-    if (mvtRoute) { stations.push(mvtRoute[1]); stations.push(mvtRoute[2]); }
-  }
-
-  // SI stations
-  const siRx = /SI\s+([A-Z]{2,4})\s+BAG/gi;
-  let siM; const siStations = [];
-  while ((siM = siRx.exec(text)) !== null) siStations.push(siM[1]);
-
-  const allSt = [...new Set([...stations, ...siStations])];
-  const otherSt = allSt.filter(s => s !== BASE);
-
-  if (otherSt.length >= 2) {
-    if (allSt.includes(BASE)) {
-      p.from = otherSt[0]; p.to = otherSt[otherSt.length - 1];
-      p.stopover = BASE; p.type = 'TRANSIT';
-    } else {
-      p.from = BASE; p.stopover = otherSt[0];
-      p.to = otherSt[otherSt.length - 1]; p.type = 'DEP';
-    }
-  } else if (allSt.includes(BASE)) {
-    p.from = otherSt[0] || ''; p.to = BASE; p.type = 'ARR';
-  } else {
-    p.from = BASE; p.to = otherSt[0] || ''; p.type = 'DEP';
-  }
-
-  // ── PAX + Bébés (somme toutes stations)
-  let totalPax = 0, totalBabies = 0, found = false;
-  routeLines.forEach(line => {
-    const nm = line.match(/\.(\d+(?:\/\d+)+)/);
-    if (!nm) return;
-    const nums = nm[1].split('/').map(Number);
-    if (nums.length >= 2) {
-      totalBabies += nums[nums.length - 1];
-      totalPax    += nums.slice(0, -1).reduce((a, b) => a + b, 0);
-      found = true;
-    }
-  });
-  if (!found) {
-    const paxM = text.match(/PAX[\/\s]+(\d+)(?:\/(\d+))?/i);
-    if (paxM) { totalPax = parseInt(paxM[1]); totalBabies = paxM[2] ? parseInt(paxM[2]) : 0; }
-  }
-  p.passengers = totalPax;
-  p.babies = totalBabies;
-
-  // ── Bagages
-  let maxBags = 0;
-  const si2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi;
-  let s2;
-  while ((s2 = si2.exec(text)) !== null) maxBags = Math.max(maxBags, parseInt(s2[1]) || 0);
-  p.bags = maxBags;
-
-  if (!p.flightNumber) p.confidence = 'faible';
-  else if (!p.from || !p.to) p.confidence = 'moyenne';
-
-  return p;
-}
-
-// ══════════════════════════════════════════
-// RENDER RESULTS
-// ══════════════════════════════════════════
-function renderResults() {
-  const section = document.getElementById('resultsSection');
-  const list    = document.getElementById('resultList');
-  document.getElementById('resCount').textContent = results.length;
-
-  if (!results.length) { section.style.display = 'none'; return; }
-  section.style.display = 'block';
-
-  list.innerHTML = results.map((r, i) => {
-    const p   = r.parsed || {};
-    const imp = r._imported;
-    const conf = p.confidence || 'haute';
-    const confClass = conf === 'haute' ? 'conf-high' : conf === 'moyenne' ? 'conf-med' : 'conf-low';
-    const confLabel = conf === 'haute' ? '✓ Haute confiance' : conf === 'moyenne' ? '~ Moyenne' : '⚠ Faible';
-
-    const title = p.flightNumber
-      ? `${p.flightNumber} — ${p.from || '?'} → ${p.to || '?'}`
-      : r.fileName;
-    const sub = [p.company, p.date, p.registration].filter(Boolean).join(' · ');
-
-    const badgeClass = r.source === 'image' ? 'badge-img' : `badge-${r.docType?.toLowerCase() || 'ldm'}`;
-    const badgeLabel = r.source === 'image' ? '📷 IMG' : r.docType;
-
-    return `
-    <div class="result-card ${imp ? 'imported' : ''}" id="rc-${i}">
-      <div class="result-hdr" onclick="toggleResult(${i})">
-        <span class="result-type ${badgeClass}">${badgeLabel}</span>
-        <div class="result-meta">
-          <div class="result-title">${esc(title)}</div>
-          <div class="result-sub">${esc(sub || r.fileName)}</div>
-        </div>
-        <span class="confidence ${confClass}">${confLabel}</span>
-        ${imp ? '<span class="st-badge st-ok">✓ Importé</span>' : ''}
-        <span class="chevron" id="chv-${i}">▼</span>
-      </div>
-      <div class="result-body" id="rb-${i}">
-        ${r.source === 'image' ? `<img class="img-thumb-prev" src="${r.dataUrl}" alt="${esc(r.fileName)}">` : ''}
-        ${r.rawText ? `<div class="raw-preview">${esc(r.rawText.slice(0, 600))}</div>` : ''}
-        <div class="parsed-sec">
-          <div class="parsed-lbl">
-            ✦ Données extraites
-            ${r.source === 'image' ? '<span class="ai-badge" style="background:rgba(0,201,141,0.1);border-color:rgba(0,201,141,0.3);color:var(--green);">OCR Local</span>' : ''}
-          </div>
-          <div class="pgrid">
-            <div class="pf"><label>N° Vol</label><input id="r${i}-fn" value="${esc(p.flightNumber||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>Immatriculation</label><input id="r${i}-rg" value="${esc(p.registration||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>Date</label><input type="date" id="r${i}-dt" value="${p.date||''}"></div>
-            <div class="pf"><label>Compagnie</label><input id="r${i}-co" value="${esc(p.company||'')}"></div>
-            <div class="pf">
-              <label>Type</label>
-              <select id="r${i}-ty">
-                <option value="DEP" ${p.type==='DEP'?'selected':''}>Départ</option>
-                <option value="ARR" ${p.type==='ARR'?'selected':''}>Arrivée</option>
-                <option value="TRANSIT" ${p.type==='TRANSIT'?'selected':''}>Transit</option>
-              </select>
-            </div>
-            <div class="pf"><label>De</label><input id="r${i}-fr" value="${esc(p.from||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>À</label><input id="r${i}-to" value="${esc(p.to||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>PAX</label><input type="number" id="r${i}-px" value="${p.passengers||0}" min="0"></div>
-            <div class="pf"><label>Bébés</label><input type="number" id="r${i}-bb" value="${p.babies||0}" min="0"></div>
-            ${p.stopover ? `
-            <div class="pf"><label>Escale</label><input id="r${i}-sw" value="${esc(p.stopover||'')}" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>PAX escale</label><input type="number" id="r${i}-spx" value="${p.stopoverPax||0}" min="0"></div>
-            <div class="pf"><label>Bébés escale</label><input type="number" id="r${i}-sbb" value="${p.stopoverBabies||0}" min="0"></div>
-            ` : ''}
-          </div>
-          <div class="act-row" id="ra-${i}">
-            ${imp
-              ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé</span>'
-              : `<button class="btn btn-green" onclick="importResult(${i})">⬆️ Importer dans le système</button>`
-            }
-            <button class="btn btn-outline btn-sm" onclick="removeResult(${i})">🗑 Supprimer</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function toggleResult(i) {
-  const body = document.getElementById(`rb-${i}`);
-  const chv  = document.getElementById(`chv-${i}`);
-  const open = body.style.display === 'block';
-  body.style.display = open ? 'none' : 'block';
-  chv.classList.toggle('open', !open);
-}
-
-function removeResult(i) {
-  results.splice(i, 1);
-  renderResults();
-  updateStats();
-}
-
-function clearResults() {
-  results = [];
-  renderResults();
-  updateStats();
-}
-
-// ══════════════════════════════════════════
-// IMPORT TO FIREBASE
-// ══════════════════════════════════════════
-async function importResult(i, force) {
-  const fn  = document.getElementById(`r${i}-fn`)?.value.trim().toUpperCase() || '';
-  const rg  = document.getElementById(`r${i}-rg`)?.value.trim().toUpperCase().replace(/[-.\s]/g,'') || '';
-  const dt  = document.getElementById(`r${i}-dt`)?.value || '';
-  const co  = document.getElementById(`r${i}-co`)?.value.trim() || '';
-  const ty  = document.getElementById(`r${i}-ty`)?.value || 'DEP';
-  const fr  = document.getElementById(`r${i}-fr`)?.value.trim().toUpperCase() || '';
-  const to  = document.getElementById(`r${i}-to`)?.value.trim().toUpperCase() || '';
-  const px  = parseInt(document.getElementById(`r${i}-px`)?.value) || 0;
-  const bb  = parseInt(document.getElementById(`r${i}-bb`)?.value) || 0;
-  const sw  = document.getElementById(`r${i}-sw`)?.value.trim().toUpperCase() || '';
-  const spx = parseInt(document.getElementById(`r${i}-spx`)?.value) || 0;
-  const sbb = parseInt(document.getElementById(`r${i}-sbb`)?.value) || 0;
-
-  if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires', 'warn'); return; }
-
-  // Anti-duplicate
-  const fp = `${fn}|${dt}|${rg}`;
-  const imported = getImported();
-  if (!force && imported.has(fp)) {
-    const prev = imported.get(fp);
-    document.getElementById(`ra-${i}`).innerHTML = `
-      <div class="dup-box">⚠️ Vol ${fn} du ${dt} déjà importé le ${new Date(prev.at).toLocaleDateString('fr-FR')}</div>
-      <button class="btn btn-outline btn-sm" onclick="importResult(${i},true)">Forcer quand même</button>
-    `;
-    return;
-  }
-
-  const btn = document.querySelector(`#ra-${i} .btn-green`);
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>'; }
-
-  try {
-    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const { getFirestore, collection, addDoc, query, where, getDocs, limit }
-      = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const apps = getApps();
-    const app  = apps.find(a => a.name === 'ldm') || initializeApp(FB, 'ldm');
-    const db   = getFirestore(app);
-
-    // ── Lookup N° autorisation via programme_vols (N°vol + date = unique) ──
-    let authorizationNumber = '';
-    let decisionNumber = '';
-    if (fn && dt) {
-      try {
-        const q = query(
-          collection(db, 'programme_vols'),
-          where('flight', '==', fn),
-          where('date',   '==', dt),
-          limit(1)
-        );
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          const found = snap.docs[0].data();
-          authorizationNumber = found.auth     || '';
-          decisionNumber      = found.decision || '';
-        }
-      } catch(e) { console.warn('Lookup programme_vols:', e); }
-    }
-
-    await addDoc(collection(db, 'flights'), {
-      flightNumber: fn, registration: rg,
-      date: dt, from: fr, to, type: ty,
-      company: co || detectCompany(fn),
-      hasStopover: !!sw, stopover: sw,
-      stopoverPax: spx, stopoverBabies: sbb,
-      passengers: px + spx,
-      babies: bb + sbb,
-      authorizationNumber,
-      decisionNumber,
-      source: results[i]?.source === 'image' ? 'LDM_IMAGE' : 'LDM_TEXT',
-      createdAt: new Date().toISOString(),
-      timestamp: Date.now()
-    });
-
-    imported.set(fp, { fn, dt, rg, at: new Date().toISOString() });
-    saveImported(imported);
-    results[i]._imported = true;
-
-    document.getElementById(`rc-${i}`)?.classList.add('imported');
-    document.getElementById(`ra-${i}`).innerHTML =
-      `<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Importé${authorizationNumber ? ' — Auth: <strong>'+authorizationNumber+'</strong>' : ' (autorisation non trouvée dans le programme)'}</span>`;
-
-    updateStats();
-    toast(`✅ Vol ${fn} importé`, 'ok');
-  } catch (e) {
-    console.error(e);
-    toast('❌ Erreur : ' + e.message, 'err');
-    if (btn) { btn.disabled = false; btn.innerHTML = '⬆️ Importer dans le système'; }
-  }
-}
-
-// ══════════════════════════════════════════
-// DUPLICATE DETECTION
-// ══════════════════════════════════════════
+// ── ANTI-DUPLICATE ──
+// fingerprint = flightNumber|date|registration
 function makeFP(p) {
   return [
-    (p.flightNumber||'').toUpperCase(),
+    (p.flightNumber||'').replace(/\s/g,'').toUpperCase(),
     (p.date||'').trim(),
-    (p.registration||'').replace(/[-.\s]/g,'').toUpperCase()
+    (p.registration||'').replace(/[\s.\-]/g,'').toUpperCase()
   ].join('|');
 }
 function getImported() {
@@ -884,38 +264,31 @@ function getImported() {
 function saveImported(m) {
   localStorage.setItem('ldm_fp', JSON.stringify([...m.entries()]));
 }
-function markDuplicates() {
-  const imported = getImported();
-  results.forEach(r => {
-    const fp = makeFP(r.parsed || {});
-    r._fp = fp;
-    r._imported = imported.has(fp);
-  });
-}
 
-// ══════════════════════════════════════════
-// GMAIL
-// ══════════════════════════════════════════
-const CLIENT_ID = '416940058923-28bdevk2c3fk2abihu55ia5391j0g5qf.apps.googleusercontent.com';
-const SCOPES    = 'https://www.googleapis.com/auth/gmail.readonly';
-
+// ── GOOGLE SIGN IN ──
 function signIn() {
   const client = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID, scope: SCOPES,
+    client_id: CLIENT_ID,
+    scope: SCOPES,
     callback: (resp) => {
-      if (resp.error) { toast('❌ ' + resp.error, 'err'); return; }
+      if (resp.error) { toast('❌ Erreur connexion: '+resp.error,'err'); return; }
       accessToken = resp.access_token;
-      document.getElementById('authDot').className = 'dot ok';
-      document.getElementById('authTxt').textContent = 'Gmail connecté';
-      document.getElementById('authActions').innerHTML =
-        `<div class="user-chip">✓ Gmail connecté</div>
-         <button class="btn btn-outline btn-sm" onclick="signOut()" style="margin-left:8px;">Déconnecter</button>`;
-      document.getElementById('readBtn').disabled = false;
-      setStatus('active', 'Gmail connecté — prêt');
-      toast('✅ Gmail connecté', 'ok');
+      onSignedIn();
     }
   });
   client.requestAccessToken();
+}
+
+function onSignedIn() {
+  document.getElementById('authDot').className = 'dot ok';
+  document.getElementById('authTxt').textContent = 'Gmail connecté';
+  document.getElementById('authActions').innerHTML = `
+    <div class="user-chip">✓ Gmail connecté</div>
+    <button class="btn btn-outline btn-sm" onclick="signOut()">Déconnecter</button>
+  `;
+  document.getElementById('readBtn').disabled = false;
+  setStatus('active','Gmail connecté — prêt à lire les emails');
+  toast('✅ Gmail connecté avec succès','ok');
 }
 
 function signOut() {
@@ -923,75 +296,72 @@ function signOut() {
     accessToken = null;
     document.getElementById('authDot').className = 'dot';
     document.getElementById('authTxt').textContent = 'Non connecté';
-    document.getElementById('authActions').innerHTML = '<button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>';
+    document.getElementById('authActions').innerHTML = `<button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>`;
     document.getElementById('readBtn').disabled = true;
-    setStatus('idle', 'Déconnecté');
+    setStatus('idle','Déconnecté');
+    stopAuto();
   });
 }
 
+// ── READ EMAILS FROM GMAIL API ──
 async function readEmails() {
-  if (!accessToken) return;
+  if (!accessToken) { toast('⚠️ Connectez Gmail d\'abord','warn'); return; }
+
   const btn = document.getElementById('readBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Lecture...';
-  setStatus('loading', 'Lecture des emails non lus...');
-  try {
-    // ── Récupérer TOUS les emails de l'INBOX (toutes pages) ──────
-    let allIds = [];
-    let pageToken = null;
-    do {
-      const url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages'
-        + '?labelIds=INBOX&labelIds=UNREAD'
-        + '&maxResults=100'
-        + (pageToken ? '&pageToken=' + pageToken : '');
-      const resp = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-      const data = await resp.json();
-      if (data.messages?.length) allIds.push(...data.messages.map(m => m.id));
-      pageToken = data.nextPageToken || null;
-    } while (pageToken);
+  setStatus('loading','Recherche des emails LDM/MVT...');
 
-    if (!allIds.length) {
-      setStatus('active', 'Aucun email non lu');
-      toast('📭 Aucun email non lu dans la boîte de réception', 'warn');
+  try {
+    // Search Gmail for LDM or MVT emails (last 30 days)
+    const query = encodeURIComponent('subject:(LDM OR MVT) OR (LDM OR MVT) newer_than:30d');
+    const listResp = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=50`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const listData = await listResp.json();
+
+    if (!listData.messages || listData.messages.length === 0) {
+      emails = [];
+      renderEmails();
+      updateStats();
+      setStatus('active','Aucun email LDM/MVT trouvé dans les 30 derniers jours');
+      toast('📭 Aucun email trouvé','warn');
       return;
     }
-    setStatus('loading', `${allIds.length} email(s) non lu(s) — analyse du contenu...`);
 
-    // ── Télécharger chaque email complet ─────────────────────────
-    const fetched = await Promise.all(allIds.map(id => fetchEmail(id)));
+    setStatus('loading',`${listData.messages.length} email(s) trouvé(s) — extraction des données...`);
 
-    // ── Filtrer : LDM ou MVT dans le subject OU dans le body ─────
-    const parsed = fetched.filter(Boolean)
-      .filter(em => {
-        const subj = getHeader(em, 'Subject') || '';
-        const body = getBody(em);
-        const combined = (subj + ' ' + body).toUpperCase();
-        return combined.includes('LDM') || combined.includes('MVT');
-      })
-      .map(em => {
-        const subj    = getHeader(em, 'Subject') || '(sans objet)';
-        const dateH   = getHeader(em, 'Date') || '';
-        const body    = getBody(em);
-        let dateRec   = '';
-        try { dateRec = new Date(dateH).toISOString().split('T')[0]; } catch {}
-        const fullText = (body && body.trim()) ? body : subj;
-        const up       = fullText.toUpperCase();
-        const docType  = up.includes('MVT') && !up.includes('LDM') ? 'MVT' : 'LDM';
-        const p        = extractFields(fullText, dateRec);
-        return { id: em.id, source: 'gmail', docType, fileName: subj,
-                 rawText: fullText.slice(0, 1200), parsed: p, _imported: false };
-      });
+    // Fetch each email
+    const fetched = await Promise.all(
+      listData.messages.map(m => fetchEmail(m.id))
+    );
 
-    results.push(...parsed);
-    markDuplicates();
-    renderResults();
+    // Filter and parse
+    emails = fetched
+      .filter(Boolean)
+      .filter(em => isLDMorMVT(em))
+      .map(em => parseLDM(em));
+
+    // Mark duplicates
+    const imported = getImported();
+    emails.forEach(em => {
+      const fp = makeFP(em.parsed || {});
+      em._fp       = fp;
+      em._imported = imported.has(fp);
+    });
+
+    renderEmails();
     updateStats();
     const now = new Date().toLocaleTimeString('fr-FR');
-    document.getElementById('sLast').textContent = `Vérifié à ${now}`;
-    setStatus('active', `${parsed.length} email(s) LDM/MVT trouvé(s)`);
-    toast(`✅ ${parsed.length} email(s) chargé(s)`, 'ok');
-  } catch (e) {
-    setStatus('idle', 'Erreur : ' + e.message);
-    toast('❌ ' + e.message, 'err');
+    document.getElementById('sLast').textContent = `Dernière vérif. : ${now}`;
+    const dups = emails.filter(e=>e._imported).length;
+    setStatus('active',`${emails.length} email(s) — ${dups} déjà importé(s)`);
+    toast(`✅ ${emails.length} email(s) LDM/MVT trouvé(s)`,'ok');
+
+  } catch(e) {
+    console.error(e);
+    setStatus('idle','Erreur : '+e.message);
+    toast('❌ '+e.message,'err');
   } finally {
     btn.disabled = false; btn.innerHTML = '📨 Lire emails';
   }
@@ -1007,166 +377,404 @@ async function fetchEmail(id) {
   } catch { return null; }
 }
 
+function isLDMorMVT(em) {
+  const subject = getHeader(em, 'Subject') || '';
+  const body    = getBody(em);
+  const text    = (subject + ' ' + body).toUpperCase();
+  return text.includes('LDM') || text.includes('MVT');
+}
+
 function getHeader(em, name) {
-  const h = em?.payload?.headers;
+  const h = em.payload && em.payload.headers;
   if (!h) return '';
-  return h.find(x => x.name.toLowerCase() === name.toLowerCase())?.value || '';
+  const found = h.find(x => x.name.toLowerCase() === name.toLowerCase());
+  return found ? found.value : '';
 }
 
 function getBody(em) {
-  if (!em?.payload) return em?.snippet || '';
-  // Décoder un bloc body base64url
-  function decode(data) {
-    try { return atob(data.replace(/-/g,'+').replace(/_/g,'/')); }
-    catch { return ''; }
-  }
-  // Chercher text/plain récursivement dans toutes les parts imbriquées
-  function findText(parts) {
-    if (!parts) return '';
-    for (const p of parts) {
-      if (p.mimeType === 'text/plain' && p.body?.data) return decode(p.body.data);
-      if (p.parts) { const r = findText(p.parts); if (r) return r; }
-    }
-    // Fallback: text/html si pas de plain
-    for (const p of parts) {
-      if (p.mimeType === 'text/html' && p.body?.data) {
-        const html = decode(p.body.data);
-        return html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-      }
-      if (p.parts) { const r = findText(p.parts); if (r) return r; }
-    }
-    return '';
-  }
+  if (!em.payload) return '';
+  // Try parts first
   if (em.payload.parts) {
-    const t = findText(em.payload.parts);
-    if (t) return t;
+    for (const p of em.payload.parts) {
+      if (p.mimeType === 'text/plain' && p.body && p.body.data) {
+        return atob(p.body.data.replace(/-/g,'+').replace(/_/g,'/'));
+      }
+    }
   }
-  if (em.payload.body?.data) return decode(em.payload.body.data);
+  // Fallback to direct body
+  if (em.payload.body && em.payload.body.data) {
+    return atob(em.payload.body.data.replace(/-/g,'+').replace(/_/g,'/'));
+  }
   return em.snippet || '';
 }
 
-// ══════════════════════════════════════════
-// UTILS
-// ══════════════════════════════════════════
-function detectCompany(fn) {
-  return COMPANY_MAP[(fn||'').slice(0,2)] || COMPANY_MAP[(fn||'').slice(0,1)] || fn?.slice(0,2) || '';
+// ── PARSE LDM/MVT TEXT ──
+function parseLDM(em) {
+  const subject  = getHeader(em, 'Subject') || '';
+  const from     = getHeader(em, 'From')    || '';
+  const dateHdr  = getHeader(em, 'Date')    || '';
+  const body     = getBody(em);
+  const text     = body || subject;
+  const type     = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
+  let dateReceived = '';
+  try { dateReceived = new Date(dateHdr).toISOString().split('T')[0]; } catch {}
+  const p = extractFields(text, dateReceived);
+  return { id: em.id, type, subject, from, date: dateReceived, rawText: text.trim(), parsed: p };
 }
 
+function extractFields(text, dateReceived) {
+  const p = {};
+  // Normalize: remove carriage returns, collapse spaces
+  const lines = text.replace(/\r/g,'').split('\n').map(l => l.trim()).filter(Boolean);
+
+  // ── 1. FLIGHT LINE: AF598/22.FHTYP.J34W24Y266.2/10
+  //                    L6212/21.5TCLJ.C16Y144.2/5
+  const flightLineRx = /^([A-Z]{1,2}\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,6})\./;
+  const flightLine = lines.find(l => flightLineRx.test(l));
+  if (flightLine) {
+    const m = flightLine.match(flightLineRx);
+    p.flightNumber = m[1];
+    const day      = m[2].padStart(2,'0');
+    p.registration = m[3];
+    // Build flight date: use day from LDM + month/year from email received date
+    if (dateReceived) {
+      const [yr, mo] = dateReceived.split('-');
+      p.date = `${yr}-${mo}-${day}`;
+    } else {
+      p.date = '';
+    }
+  }
+
+  // ── 2. ROUTE: NKC = Nouakchott Oumtounsy (base airport)
+  // Logic:
+  //   - NKC only → simple ARR or DEP
+  //   - 2 other cities + NKC → stopover at NKC (transit)
+  //   - 2 other cities without NKC → DEP from NKC, stopover at first, dest = last
+  const BASE = 'NKC';
+  const routeLines = lines.filter(l => /^-[A-Z]{2,4}[./]/.test(l));
+  const stations = routeLines.map(l => l.match(/^-([A-Z]{2,4})/)?.[1]).filter(Boolean);
+
+  // Also collect SI stations
+  const siStations = [];
+  const siAllRx = /SI\s+([A-Z]{2,4})\s+BAG/gi;
+  let siAll;
+  while ((siAll = siAllRx.exec(text)) !== null) siStations.push(siAll[1]);
+
+  // Merge all stations keeping order, deduplicated
+  const allStations = [...new Set([...stations, ...siStations])];
+  const otherStations = allStations.filter(s => s !== BASE);
+
+  if (otherStations.length >= 2) {
+    if (allStations.includes(BASE)) {
+      // NKC is the stopover: e.g. DSS → NKC(escale) → ABJ
+      p.from     = otherStations[0];
+      p.to       = otherStations[otherStations.length - 1];
+      p.stopover = BASE;
+      p.type     = 'TRANSIT';
+    } else {
+      // 2 cities no NKC: depart NKC, stopover first city, dest last
+      p.from     = BASE;
+      p.stopover = otherStations[0];
+      p.to       = otherStations[otherStations.length - 1];
+      p.type     = 'DEP';
+    }
+  } else if (allStations.includes(BASE)) {
+    p.from = otherStations[0] || '';
+    p.to   = BASE;
+    p.type = 'ARR';
+  } else {
+    p.from = BASE;
+    p.to   = otherStations[0] || '';
+    p.type = 'DEP';
+  }
+
+  // ── 3 & 4. PAX + BABIES
+  // Rule: after each station code X/X/X or X/X/X/X
+  //   last number = babies for that leg
+  //   sum of rest  = pax for that leg
+  // Total PAX = SUM across ALL station lines
+  // Total babies = SUM across ALL station lines
+  let totalPax    = 0;
+  let totalBabies = 0;
+  let foundPax    = false;
+
+  routeLines.forEach(line => {
+    const numMatch = line.match(/\.(\d+(?:\/\d+)+)/);
+    if (!numMatch) return;
+    const nums = numMatch[1].split('/').map(Number);
+    if (nums.length >= 2) {
+      totalBabies += nums[nums.length - 1];             // SUM babies
+      totalPax    += nums.slice(0, -1).reduce((a,b) => a+b, 0); // SUM pax
+      foundPax = true;
+    }
+  });
+
+  // Fallback for MVT: .PAX/X/X/X or PAX 123
+  if (!foundPax) {
+    const paxSlash = text.match(/\.?PAX\/(\d+(?:\/\d+)*)/i);
+    if (paxSlash) {
+      const nums = paxSlash[1].split('/').map(Number);
+      if (nums.length >= 2) {
+        totalBabies = nums[nums.length - 1];
+        totalPax    = nums.slice(0,-1).reduce((a,b)=>a+b,0);
+      } else {
+        totalPax = nums[0]; totalBabies = 0;
+      }
+      foundPax = true;
+    }
+  }
+  if (!foundPax) {
+    const mvtPax = text.match(/\bPAX\s+(\d+)/i);
+    if (mvtPax) { totalPax = parseInt(mvtPax[1]); totalBabies = 0; }
+  }
+
+  p.totalPax  = totalPax;
+  p.paxBabies = totalBabies;
+
+  // ── 5. BAGS: take max from all SI lines
+  let maxBags = 0;
+  const siRx2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi;
+  let siM2;
+  while ((siM2 = siRx2.exec(text)) !== null) {
+    maxBags = Math.max(maxBags, parseInt(siM2[1]) || 0);
+  }
+  p.bags = maxBags;
+
+  // ── 6. FUEL IN TANKS
+  const fuelM = text.match(/FUEL IN TANKS\s+(\d+)/i);
+  if (fuelM) p.fuel = parseInt(fuelM[1]);
+
+  // ── 7. Baggage weight T#### (e.g. T8189)
+  const tM = text.match(/\.T(\d{4,5})[\.\s\/]/);
+  if (tM) p.bagWeight = parseInt(tM[1]);
+
+  return p;
+}
+
+// ── RENDER ──
+function renderEmails() {
+  const list = document.getElementById('emailList');
+  document.getElementById('eCount').textContent = emails.length;
+  if (!emails.length) {
+    list.innerHTML = '<div class="empty"><div class="ico">📭</div><h3>Aucun email LDM/MVT trouvé</h3><p>Aucun message LDM ou MVT dans votre Gmail des 30 derniers jours</p></div>';
+    return;
+  }
+  list.innerHTML = emails.map((em, i) => {
+    const p   = em.parsed || {};
+    const imp = em._imported;
+    return `
+    <div class="email-card ${imp?'imported':''}" id="card-${i}">
+      <div class="email-hdr" onclick="toggleCard(${i})">
+        <span class="type-badge badge-${em.type.toLowerCase()}">${em.type}</span>
+        <div class="email-meta">
+          <div class="email-subj">${esc(em.subject||'Sans objet')}</div>
+          <div class="email-from">De : ${esc(em.from||'–')}</div>
+        </div>
+        <div class="email-date2">${em.date||'–'}</div>
+        ${imp ? '<span class="st-badge st-ok">✓ Importé</span>' : ''}
+        <span style="color:var(--dim);font-size:16px;margin-left:4px;" id="arr-${i}">▼</span>
+      </div>
+      <div class="email-body" id="bdy-${i}" style="display:none;">
+        ${em.rawText ? `<div class="raw-text">${esc(em.rawText.slice(0,800))}</div>` : ''}
+        <div class="parsed-sec">
+          <div class="parsed-lbl">✦ Données extraites — vérifiez et corrigez si nécessaire</div>
+          <div class="pgrid">
+            <div class="pf"><label>N° Vol</label><input id="p${i}-fn" value="${esc(p.flightNumber||'')}" placeholder="ex: L6212" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Immatriculation</label><input id="p${i}-rg" value="${esc(p.registration||'')}" placeholder="ex: 5TCLJ" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Date du vol</label><input type="date" id="p${i}-dt" value="${p.date||em.date||''}"></div>
+            <div class="pf"><label>Départ</label><input id="p${i}-fr" value="${esc(p.from||'')}" placeholder="ex: NKC" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Arrivée</label><input id="p${i}-to" value="${esc(p.to||'')}" placeholder="ex: CDG" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>PAX (adultes+enfants)</label><input type="number" id="p${i}-px" value="${p.totalPax||p.paxAdults||0}" min="0"></div>
+            <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
+            <div class="pf"><label>Bagages (pièces)</label><input type="number" id="p${i}-bg" value="${p.bags||0}" min="0"></div>
+          </div>
+          <div class="act-row" id="act-${i}">
+            ${imp
+              ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>'
+              : `<button class="btn btn-green" onclick="importFlight(${i})">⬆️ Importer dans le système</button>`
+            }
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCard(i) {
+  const b = document.getElementById(`bdy-${i}`);
+  const a = document.getElementById(`arr-${i}`);
+  const open = b.style.display !== 'none';
+  b.style.display = open ? 'none' : 'block';
+  a.textContent   = open ? '▼' : '▲';
+}
+
+// ── IMPORT TO FIREBASE ──
+async function importFlight(i, force) {
+  const fn  = document.getElementById(`p${i}-fn`).value.trim().toUpperCase();
+  const rg  = document.getElementById(`p${i}-rg`).value.trim().toUpperCase().replace(/[\s.\-]/g,'');
+  const dt  = document.getElementById(`p${i}-dt`).value;
+  const fr  = document.getElementById(`p${i}-fr`).value.trim().toUpperCase();
+  const to  = document.getElementById(`p${i}-to`).value.trim().toUpperCase();
+  const ty  = document.getElementById(`p${i}-ty`) ? document.getElementById(`p${i}-ty`).value : 'DEP';
+  const co  = document.getElementById(`p${i}-co`) ? document.getElementById(`p${i}-co`).value.trim() : '';
+  const sw  = document.getElementById(`p${i}-sw`) ? document.getElementById(`p${i}-sw`).value.trim().toUpperCase() : '';
+  const spx = document.getElementById(`p${i}-spx`) ? parseInt(document.getElementById(`p${i}-spx`).value)||0 : 0;
+  const sbb = document.getElementById(`p${i}-sbb`) ? parseInt(document.getElementById(`p${i}-sbb`).value)||0 : 0;
+  const px  = parseInt(document.getElementById(`p${i}-px`).value) || 0;
+  const bb  = parseInt(document.getElementById(`p${i}-bb`).value) || 0;
+
+  if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires','warn'); return; }
+
+  // Anti-duplicate check
+  const fp = `${fn}|${dt}|${rg}`;
+  const imported = getImported();
+  if (!force && imported.has(fp)) {
+    const prev = imported.get(fp);
+    document.getElementById(`act-${i}`).innerHTML = `
+      <div class="dup-box">⚠️ Ce vol (${fn} du ${dt}) a déjà été importé le ${new Date(prev.at).toLocaleDateString('fr-FR')}. Immat: ${prev.rg||'–'}</div>
+      <button class="btn btn-outline btn-sm" onclick="importFlight(${i},true)">Forcer l'import quand même</button>
+    `;
+    return;
+  }
+
+  const btn = document.querySelector(`#act-${i} .btn-green`);
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span>'; }
+
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const apps = getApps();
+    const app  = apps.find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    const db   = getFirestore(app);
+
+    await addDoc(collection(db,'flights'), {
+      flightNumber: fn, registration: rg,
+      date: dt, from: fr, to,
+      type: ty,
+      hasStopover: !!sw,
+      stopover: sw || '',
+      stopoverPax: spx,
+      stopoverBabies: sbb,
+      passengers: px, babies: bb,
+      company: co || detectCompany(fn),
+      authorizationNumber: '',
+      source: 'LDM_EMAIL',
+      createdAt: new Date().toISOString(),
+      timestamp: Date.now()
+    });
+
+    // Save fingerprint
+    imported.set(fp, { fn, dt, rg, at: new Date().toISOString() });
+    saveImported(imported);
+    emails[i]._imported = true;
+
+    // Update UI
+    const card = document.getElementById(`card-${i}`);
+    card.classList.add('imported');
+    document.getElementById(`act-${i}`).innerHTML =
+      '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Importé avec succès dans le système</span>';
+    const hdr = card.querySelector('.email-hdr');
+    if (!hdr.querySelector('.st-ok')) {
+      const badge = document.createElement('span');
+      badge.className='st-badge st-ok'; badge.textContent='✓ Importé';
+      hdr.insertBefore(badge, document.getElementById(`arr-${i}`));
+    }
+
+    updateStats();
+    toast(`✅ Vol ${fn} importé avec succès`,'ok');
+
+  } catch(e) {
+    console.error(e);
+    toast('❌ Erreur import : '+e.message,'err');
+    if(btn){ btn.disabled=false; btn.innerHTML='⬆️ Importer dans le système'; }
+  }
+}
+
+function detectCompany(fn) {
+  const m = {'L6':'Mauritania Airlines','HC':'Air Sénégal','TK':'Turkish Airlines','NT':'Binter','AH':'Air Algérie','KP':'ASKY','AT':'Royal Air Maroc','TU':'Tunisair','AF':'Air France'};
+  return m[fn.slice(0,2)] || fn.slice(0,2);
+}
+
+// ── AUTO REFRESH ──
+function toggleAuto() {
+  autoOn = !autoOn;
+  document.getElementById('autoTrack').classList.toggle('on',autoOn);
+  document.getElementById('autoLbl').textContent = autoOn ? 'Activé' : 'Désactivé';
+  if (autoOn) { startAuto(); toast('🔄 Auto-actualisation activée','ok'); }
+  else        { stopAuto(); document.getElementById('sNext').textContent=''; }
+}
+function startAuto() {
+  stopAuto();
+  const mins = parseInt(document.getElementById('intSel').value);
+  let rem = mins * 60;
+  timer = setInterval(()=>{
+    rem--;
+    const m=Math.floor(rem/60), s=rem%60;
+    document.getElementById('sNext').textContent=`Prochaine vérif. dans ${m}:${String(s).padStart(2,'0')}`;
+    if(rem<=0){ readEmails(); rem=mins*60; }
+  },1000);
+}
+function stopAuto() { if(timer){clearInterval(timer);timer=null;} }
+function updateInterval() { if(autoOn){stopAuto();startAuto();} }
+
+// ── UTILS ──
 function updateStats() {
-  document.getElementById('stTotal').textContent    = results.length;
-  document.getElementById('stLDM').textContent      = results.filter(r=>r.docType==='LDM').length;
-  document.getElementById('stMVT').textContent      = results.filter(r=>r.docType==='MVT').length;
+  document.getElementById('stTotal').textContent    = emails.length;
+  document.getElementById('stLDM').textContent      = emails.filter(e=>e.type==='LDM').length;
+  document.getElementById('stMVT').textContent      = emails.filter(e=>e.type==='MVT').length;
   document.getElementById('stImported').textContent = getImported().size;
 }
-
-function setStatus(st, txt) {
-  const d = document.getElementById('sDot');
-  d.className = 'dot' + (st==='active'?' ok':st==='loading'?' loading':'');
-  document.getElementById('sTxt').textContent = txt;
+function setStatus(st,txt) {
+  const d=document.getElementById('sDot');
+  d.className='dot'+(st==='active'?' ok':st==='loading'?' loading':'');
+  document.getElementById('sTxt').textContent=txt;
 }
-
-function toast(msg, type) {
-  const c = document.getElementById('toasts');
-  const t = document.createElement('div');
-  t.className = `toast ${type==='ok'?'ok':type==='err'?'err':'warn'}`;
-  t.textContent = msg; c.appendChild(t);
-  setTimeout(() => t.remove(), 4000);
+function clearAll() { emails=[]; renderEmails(); updateStats(); setStatus('idle','Résultats effacés'); }
+function toast(msg,type) {
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className=`toast ${type==='ok'?'ok':type==='err'?'err':type==='warn'?'warn':''}`;
+  t.textContent=msg; c.appendChild(t);
+  setTimeout(()=>t.remove(),4000);
 }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function esc(s) {
-  return String(s||'')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// Init
+updateStats();
+setStatus('idle','Prêt');
+
+// ══ LDM AUTH ══════════════════════════════════════════
+const _LS='anac_sess';
+const _LC={apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
+let _ldb=null;
+async function _lDB(){if(_ldb)return _ldb;const{initializeApp,getApps}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');const{getFirestore}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const a=getApps().find(x=>x.name==='_la')||initializeApp(_LC,'_la');_ldb=getFirestore(a);return _ldb;}
+async function _lChk(u,p){try{const db=await _lDB();const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));const s=await getDocs(q);if(!s.empty){const x=s.docs[0].data();return x.password===p;}const c=await getDoc(doc(db,'flights','cfg-auth'));const su=c.exists()?(c.data().username||'DADY'):'DADY';const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';return u.toUpperCase()===su.toUpperCase()&&p===sp;}catch(e){return false;}}
+async function _lValid(ts){try{const db=await _lDB();const{doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const c=await getDoc(doc(db,'flights','cfg-auth'));if(c.exists()&&(c.data().sessionReset||0)>ts)return false;}catch(e){}return true;}
+async function _laLogin(){
+  const u=(document.getElementById('laUser').value||'').trim();
+  const p=document.getElementById('laPass').value||'';
+  const err=document.getElementById('laErr');
+  const btn=document.getElementById('laBtn');
+  err.textContent='';
+  if(!u||!p){err.textContent='Remplissez tous les champs';return;}
+  btn.disabled=true;btn.textContent='Vérification...';
+  const ok=await _lChk(u,p);
+  btn.disabled=false;btn.textContent='Connexion';
+  if(ok){sessionStorage.setItem(_LS,JSON.stringify({u:u.toUpperCase(),ts:Date.now()}));document.getElementById('ldmAuth').classList.add('hidden');}
+  else{err.textContent='Identifiants incorrects';document.getElementById('laPass').value='';}
 }
-
-
-// ── AUTH MODULE (inline) ─────────────────────────────────────────
-const _FB = {
-  apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
-  authDomain:"anacmr-e05b4.firebaseapp.com",
-  projectId:"anacmr-e05b4",
-  storageBucket:"anacmr-e05b4.firebasestorage.app",
-  messagingSenderId:"857117390430",
-  appId:"1:857117390430:web:0231614b880df3196e26cf"
-};
-const _AUTH_KEY = 'anac_auth_v2';
-const _DEF_USER = 'DADY', _DEF_PASS = 'ANACdady';
-let _authDB = null;
-
-async function _getDB() {
-  if (_authDB) return _authDB;
-  const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-  const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-  const apps = getApps();
-  const app  = apps.find(a=>a.name==='anac-auth') || initializeApp(_FB,'anac-auth');
-  _authDB = getFirestore(app);
-  return _authDB;
-}
-
-async function _checkCreds(username, password) {
-  try {
-    const db = await _getDB();
-    const { collection, query, where, getDocs, doc, getDoc }
-      = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    // 1. Chercher dans anac_users
-    const q    = query(collection(db,'anac_users'), where('username','==',username.toUpperCase()));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const u = snap.docs[0].data();
-      return u.password === password ? { ok:true, username:u.username } : { ok:false };
-    }
-    // 2. Fallback: cfg-auth legacy (DADY/ANACdady)
-    const cfg = await getDoc(doc(db,'flights','cfg-auth'));
-    const su  = cfg.exists() ? (cfg.data().username||_DEF_USER) : _DEF_USER;
-    const sp  = cfg.exists() ? (cfg.data().password||_DEF_PASS) : _DEF_PASS;
-    if (username.toUpperCase()===su.toUpperCase() && password===sp)
-      return { ok:true, username:su };
-    return { ok:false };
-  } catch(e) { return { ok:false }; }
-}
-
-function _getSession() {
-  try { return JSON.parse(sessionStorage.getItem(_AUTH_KEY)); } catch { return null; }
-}
-
-async function doLogin() {
-  const user = document.getElementById('authUser').value.trim();
-  const pass = document.getElementById('authPass').value;
-  if (!user||!pass) return;
-  const btn = document.getElementById('authBtn');
-  btn.disabled=true; btn.textContent='Vérification...';
-  document.getElementById('authErr').style.display='none';
-  const res = await _checkCreds(user, pass);
-  btn.disabled=false; btn.textContent='Se connecter';
-  if (res.ok) {
-    sessionStorage.setItem(_AUTH_KEY, JSON.stringify({ username:res.username, ts:Date.now() }));
-    document.getElementById('authOverlay').classList.add('hidden');
-    document.getElementById('badgeUsername').textContent = res.username;
-    document.getElementById('userBadge').style.display = 'flex';
-    if (typeof onLdmAuthSuccess === 'function') onLdmAuthSuccess(res.username);
-  } else {
-    document.getElementById('authErr').style.display='block';
-    document.getElementById('authPass').value='';
-  }
-}
-
-function doLogout() {
-  sessionStorage.removeItem(_AUTH_KEY);
-  location.reload();
-}
-
-// Auto-login si session active
-(function() {
-  const s = _getSession();
-  if (s) {
-    document.getElementById('authOverlay').classList.add('hidden');
-    document.getElementById('badgeUsername').textContent = s.username;
-    document.getElementById('userBadge').style.display = 'flex';
-    if (typeof onLdmAuthSuccess === 'function') setTimeout(()=>onLdmAuthSuccess(s.username),0);
-  }
+// Auto-check session
+(async function(){
+  const s=sessionStorage.getItem(_LS);
+  if(!s)return;
+  try{
+    const sess=JSON.parse(s);
+    const valid=await _lValid(sess.ts);
+    if(valid){document.getElementById('ldmAuth').classList.add('hidden');return;}
+  }catch(e){}
+  sessionStorage.removeItem(_LS);
 })();
 
-function onLdmAuthSuccess(u){console.log("LDM auth ok:",u);}
 </script>
 </body>
 </html>
