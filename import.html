@@ -27,9 +27,57 @@ button{padding:11px 24px;border:none;border-radius:8px;font-size:13px;font-weigh
 .btn-gold{background:linear-gradient(135deg,#D4AF37,#b8942a);color:#0a1628;}
 .btn-red{background:linear-gradient(135deg,#e53e3e,#c53030);color:#fff;}
 button:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ══ LOGIN OVERLAY ══════════════════════════════════════ */
+#authOverlay{position:fixed;inset:0;background:#0a1628;z-index:9999;display:flex;align-items:center;justify-content:center;}
+#authOverlay.hidden{display:none;}
+.auth-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:36px 40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.auth-logo{text-align:center;margin-bottom:24px;}
+.auth-logo div{font-size:32px;margin-bottom:6px;}
+.auth-logo h2{font-size:16px;font-weight:800;color:#D4AF37;margin:0;}
+.auth-logo p{font-size:12px;color:#7a8ba8;margin:4px 0 0;}
+.auth-field{margin-bottom:14px;}
+.auth-field label{display:block;font-size:11px;font-weight:700;color:#7a8ba8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+.auth-field input{width:100%;padding:11px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#e8edf5;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;}
+.auth-field input:focus{border-color:#D4AF37;}
+.auth-btn{width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#D4AF37,#b8942a);color:#0a1628;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;margin-top:4px;}
+.auth-btn:hover{opacity:0.9;}
+.auth-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.auth-err{color:#fc8181;font-size:12px;margin-top:10px;text-align:center;display:none;}
+.auth-user-badge{position:fixed;top:12px;right:16px;background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:#D4AF37;z-index:1000;display:flex;align-items:center;gap:10px;}
+.auth-user-badge button{background:none;border:none;color:#7a8ba8;font-size:11px;cursor:pointer;font-family:inherit;padding:0;}
+.auth-user-badge button:hover{color:#fc8181;}
+
 </style>
 </head>
 <body>
+
+<!-- AUTH OVERLAY -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div>✈</div>
+      <h2>ANAC Mauritanie</h2>
+      <p>Import Programme des Vols</p>
+    </div>
+    <div class="auth-field">
+      <label>Nom d'utilisateur</label>
+      <input type="text" id="authUser" placeholder="ex: DADY" autocomplete="username" autofocus>
+    </div>
+    <div class="auth-field">
+      <label>Mot de passe</label>
+      <input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="auth-btn" id="authBtn" onclick="doLogin()">Se connecter</button>
+    <div class="auth-err" id="authErr">Identifiants incorrects</div>
+  </div>
+</div>
+<!-- USER BADGE (affiché après login) -->
+<div class="auth-user-badge" id="userBadge" style="display:none">
+  <span id="badgeUsername">—</span>
+  <button onclick="doLogout()">Déconnexion</button>
+</div>
+
 <h2>✈ Import Programme des Vols</h2>
 <p class="sub">Importe les fichiers Excel dans Firebase → collection <code style="color:#D4AF37">programme_vols</code><br>
 Le LDM/MVT reader utilisera cette collection pour trouver automatiquement le <strong style="color:#D4AF37">N° d'autorisation</strong> via N° vol + date.</p>
@@ -186,6 +234,95 @@ function log(html) {
   const el=document.getElementById('log');
   el.innerHTML+=html+'\n'; el.scrollTop=el.scrollHeight;
 }
+
+
+// ── AUTH MODULE (inline) ─────────────────────────────────────────
+const _FB = {
+  apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+  authDomain:"anacmr-e05b4.firebaseapp.com",
+  projectId:"anacmr-e05b4",
+  storageBucket:"anacmr-e05b4.firebasestorage.app",
+  messagingSenderId:"857117390430",
+  appId:"1:857117390430:web:0231614b880df3196e26cf"
+};
+const _AUTH_KEY = 'anac_auth_v2';
+const _DEF_USER = 'DADY', _DEF_PASS = 'ANACdady';
+let _authDB = null;
+
+async function _getDB() {
+  if (_authDB) return _authDB;
+  const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+  const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const apps = getApps();
+  const app  = apps.find(a=>a.name==='anac-auth') || initializeApp(_FB,'anac-auth');
+  _authDB = getFirestore(app);
+  return _authDB;
+}
+
+async function _checkCreds(username, password) {
+  try {
+    const db = await _getDB();
+    const { collection, query, where, getDocs, doc, getDoc }
+      = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    // 1. Chercher dans anac_users
+    const q    = query(collection(db,'anac_users'), where('username','==',username.toUpperCase()));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      const u = snap.docs[0].data();
+      return u.password === password ? { ok:true, username:u.username } : { ok:false };
+    }
+    // 2. Fallback: cfg-auth legacy (DADY/ANACdady)
+    const cfg = await getDoc(doc(db,'flights','cfg-auth'));
+    const su  = cfg.exists() ? (cfg.data().username||_DEF_USER) : _DEF_USER;
+    const sp  = cfg.exists() ? (cfg.data().password||_DEF_PASS) : _DEF_PASS;
+    if (username.toUpperCase()===su.toUpperCase() && password===sp)
+      return { ok:true, username:su };
+    return { ok:false };
+  } catch(e) { return { ok:false }; }
+}
+
+function _getSession() {
+  try { return JSON.parse(sessionStorage.getItem(_AUTH_KEY)); } catch { return null; }
+}
+
+async function doLogin() {
+  const user = document.getElementById('authUser').value.trim();
+  const pass = document.getElementById('authPass').value;
+  if (!user||!pass) return;
+  const btn = document.getElementById('authBtn');
+  btn.disabled=true; btn.textContent='Vérification...';
+  document.getElementById('authErr').style.display='none';
+  const res = await _checkCreds(user, pass);
+  btn.disabled=false; btn.textContent='Se connecter';
+  if (res.ok) {
+    sessionStorage.setItem(_AUTH_KEY, JSON.stringify({ username:res.username, ts:Date.now() }));
+    document.getElementById('authOverlay').classList.add('hidden');
+    document.getElementById('badgeUsername').textContent = res.username;
+    document.getElementById('userBadge').style.display = 'flex';
+    if (typeof onImportAuthSuccess === 'function') onImportAuthSuccess(res.username);
+  } else {
+    document.getElementById('authErr').style.display='block';
+    document.getElementById('authPass').value='';
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem(_AUTH_KEY);
+  location.reload();
+}
+
+// Auto-login si session active
+(function() {
+  const s = _getSession();
+  if (s) {
+    document.getElementById('authOverlay').classList.add('hidden');
+    document.getElementById('badgeUsername').textContent = s.username;
+    document.getElementById('userBadge').style.display = 'flex';
+    if (typeof onImportAuthSuccess === 'function') setTimeout(()=>onImportAuthSuccess(s.username),0);
+  }
+})();
+
+function onImportAuthSuccess(u){console.log("Import auth ok:",u);}
 </script>
 </body>
 </html>
