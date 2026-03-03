@@ -522,7 +522,7 @@ function extractFields(text, dateReceived) {
   const lines = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
 
   // ── N° vol + immat + jour
-  const flightRx = /^([A-Z]{1,2}\d{2,4})\/(\d{1,2})\.([A-Z0-9]{4,8})\./;
+  const flightRx = /^([A-Z0-9]{1,2}\d{2,4})\/(\d{1,2})\.([A-Z0-9]{4,8})\./;
   const flLine = lines.find(l => flightRx.test(l));
   if (flLine) {
     const m = flLine.match(flightRx);
@@ -537,9 +537,9 @@ function extractFields(text, dateReceived) {
 
   // MVT style: TK762/15.TCJRI
   if (!p.flightNumber) {
-    const mvtFl = lines.find(l => /^[A-Z]{2}\d{3,4}\/\d{1,2}/.test(l));
+    const mvtFl = lines.find(l => /^[A-Z0-9]{1,2}\d{2,4}\/\d{1,2}/.test(l));
     if (mvtFl) {
-      const m = mvtFl.match(/^([A-Z]{2}\d{3,4})\/(\d{1,2})\.?([A-Z0-9]{4,8})?/);
+      const m = mvtFl.match(/^([A-Z0-9]{1,2}\d{2,4})\/(\d{1,2})\.?([A-Z0-9]{4,8})?/);
       if (m) {
         p.flightNumber = m[1];
         if (m[3]) p.registration = m[3].replace(/[-.\s]/g, '');
@@ -565,7 +565,7 @@ function extractFields(text, dateReceived) {
 
   // MVT route: AD1450/1605 NKC/CDG
   if (!stations.length) {
-    const mvtRoute = text.match(/[A-Z]{2}\d{4}\/\d{4}\s+([A-Z]{3})\/([A-Z]{3})/);
+    const mvtRoute = text.match(/[A-Z0-9]{1,2}\d{3,4}\/\d{4}\s+([A-Z]{3})\/([A-Z]{3})/);
     if (mvtRoute) { stations.push(mvtRoute[1]); stations.push(mvtRoute[2]); }
   }
 
@@ -863,14 +863,14 @@ async function readEmails() {
   if (!accessToken) return;
   const btn = document.getElementById('readBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Lecture...';
-  setStatus('loading', 'Lecture de la boîte de réception...');
+  setStatus('loading', 'Lecture des emails non lus...');
   try {
     // ── Récupérer TOUS les emails de l'INBOX (toutes pages) ──────
     let allIds = [];
     let pageToken = null;
     do {
       const url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages'
-        + '?labelIds=INBOX'
+        + '?labelIds=INBOX&labelIds=UNREAD'
         + '&maxResults=100'
         + (pageToken ? '&pageToken=' + pageToken : '');
       const resp = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -880,11 +880,11 @@ async function readEmails() {
     } while (pageToken);
 
     if (!allIds.length) {
-      setStatus('active', 'Boîte de réception vide');
-      toast('📭 Aucun email dans la boîte de réception', 'warn');
+      setStatus('active', 'Aucun email non lu');
+      toast('📭 Aucun email non lu dans la boîte de réception', 'warn');
       return;
     }
-    setStatus('loading', `${allIds.length} email(s) en boîte — analyse du contenu...`);
+    setStatus('loading', `${allIds.length} email(s) non lu(s) — analyse du contenu...`);
 
     // ── Télécharger chaque email complet ─────────────────────────
     const fetched = await Promise.all(allIds.map(id => fetchEmail(id)));
@@ -979,7 +979,7 @@ function getBody(em) {
 // UTILS
 // ══════════════════════════════════════════
 function detectCompany(fn) {
-  return COMPANY_MAP[(fn||'').slice(0,2)] || fn?.slice(0,2) || '';
+  return COMPANY_MAP[(fn||'').slice(0,2)] || COMPANY_MAP[(fn||'').slice(0,1)] || fn?.slice(0,2) || '';
 }
 
 function updateStats() {
