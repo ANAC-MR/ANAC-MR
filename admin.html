@@ -2,14 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#0a1628">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ANAC Admin">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ANAC Mauritanie – Panneau Administration</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -952,11 +945,11 @@
         <form id="loginForm">
             <div class="login-field">
                 <label>Identifiant</label>
-                <input type="text" id="loginUser" placeholder="Identifiant" autocomplete="off" required>
+                <input type="text" id="loginUser" placeholder="admin" autocomplete="username" required>
             </div>
             <div class="login-field">
                 <label>Mot de passe</label>
-                <input type="password" id="loginPass" placeholder="Mot de passe" autocomplete="new-password" required>
+                <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
                 <span class="login-error" id="loginError">Identifiants incorrects. Réessayez.</span>
             </div>
             <button type="submit" class="btn-login">Connexion</button>
@@ -1000,7 +993,10 @@
                 <span class="icon">🔢</span> Format N° Auth.
             </div>
             <div class="nav-item" onclick="showSection('security')" data-section="security">
-                <span class="icon">🛡️</span> Sécurité
+                <span class="icon">🛡️</span> Sécurité & Utilisateurs
+            </div>
+            <div class="nav-item" onclick="window.open('import.html','_blank')">
+                <span class="icon">📥</span> Import Programme
             </div>
         </nav>
 
@@ -1201,92 +1197,69 @@
             <div class="section-page" id="section-security">
                 <div class="page-header">
                     <div class="page-header-left">
-                        <h2>Sécurité</h2>
-                        <p>Gérez les accès et mots de passe</p>
+                        <h2>Sécurité & Utilisateurs</h2>
+                        <p>Contrôle total des accès — modifications appliquées sur tous les appareils</p>
                     </div>
                 </div>
 
+                <!-- Identifiants principaux -->
                 <div class="card">
-                    <div class="card-title">🔑 Changer le mot de passe admin</div>
-                    <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:18px;">
+                    <div class="card-title">🔑 Compte principal</div>
+                    <p style="font-size:13px;color:var(--text-dim);margin-bottom:18px;line-height:1.7;">
+                        Modifier l'identifiant ou le mot de passe <strong style="color:var(--text);">déconnecte automatiquement tous les appareils</strong> connectés au site.
+                    </p>
+                    <div class="form-grid">
                         <div class="field-group">
-                            <label>Nouveau mot de passe</label>
-                            <div style="position:relative;">
-                                <input type="password" id="secNewPass" placeholder="Nouveau mot de passe" style="padding-right:42px;" autocomplete="new-password">
-                                <button type="button" onclick="togglePwd('secNewPass','eyeA')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;" id="eyeA">👁</button>
-                            </div>
+                            <label>Identifiant actuel</label>
+                            <input type="text" id="secCurrUser" autocomplete="new-password" placeholder="Identifiant actuel">
                         </div>
                         <div class="field-group">
-                            <label>Confirmer le mot de passe</label>
-                            <div style="position:relative;">
-                                <input type="password" id="secConfirmPass" placeholder="Confirmer le mot de passe" style="padding-right:42px;" autocomplete="new-password">
-                                <button type="button" onclick="togglePwd('secConfirmPass','eyeB')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;" id="eyeB">👁</button>
+                            <label>Nouvel identifiant <span style="color:var(--text-dim);font-weight:400;">(laisser vide = inchangé)</span></label>
+                            <input type="text" id="secNewUser" autocomplete="new-password" placeholder="Nouveau identifiant" style="text-transform:uppercase;">
+                        </div>
+                        <div class="field-group">
+                            <label>Mot de passe actuel</label>
+                            <input type="password" id="secCurrentPass" autocomplete="new-password" placeholder="••••••••">
+                        </div>
+                        <div class="field-group">
+                            <label>Nouveau mot de passe <span style="color:var(--text-dim);font-weight:400;">(laisser vide = inchangé)</span></label>
+                            <input type="password" id="secNewPass" autocomplete="new-password" placeholder="••••••••" oninput="checkPasswordStrength()">
+                            <div id="strengthBar" style="height:4px;border-radius:2px;background:rgba(255,255,255,0.1);margin-top:8px;overflow:hidden;">
+                                <div id="strengthFill" style="height:100%;width:0%;transition:width 0.3s,background 0.3s;"></div>
                             </div>
+                            <span id="strengthLabel" class="hint"></span>
+                        </div>
+                        <div class="field-group">
+                            <label>Confirmer nouveau mot de passe</label>
+                            <input type="password" id="secConfirmPass" autocomplete="new-password" placeholder="••••••••">
                         </div>
                     </div>
-                    <div id="adminPassMsg" style="display:none;margin-top:10px;font-size:13px;"></div>
-                    <div style="margin-top:16px;">
-                        <button class="btn-primary" onclick="changePassword()">🔒 Changer le mot de passe</button>
+                    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <button class="btn-primary" onclick="changeCredentials()">💾 Mettre à jour</button>
+                        <button class="btn-danger"  onclick="forceLogoutAll()">⚡ Déconnecter tous les appareils</button>
                     </div>
-                    <p style="font-size:12px;color:var(--text-muted);margin-top:10px;line-height:1.6;">
-                        Apres le changement, tous les appareils connectes seront deconnectes.
-                    </p>
+                    <div id="secMsg" style="margin-top:12px;font-size:13px;font-weight:600;min-height:20px;"></div>
                 </div>
 
-                <!-- ── LDM ACCESS CREDENTIALS ── -->
+                <!-- Utilisateurs secondaires -->
                 <div class="card">
-                    <div class="card-title">📡 Accès LDM/MVT Reader</div>
-                    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">
-                        Chaque modification deconnecte immediatement tous les appareils connectes au LDM Reader.
-                    </p>
-
-                    <!-- Bloc 1: Changer identifiant -->
-                    <div style="border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:18px;margin-bottom:16px;">
-                        <div style="font-size:12px;font-weight:700;color:var(--accent,#D4AF37);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:14px;">Changer l'identifiant</div>
-                        <div style="max-width:360px;">
-                            <div class="field-group" style="margin-bottom:12px;">
-                                <label>Nouvel identifiant</label>
-                                <input type="text" id="ldmNewUsername" placeholder="Nouvel identifiant" style="text-transform:uppercase;" autocomplete="off">
-                            </div>
-                        </div>
-                        <div id="ldmUserMsg" style="display:none;margin-top:8px;font-size:13px;"></div>
-                        <div style="margin-top:12px;">
-                            <button class="btn-primary" onclick="changeLdmUsername()">Changer l'identifiant</button>
-                        </div>
+                    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>👥 Utilisateurs secondaires</span>
+                        <button class="btn-primary" style="padding:7px 16px;font-size:12px;" onclick="showAddUserModal()">+ Ajouter</button>
                     </div>
-
-                    <!-- Bloc 2: Changer mot de passe -->
-                    <div style="border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:18px;">
-                        <div style="font-size:12px;font-weight:700;color:var(--accent,#D4AF37);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:14px;">Changer le mot de passe</div>
-                        <div style="max-width:360px;">
-                            <div class="field-group" style="margin-bottom:12px;">
-                                <label>Nouveau mot de passe</label>
-                                <div style="position:relative;">
-                                    <input type="password" id="ldmNewPass" placeholder="Nouveau mot de passe" style="padding-right:42px;" autocomplete="new-password">
-                                    <button type="button" onclick="togglePwd('ldmNewPass','eyeC')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;" id="eyeC">👁</button>
-                                </div>
-                            </div>
-                            <div class="field-group">
-                                <label>Confirmer le mot de passe</label>
-                                <div style="position:relative;">
-                                    <input type="password" id="ldmConfirmPass" placeholder="Confirmer le mot de passe" style="padding-right:42px;" autocomplete="new-password">
-                                    <button type="button" onclick="togglePwd('ldmConfirmPass','eyeD')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;" id="eyeD">👁</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="ldmPassMsg" style="display:none;margin-top:8px;font-size:13px;"></div>
-                        <div style="margin-top:12px;">
-                            <button class="btn-primary" onclick="changeLdmPassword()">Changer le mot de passe</button>
-                        </div>
-                    </div>
+                    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Ces comptes ont accès aux mêmes pages protégées que le compte principal.</p>
+                    <div id="usersList"><div style="text-align:center;color:var(--text-dim);padding:20px;font-size:13px;">Chargement...</div></div>
                 </div>
 
-                <div class="card">
-                    <div class="card-title">🔓 Réinitialiser la session</div>
-                    <p style="font-size:13px; color:var(--text-dim); margin-bottom:16px; line-height:1.7;">
-                        Déconnecte toutes les sessions actives. Les utilisateurs devront se reconnecter.
-                    </p>
-                    <button class="btn-danger" onclick="clearAllSessions()">🗑️ Réinitialiser toutes les sessions</button>
+                <!-- Pages protégées -->
+                <div class="card" style="background:rgba(212,175,55,0.04);border-color:rgba(212,175,55,0.2);">
+                    <div class="card-title" style="color:#D4AF37;">🛡️ Pages nécessitant une connexion</div>
+                    <div style="font-size:13px;color:var(--text-dim);line-height:2.2;">
+                        <strong style="color:var(--text);">📡 ldm.html</strong> — LDM/MVT Reader<br>
+                        <strong style="color:var(--text);">📥 import.html</strong> — Import Programme des Vols<br>
+                        <strong style="color:var(--text);">🧾 Onglet Facturation</strong> — dans le site principal<br>
+                        <strong style="color:var(--text);">⚙️ admin.html</strong> — ce panneau d'administration
+                    </div>
                 </div>
             </div>
 
@@ -1297,6 +1270,34 @@
 <!-- ════════════════════════════════════
      MODALS
 ════════════════════════════════════ -->
+
+<!-- Modal Utilisateur -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-header">
+            <h3>Nouvel utilisateur</h3>
+            <button class="modal-close" onclick="closeModal('userModal')">×</button>
+        </div>
+        <div class="form-grid">
+            <div class="field-group form-full">
+                <label>Identifiant *</label>
+                <input type="text" id="newUname" autocomplete="new-password" placeholder="Ex: AHMED" style="text-transform:uppercase;">
+            </div>
+            <div class="field-group form-full">
+                <label>Mot de passe *</label>
+                <input type="password" id="newUpass" autocomplete="new-password" placeholder="Min 6 caractères">
+            </div>
+            <div class="field-group form-full">
+                <label>Confirmer *</label>
+                <input type="password" id="newUpass2" autocomplete="new-password" placeholder="••••••••">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('userModal')">Annuler</button>
+            <button class="btn-primary" onclick="saveNewUser()">Créer le compte</button>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Compagnie -->
 <div class="modal-overlay" id="airlineModal">
@@ -1570,19 +1571,6 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     if (user === storedUser && pass === storedPass) {
         recordAttempt(true);
-        // Sauvegarde le token de session actuel pour detecter un changement de mdp sur un autre appareil
-        try {
-            const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-            const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-            const fbCfg2 = {apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
-            const apps2 = getApps();
-            const app2  = apps2.find(a=>a.name==='auth-reader') || initializeApp(fbCfg2,'auth-reader');
-            const db2   = getFirestore(app2);
-            const snap2 = await getDoc(doc(db2,'flights','cfg-auth'));
-            if (snap2.exists() && snap2.data().sessionToken) {
-                sessionStorage.setItem('admin_session_token', snap2.data().sessionToken);
-            }
-        } catch(e) {}
         sessionStorage.setItem(AUTH_KEY, 'true');
         document.body.classList.add('authenticated');
         await loadAll();
@@ -1616,28 +1604,6 @@ window.logout = function() {
 // LOAD DATA
 // ────────────────────────────────────────
 async function loadAll() {
-    // Verifie que la session est toujours valide (detecte changement de mdp sur autre appareil)
-    try {
-        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const fbCfg3 = {apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
-        const apps3 = getApps();
-        const app3  = apps3.find(a=>a.name==='auth-reader') || initializeApp(fbCfg3,'auth-reader');
-        const db3   = getFirestore(app3);
-        const snap3 = await getDoc(doc(db3,'flights','cfg-auth'));
-        if (snap3.exists() && snap3.data().sessionToken) {
-            const fbToken    = snap3.data().sessionToken;
-            const localToken = sessionStorage.getItem('admin_session_token');
-            if (localToken && localToken !== fbToken) {
-                // Token different = mot de passe change sur un autre appareil -> deconnexion forcee
-                sessionStorage.clear();
-                document.body.classList.remove('authenticated');
-                document.getElementById('loginError').textContent = 'Session expiree — mot de passe modifie sur un autre appareil.';
-                document.getElementById('loginError').style.display = 'block';
-                return;
-            }
-        }
-    } catch(e) { /* si Firebase inaccessible, on continue */ }
     await Promise.all([ loadAirlines(), loadAirports(), loadFormatConfig() ]);
     updateDashboard();
 }
@@ -2137,125 +2103,191 @@ window.saveFormatConfig = async function() {
 // ────────────────────────────────────────
 // SECURITY
 // ────────────────────────────────────────
-
-// Toggle visibilite mot de passe
-window.togglePwd = function(inputId, btnId) {
-    var inp = document.getElementById(inputId);
-    var btn = document.getElementById(btnId);
-    if (!inp) return;
-    if (inp.type === 'password') { inp.type = 'text'; if(btn) btn.textContent = '🙈'; }
-    else { inp.type = 'password'; if(btn) btn.textContent = '👁'; }
+window.checkPasswordStrength = function() {
+    const val = document.getElementById('secNewPass').value;
+    const fill = document.getElementById('strengthFill');
+    const label = document.getElementById('strengthLabel');
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const levels = [
+        {pct:'25%', bg:'#e84141', txt:'Faible'},
+        {pct:'50%', bg:'#ff8c42', txt:'Moyen'},
+        {pct:'75%', bg:'#D4AF37', txt:'Bien'},
+        {pct:'100%', bg:'#00b67a', txt:'Fort'},
+    ];
+    const lvl = levels[score-1] || {pct:'0%', bg:'transparent', txt:''};
+    fill.style.width = lvl.pct;
+    fill.style.background = lvl.bg;
+    label.textContent = lvl.txt;
+    label.style.color = lvl.bg;
 };
 
-// Message inline dans la section securite
-function showSecMsg(elId, msg, isError) {
-    var el = document.getElementById(elId);
-    if (!el) return;
-    el.textContent = msg;
-    el.style.color = isError ? '#fc8181' : '#00c98d';
-    el.style.display = 'block';
-    setTimeout(function(){ el.style.display = 'none'; }, 5000);
-}
 
-// ── CHANGER MOT DE PASSE ADMIN ──
-window.changePassword = async function() {
-    var newPass = (document.getElementById('secNewPass').value || '').trim();
-    var confirm = (document.getElementById('secConfirmPass').value || '').trim();
+// ══ SÉCURITÉ & UTILISATEURS ════════════════════════════════════
+window.changeCredentials = async function() {
+    const currUser = (document.getElementById('secCurrUser').value||'').trim();
+    const newUser  = (document.getElementById('secNewUser').value||'').trim().toUpperCase();
+    const currPass = document.getElementById('secCurrentPass').value||'';
+    const newPass  = document.getElementById('secNewPass').value||'';
+    const confPass = document.getElementById('secConfirmPass').value||'';
+    const msgEl    = document.getElementById('secMsg');
+    msgEl.textContent = '';
 
-    if (!newPass)            { showSecMsg('adminPassMsg', 'Entrez un nouveau mot de passe', true); return; }
-    if (newPass.length < 4)  { showSecMsg('adminPassMsg', 'Mot de passe trop court (min 4 caracteres)', true); return; }
-    if (newPass !== confirm)  { showSecMsg('adminPassMsg', 'Les deux mots de passe ne correspondent pas', true); return; }
+    const creds = await getStoredCredentials();
+    if (!currUser && !currPass) { msgEl.style.color='#fc8181'; msgEl.textContent='Entrez vos identifiants actuels'; return; }
+    if (currUser && currUser.toUpperCase() !== creds.user.toUpperCase()) { msgEl.style.color='#fc8181'; msgEl.textContent='Identifiant actuel incorrect'; return; }
+    if (currPass && currPass !== creds.pass) { msgEl.style.color='#fc8181'; msgEl.textContent='Mot de passe actuel incorrect'; return; }
+    if (newPass && newPass.length < 6) { msgEl.style.color='#fc8181'; msgEl.textContent='Nouveau mot de passe trop court (min 6)'; return; }
+    if (newPass && newPass !== confPass) { msgEl.style.color='#fc8181'; msgEl.textContent='Les mots de passe ne correspondent pas'; return; }
+
+    const finalUser = newUser  || creds.user;
+    const finalPass = newPass  || creds.pass;
 
     try {
         const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const fbCfg = {apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
+        const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const apps = getApps();
-        const app2 = apps.find(a => a.name === 'sec-admin') || initializeApp(fbCfg, 'sec-admin');
-        const db2  = getFirestore(app2);
-
-        // Garde identifiant actuel, met a jour mdp + token session
-        const snap = await getDoc(doc(db2, 'flights', 'cfg-auth'));
-        const currentUser = snap.exists() ? (snap.data().username || 'DADY') : 'DADY';
-
-        await setDoc(doc(db2, 'flights', 'cfg-auth'), {
-            username: currentUser,
-            password: newPass,
-            sessionToken: Date.now().toString(),
-            updatedAt: new Date().toISOString()
+        const app  = apps.find(a=>a.name==='auth-reader') || initializeApp({apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"},'auth-reader');
+        const db = getFirestore(app);
+        await setDoc(doc(db,'flights','cfg-auth'), {
+            username: finalUser,
+            password: finalPass,
+            updatedAt: new Date().toISOString(),
+            sessionReset: Date.now()   // ← déconnecte tous les appareils
         });
-
-        document.getElementById('secNewPass').value = '';
-        document.getElementById('secConfirmPass').value = '';
-
-        showSecMsg('adminPassMsg', 'Mot de passe change ! Deconnexion...', false);
-        logActivity('Changement de mot de passe admin', 'security');
-
-        setTimeout(function() {
-            sessionStorage.clear();
-            window.location.href = 'index.html';
-        }, 1500);
-
+        _cachedUser = finalUser;
+        _cachedPass = finalPass;
+        ['secCurrUser','secNewUser','secCurrentPass','secNewPass','secConfirmPass'].forEach(id => {
+            const el = document.getElementById(id); if(el) el.value='';
+        });
+        if (document.getElementById('strengthFill')) document.getElementById('strengthFill').style.width='0%';
+        if (document.getElementById('strengthLabel')) document.getElementById('strengthLabel').textContent='';
+        msgEl.style.color = '#00c98d';
+        msgEl.textContent = '✅ Mis à jour — tous les appareils ont été déconnectés';
+        logActivity('Modification identifiants admin', 'security');
     } catch(e) {
-        showSecMsg('adminPassMsg', 'Erreur: ' + e.message, true);
+        msgEl.style.color = '#fc8181';
+        msgEl.textContent = 'Erreur: ' + e.message;
     }
 };
 
-// ── LDM: CHANGER IDENTIFIANT SEUL ──
-async function getLdmDoc() {
+// Alias legacy
+window.changePassword = window.changeCredentials;
+
+window.forceLogoutAll = async function() {
+    if (!confirm('Déconnecter tous les appareils connectés au site ?')) return;
+    try {
+        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const apps = getApps();
+        const app  = apps.find(a=>a.name==='auth-reader') || initializeApp({apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"},'auth-reader');
+        const db = getFirestore(app);
+        const snap = await getDoc(doc(db,'flights','cfg-auth'));
+        const data = snap.exists() ? snap.data() : {};
+        await setDoc(doc(db,'flights','cfg-auth'), { ...data, sessionReset: Date.now() });
+        document.getElementById('secMsg').style.color = '#00c98d';
+        document.getElementById('secMsg').textContent = '⚡ Tous les appareils ont été déconnectés';
+        showNotif('⚡ Déconnexion globale déclenchée', 'success');
+        logActivity('Déconnexion globale forcée', 'security');
+    } catch(e) { showNotif('Erreur: ' + e.message, 'error'); }
+};
+
+window.clearAllSessions = window.forceLogoutAll;
+
+// ── Utilisateurs secondaires ──────────────────────────────────
+async function _usersDB() {
     const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const fbCfg = {apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
+    const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     const apps = getApps();
-    const app2 = apps.find(a => a.name === 'sec-ldm') || initializeApp(fbCfg, 'sec-ldm');
-    const db2  = getFirestore(app2);
-    return { db2, doc, getDoc, setDoc };
+    const app  = apps.find(a=>a.name==='auth-reader') || initializeApp({apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"},'auth-reader');
+    return getFirestore(app);
 }
 
-window.changeLdmUsername = async function() {
-    var newUser = (document.getElementById('ldmNewUsername').value || '').trim().toUpperCase();
-    if (!newUser)           { showSecMsg('ldmUserMsg', 'Entrez un nouvel identifiant', true); return; }
-    if (newUser.length < 2) { showSecMsg('ldmUserMsg', 'Identifiant trop court', true); return; }
+async function loadUsers() {
+    const div = document.getElementById('usersList');
+    if (!div) return;
     try {
-        var r = await getLdmDoc();
-        var snap = await r.getDoc(r.doc(r.db2, 'config', 'ldm-access'));
-        var currentPass = snap.exists() ? (snap.data().password || 'ANACdady') : 'ANACdady';
-        await r.setDoc(r.doc(r.db2, 'config', 'ldm-access'), {
-            username: newUser, password: currentPass,
-            sessionToken: Date.now().toString(), updatedAt: new Date().toISOString()
-        });
-        document.getElementById('ldmNewUsername').value = '';
-        showSecMsg('ldmUserMsg', 'Identifiant change : ' + newUser + ' — tous les appareils deconnectes', false);
-        logActivity('Changement identifiant LDM: ' + newUser, 'security');
-    } catch(e) { showSecMsg('ldmUserMsg', 'Erreur: ' + e.message, true); }
+        const db = await _usersDB();
+        const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const snap  = await getDocs(collection(db,'anac_users'));
+        const users = snap.docs.map(d=>({id:d.id,...d.data()}));
+        if (!users.length) {
+            div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:13px;">Aucun utilisateur secondaire</div>';
+            return;
+        }
+        div.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="border-bottom:2px solid rgba(255,255,255,0.08);">
+                <th style="padding:10px 12px;text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;font-weight:700;">Identifiant</th>
+                <th style="padding:10px 12px;text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;font-weight:700;">Créé le</th>
+                <th style="padding:10px 12px;text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;font-weight:700;">Par</th>
+                <th></th>
+            </tr></thead>
+            <tbody>${users.map(u=>`
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td style="padding:10px 12px;font-weight:700;">👤 ${u.username}</td>
+                    <td style="padding:10px 12px;color:var(--text-dim);">${u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR'):'—'}</td>
+                    <td style="padding:10px 12px;color:var(--text-dim);">${u.createdBy||'—'}</td>
+                    <td style="padding:10px 12px;text-align:right;">
+                        <button onclick="deleteSecUser('${u.id}','${u.username}')"
+                            style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">
+                            Supprimer
+                        </button>
+                    </td>
+                </tr>`).join('')}
+            </tbody></table>`;
+    } catch(e) {
+        div.innerHTML = `<div style="color:#fc8181;padding:12px;font-size:13px;">Erreur: ${e.message}</div>`;
+    }
+}
+
+window.showAddUserModal = function() {
+    ['newUname','newUpass','newUpass2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    openModal('userModal');
 };
 
-// ── LDM: CHANGER MOT DE PASSE SEUL ──
-window.changeLdmPassword = async function() {
-    var newPass = (document.getElementById('ldmNewPass').value || '').trim();
-    var confirm = (document.getElementById('ldmConfirmPass').value || '').trim();
-    if (!newPass)           { showSecMsg('ldmPassMsg', 'Entrez un nouveau mot de passe', true); return; }
-    if (newPass.length < 4) { showSecMsg('ldmPassMsg', 'Mot de passe trop court (min 4 caracteres)', true); return; }
-    if (newPass !== confirm) { showSecMsg('ldmPassMsg', 'Les deux mots de passe ne correspondent pas', true); return; }
+window.saveNewUser = async function() {
+    const uname = (document.getElementById('newUname').value||'').trim().toUpperCase();
+    const pass1 = document.getElementById('newUpass').value||'';
+    const pass2 = document.getElementById('newUpass2').value||'';
+    if (!uname||!pass1) { showNotif('Remplissez tous les champs','error'); return; }
+    if (pass1!==pass2)  { showNotif('Les mots de passe ne correspondent pas','error'); return; }
+    if (pass1.length<6) { showNotif('Mot de passe trop court (min 6)','error'); return; }
     try {
-        var r = await getLdmDoc();
-        var snap = await r.getDoc(r.doc(r.db2, 'config', 'ldm-access'));
-        var currentUser = snap.exists() ? (snap.data().username || 'DADY') : 'DADY';
-        await r.setDoc(r.doc(r.db2, 'config', 'ldm-access'), {
-            username: currentUser, password: newPass,
-            sessionToken: Date.now().toString(), updatedAt: new Date().toISOString()
+        const db = await _usersDB();
+        const { collection, addDoc, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const q    = query(collection(db,'anac_users'),where('username','==',uname));
+        const snap = await getDocs(q);
+        if (!snap.empty) { showNotif('Identifiant déjà existant','error'); return; }
+        const creds = await getStoredCredentials();
+        await addDoc(collection(db,'anac_users'),{
+            username:uname, password:pass1, role:'admin',
+            createdAt:new Date().toISOString(), createdBy:creds.user
         });
-        document.getElementById('ldmNewPass').value = '';
-        document.getElementById('ldmConfirmPass').value = '';
-        showSecMsg('ldmPassMsg', 'Mot de passe LDM change — tous les appareils deconnectes', false);
-        logActivity('Changement mot de passe LDM', 'security');
-    } catch(e) { showSecMsg('ldmPassMsg', 'Erreur: ' + e.message, true); }
+        closeModal('userModal');
+        showNotif(`✅ Compte "${uname}" créé`,'success');
+        loadUsers();
+    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
 };
 
-window.clearAllSessions = function() {
-    sessionStorage.clear();
-    showNotif('Toutes les sessions ont ete reinitialisees', 'success');
-    logActivity('Reinitialisation des sessions', 'security');
+window.deleteSecUser = async function(id, uname) {
+    if (!confirm(`Supprimer le compte "${uname}" ?`)) return;
+    try {
+        const db = await _usersDB();
+        const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        await deleteDoc(doc(db,'anac_users',id));
+        showNotif(`Compte "${uname}" supprimé`,'success');
+        loadUsers();
+    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+};
+
+// Hook showSection pour charger users
+const _origShowSection = window.showSection;
+window.showSection = function(name) {
+    _origShowSection(name);
+    if (name==='security') loadUsers();
 };
 
 // ────────────────────────────────────────
@@ -2351,14 +2383,5 @@ function esc(str) {
 
 </script>
 
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/ANAC-MR/sw.js', { scope: '/ANAC-MR/' })
-      .catch(function(err) { console.warn('[PWA] SW:', err); });
-  });
-}
-</script>
 </body>
 </html>
