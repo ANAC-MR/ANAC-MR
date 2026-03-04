@@ -92,11 +92,11 @@ Le LDM/MVT reader trouvera automatiquement le <strong style="color:#D4AF37">N° 
   <div id="log">En attente...</div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, getDocs, writeBatch, doc }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/xlsx.mjs';
 
 const db = getFirestore(initializeApp({
   apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
