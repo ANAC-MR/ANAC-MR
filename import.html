@@ -137,8 +137,8 @@ async function parseAll(){
     const code=file.name.replace('.xlsx','').toUpperCase();
     const company=COMPANIES[code]||code;
     const buf=await file.arrayBuffer();
-    const wb=XLSX.read(buf,{type:'array',cellDates:true});
-    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,dateNF:'yyyy-mm-dd'});
+    const wb=window.XLSX.read(buf,{type:'array',cellDates:true});
+    const rows=window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,dateNF:'yyyy-mm-dd'});
     for(const row of rows){
       const auth=row[0]?String(row[0]).trim():'';
       if(!auth.startsWith('SNA'))continue;
