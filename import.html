@@ -229,6 +229,7 @@ async function _iaLogin(){
   if(ok){sessionStorage.setItem(_IS,JSON.stringify({u:u.toUpperCase(),ts:Date.now()}));document.getElementById('impAuth').classList.add('hidden');}
   else{err.textContent='Identifiants incorrects';document.getElementById('iaPass').value='';}
 }
+window._iaLogin = _iaLogin;
 (async function(){
   const s=sessionStorage.getItem(_IS);
   if(!s)return;
