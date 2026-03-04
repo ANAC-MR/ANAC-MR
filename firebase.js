@@ -4,12 +4,12 @@
 
 // Firebase configuration - REPLACE WITH YOUR CONFIG
 const firebaseConfig = {
-  apiKey: "AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
-  authDomain: "anacmr-e05b4.firebaseapp.com",
-  projectId: "anacmr-e05b4",
-  storageBucket: "anacmr-e05b4.firebasestorage.app",
-  messagingSenderId: "857117390430",
-  appId: "1:857117390430:web:0231614b880df3196e26cf",
+  apiKey: "AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
+  authDomain: "anacmr-67835.firebaseapp.com",
+  projectId: "anacmr-67835",
+  storageBucket: "anacmr-67835.firebasestorage.app",
+  messagingSenderId: "906668222910",
+  appId: "1:906668222910:web:0231614b880df3196e26cf",
   measurementId: "G-99SRWB16J8"
 };
 
@@ -115,7 +115,7 @@ function initializeMockMode() {
     console.log('Initializing in mock mode');
     
     // Mock storage
-    let mockFlights = window._mockFlightsDB || [];
+    let mockFlights = JSON.parse(localStorage.getItem('mock_flights') || '[]');
     
     // Mock service
     const mockDbService = {
@@ -126,7 +126,7 @@ function initializeMockMode() {
             };
             
             mockFlights.push(flight);
-            window._mockFlightsDB = mockFlights;
+            localStorage.setItem('mock_flights', JSON.stringify(mockFlights));
             
             // Simulate delay
             await new Promise(resolve => setTimeout(resolve, 300));
@@ -147,7 +147,7 @@ function initializeMockMode() {
                     ...flightData,
                     id: flightId
                 };
-                window._mockFlightsDB = mockFlights;
+                localStorage.setItem('mock_flights', JSON.stringify(mockFlights));
                 
                 // Simulate delay
                 await new Promise(resolve => setTimeout(resolve, 300));
@@ -164,7 +164,7 @@ function initializeMockMode() {
         
         async deleteFlight(flightId) {
             mockFlights = mockFlights.filter(f => f.id !== flightId);
-            window._mockFlightsDB = mockFlights;
+            localStorage.setItem('mock_flights', JSON.stringify(mockFlights));
             
             // Simulate delay
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -181,9 +181,9 @@ function initializeMockMode() {
             // Initial load
             callback([...mockFlights]);
             
-            // Mock real-time updates (polling in-memory)
+            // Mock real-time updates (polling localStorage)
             const interval = setInterval(() => {
-                const currentFlights = window._mockFlightsDB || [];
+                const currentFlights = JSON.parse(localStorage.getItem('mock_flights') || '[]');
                 if (JSON.stringify(currentFlights) !== JSON.stringify(mockFlights)) {
                     mockFlights = currentFlights;
                     callback([...mockFlights]);
@@ -534,11 +534,10 @@ if (window.location.hostname === 'localhost' || window.location.hostname === '12
         getStatus: getFirebaseStatus,
         reconnect: reconnectFirebase,
         clearMockData: () => {
-            window._mockFlightsDB = [];
+            localStorage.removeItem('mock_flights');
             console.log('Mock data cleared');
         }
     };
     
     console.log('Firebase debug mode enabled');
 }
-
