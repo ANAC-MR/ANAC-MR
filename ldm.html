@@ -763,6 +763,7 @@ async function _laLogin(){
   if(ok){sessionStorage.setItem(_LS,JSON.stringify({u:u.toUpperCase(),ts:Date.now()}));document.getElementById('ldmAuth').classList.add('hidden');}
   else{err.textContent='Identifiants incorrects';document.getElementById('laPass').value='';}
 }
+window._laLogin = _laLogin;
 // Auto-check session
 (async function(){
   const s=sessionStorage.getItem(_LS);
