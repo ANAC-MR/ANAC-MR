@@ -1543,7 +1543,7 @@ content = content.replace('
 
 // ══ AUTH FACTURATION ══════════════════════════════════
 const _FS='anac_sess';
-const _FC={apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",authDomain:"anacmr-e05b4.firebaseapp.com",projectId:"anacmr-e05b4",storageBucket:"anacmr-e05b4.firebasestorage.app",messagingSenderId:"857117390430",appId:"1:857117390430:web:0231614b880df3196e26cf"};
+const _FC={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
 let _fdb=null;
 async function _fDB(){if(_fdb)return _fdb;const{initializeApp,getApps}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');const{getFirestore}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const a=getApps().find(x=>x.name==='_fa')||initializeApp(_FC,'_fa');_fdb=getFirestore(a);return _fdb;}
 async function _fChk(u,p){try{const db=await _fDB();const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));const s=await getDocs(q);if(!s.empty){const x=s.docs[0].data();return x.password===p;}const c=await getDoc(doc(db,'flights','cfg-auth'));const su=c.exists()?(c.data().username||'DADY'):'DADY';const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';return u.toUpperCase()===su.toUpperCase()&&p===sp;}catch(e){return false;}}
