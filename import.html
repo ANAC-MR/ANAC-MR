@@ -147,12 +147,22 @@ async function parseAll() {
       let found = 0;
       for (const row of rows) {
         const auth = row[0] ? String(row[0]).trim() : '';
-        if (!auth.startsWith('SNA')) continue;
+        if (!auth.toUpperCase().startsWith('SNA')) continue;
         let date = '';
         const rd = row[1] ? String(row[1]).trim() : '';
         if (/^\d{4}-\d{2}-\d{2}/.test(rd)) date = rd.slice(0,10);
         else if (/^\d{2}\/\d{2}\/\d{4}/.test(rd)) { const[d,m,y]=rd.split('/'); date=`${y}-${m}-${d}`; }
-        else { const s = parseFloat(rd); if (s > 40000) date = new Date(Math.round((s-25569)*86400000)).toISOString().slice(0,10); }
+        else if (/^\d{2}\/\d{2}\/\d{2}$/.test(rd)) { const[d,m,y]=rd.split('/'); date=`20${y}-${m}-${d}`; }
+        else {
+          // Format long: "Monday, October 27, 2025" ou "27 octobre 2025"
+          const parsed = new Date(rd);
+          if (!isNaN(parsed)) date = parsed.toISOString().slice(0,10);
+          else {
+            // Excel serial
+            const s = parseFloat(rd);
+            if (s > 40000) date = new Date(Math.round((s-25569)*86400000)).toISOString().slice(0,10);
+          }
+        }
         if (!date) continue;
         const flight = row[2] ? String(row[2]).trim().replace(/\s+/g,'') : '';
         const decision = row[3] ? String(row[3]).trim() : '';
