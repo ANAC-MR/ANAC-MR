@@ -385,10 +385,10 @@ async function readEmails() {
   setStatus('loading','Recherche des emails LDM/MVT...');
 
   try {
-    // Search Gmail for LDM or MVT emails (last 30 days)
-    const query = encodeURIComponent('subject:(LDM OR MVT) OR (LDM OR MVT) newer_than:30d');
+    // Emails non lus dans INBOX contenant LDM ou MVT
+    const query = encodeURIComponent('in:inbox is:unread (LDM OR MVT)');
     const listResp = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=50`,
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const listData = await listResp.json();
@@ -573,17 +573,9 @@ function extractFields(text, dateReceived) {
     }
     p.totalPax = totalPax; p.paxBabies = totalBabies;
 
-    // 4. BAGS SI lines
-    let maxBags = 0;
-    const siRx2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi; let siM2;
-    while ((siM2 = siRx2.exec(text)) !== null) maxBags = Math.max(maxBags, parseInt(siM2[1])||0);
-    p.bags = maxBags;
-
-    // 5. Fuel + baggage weight
+    // 4. Fuel
     const fuelM = text.match(/FUEL IN TANKS\s+(\d+)/i);
     if (fuelM) p.fuel = parseInt(fuelM[1]);
-    const tM = text.match(/\.T(\d{4,5})[\.\s\/]/);
-    if (tM) p.bagWeight = parseInt(tM[1]);
 
   } else {
     // ─────────────────────────────────────────────────
@@ -673,20 +665,12 @@ function extractFields(text, dateReceived) {
       }
     }
 
-    // 2. PAX dans MVT: chercher .PX<chiffres> ou PX <chiffres>
-    //    Règle: PX se trouve toujours en bas du MVT
-    //    Format: .PX123  ou  .PX/123  ou  PX 123
-    const pxRx = /\.PX\/?([0-9]+)|\bPX\s+([0-9]+)/i;
+    // 2. PAX dans MVT: chercher PX suivi directement de chiffres (ex: PX123)
+    //    PX se trouve toujours en bas du MVT
+    const pxRx = /\bPX([0-9]+)/;
     const pxM  = text.match(pxRx);
-    if (pxM) {
-      p.totalPax  = parseInt(pxM[1] || pxM[2]) || 0;
-      p.paxBabies = 0;
-    } else {
-      // Fallback PAX générique
-      const paxFb = text.match(/\.?PAX\/(\d+)/i);
-      p.totalPax  = paxFb ? parseInt(paxFb[1]) : 0;
-      p.paxBabies = 0;
-    }
+    p.totalPax  = pxM ? parseInt(pxM[1]) : 0;
+    p.paxBabies = 0;
 
     // 3. Immat depuis ligne MVT si pas encore trouvé
     if (!p.registration && mvtLine) {
@@ -694,7 +678,6 @@ function extractFields(text, dateReceived) {
       if (immM2) p.registration = immM2[1];
     }
 
-    p.bags = 0; // MVT ne contient pas de bagages
   }
 
   return p;
@@ -743,7 +726,7 @@ function renderEmails() {
             <div class="pf"><label>Arrivée</label><input id="p${i}-to" value="${esc(p.to||'')}" placeholder="ex: CDG" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>PAX (adultes+enfants)</label><input type="number" id="p${i}-px" value="${p.totalPax||p.paxAdults||0}" min="0"></div>
             <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
-            <div class="pf"><label>Bagages (pièces)</label><input type="number" id="p${i}-bg" value="${p.bags||0}" min="0"></div>
+
           </div>
           <div class="act-row" id="act-${i}">
             ${imp
