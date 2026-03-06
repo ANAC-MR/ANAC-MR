@@ -1370,7 +1370,16 @@
                     </label>
                     <span id="volLockLabel" style="font-size:12px; color:var(--text-dim);">Déverrouillé – saisie libre</span>
                     <span id="volLockBadge" class="unlocked-badge">🔓 Libre</span>
+                    <button type="button" id="btnImportProg" onclick="importFromProgramme()"
+                        style="margin-left:auto;padding:5px 14px;border-radius:7px;border:1.5px solid #2B5A8E;
+                               background:#fff;color:#2B5A8E;font-size:12px;font-weight:700;cursor:pointer;
+                               display:flex;align-items:center;gap:6px;transition:all 0.2s;"
+                        onmouseover="this.style.background='#2B5A8E';this.style.color='#fff'"
+                        onmouseout="this.style.background='#fff';this.style.color='#2B5A8E'">
+                        📋 Importer depuis Programme de Vols
+                    </button>
                 </div>
+                <div id="progImportStatus" style="font-size:12px;color:#718096;margin:4px 0;min-height:16px;"></div>
                 <div class="immat-list" id="volList"></div>
                 <div class="immat-add-row">
                     <input type="text" id="volInput" placeholder="Ex: L6-101" maxlength="10"
@@ -1849,6 +1858,79 @@ window.addVol = function() {
     currentVolList.push(val);
     input.value = '';
     renderVolList();
+};
+
+// ── Import depuis Programme de Vols Firebase ──────────────────
+window.importFromProgramme = async function() {
+    const btn    = document.getElementById('btnImportProg');
+    const status = document.getElementById('progImportStatus');
+    const airlineId = document.getElementById('airlineEditId').value;
+    const airlineName = document.getElementById('airlineName').value.trim();
+
+    if (!airlineName) { showNotif('Enregistrez d'abord le nom de la compagnie', 'warning'); return; }
+
+    btn.textContent = '⏳ Chargement...';
+    btn.disabled = true;
+    status.textContent = 'Recherche dans le programme de vols...';
+
+    try {
+        // Lire les vols existants dans Firebase pour détecter les N° de vol de cette compagnie
+        const { collection, query, where, getDocs, orderBy } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+        // Chercher dans flights les vols de cette compagnie pour extraire les N° vol uniques
+        const q = query(
+            collection(db, 'flights'),
+            where('company', '==', airlineName)
+        );
+        const snap = await getDocs(q);
+
+        const nums = new Set();
+        snap.forEach(doc => {
+            const fn = doc.data().flightNumber;
+            if (fn && fn.trim()) nums.add(fn.trim().toUpperCase());
+        });
+
+        // Aussi chercher dans une collection "programme_vols" si elle existe
+        try {
+            const q2 = query(collection(db, 'programme_vols'), where('company', '==', airlineName));
+            const snap2 = await getDocs(q2);
+            snap2.forEach(doc => {
+                const fn = doc.data().flightNumber || doc.data().numero;
+                if (fn) nums.add(fn.trim().toUpperCase());
+            });
+        } catch(e) { /* collection optionnelle */ }
+
+        if (nums.size === 0) {
+            status.textContent = '⚠️ Aucun numéro de vol trouvé pour ' + airlineName;
+            btn.textContent = '📋 Importer depuis Programme de Vols';
+            btn.disabled = false;
+            return;
+        }
+
+        let added = 0;
+        nums.forEach(n => {
+            if (!currentVolList.includes(n)) {
+                currentVolList.push(n);
+                added++;
+            }
+        });
+
+        currentVolList.sort();
+        renderVolList();
+
+        status.textContent = '✓ ' + added + ' numéro(s) importé(s) depuis Firebase (' + nums.size + ' trouvés au total)';
+        status.style.color = '#006B3F';
+        if (added > 0) showNotif(added + ' numéros de vol importés', 'success');
+        else showNotif('Tous les numéros étaient déjà dans la liste', 'info');
+
+    } catch(e) {
+        console.error('importFromProgramme:', e);
+        status.textContent = '✗ Erreur: ' + e.message;
+        status.style.color = '#e53e3e';
+    } finally {
+        btn.textContent = '📋 Importer depuis Programme de Vols';
+        btn.disabled = false;
+    }
 };
 
 window.removeVol = function(val) {
