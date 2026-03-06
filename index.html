@@ -563,11 +563,6 @@
                 </div>
             </div>
         </div><!-- end tab-facturation -->
-    </main>'''
-
-content = content.replace('        </div>
-    </div>
-
     </main>
 
 </div>
@@ -1530,16 +1525,6 @@ window.switchTab = function(tab) {
     }
 };
 """
-
-# Insérer juste avant </script> final
-assert '
-</script>
-</body>' in content, "Marker not found"
-content = content.replace('
-</script>
-</body>', FACT_JS + '
-</script>
-</body>')
 
 // ══ AUTH FACTURATION ══════════════════════════════════
 const _FS='anac_sess';
