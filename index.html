@@ -607,6 +607,14 @@
                     <option value="">— Aucune escale —</option>
                 </select>
             </div>
+            <div class="form-group" id="stopoverPaxGroup" style="display:none;">
+                <label for="fStopoverPax">PAX Escale</label>
+                <input type="number" id="fStopoverPax" min="0" value="0">
+            </div>
+            <div class="form-group" id="stopoverBabiesGroup" style="display:none;">
+                <label for="fStopoverBabies">Bébés Escale</label>
+                <input type="number" id="fStopoverBabies" min="0" value="0">
+            </div>
             <div class="form-group">
                 <label for="fType">Type du vol</label>
                 <select id="fType" required>
@@ -910,8 +918,13 @@ async function exportPDF() {
 
 function toggleStopoverField() {
     const type = document.getElementById('fType').value;
+    const show = (type === 'TRANSIT');
     const grp  = document.getElementById('stopoverGroup');
-    if (grp) grp.style.display = (type === 'TRANSIT') ? '' : 'none';
+    const grpP = document.getElementById('stopoverPaxGroup');
+    const grpB = document.getElementById('stopoverBabiesGroup');
+    if (grp)  grp.style.display  = show ? '' : 'none';
+    if (grpP) grpP.style.display = show ? '' : 'none';
+    if (grpB) grpB.style.display = show ? '' : 'none';
 }
 
 // Called from app.js when flights are loaded/updated
