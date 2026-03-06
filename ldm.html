@@ -593,90 +593,72 @@ function extractFields(text, dateReceived) {
     //   Si ville != NKC → vol DEP (de NKC vers cette ville)
     // ─────────────────────────────────────────────────
 
-    // 1. Ligne principale MVT: CODE/DATE.IMMAT.TYPE HHDEP/HHARR.VILLE
-    //    ou: L6301/22.5TCLJ.AD1430/1525.TUN
-    //    ou: AD/L6100/22.5TCLJ.D1545.NKC
-    const mvtLineRx = /^(?:[A-Z]{2}\/)?([A-Z0-9]{2}\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,8})\.([A-Z]{1,3})(\d{3,4})(?:\/(\d{3,4}))?\.([A-Z]{2,4})/;
-    const mvtLine = lines.find(l => mvtLineRx.test(l));
+    // Regex robuste MVT — cherche dans toutes les lignes (pas seulement ^)
+    // Formats supportés:
+    //   L6301/22.5TCLJ.AD1430/1525.TUN
+    //   L6-301/22.5TCLJ.D1430.NKC
+    //   AF598/25.FHTYF.AD1430.NKC
+    //   AD/L6100/22.5TCLJ.D1545/1615.TUN
+    const mvtRx = /([A-Z]{1,2}\d{1,2}-?\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,8})\.([A-Z]{1,3})(\d{3,4})(?:\/(\d{3,4}))?\.([A-Z]{2,4})/;
+    let mvtLine = null;
+    let mvtMatch = null;
+    for (const line of lines) {
+      const m = line.match(mvtRx);
+      if (m) { mvtLine = line; mvtMatch = m; break; }
+    }
 
-    if (mvtLine) {
-      const m = mvtLine.match(mvtLineRx);
-      p.flightNumber = m[1];
+    if (mvtMatch) {
+      const m = mvtMatch;
+      // Nettoyer le N° vol: enlever tiret éventuel (L6-301 → L6301)
+      p.flightNumber = m[1].replace(/-/g, '');
       p.registration = m[3];
-      const mvtCode  = m[4]; // AD=Arrival+Departure, A=Arrival, D=Departure, AA=Arrival
-      const cityCode = m[7]; // ville après les heures
+      const cityCode = m[7];
 
       if (dateReceived) {
         const [yr, mo] = dateReceived.split('-');
         p.date = `${yr}-${mo}-${m[2].padStart(2,'0')}`;
       }
 
-      // Règle: ville dans le MVT = aéroport d'origine/destination de la compagnie
-      // Si ville == NKC → vol qui ARRIVE à NKC (DEP depuis cette ville)
-      //   → type ARR, from = cityCode, to = NKC
-      // Si ville != NKC → vol qui REPART de NKC (DEP depuis NKC)
-      //   → type DEP, from = NKC, to = cityCode
-      const isNKC = (cityCode === BASE_IATA || cityCode === 'GQNO');
-
+      // Règle: ville dans le MVT = hub de la compagnie
+      // NKC → vol ARR à Nouakchott (vient de cityCode)
+      // Autre ville → vol DEP de Nouakchott vers cityCode
+      const isNKC = (cityCode === BASE_IATA || cityCode === BASE);
       if (isNKC) {
-        // Arrivée à Nouakchott
         p.type = 'ARR';
-        p.from = ''; // sera complété par lookupAuthNumber ou manuellement
+        p.from = '';      // opérateur complète l'origine
         p.to   = BASE_IATA;
-        // Pour ARR, la ville vient du vol retour — laisser vide pour l'opérateur
       } else {
-        // Départ de Nouakchott
         p.type = 'DEP';
         p.from = BASE_IATA;
         p.to   = cityCode;
       }
-
-      // mvtCode: D=Departure, A=Arrival, AD=both
-      // Si mvtCode contient D et ville != NKC → DEP confirmé
-      // Si mvtCode contient A et ville == NKC → ARR confirmé
-      // On garde la logique ville qui est plus fiable
-
     } else {
-      // Fallback: chercher le N° vol seul
-      const fnRx = /\b([A-Z0-9]{2}\d{2,4})\/([0-9]{1,2})\b/;
-      const fnM  = text.match(fnRx);
-      if (fnM) {
-        p.flightNumber = fnM[1];
-        if (dateReceived) {
-          const [yr, mo] = dateReceived.split('-');
-          p.date = `${yr}-${mo}-${fnM[2].padStart(2,'0')}`;
+      // Fallback: chercher N°vol/jour dans n'importe quelle ligne
+      const fnRx = /([A-Z]{1,2}\d{1,2}-?\d{2,4})\/([0-9]{1,2})/;
+      for (const line of lines) {
+        const m = line.match(fnRx);
+        if (m) {
+          p.flightNumber = m[1].replace(/-/g,'');
+          if (dateReceived) {
+            const [yr, mo] = dateReceived.split('-');
+            p.date = `${yr}-${mo}-${m[2].padStart(2,'0')}`;
+          }
+          break;
         }
       }
-      // Chercher immat: 4-6 lettres/chiffres majuscules (pas des mots clés)
-      const immRx = /\b([A-Z0-9]{4,6})\b/g; let immM;
-      const keywords = new Set(['MVT','LDM','PAX','DEP','ARR','MSG','RCV','TEXT','CREW','BAG','FUEL','LOAD','CARGO','TOTAL','FLIGHT','FROM','DATE','INFO']);
-      while ((immM = immRx.exec(text)) !== null) {
-        if (!keywords.has(immM[1]) && /\d/.test(immM[1])) { p.registration = immM[1]; break; }
+      // Fallback immat: 4-8 majuscules/chiffres après le N°vol
+      if (p.flightNumber) {
+        const afterFn = text.slice(text.indexOf(p.flightNumber) + p.flightNumber.length);
+        const immFb = afterFn.match(/[./]([A-Z0-9]{4,8})[./]/);
+        if (immFb) p.registration = immFb[1];
       }
-      // Route fallback
-      const cityRx = /\b(NKC|CDG|TUN|DSS|ABJ|LPA|LIS|CMN|DKR|CAI|FCO|MAD|AMS|IST|CAS|ORN|ALG|MRS|NCE|LHR|FRA|BCN)\b/g;
-      const cities = []; let cm;
-      while ((cm = cityRx.exec(text)) !== null) cities.push(cm[1]);
-      const uniqCities = [...new Set(cities)];
-      const otherCity = uniqCities.find(c => c !== BASE_IATA);
-      if (otherCity) {
-        const idx = uniqCities.indexOf(otherCity);
-        p.from = BASE_IATA; p.to = otherCity; p.type = 'DEP';
-      }
+      p.from = BASE_IATA; p.to = ''; p.type = 'DEP';
     }
 
-    // 2. PAX dans MVT: chercher PX suivi directement de chiffres (ex: PX123)
-    //    PX se trouve toujours en bas du MVT
-    const pxRx = /\bPX([0-9]+)/;
-    const pxM  = text.match(pxRx);
+    // PAX: chercher PX directement collé aux chiffres (ex: PX123)
+    const pxM = text.match(/\bPX([0-9]+)/);
     p.totalPax  = pxM ? parseInt(pxM[1]) : 0;
     p.paxBabies = 0;
-
-    // 3. Immat depuis ligne MVT si pas encore trouvé
-    if (!p.registration && mvtLine) {
-      const immM2 = mvtLine.match(/\.([A-Z0-9]{4,8})\./);
-      if (immM2) p.registration = immM2[1];
-    }
 
   }
 
