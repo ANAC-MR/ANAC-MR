@@ -278,6 +278,9 @@ function makeFP(p) {
 // Cache en mémoire des vols confirmés présents dans Firebase
 const _fbImported = new Set();
 
+// Cache: N° vol → authorizationNumber (dernier connu dans Firebase)
+const _authByFlight = {};
+
 async function checkImportedFromFirebase() {
   if (!emails.length) return;
   const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
@@ -285,32 +288,49 @@ async function checkImportedFromFirebase() {
   const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
   const db  = getFirestore(app);
 
-  // Lire TOUS les vols Firebase et construire un Set de fingerprints
+  // Lire TOUS les vols Firebase
   const snap = await getDocs(collection(db, 'flights'));
   _fbImported.clear();
+  Object.keys(_authByFlight).forEach(k => delete _authByFlight[k]);
+
   snap.forEach(doc => {
     const d = doc.data();
-    // Ignorer les docs de config (prefix cfg-)
     if (doc.id.startsWith('cfg-')) return;
+    // Fingerprint pour doublon
     const fp = [
       (d.flightNumber||'').replace(/\s/g,'').toUpperCase(),
       (d.date||'').trim(),
       (d.registration||'').replace(/[\s.\-]/g,'').toUpperCase()
     ].join('|');
     if (fp !== '||') _fbImported.add(fp);
+    // Mémoriser authorizationNumber par N° vol (prend le plus récent)
+    const fn = (d.flightNumber||'').toUpperCase();
+    if (fn && d.authorizationNumber) {
+      _authByFlight[fn] = d.authorizationNumber;
+    }
   });
 
-  // Mettre à jour chaque email
+  // Mettre à jour chaque email:
+  // - marquer importé ou non
+  // - pré-remplir authorizationNumber si connu
   let changed = false;
   emails.forEach(em => {
     const wasImported = em._imported;
     em._imported = _fbImported.has(em._fp || '');
     if (em._imported !== wasImported) changed = true;
+    // Pré-remplir N° autorisation depuis Firebase
+    const fn = (em.parsed && em.parsed.flightNumber || '').toUpperCase();
+    if (fn && _authByFlight[fn] && !em.parsed.authorizationNumber) {
+      em.parsed.authorizationNumber = _authByFlight[fn];
+    }
   });
 
   if (changed) {
     renderEmails();
     updateStats();
+  } else if (Object.keys(_authByFlight).length) {
+    // Même si pas de changement d'import, rafraîchir pour les champs auth
+    renderEmails();
   }
 }
 
@@ -474,7 +494,8 @@ function parseLDM(em) {
   const dateHdr  = getHeader(em, 'Date')    || '';
   const body     = getBody(em);
   const text     = body || subject;
-  const type     = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
+  const upper    = text.toUpperCase();
+  const type     = upper.includes('MVT') && !upper.includes('LDM') ? 'MVT' : 'LDM';
   let dateReceived = '';
   try { dateReceived = new Date(dateHdr).toISOString().split('T')[0]; } catch {}
   const p = extractFields(text, dateReceived);
@@ -483,129 +504,198 @@ function parseLDM(em) {
 
 function extractFields(text, dateReceived) {
   const p = {};
-  // Normalize: remove carriage returns, collapse spaces
   const lines = text.replace(/\r/g,'').split('\n').map(l => l.trim()).filter(Boolean);
+  const upper = text.toUpperCase();
 
-  // ── 1. FLIGHT LINE: AF598/22.FHTYP.J34W24Y266.2/10
-  //                    L6212/21.5TCLJ.C16Y144.2/5
-  const flightLineRx = /^([A-Z]{1,2}\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,6})\./;
-  const flightLine = lines.find(l => flightLineRx.test(l));
-  if (flightLine) {
-    const m = flightLine.match(flightLineRx);
-    p.flightNumber = m[1];
-    const day      = m[2].padStart(2,'0');
-    p.registration = m[3];
-    // Build flight date: use day from LDM + month/year from email received date
-    if (dateReceived) {
-      const [yr, mo] = dateReceived.split('-');
-      p.date = `${yr}-${mo}-${day}`;
-    } else {
-      p.date = '';
-    }
-  }
+  // Détecter si c'est un MVT ou LDM
+  const isMVT = upper.includes('MVT') && !upper.includes('LDM');
+  const BASE  = 'GQNO'; // ICAO Nouakchott — mais on accepte aussi NKC (IATA)
+  const BASE_IATA = 'NKC';
 
-  // ── 2. ROUTE: NKC = Nouakchott Oumtounsy (base airport)
-  // Logic:
-  //   - NKC only → simple ARR or DEP
-  //   - 2 other cities + NKC → stopover at NKC (transit)
-  //   - 2 other cities without NKC → DEP from NKC, stopover at first, dest = last
-  const BASE = 'NKC';
-  const routeLines = lines.filter(l => /^-[A-Z]{2,4}[./]/.test(l));
-  const stations = routeLines.map(l => l.match(/^-([A-Z]{2,4})/)?.[1]).filter(Boolean);
-
-  // Also collect SI stations
-  const siStations = [];
-  const siAllRx = /SI\s+([A-Z]{2,4})\s+BAG/gi;
-  let siAll;
-  while ((siAll = siAllRx.exec(text)) !== null) siStations.push(siAll[1]);
-
-  // Merge all stations keeping order, deduplicated
-  const allStations = [...new Set([...stations, ...siStations])];
-  const otherStations = allStations.filter(s => s !== BASE);
-
-  if (otherStations.length >= 2) {
-    if (allStations.includes(BASE)) {
-      // NKC is the stopover: e.g. DSS → NKC(escale) → ABJ
-      p.from     = otherStations[0];
-      p.to       = otherStations[otherStations.length - 1];
-      p.stopover = BASE;
-      p.type     = 'TRANSIT';
-    } else {
-      // 2 cities no NKC: depart NKC, stopover first city, dest last
-      p.from     = BASE;
-      p.stopover = otherStations[0];
-      p.to       = otherStations[otherStations.length - 1];
-      p.type     = 'DEP';
-    }
-  } else if (allStations.includes(BASE)) {
-    p.from = otherStations[0] || '';
-    p.to   = BASE;
-    p.type = 'ARR';
-  } else {
-    p.from = BASE;
-    p.to   = otherStations[0] || '';
-    p.type = 'DEP';
-  }
-
-  // ── 3 & 4. PAX + BABIES
-  // Rule: after each station code X/X/X or X/X/X/X
-  //   last number = babies for that leg
-  //   sum of rest  = pax for that leg
-  // Total PAX = SUM across ALL station lines
-  // Total babies = SUM across ALL station lines
-  let totalPax    = 0;
-  let totalBabies = 0;
-  let foundPax    = false;
-
-  routeLines.forEach(line => {
-    const numMatch = line.match(/\.(\d+(?:\/\d+)+)/);
-    if (!numMatch) return;
-    const nums = numMatch[1].split('/').map(Number);
-    if (nums.length >= 2) {
-      totalBabies += nums[nums.length - 1];             // SUM babies
-      totalPax    += nums.slice(0, -1).reduce((a,b) => a+b, 0); // SUM pax
-      foundPax = true;
-    }
-  });
-
-  // Fallback for MVT: .PAX/X/X/X or PAX 123
-  if (!foundPax) {
-    const paxSlash = text.match(/\.?PAX\/(\d+(?:\/\d+)*)/i);
-    if (paxSlash) {
-      const nums = paxSlash[1].split('/').map(Number);
-      if (nums.length >= 2) {
-        totalBabies = nums[nums.length - 1];
-        totalPax    = nums.slice(0,-1).reduce((a,b)=>a+b,0);
-      } else {
-        totalPax = nums[0]; totalBabies = 0;
+  // ─────────────────────────────────────────────────
+  // ══ LDM PARSING ══
+  // ─────────────────────────────────────────────────
+  if (!isMVT) {
+    // 1. FLIGHT LINE: AF598/22.FHTYP.J34W24Y266.2/10
+    const flightLineRx = /^([A-Z0-9]{2}\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,6})\./;
+    const flightLine = lines.find(l => flightLineRx.test(l));
+    if (flightLine) {
+      const m = flightLine.match(flightLineRx);
+      p.flightNumber = m[1];
+      p.registration = m[3];
+      if (dateReceived) {
+        const [yr, mo] = dateReceived.split('-');
+        p.date = `${yr}-${mo}-${m[2].padStart(2,'0')}`;
       }
-      foundPax = true;
     }
+
+    // 2. ROUTE via lignes -XYZ
+    const routeLines = lines.filter(l => /^-[A-Z]{2,4}[./]/.test(l));
+    const stations   = routeLines.map(l => l.match(/^-([A-Z]{2,4})/)?.[1]).filter(Boolean);
+    const siStations = [];
+    const siAllRx = /SI\s+([A-Z]{2,4})\s+BAG/gi; let siAll;
+    while ((siAll = siAllRx.exec(text)) !== null) siStations.push(siAll[1]);
+    const allStations   = [...new Set([...stations, ...siStations])];
+    const otherStations = allStations.filter(s => s !== BASE_IATA && s !== 'GQNO');
+
+    if (otherStations.length >= 2) {
+      if (allStations.some(s => s===BASE_IATA||s===BASE)) {
+        p.from = otherStations[0]; p.to = otherStations[otherStations.length-1]; p.stopover = BASE_IATA; p.type = 'TRANSIT';
+      } else {
+        p.from = BASE_IATA; p.stopover = otherStations[0]; p.to = otherStations[otherStations.length-1]; p.type = 'DEP';
+      }
+    } else if (allStations.some(s => s===BASE_IATA||s===BASE)) {
+      p.from = otherStations[0] || ''; p.to = BASE_IATA; p.type = 'ARR';
+    } else {
+      p.from = BASE_IATA; p.to = otherStations[0] || ''; p.type = 'DEP';
+    }
+
+    // 3. PAX/BABIES via lignes -XYZ.X/X/X
+    let totalPax = 0, totalBabies = 0, foundPax = false;
+    routeLines.forEach(line => {
+      const numMatch = line.match(/\.(\d+(?:\/\d+)+)/);
+      if (!numMatch) return;
+      const nums = numMatch[1].split('/').map(Number);
+      if (nums.length >= 2) {
+        totalBabies += nums[nums.length-1];
+        totalPax    += nums.slice(0,-1).reduce((a,b)=>a+b,0);
+        foundPax = true;
+      }
+    });
+    if (!foundPax) {
+      const paxSlash = text.match(/\.?PAX\/(\d+(?:\/\d+)*)/i);
+      if (paxSlash) {
+        const nums = paxSlash[1].split('/').map(Number);
+        totalPax = nums.length>=2 ? nums.slice(0,-1).reduce((a,b)=>a+b,0) : nums[0];
+        totalBabies = nums.length>=2 ? nums[nums.length-1] : 0;
+        foundPax = true;
+      }
+    }
+    p.totalPax = totalPax; p.paxBabies = totalBabies;
+
+    // 4. BAGS SI lines
+    let maxBags = 0;
+    const siRx2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi; let siM2;
+    while ((siM2 = siRx2.exec(text)) !== null) maxBags = Math.max(maxBags, parseInt(siM2[1])||0);
+    p.bags = maxBags;
+
+    // 5. Fuel + baggage weight
+    const fuelM = text.match(/FUEL IN TANKS\s+(\d+)/i);
+    if (fuelM) p.fuel = parseInt(fuelM[1]);
+    const tM = text.match(/\.T(\d{4,5})[\.\s\/]/);
+    if (tM) p.bagWeight = parseInt(tM[1]);
+
+  } else {
+    // ─────────────────────────────────────────────────
+    // ══ MVT PARSING ══
+    // Structure MVT:
+    //   MVT
+    //   L6301/22.GQNF.AD1430/1525.NKC       ← ligne principale
+    //   ou: AD/L6100/22.5TCLJ.D1545/1615.TUN
+    //   .PX123                                ← PAX (chercher PX suivi de chiffres)
+    //   .SI CREW 5
+    //
+    // Règle route:
+    //   La ville après l'immatriculation détermine ARR ou DEP
+    //   Si ville == NKC → vol ARR (de cette ville vers NKC)
+    //   Si ville != NKC → vol DEP (de NKC vers cette ville)
+    // ─────────────────────────────────────────────────
+
+    // 1. Ligne principale MVT: CODE/DATE.IMMAT.TYPE HHDEP/HHARR.VILLE
+    //    ou: L6301/22.5TCLJ.AD1430/1525.TUN
+    //    ou: AD/L6100/22.5TCLJ.D1545.NKC
+    const mvtLineRx = /^(?:[A-Z]{2}\/)?([A-Z0-9]{2}\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,8})\.([A-Z]{1,3})(\d{3,4})(?:\/(\d{3,4}))?\.([A-Z]{2,4})/;
+    const mvtLine = lines.find(l => mvtLineRx.test(l));
+
+    if (mvtLine) {
+      const m = mvtLine.match(mvtLineRx);
+      p.flightNumber = m[1];
+      p.registration = m[3];
+      const mvtCode  = m[4]; // AD=Arrival+Departure, A=Arrival, D=Departure, AA=Arrival
+      const cityCode = m[7]; // ville après les heures
+
+      if (dateReceived) {
+        const [yr, mo] = dateReceived.split('-');
+        p.date = `${yr}-${mo}-${m[2].padStart(2,'0')}`;
+      }
+
+      // Règle: ville dans le MVT = aéroport d'origine/destination de la compagnie
+      // Si ville == NKC → vol qui ARRIVE à NKC (DEP depuis cette ville)
+      //   → type ARR, from = cityCode, to = NKC
+      // Si ville != NKC → vol qui REPART de NKC (DEP depuis NKC)
+      //   → type DEP, from = NKC, to = cityCode
+      const isNKC = (cityCode === BASE_IATA || cityCode === 'GQNO');
+
+      if (isNKC) {
+        // Arrivée à Nouakchott
+        p.type = 'ARR';
+        p.from = ''; // sera complété par lookupAuthNumber ou manuellement
+        p.to   = BASE_IATA;
+        // Pour ARR, la ville vient du vol retour — laisser vide pour l'opérateur
+      } else {
+        // Départ de Nouakchott
+        p.type = 'DEP';
+        p.from = BASE_IATA;
+        p.to   = cityCode;
+      }
+
+      // mvtCode: D=Departure, A=Arrival, AD=both
+      // Si mvtCode contient D et ville != NKC → DEP confirmé
+      // Si mvtCode contient A et ville == NKC → ARR confirmé
+      // On garde la logique ville qui est plus fiable
+
+    } else {
+      // Fallback: chercher le N° vol seul
+      const fnRx = /\b([A-Z0-9]{2}\d{2,4})\/([0-9]{1,2})\b/;
+      const fnM  = text.match(fnRx);
+      if (fnM) {
+        p.flightNumber = fnM[1];
+        if (dateReceived) {
+          const [yr, mo] = dateReceived.split('-');
+          p.date = `${yr}-${mo}-${fnM[2].padStart(2,'0')}`;
+        }
+      }
+      // Chercher immat: 4-6 lettres/chiffres majuscules (pas des mots clés)
+      const immRx = /\b([A-Z0-9]{4,6})\b/g; let immM;
+      const keywords = new Set(['MVT','LDM','PAX','DEP','ARR','MSG','RCV','TEXT','CREW','BAG','FUEL','LOAD','CARGO','TOTAL','FLIGHT','FROM','DATE','INFO']);
+      while ((immM = immRx.exec(text)) !== null) {
+        if (!keywords.has(immM[1]) && /\d/.test(immM[1])) { p.registration = immM[1]; break; }
+      }
+      // Route fallback
+      const cityRx = /\b(NKC|CDG|TUN|DSS|ABJ|LPA|LIS|CMN|DKR|CAI|FCO|MAD|AMS|IST|CAS|ORN|ALG|MRS|NCE|LHR|FRA|BCN)\b/g;
+      const cities = []; let cm;
+      while ((cm = cityRx.exec(text)) !== null) cities.push(cm[1]);
+      const uniqCities = [...new Set(cities)];
+      const otherCity = uniqCities.find(c => c !== BASE_IATA);
+      if (otherCity) {
+        const idx = uniqCities.indexOf(otherCity);
+        p.from = BASE_IATA; p.to = otherCity; p.type = 'DEP';
+      }
+    }
+
+    // 2. PAX dans MVT: chercher .PX<chiffres> ou PX <chiffres>
+    //    Règle: PX se trouve toujours en bas du MVT
+    //    Format: .PX123  ou  .PX/123  ou  PX 123
+    const pxRx = /\.PX\/?([0-9]+)|\bPX\s+([0-9]+)/i;
+    const pxM  = text.match(pxRx);
+    if (pxM) {
+      p.totalPax  = parseInt(pxM[1] || pxM[2]) || 0;
+      p.paxBabies = 0;
+    } else {
+      // Fallback PAX générique
+      const paxFb = text.match(/\.?PAX\/(\d+)/i);
+      p.totalPax  = paxFb ? parseInt(paxFb[1]) : 0;
+      p.paxBabies = 0;
+    }
+
+    // 3. Immat depuis ligne MVT si pas encore trouvé
+    if (!p.registration && mvtLine) {
+      const immM2 = mvtLine.match(/\.([A-Z0-9]{4,8})\./);
+      if (immM2) p.registration = immM2[1];
+    }
+
+    p.bags = 0; // MVT ne contient pas de bagages
   }
-  if (!foundPax) {
-    const mvtPax = text.match(/\bPAX\s+(\d+)/i);
-    if (mvtPax) { totalPax = parseInt(mvtPax[1]); totalBabies = 0; }
-  }
-
-  p.totalPax  = totalPax;
-  p.paxBabies = totalBabies;
-
-  // ── 5. BAGS: take max from all SI lines
-  let maxBags = 0;
-  const siRx2 = /SI\s+[A-Z]{2,4}\s+BAG\s+(\d+)/gi;
-  let siM2;
-  while ((siM2 = siRx2.exec(text)) !== null) {
-    maxBags = Math.max(maxBags, parseInt(siM2[1]) || 0);
-  }
-  p.bags = maxBags;
-
-  // ── 6. FUEL IN TANKS
-  const fuelM = text.match(/FUEL IN TANKS\s+(\d+)/i);
-  if (fuelM) p.fuel = parseInt(fuelM[1]);
-
-  // ── 7. Baggage weight T#### (e.g. T8189)
-  const tM = text.match(/\.T(\d{4,5})[\.\s\/]/);
-  if (tM) p.bagWeight = parseInt(tM[1]);
 
   return p;
 }
@@ -640,8 +730,9 @@ function renderEmails() {
           <div class="pgrid">
             <div class="pf-auth-wrap">
               <div class="pf" style="flex:1;">
-                <label>N° Autorisation <span class="auth-badge" id="auth-badge-${i}"></span></label>
-                <input id="p${i}-auth" placeholder="SNA26-XXXX" style="text-transform:uppercase;">
+                <label>N° Autorisation <span class="auth-badge" id="auth-badge-${i}">${p.authorizationNumber ? '&#10003; Auto' : ''}</span></label>
+                <input id="p${i}-auth" value="${esc(p.authorizationNumber||'')}" placeholder="SNA26-XXXX" style="text-transform:uppercase;"
+                       onchange="document.getElementById('auth-badge-'+${i}).textContent=''">
               </div>
               <button class="auth-lookup-btn" onclick="lookupAuthNumber(${i})">🔍 Chercher</button>
             </div>
@@ -664,6 +755,15 @@ function renderEmails() {
       </div>
     </div>`;
   }).join('');
+
+  // Colorer les badges auth auto-remplis
+  emails.forEach((em, i) => {
+    const badge = document.getElementById('auth-badge-'+i);
+    const input = document.getElementById('p'+i+'-auth');
+    if (badge && input && input.value) {
+      badge.className = 'auth-badge found';
+    }
+  });
 }
 
 function toggleCard(i) {
