@@ -135,8 +135,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <input type="text" id="laUser" autocomplete="new-password" spellcheck="false"></div>
     <div class="la-f"><label>Mot de passe</label>
       <input type="password" id="laPass" autocomplete="new-password"
-        onkeydown="if(event.key==='Enter')_laLogin()"></div>
-    <button class="la-btn" id="laBtn" onclick="_laLogin()">Connexion</button>
+        onkeydown="if(event.key==='Enter') window._laLogin && window._laLogin()"></div>
+    <button class="la-btn" id="laBtn" onclick="window._laLogin ? window._laLogin() : void 0">Connexion</button>
     <div class="la-err" id="laErr"></div>
   </div>
 </div>
@@ -762,7 +762,7 @@ async function lookupAuthNumber(i) {
 
   const fn = fnEl.value.trim().toUpperCase();
   const dt = dtEl.value;
-  if (!fn) { toast('Saisissez un numéro de vol d'abord','warn'); return; }
+  if (!fn) { toast('Saisissez un numéro de vol d\'abord','warn'); return; }
 
   badge.className = 'auth-badge';
   badge.textContent = '⏳';
