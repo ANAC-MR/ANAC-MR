@@ -123,6 +123,23 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .la-btn:disabled{opacity:0.5;cursor:not-allowed;}
 .la-err{color:#fc8181;font-size:12px;text-align:center;margin-top:10px;min-height:18px;}
 
+/* Auth lookup dans formulaire parsed */
+.pf-auth-wrap { grid-column: 1 / -1; display:flex; gap:8px; align-items:flex-end; }
+.pf-auth-wrap input { flex:1; }
+.auth-lookup-btn {
+    padding:7px 14px; border:none; border-radius:8px;
+    background:linear-gradient(135deg,#2B5A8E,#1a365d); color:#fff;
+    font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
+    transition:opacity 0.2s; flex-shrink:0;
+}
+.auth-lookup-btn:hover { opacity:0.85; }
+.auth-badge {
+    display:inline-block; font-size:11px; font-weight:700;
+    padding:2px 8px; border-radius:10px; margin-left:8px;
+}
+.auth-badge.found   { background:#d4edda; color:#155724; }
+.auth-badge.approx  { background:#fff3cd; color:#856404; }
+.auth-badge.notfound{ background:#f8d7da; color:#721c24; }
 </style>
 </head>
 <body>
@@ -257,13 +274,49 @@ function makeFP(p) {
     (p.registration||'').replace(/[\s.\-]/g,'').toUpperCase()
   ].join('|');
 }
-function getImported() {
-  try { return new Map(JSON.parse(localStorage.getItem('ldm_fp')||'[]')); }
-  catch { return new Map(); }
+
+// Cache en mémoire des vols confirmés présents dans Firebase
+const _fbImported = new Set();
+
+async function checkImportedFromFirebase() {
+  if (!emails.length) return;
+  const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+  const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+  const db  = getFirestore(app);
+
+  // Lire TOUS les vols Firebase et construire un Set de fingerprints
+  const snap = await getDocs(collection(db, 'flights'));
+  _fbImported.clear();
+  snap.forEach(doc => {
+    const d = doc.data();
+    // Ignorer les docs de config (prefix cfg-)
+    if (doc.id.startsWith('cfg-')) return;
+    const fp = [
+      (d.flightNumber||'').replace(/\s/g,'').toUpperCase(),
+      (d.date||'').trim(),
+      (d.registration||'').replace(/[\s.\-]/g,'').toUpperCase()
+    ].join('|');
+    if (fp !== '||') _fbImported.add(fp);
+  });
+
+  // Mettre à jour chaque email
+  let changed = false;
+  emails.forEach(em => {
+    const wasImported = em._imported;
+    em._imported = _fbImported.has(em._fp || '');
+    if (em._imported !== wasImported) changed = true;
+  });
+
+  if (changed) {
+    renderEmails();
+    updateStats();
+  }
 }
-function saveImported(m) {
-  localStorage.setItem('ldm_fp', JSON.stringify([...m.entries()]));
-}
+
+// Compatibilité: getImported retourne maintenant le cache Firebase
+function getImported() { return _fbImported; }
+function saveImported() { /* Firebase est la source de vérité, localStorage ignoré */ }
 
 // ── GOOGLE SIGN IN ──
 function signIn() {
@@ -342,21 +395,27 @@ async function readEmails() {
       .filter(em => isLDMorMVT(em))
       .map(em => parseLDM(em));
 
-    // Mark duplicates
-    const imported = getImported();
+    // Préparer les fingerprints
     emails.forEach(em => {
       const fp = makeFP(em.parsed || {});
       em._fp       = fp;
-      em._imported = imported.has(fp);
+      em._imported = false; // sera mis à jour après vérif Firebase
     });
 
     renderEmails();
     updateStats();
     const now = new Date().toLocaleTimeString('fr-FR');
     document.getElementById('sLast').textContent = `Dernière vérif. : ${now}`;
+    toast(`✅ ${emails.length} email(s) LDM/MVT trouvé(s) — vérification Firebase...`,'ok');
+
+    // Vérifier dans Firebase quels vols existent VRAIMENT
+    try {
+      await checkImportedFromFirebase();
+    } catch(e) {
+      console.warn('checkImportedFromFirebase failed:', e);
+    }
     const dups = emails.filter(e=>e._imported).length;
-    setStatus('active',`${emails.length} email(s) — ${dups} déjà importé(s)`);
-    toast(`✅ ${emails.length} email(s) LDM/MVT trouvé(s)`,'ok');
+    setStatus('active',`${emails.length} email(s) — ${dups} déjà dans le système`);
 
   } catch(e) {
     console.error(e);
@@ -632,14 +691,12 @@ async function importFlight(i, force) {
 
   if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires','warn'); return; }
 
-  // Anti-duplicate check
+  // Anti-duplicate check via Firebase (source de vérité)
   const fp = `${fn}|${dt}|${rg}`;
-  const imported = getImported();
-  if (!force && imported.has(fp)) {
-    const prev = imported.get(fp);
+  if (!force && _fbImported.has(fp)) {
     document.getElementById(`act-${i}`).innerHTML = `
-      <div class="dup-box">⚠️ Ce vol (${fn} du ${dt}) a déjà été importé le ${new Date(prev.at).toLocaleDateString('fr-FR')}. Immat: ${prev.rg||'–'}</div>
-      <button class="btn btn-outline btn-sm" onclick="importFlight(${i},true)">Forcer l'import quand même</button>
+      <div class="dup-box">⚠️ Ce vol (${fn} du ${dt}) existe déjà dans Firebase.</div>
+      <button class="btn btn-outline btn-sm" onclick="importFlight(${i},true)">Forcer l\'import quand même</button>
     `;
     return;
   }
@@ -671,9 +728,8 @@ async function importFlight(i, force) {
       timestamp: Date.now()
     });
 
-    // Save fingerprint
-    imported.set(fp, { fn, dt, rg, at: new Date().toISOString() });
-    saveImported(imported);
+    // Mettre à jour le cache mémoire Firebase
+    _fbImported.add(fp);
     emails[i]._imported = true;
 
     // Update UI
@@ -730,7 +786,7 @@ function updateStats() {
   document.getElementById('stTotal').textContent    = emails.length;
   document.getElementById('stLDM').textContent      = emails.filter(e=>e.type==='LDM').length;
   document.getElementById('stMVT').textContent      = emails.filter(e=>e.type==='MVT').length;
-  document.getElementById('stImported').textContent = getImported().size;
+  document.getElementById('stImported').textContent = _fbImported.size;
 }
 function setStatus(st,txt) {
   const d=document.getElementById('sDot');
@@ -853,22 +909,3 @@ window._laLogin = _laLogin;
 </script>
 </body>
 </html>
-/* Auth lookup dans formulaire parsed */
-.pf-auth-wrap { grid-column: 1 / -1; display:flex; gap:8px; align-items:flex-end; }
-.pf-auth-wrap input { flex:1; }
-.auth-lookup-btn {
-    padding:7px 14px; border:none; border-radius:8px;
-    background:linear-gradient(135deg,#2B5A8E,#1a365d); color:#fff;
-    font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
-    transition:opacity 0.2s; flex-shrink:0;
-}
-.auth-lookup-btn:hover { opacity:0.85; }
-.auth-badge {
-    display:inline-block; font-size:11px; font-weight:700;
-    padding:2px 8px; border-radius:10px; margin-left:8px;
-}
-.auth-badge.found   { background:#d4edda; color:#155724; }
-.auth-badge.approx  { background:#fff3cd; color:#856404; }
-.auth-badge.notfound{ background:#f8d7da; color:#721c24; }
-
-
