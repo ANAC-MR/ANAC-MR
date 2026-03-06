@@ -425,27 +425,22 @@ function closeModal() {
     document.body.style.overflow = '';
     editingFlightId = null;
     resetForm();
-    updateTotalsReset();
-    // Reset modal title
-    const fpTitle = document.getElementById('fpTitle');
-    if (fpTitle) fpTitle.textContent = 'Ajouter un vol';
+    // Reset totaux live
+    ['liveTotalPax','liveTotalBabies','liveTotalAll'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.textContent = '0';
+    });
+    const fpTitleEl3 = document.getElementById('fpTitle');
+    if (fpTitleEl3) fpTitleEl3.textContent = 'Ajouter un vol';
 }
 
-function updateTotalsReset() {
-    ['liveTotalPax','liveTotalBabies','liveTotalAll'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = '0';
-    });
-}
+// Expose closeModal globally
+window._appCloseModal = closeModal;
 
 function handleModalBackdropClick(event) {
     if (event.target === elements.flightModal) {
         closeModal();
     }
 }
-
-// Expose closeModal globally for inline onclick handlers
-window._appCloseModal = closeModal;
 
 function resetForm() {
     elements.flightForm.reset();
@@ -1390,7 +1385,17 @@ function editFlight(flightId) {
 window.toggleStopoverField = function() {
     const cb  = document.getElementById('hasStopover');
     const grp = document.getElementById('stopoverGroup');
-    if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
+    const show = cb && cb.checked;
+    if (grp) {
+        grp.style.display = show ? '' : 'none';
+        if (!show) {
+            const sp = document.getElementById('fStopoverPax');
+            const sb = document.getElementById('fStopoverBabies');
+            if (sp) sp.value = 0;
+            if (sb) sb.value = 0;
+        }
+    }
+    if (window.updateTotals) window.updateTotals();
 };
 
 window.updateRouteByType = updateRouteByType;
@@ -1399,9 +1404,8 @@ window.updateRouteByType = updateRouteByType;
 window.selectType = function(type) {
     const hiddenInput = document.getElementById('fType');
     if (hiddenInput) hiddenInput.value = type;
-    // Mettre à jour les 3 boutons
-    ['DEP','ARR','TRANSIT'].forEach(t => {
-        const btn = document.getElementById('btn' + t);
+    ['DEP','ARR'].forEach(t => {
+        const btn = document.getElementById('btn'+t);
         if (btn) btn.classList.toggle('active', t === type);
     });
     updateRouteByType();
@@ -1462,3 +1466,4 @@ const additionalStyles = `
 const styleSheet = document.createElement('style');
 styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
+
