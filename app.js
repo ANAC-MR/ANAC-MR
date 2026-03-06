@@ -348,6 +348,7 @@ function handleKeyboardShortcuts(event) {
 function openModal(flightId = null) {
     requireAuthentication(() => {
         elements.flightModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
         
         // Validate flightId - ensure it's a string, not an event object
         const validFlightId = (flightId && typeof flightId === 'string') ? flightId : null;
@@ -359,8 +360,8 @@ function openModal(flightId = null) {
             
             if (flight) {
                 // Update modal title
-                const modalTitle = elements.flightModal.querySelector('h2');
-                modalTitle.textContent = 'Modifier un vol';
+                const fpTitleEl = document.getElementById('fpTitle');
+                if (fpTitleEl) fpTitleEl.textContent = 'Modifier un vol';
                 
                 // Pre-fill form with flight data
                 elements.fAuthNumber.value = flight.authorizationNumber || '';
@@ -389,8 +390,8 @@ function openModal(flightId = null) {
             resetForm();
             
             // Update modal title
-            const modalTitle = elements.flightModal.querySelector('h2');
-            modalTitle.textContent = 'Ajouter un vol';
+            const fpTitleEl2 = document.getElementById('fpTitle');
+            if (fpTitleEl2) fpTitleEl2.textContent = 'Ajouter un vol';
             
             // Set default values
             elements.fCompany.value = AIRLINES[0];
@@ -409,6 +410,7 @@ function openModal(flightId = null) {
             setTimeout(() => {
                 if (window.selectType) window.selectType('DEP');
                 updateFlightNumberPrefix();
+                if (window.updateTotals) window.updateTotals();
             }, 60);
         }
     });
@@ -420,12 +422,20 @@ function openEditModal(flightId) {
 
 function closeModal() {
     elements.flightModal.classList.remove('active');
+    document.body.style.overflow = '';
     editingFlightId = null;
     resetForm();
-    
+    updateTotalsReset();
     // Reset modal title
-    const modalTitle = elements.flightModal.querySelector('h2');
-    modalTitle.textContent = 'Ajouter un vol';
+    const fpTitle = document.getElementById('fpTitle');
+    if (fpTitle) fpTitle.textContent = 'Ajouter un vol';
+}
+
+function updateTotalsReset() {
+    ['liveTotalPax','liveTotalBabies','liveTotalAll'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0';
+    });
 }
 
 function handleModalBackdropClick(event) {
@@ -433,6 +443,9 @@ function handleModalBackdropClick(event) {
         closeModal();
     }
 }
+
+// Expose closeModal globally for inline onclick handlers
+window._appCloseModal = closeModal;
 
 function resetForm() {
     elements.flightForm.reset();
@@ -1386,17 +1399,11 @@ window.updateRouteByType = updateRouteByType;
 window.selectType = function(type) {
     const hiddenInput = document.getElementById('fType');
     if (hiddenInput) hiddenInput.value = type;
-    const btnDEP = document.getElementById('btnDEP');
-    const btnARR = document.getElementById('btnARR');
-    if (btnDEP && btnARR) {
-        if (type === 'DEP') {
-            btnDEP.style.cssText += ';background:#2B5A8E!important;color:#fff!important;border-color:#2B5A8E!important;';
-            btnARR.style.cssText += ';background:#f7fafc!important;color:#718096!important;border-color:#e2e8f0!important;';
-        } else {
-            btnARR.style.cssText += ';background:#2B5A8E!important;color:#fff!important;border-color:#2B5A8E!important;';
-            btnDEP.style.cssText += ';background:#f7fafc!important;color:#718096!important;border-color:#e2e8f0!important;';
-        }
-    }
+    // Mettre à jour les 3 boutons
+    ['DEP','ARR','TRANSIT'].forEach(t => {
+        const btn = document.getElementById('btn' + t);
+        if (btn) btn.classList.toggle('active', t === type);
+    });
     updateRouteByType();
 };
 
@@ -1455,4 +1462,3 @@ const additionalStyles = `
 const styleSheet = document.createElement('style');
 styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
-
