@@ -93,6 +93,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .pf label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;}
 .pf input{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:5px 8px;border-radius:6px;width:100%;outline:none;transition:border-color 0.2s;}
 .pf input:focus{border-color:var(--accent);}
+.pf-auth{grid-column:span 2;}
+.auth-input-wrap{position:relative;display:flex;align-items:center;}
+.auth-input-wrap input{padding-right:36px !important;}
+.auth-lookup-btn{position:absolute;right:6px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--accent);padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;opacity:0.7;transition:opacity 0.2s;box-shadow:none;transform:none;}
+.auth-lookup-btn:hover{opacity:1;transform:none;box-shadow:none;}
+.auth-lookup-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
+.auth-found{background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.25);}
+.auth-notfound{background:rgba(255,165,0,0.12);color:#ffa500;border:1px solid rgba(255,165,0,0.25);}
 .act-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .dup-box{background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#ffa500;width:100%;margin-bottom:8px;}
 .empty{text-align:center;padding:50px 20px;color:var(--dim);}
@@ -587,6 +595,13 @@ function renderEmails() {
             <div class="pf"><label>PAX (adultes+enfants)</label><input type="number" id="p${i}-px" value="${p.totalPax||p.paxAdults||0}" min="0"></div>
             <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
             <div class="pf"><label>Bagages (pièces)</label><input type="number" id="p${i}-bg" value="${p.bags||0}" min="0"></div>
+            <div class="pf pf-auth" id="pf-auth-${i}">
+              <label>N° Autorisation <span class="auth-lookup-badge" id="auth-badge-${i}"></span></label>
+              <div class="auth-input-wrap">
+                <input id="p${i}-auth" value="" placeholder="SNA26-XXXX" oninput="this.value=this.value.toUpperCase()" style="padding-right:32px;">
+                <button type="button" class="auth-lookup-btn" onclick="lookupAuthNumber(${i})" title="Chercher dans Firebase">🔍</button>
+              </div>
+            </div>
           </div>
           <div class="act-row" id="act-${i}">
             ${imp
@@ -606,6 +621,10 @@ function toggleCard(i) {
   const open = b.style.display !== 'none';
   b.style.display = open ? 'none' : 'block';
   a.textContent   = open ? '▼' : '▲';
+  // Auto-lookup auth number quand on ouvre la carte
+  if (!open) {
+    setTimeout(() => lookupAuthNumber(i), 300);
+  }
 }
 
 // ── IMPORT TO FIREBASE ──
@@ -657,7 +676,7 @@ async function importFlight(i, force) {
       stopoverBabies: sbb,
       passengers: px, babies: bb,
       company: co || detectCompany(fn),
-      authorizationNumber: '',
+      authorizationNumber: (document.getElementById(`p${i}-auth`) ? document.getElementById(`p${i}-auth`).value.trim().toUpperCase() : ''),
       source: 'LDM_EMAIL',
       createdAt: new Date().toISOString(),
       timestamp: Date.now()
@@ -687,6 +706,91 @@ async function importFlight(i, force) {
     console.error(e);
     toast('❌ Erreur import : '+e.message,'err');
     if(btn){ btn.disabled=false; btn.innerHTML='⬆️ Importer dans le système'; }
+  }
+}
+
+// ── LOOKUP AUTH NUMBER FROM FIREBASE ────────────────────────────
+// Cherche un vol existant dans Firebase par flightNumber + date
+async function lookupAuthNumber(i) {
+  const fn = document.getElementById(`p${i}-fn`).value.trim().toUpperCase();
+  const dt = document.getElementById(`p${i}-dt`).value;
+  const badge = document.getElementById(`auth-badge-${i}`);
+  const input = document.getElementById(`p${i}-auth`);
+
+  if (!fn || !dt) { toast('⚠️ Renseignez le N° de vol et la date d'abord','warn'); return; }
+
+  const lookupBtn = document.querySelector(`#pf-auth-${i} .auth-lookup-btn`);
+  if (lookupBtn) lookupBtn.innerHTML = '<span class="spin"></span>';
+  if (badge) badge.textContent = '';
+
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const apps = getApps();
+    const app  = apps.find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    const db   = getFirestore(app);
+
+    // Chercher par flightNumber ET date (les deux champs Firebase)
+    const q = query(
+      collection(db,'flights'),
+      where('flightNumber','==', fn),
+      where('date','==', dt)
+    );
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      // Prendre le premier résultat avec un authorizationNumber
+      let found = null;
+      snap.forEach(doc => {
+        const d = doc.data();
+        if (d.authorizationNumber && !found) found = d.authorizationNumber;
+      });
+
+      if (found) {
+        input.value = found;
+        input.style.borderColor = 'var(--green)';
+        if (badge) { badge.textContent = '✓ Trouvé'; badge.className = 'auth-lookup-badge auth-found'; }
+        toast(`✅ N° autorisation trouvé : ${found}`, 'ok');
+      } else {
+        // Vol existant mais sans auth number
+        input.style.borderColor = 'rgba(255,165,0,0.6)';
+        if (badge) { badge.textContent = 'Vol trouvé, auth manquant'; badge.className = 'auth-lookup-badge auth-notfound'; }
+        toast(`⚠️ Vol trouvé mais sans N° d'autorisation`,'warn');
+      }
+    } else {
+      // Essayer avec juste flightNumber (sans date stricte)
+      const q2 = query(collection(db,'flights'), where('flightNumber','==', fn));
+      const snap2 = await getDocs(q2);
+      if (!snap2.empty) {
+        let closest = null;
+        let minDiff = Infinity;
+        snap2.forEach(doc => {
+          const d = doc.data();
+          if (!d.authorizationNumber) return;
+          const diff = Math.abs(new Date(d.date) - new Date(dt));
+          if (diff < minDiff) { minDiff = diff; closest = d; }
+        });
+        if (closest && minDiff < 7 * 86400000) { // dans les 7 jours
+          input.value = closest.authorizationNumber;
+          input.style.borderColor = 'rgba(212,175,55,0.8)';
+          if (badge) { badge.textContent = `~${closest.date}`; badge.className = 'auth-lookup-badge auth-notfound'; }
+          toast(`⚠️ Auth trouvé (date approx. : ${closest.date}) : ${closest.authorizationNumber}`,'warn');
+        } else {
+          input.style.borderColor = 'rgba(229,62,62,0.5)';
+          if (badge) { badge.textContent = 'Non trouvé'; badge.className = 'auth-lookup-badge auth-notfound'; }
+          toast(`❌ Aucun vol ${fn} du ${dt} dans Firebase`,'err');
+        }
+      } else {
+        input.style.borderColor = 'rgba(229,62,62,0.5)';
+        if (badge) { badge.textContent = 'Non trouvé'; badge.className = 'auth-lookup-badge auth-notfound'; }
+        toast(`❌ Aucun vol ${fn} trouvé dans Firebase`,'err');
+      }
+    }
+  } catch(e) {
+    console.error(e);
+    toast('❌ Erreur Firebase : '+e.message,'err');
+  } finally {
+    if (lookupBtn) lookupBtn.innerHTML = '🔍';
   }
 }
 
