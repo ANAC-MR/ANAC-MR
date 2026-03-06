@@ -194,194 +194,365 @@
 #factWall .aerr{color:#e53e3e;font-size:12px;margin-top:8px;min-height:16px;}
 
 
-/* ═══════════════════════════════════════════════════════
-   FACTURATION — Design moderne 2025
-   ═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   FLIGHT MODAL — Design horizontal moderne
+   ═══════════════════════════════════════════════════ */
+.fm-wide {
+    max-width: 780px !important;
+    width: 95vw !important;
+    padding: 0 !important;
+    border-radius: 16px !important;
+    overflow: hidden;
+}
 
-/* Hero */
-.fact-hero {
-    display: flex; align-items: center; gap: 16px;
-    margin-bottom: 24px;
-    padding: 20px 24px;
+/* Header */
+.fm-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 26px;
     background: linear-gradient(135deg, #1a365d 0%, #2B5A8E 100%);
-    border-radius: 14px;
     color: #fff;
 }
-.fact-hero-icon {
-    font-size: 32px; width: 56px; height: 56px;
-    background: rgba(255,255,255,0.15); border-radius: 12px;
+.fm-header-left { display: flex; align-items: center; gap: 14px; }
+.fm-header-icon {
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,0.15); border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
+    font-size: 20px; flex-shrink: 0;
 }
-.fact-hero-title { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
-.fact-hero-sub { font-size: 13px; color: rgba(255,255,255,0.65); margin: 0; }
+.fm-title { font-size: 17px; font-weight: 800; margin: 0; color: #fff; }
+.fm-subtitle { font-size: 11px; color: rgba(255,255,255,0.6); margin: 2px 0 0; }
+.fm-close-btn {
+    width: 34px; height: 34px;
+    background: rgba(255,255,255,0.12); border: none; border-radius: 8px;
+    color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+}
+.fm-close-btn:hover { background: rgba(255,255,255,0.25); transform: none; box-shadow: none; }
 
-/* Panels */
-.fact-panel {
-    background: #fff;
-    border: 1px solid #e8edf3;
-    border-radius: 12px;
-    margin-bottom: 16px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-}
-.fact-panel-header {
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 20px;
-    background: linear-gradient(to right, #f7fafc, #fff);
-    border-bottom: 1px solid #e8edf3;
-}
-.fact-panel-icon { font-size: 16px; }
-.fact-panel-title { font-size: 13px; font-weight: 800; color: #1a365d; text-transform: uppercase; letter-spacing: 0.6px; flex: 1; }
-.fact-panel-actions { display: flex; gap: 8px; }
-.fact-sel-btn {
-    padding: 5px 12px; border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    background: #fff; color: #2B5A8E;
-    font-size: 11px; font-weight: 700; font-family: inherit;
-    cursor: pointer; transition: all 0.2s;
-}
-.fact-sel-btn:hover { background: #2B5A8E; color: #fff; border-color: #2B5A8E; transform: none; box-shadow: none; }
+/* Form body */
+.fm-form { padding: 20px 26px; }
 
-/* Params grid */
-.fact-params-grid {
+/* Section label */
+.fm-section-label {
+    font-size: 11px; font-weight: 800; color: #2B5A8E;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    margin: 16px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid rgba(43,90,142,0.1);
+}
+.fm-section-label:first-of-type { margin-top: 0; }
+
+/* Grids */
+.fm-grid {
+    display: grid; gap: 12px; margin-bottom: 10px;
+}
+.fm-grid-4 { grid-template-columns: repeat(4, 1fr); }
+.fm-grid-1 { grid-template-columns: 1fr; }
+.fm-route-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 14px;
-    padding: 18px 20px;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px; align-items: end;
+    margin-bottom: 10px;
 }
-.fact-param label {
+.fm-route-arrow {
+    font-size: 22px; color: #2B5A8E; font-weight: 800;
+    padding-bottom: 8px; text-align: center;
+}
+
+/* Fields */
+.fm-field label {
     display: block; font-size: 11px; font-weight: 700;
-    color: #718096; text-transform: uppercase; letter-spacing: 0.4px;
-    margin-bottom: 6px;
+    color: #4a5568; text-transform: uppercase; letter-spacing: 0.4px;
+    margin-bottom: 5px;
 }
-.fact-param input, .fact-param select {
-    width: 100%; padding: 9px 12px;
+.fm-field input, .fm-field select {
+    width: 100%; padding: 8px 11px;
     border: 1.5px solid #e2e8f0; border-radius: 8px;
     font-size: 13px; font-family: inherit; color: #2d3748;
     background: #fff; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.fact-param input:focus, .fact-param select:focus {
+.fm-field input:focus, .fm-field select:focus {
     outline: none; border-color: #2B5A8E;
     box-shadow: 0 0 0 3px rgba(43,90,142,0.1);
 }
+.fm-field-col2 { grid-column: span 2; }
 
-/* ── Chips (colonnes) ── */
-.fact-chips-row {
-    display: flex; flex-wrap: wrap; gap: 10px;
-    padding: 16px 20px;
-}
-.fact-chip { cursor: pointer; }
-.fact-chip input[type=checkbox] { display: none; }
-.fact-chip-inner {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 16px;
-    border: 2px solid #e2e8f0; border-radius: 30px;
+/* Type buttons */
+.fm-type-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.fm-type-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 7px; padding: 9px 16px;
+    border: 2px solid #e2e8f0; border-radius: 9px;
     background: #f7fafc; color: #718096;
-    font-size: 13px; font-weight: 600;
-    transition: all 0.2s; user-select: none;
+    font-size: 13px; font-weight: 700; font-family: inherit;
+    cursor: pointer; transition: all 0.2s;
 }
-.fact-chip-check { display: none; font-weight: 800; }
-.fact-chip input:checked + .fact-chip-inner {
+.fm-type-btn:hover { border-color: #2B5A8E; color: #2B5A8E; background: rgba(43,90,142,0.04); transform: none; box-shadow: none; }
+.fm-type-btn.active {
     border-color: #2B5A8E; background: #2B5A8E; color: #fff;
     box-shadow: 0 4px 12px rgba(43,90,142,0.25);
 }
-.fact-chip input:checked + .fact-chip-inner .fact-chip-check { display: inline; }
-.fact-chip-inner:hover { border-color: #2B5A8E; color: #2B5A8E; background: rgba(43,90,142,0.05); }
-.fact-chip input:checked + .fact-chip-inner:hover { background: #2B5A8E; color: #fff; }
 
-/* ── Compagnies cards ── */
+/* Counters */
+.fm-counter {
+    display: flex; align-items: center;
+    border: 1.5px solid #e2e8f0; border-radius: 8px;
+    overflow: hidden; background: #fff;
+}
+.fm-counter input[type=number] {
+    flex: 1; border: none; text-align: center;
+    font-size: 15px; font-weight: 700; padding: 7px 2px;
+    -moz-appearance: textfield;
+}
+.fm-counter input[type=number]::-webkit-inner-spin-button,
+.fm-counter input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+.fm-counter input:focus { outline: none; box-shadow: none; border: none; }
+.fm-cnt {
+    width: 34px; min-height: 36px;
+    background: #f7fafc; color: #2B5A8E;
+    border: none; font-size: 18px; font-weight: 700;
+    cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0; transition: background 0.15s;
+}
+.fm-cnt:hover { background: #2B5A8E; color: #fff; transform: none; box-shadow: none; }
+
+/* Total boxes */
+.fm-total-box {
+    background: rgba(43,90,142,0.06); border: 1px solid rgba(43,90,142,0.15);
+    border-radius: 9px; padding: 10px 14px;
+    display: flex; flex-direction: column; justify-content: center; gap: 6px;
+}
+.fm-total-line { display: flex; justify-content: space-between; align-items: center; }
+.fm-total-lbl { font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; }
+.fm-total-val { font-size: 16px; font-weight: 800; color: #2B5A8E; }
+.fm-grand-box {
+    background: linear-gradient(135deg, #1a365d, #2B5A8E);
+    border-radius: 9px; padding: 10px 14px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.fm-grand-lbl { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.65); text-transform: uppercase; letter-spacing: 0.5px; }
+.fm-grand-val { font-size: 28px; font-weight: 800; color: #D4AF37; line-height: 1; }
+
+/* Escale */
+.fm-stopover-toggle { margin: 8px 0; }
+.fm-chk-label {
+    display: inline-flex; align-items: center; gap: 10px;
+    cursor: pointer; font-size: 13px; font-weight: 600; color: #2d3748;
+    user-select: none;
+}
+.fm-chk-label input[type=checkbox] { display: none; }
+.fm-chk-box {
+    width: 20px; height: 20px;
+    border: 2px solid #e2e8f0; border-radius: 6px; background: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+}
+.fm-chk-label input:checked + .fm-chk-box {
+    background: #2B5A8E; border-color: #2B5A8E;
+}
+.fm-chk-label input:checked + .fm-chk-box::after {
+    content: "✓"; color: #fff; font-size: 12px; font-weight: 800;
+}
+.fm-stopover-panel {
+    background: rgba(43,90,142,0.04);
+    border: 1.5px dashed rgba(43,90,142,0.25);
+    border-radius: 10px; padding: 14px 16px; margin: 8px 0;
+    animation: fmSlide 0.2s ease;
+}
+@keyframes fmSlide { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.fm-stopover-title {
+    font-size: 11px; font-weight: 800; color: #2B5A8E;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+}
+
+/* Footer */
+.fm-footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 14px 26px;
+    border-top: 1px solid #e8edf3;
+    background: #f7fafc;
+    margin: 12px -26px -20px;
+}
+.fm-btn-cancel {
+    padding: 10px 22px; background: #fff; color: #718096;
+    border: 1.5px solid #e2e8f0; border-radius: 8px;
+    font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer;
+    transition: all 0.2s;
+}
+.fm-btn-cancel:hover { background: #f7fafc; color: #2d3748; transform: none; box-shadow: none; }
+.fm-btn-save {
+    padding: 10px 28px;
+    background: linear-gradient(135deg, #2B5A8E, #1a365d);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(43,90,142,0.3); transition: all 0.2s;
+}
+.fm-btn-save:hover { opacity: 0.88; transform: translateY(-1px); }
+
+/* Responsive */
+@media (max-width: 680px) {
+    .fm-grid-4 { grid-template-columns: 1fr 1fr; }
+    .fm-route-grid { grid-template-columns: 1fr; }
+    .fm-route-arrow { display: none; }
+    .fm-field-col2 { grid-column: span 1; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   FACTURATION — Design moderne
+   ═══════════════════════════════════════════════════════ */
+.fact-hero {
+    display:flex; align-items:center; gap:16px;
+    padding:20px 24px; margin-bottom:20px;
+    background:linear-gradient(135deg,#1a365d,#2B5A8E);
+    border-radius:14px; color:#fff;
+}
+.fact-hero-icon {
+    font-size:28px; width:52px; height:52px; flex-shrink:0;
+    background:rgba(255,255,255,0.15); border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+}
+.fact-hero-title { font-size:19px; font-weight:800; margin:0 0 3px; }
+.fact-hero-sub   { font-size:12px; color:rgba(255,255,255,0.65); margin:0; }
+
+.fact-panel {
+    background:#fff; border:1px solid #e8edf3;
+    border-radius:12px; margin-bottom:14px; overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,0.04);
+}
+.fact-panel-hdr {
+    display:flex; align-items:center; gap:10px;
+    padding:13px 20px;
+    background:linear-gradient(to right,#f7fafc,#fff);
+    border-bottom:1px solid #e8edf3;
+}
+.fact-panel-hdr-icon { font-size:15px; }
+.fact-panel-hdr-title {
+    flex:1; font-size:11px; font-weight:800; color:#1a365d;
+    text-transform:uppercase; letter-spacing:0.7px;
+}
+.fact-panel-hdr-actions { display:flex; gap:7px; }
+.fact-sel-btn {
+    padding:5px 12px; border-radius:6px; border:1px solid #e2e8f0;
+    background:#fff; color:#2B5A8E; font-size:11px; font-weight:700;
+    font-family:inherit; cursor:pointer; transition:all 0.2s;
+}
+.fact-sel-btn:hover { background:#2B5A8E; color:#fff; border-color:#2B5A8E; transform:none; box-shadow:none; }
+
+.fact-params-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr));
+    gap:13px; padding:16px 20px;
+}
+.fact-param label {
+    display:block; font-size:11px; font-weight:700;
+    color:#718096; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:5px;
+}
+.fact-param input, .fact-param select {
+    width:100%; padding:8px 11px; border:1.5px solid #e2e8f0;
+    border-radius:8px; font-size:13px; font-family:inherit;
+    color:#2d3748; background:#fff; transition:border-color 0.2s,box-shadow 0.2s;
+}
+.fact-param input:focus, .fact-param select:focus {
+    outline:none; border-color:#2B5A8E; box-shadow:0 0 0 3px rgba(43,90,142,0.1);
+}
+
+/* Chips colonnes */
+.fact-chips-row { display:flex; flex-wrap:wrap; gap:10px; padding:14px 20px; }
+.fact-chip { cursor:pointer; }
+.fact-chip input[type=checkbox] { display:none; }
+.fact-chip-inner {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:9px 16px; border:2px solid #e2e8f0; border-radius:30px;
+    background:#f7fafc; color:#718096; font-size:13px; font-weight:600;
+    transition:all 0.2s; user-select:none;
+}
+.fact-chip-check { display:none; font-weight:800; }
+.fact-chip input:checked + .fact-chip-inner {
+    border-color:#2B5A8E; background:#2B5A8E; color:#fff;
+    box-shadow:0 4px 12px rgba(43,90,142,0.25);
+}
+.fact-chip input:checked + .fact-chip-inner .fact-chip-check { display:inline; }
+.fact-chip-inner:hover { border-color:#2B5A8E; color:#2B5A8E; background:rgba(43,90,142,0.05); }
+.fact-chip input:checked + .fact-chip-inner:hover { background:#2B5A8E; color:#fff; }
+
+/* Cards compagnies */
 .fact-airlines-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 10px;
-    padding: 16px 20px;
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr));
+    gap:9px; padding:14px 20px;
 }
-.fact-airline-card { cursor: pointer; }
-.fact-airline-card input[type=checkbox] { display: none; }
+.fact-airline-card { cursor:pointer; }
+.fact-airline-card input[type=checkbox] { display:none; }
 .fact-airline-card-inner {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 14px;
-    border: 2px solid #e2e8f0; border-radius: 10px;
-    background: #f7fafc; color: #4a5568;
-    font-size: 13px; font-weight: 600;
-    transition: all 0.2s; user-select: none;
-    position: relative;
+    display:flex; align-items:center; gap:9px; padding:11px 13px;
+    border:2px solid #e2e8f0; border-radius:10px;
+    background:#f7fafc; color:#4a5568; font-size:12px; font-weight:600;
+    transition:all 0.2s; user-select:none; position:relative;
 }
-.fact-airline-card-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #cbd5e0; flex-shrink: 0; transition: background 0.2s;
+.fact-airline-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:#cbd5e0; flex-shrink:0; transition:background 0.2s;
 }
-.fact-airline-card-name { flex: 1; font-size: 12px; line-height: 1.3; }
-.fact-airline-card-tick {
-    position: absolute; top: 8px; right: 8px;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: #2B5A8E; color: #fff;
-    font-size: 10px; font-weight: 800;
-    display: none; align-items: center; justify-content: center;
+.fact-airline-name { flex:1; line-height:1.3; }
+.fact-airline-tick {
+    position:absolute; top:7px; right:7px; width:17px; height:17px;
+    border-radius:50%; background:#2B5A8E; color:#fff;
+    font-size:9px; font-weight:800; display:none;
+    align-items:center; justify-content:center;
 }
 .fact-airline-card input:checked + .fact-airline-card-inner {
-    border-color: #2B5A8E; background: rgba(43,90,142,0.06); color: #1a365d;
+    border-color:#2B5A8E; background:rgba(43,90,142,0.06); color:#1a365d;
 }
-.fact-airline-card input:checked + .fact-airline-card-inner .fact-airline-card-dot { background: #2B5A8E; }
-.fact-airline-card input:checked + .fact-airline-card-inner .fact-airline-card-tick { display: flex; }
-.fact-airline-card-inner:hover { border-color: #2B5A8E; }
+.fact-airline-card input:checked + .fact-airline-card-inner .fact-airline-dot { background:#2B5A8E; }
+.fact-airline-card input:checked + .fact-airline-card-inner .fact-airline-tick { display:flex; }
+.fact-airline-card-inner:hover { border-color:#2B5A8E; }
 
-/* ── Actions bar ── */
-.fact-actions-bar {
-    display: flex; gap: 12px; margin-bottom: 20px;
-}
+/* Barre d'actions */
+.fact-actions-bar { display:flex; gap:12px; margin-bottom:18px; }
 .fact-btn-primary {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, #2B5A8E, #1a365d);
-    color: #fff; border: none; border-radius: 10px;
-    font-size: 14px; font-weight: 700; font-family: inherit;
-    cursor: pointer; box-shadow: 0 4px 14px rgba(43,90,142,0.3);
-    transition: all 0.2s;
+    display:inline-flex; align-items:center; gap:8px; padding:11px 22px;
+    background:linear-gradient(135deg,#2B5A8E,#1a365d); color:#fff;
+    border:none; border-radius:10px; font-size:14px; font-weight:700;
+    font-family:inherit; cursor:pointer; box-shadow:0 4px 14px rgba(43,90,142,0.3);
+    transition:all 0.2s;
 }
-.fact-btn-primary:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(43,90,142,0.35); }
+.fact-btn-primary:hover { opacity:0.88; transform:translateY(-1px); box-shadow:0 6px 18px rgba(43,90,142,0.35); }
 .fact-btn-success {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, #006B3F, #005030);
-    color: #fff; border: none; border-radius: 10px;
-    font-size: 14px; font-weight: 700; font-family: inherit;
-    cursor: pointer; box-shadow: 0 4px 14px rgba(0,107,63,0.3);
-    transition: all 0.2s;
+    display:inline-flex; align-items:center; gap:8px; padding:11px 22px;
+    background:linear-gradient(135deg,#006B3F,#005030); color:#fff;
+    border:none; border-radius:10px; font-size:14px; font-weight:700;
+    font-family:inherit; cursor:pointer; box-shadow:0 4px 14px rgba(0,107,63,0.3);
+    transition:all 0.2s;
 }
-.fact-btn-success:hover { opacity: 0.88; transform: translateY(-1px); }
+.fact-btn-success:hover { opacity:0.88; transform:translateY(-1px); }
 
-/* ── Preview panel ── */
+/* Preview panel */
 .fact-preview-panel {
-    background: #fff;
-    border: 1px solid #e8edf3;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    background:#fff; border:1px solid #e8edf3; border-radius:12px;
+    overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.04);
 }
-.fact-preview-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 13px 20px;
-    background: linear-gradient(to right, #f7fafc, #fff);
-    border-bottom: 1px solid #e8edf3;
-    font-size: 13px; font-weight: 800; color: #1a365d;
-    text-transform: uppercase; letter-spacing: 0.6px;
+.fact-preview-panel-hdr {
+    display:flex; align-items:center; gap:8px; padding:12px 20px;
+    background:linear-gradient(to right,#f7fafc,#fff);
+    border-bottom:1px solid #e8edf3;
+    font-size:11px; font-weight:800; color:#1a365d;
+    text-transform:uppercase; letter-spacing:0.7px;
 }
-#fctPreview { padding: 20px; min-height: 100px; }
+#fctPreview { padding:20px; min-height:80px; }
 .fact-empty-state {
-    text-align: center; padding: 40px 20px; color: #a0aec0;
+    text-align:center; padding:36px 20px; color:#a0aec0;
 }
-.fact-empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
-.fact-empty-state p { font-size: 14px; line-height: 1.6; }
-.fact-empty-state strong { color: #2B5A8E; }
+.fact-empty-state-icon { font-size:36px; margin-bottom:10px; opacity:0.45; }
+.fact-empty-state p { font-size:13px; line-height:1.6; }
+.fact-empty-state strong { color:#2B5A8E; }
 
-/* Remove old styles that conflict */
-.fact-config { display: none !important; }
-.fact-col-bar { display: none !important; }
-.fact-airlines-grid { display: none !important; }
-.fact-actions { display: none !important; }
-.fact-preview-box { display: none !important; }
+/* Masquer anciens éléments */
+.fact-config     { display:none !important; }
+.fact-col-bar    { display:none !important; }
+.fact-airlines-grid { display:none !important; }
+.fact-actions    { display:none !important; }
+.fact-preview-box { display:none !important; }
 
     </style>
 </head>
@@ -675,7 +846,7 @@
         <div class="tab-content" id="tab-facturation">
         <div class="fact-section">
 
-            <!-- ── Titre ── -->
+            <!-- Hero -->
             <div class="fact-hero">
                 <div class="fact-hero-icon">📄</div>
                 <div>
@@ -684,13 +855,12 @@
                 </div>
             </div>
 
-            <!-- ── Panneau paramètres ── -->
+            <!-- Paramètres -->
             <div class="fact-panel">
-                <div class="fact-panel-header">
-                    <span class="fact-panel-icon">⚙️</span>
-                    <span class="fact-panel-title">Paramètres du document</span>
+                <div class="fact-panel-hdr">
+                    <span class="fact-panel-hdr-icon">⚙️</span>
+                    <span class="fact-panel-hdr-title">Paramètres du document</span>
                 </div>
-
                 <div class="fact-params-grid">
                     <div class="fact-param">
                         <label>Période</label>
@@ -733,46 +903,46 @@
                 </div>
             </div>
 
-            <!-- ── Colonnes ── -->
+            <!-- Colonnes -->
             <div class="fact-panel">
-                <div class="fact-panel-header">
-                    <span class="fact-panel-icon">📊</span>
-                    <span class="fact-panel-title">Colonnes à inclure</span>
+                <div class="fact-panel-hdr">
+                    <span class="fact-panel-hdr-icon">📊</span>
+                    <span class="fact-panel-hdr-title">Colonnes à inclure</span>
                 </div>
                 <div class="fact-chips-row">
                     <label class="fact-chip">
                         <input type="checkbox" class="fact-chip-cb" data-col="pax_dep" checked>
                         <span class="fact-chip-inner">
-                            <span class="fact-chip-icon">🛫</span>
-                            <span class="fact-chip-label">PAX Départs</span>
+                            <span>🛫</span>
+                            <span>PAX Départs</span>
                             <span class="fact-chip-check">✓</span>
                         </span>
                     </label>
                     <label class="fact-chip">
                         <input type="checkbox" class="fact-chip-cb" data-col="pax_arr" checked>
                         <span class="fact-chip-inner">
-                            <span class="fact-chip-icon">🛬</span>
-                            <span class="fact-chip-label">PAX Arrivées</span>
+                            <span>🛬</span>
+                            <span>PAX Arrivées</span>
                             <span class="fact-chip-check">✓</span>
                         </span>
                     </label>
                     <label class="fact-chip">
                         <input type="checkbox" class="fact-chip-cb" data-col="vols">
                         <span class="fact-chip-inner">
-                            <span class="fact-chip-icon">✈️</span>
-                            <span class="fact-chip-label">Nombre de vols</span>
+                            <span>✈️</span>
+                            <span>Nombre de vols</span>
                             <span class="fact-chip-check">✓</span>
                         </span>
                     </label>
                 </div>
             </div>
 
-            <!-- ── Compagnies ── -->
+            <!-- Compagnies -->
             <div class="fact-panel">
-                <div class="fact-panel-header">
-                    <span class="fact-panel-icon">🏢</span>
-                    <span class="fact-panel-title">Compagnies</span>
-                    <div class="fact-panel-actions">
+                <div class="fact-panel-hdr">
+                    <span class="fact-panel-hdr-icon">🏢</span>
+                    <span class="fact-panel-hdr-title">Compagnies</span>
+                    <div class="fact-panel-hdr-actions">
                         <button class="fact-sel-btn" onclick="fctSelectAll(true)">Tout sélectionner</button>
                         <button class="fact-sel-btn" onclick="fctSelectAll(false)">Tout désélectionner</button>
                     </div>
@@ -780,7 +950,7 @@
                 <div class="fact-airlines-cards" id="fctAirlines"></div>
             </div>
 
-            <!-- ── Actions ── -->
+            <!-- Actions -->
             <div class="fact-actions-bar">
                 <button class="fact-btn-primary" onclick="fctGenApercu()">
                     <span>👁</span> Générer l'aperçu
@@ -790,14 +960,14 @@
                 </button>
             </div>
 
-            <!-- ── Preview ── -->
+            <!-- Preview -->
             <div class="fact-preview-panel">
-                <div class="fact-preview-header">
+                <div class="fact-preview-panel-hdr">
                     <span>🔍</span> Aperçu du document
                 </div>
                 <div id="fctPreview">
                     <div class="fact-empty-state">
-                        <div class="fact-empty-icon">📋</div>
+                        <div class="fact-empty-state-icon">📋</div>
                         <p>Configurez les paramètres puis cliquez sur<br><strong>« Générer l'aperçu »</strong></p>
                     </div>
                 </div>
@@ -809,76 +979,153 @@
 
 </div>
 
-<!-- MODAL VOL -->
+<!-- MODAL VOL — design horizontal centré -->
 <div class="modal" id="flightModal">
-    <div class="modal-content">
-        <h2>Ajouter un vol</h2>
-        <form id="flightForm">
-            <div class="form-group">
-                <label for="fAuthNumber">Numéro d'autorisation</label>
-                <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
-                <small class="field-hint">Format: SNA26-XXXX (ex: SNA26-0001)</small>
-            </div>
-            <div class="form-group">
-                <label for="fDate">Date</label>
-                <input type="date" id="fDate" required>
-            </div>
-            <div class="form-group">
-                <label for="fCompany">Compagnie</label>
-                <select id="fCompany" required></select>
-            </div>
-            <div class="form-group">
-                <label for="fImm">Immatriculation</label>
-                <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
-            </div>
-            <div class="form-group">
-                <label for="fVol">N° Vol</label>
-                <input type="text" id="fVol" placeholder="Ex: L6-123" required>
-            </div>
-            <div class="form-group">
-                <label for="fFrom">Départ de</label>
-                <select id="fFrom" required></select>
-            </div>
-            <div class="form-group">
-                <label for="fTo">Arrivée à</label>
-                <select id="fTo" required></select>
-            </div>
-            <div class="form-group" id="stopoverGroup" style="display:none;">
-                <label for="fStopover">✈ Escale (optionnel)</label>
-                <select id="fStopover">
-                    <option value="">— Aucune escale —</option>
-                </select>
-            </div>
-            <div class="form-group" id="stopoverPaxGroup" style="display:none;">
-                <label for="fStopoverPax">PAX Escale</label>
-                <input type="number" id="fStopoverPax" min="0" value="0">
-            </div>
-            <div class="form-group" id="stopoverBabiesGroup" style="display:none;">
-                <label for="fStopoverBabies">Bébés Escale</label>
-                <input type="number" id="fStopoverBabies" min="0" value="0">
-            </div>
-            <div class="form-group">
-                <label for="fType">Type du vol</label>
-                <select id="fType" required>
-                    <option value="DEP">Départ</option>
-                    <option value="ARR">Arrivée</option>
-                    <option value="TRANSIT">Transit (escale NKC)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="fPassengers">PAX (Passagers)</label>
-                <input type="number" id="fPassengers" min="0" value="0" required>
-            </div>
-            <div class="form-group">
-                <label for="fBabies">Bébés</label>
-                <input type="number" id="fBabies" min="0" value="0" required>
-            </div>
-            <div class="modal-buttons">
-                <button type="submit" class="btn-success">Enregistrer</button>
-                <button type="button" class="btn-secondary" id="cancelBtn">Annuler</button>
-            </div>
-        </form>
+<div class="modal-content fm-wide">
+
+  <!-- HEADER -->
+  <div class="fm-header">
+    <div class="fm-header-left">
+      <span class="fm-header-icon">✈</span>
+      <div>
+        <h2 class="fm-title" id="fpTitle">Ajouter un vol</h2>
+        <p class="fm-subtitle">Remplissez les informations ci-dessous</p>
+      </div>
     </div>
+    <button type="button" class="fm-close-btn" id="cancelBtn" onclick="closeModal()">✕</button>
+  </div>
+
+  <form id="flightForm" class="fm-form">
+
+    <!-- LIGNE 1 : Identification -->
+    <div class="fm-section-label">🪪 Identification</div>
+    <div class="fm-grid fm-grid-4">
+      <div class="fm-field">
+        <label>N° autorisation</label>
+        <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
+        <small class="field-hint">Format : SNA26-XXXX</small>
+      </div>
+      <div class="fm-field">
+        <label>Date du vol</label>
+        <input type="date" id="fDate" required>
+      </div>
+      <div class="fm-field">
+        <label>Immatriculation</label>
+        <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
+      </div>
+      <div class="fm-field">
+        <label>N° Vol</label>
+        <input type="text" id="fVol" placeholder="Ex: L6-123" required>
+      </div>
+    </div>
+
+    <div class="fm-grid fm-grid-1" style="margin-top:0;">
+      <div class="fm-field">
+        <label>Compagnie aérienne</label>
+        <select id="fCompany" required></select>
+      </div>
+    </div>
+
+    <!-- LIGNE 2 : Itinéraire -->
+    <div class="fm-section-label">🗺️ Itinéraire</div>
+
+    <!-- Boutons Type -->
+    <div class="fm-type-row">
+      <button type="button" class="fm-type-btn active" id="btnDEP" onclick="selectType('DEP')">
+        <span>🛫</span><span>Départ</span>
+      </button>
+      <button type="button" class="fm-type-btn" id="btnARR" onclick="selectType('ARR')">
+        <span>🛬</span><span>Arrivée</span>
+      </button>
+    </div>
+    <input type="hidden" id="fType" value="DEP">
+
+    <div class="fm-grid fm-route-grid">
+      <div class="fm-field">
+        <label>Départ de</label>
+        <select id="fFrom" required></select>
+      </div>
+      <div class="fm-route-arrow">→</div>
+      <div class="fm-field">
+        <label>Arrivée à</label>
+        <select id="fTo" required></select>
+      </div>
+    </div>
+
+    <!-- LIGNE 3 : Passagers -->
+    <div class="fm-section-label">👥 Passagers</div>
+    <div class="fm-grid fm-grid-4">
+      <div class="fm-field">
+        <label>PAX (vol)</label>
+        <div class="fm-counter">
+          <button type="button" class="fm-cnt" onclick="stepCount('fPassengers',-1)">−</button>
+          <input type="number" id="fPassengers" min="0" value="0" required oninput="updateTotals()">
+          <button type="button" class="fm-cnt" onclick="stepCount('fPassengers',1)">+</button>
+        </div>
+      </div>
+      <div class="fm-field">
+        <label>Bébés (vol)</label>
+        <div class="fm-counter">
+          <button type="button" class="fm-cnt" onclick="stepCount('fBabies',-1)">−</button>
+          <input type="number" id="fBabies" min="0" value="0" required oninput="updateTotals()">
+          <button type="button" class="fm-cnt" onclick="stepCount('fBabies',1)">+</button>
+        </div>
+      </div>
+
+      <!-- Total live -->
+      <div class="fm-total-box">
+        <div class="fm-total-line"><span class="fm-total-lbl">Total PAX</span><span class="fm-total-val" id="liveTotalPax">0</span></div>
+        <div class="fm-total-line"><span class="fm-total-lbl">Total Bébés</span><span class="fm-total-val" id="liveTotalBabies">0</span></div>
+      </div>
+      <div class="fm-grand-box">
+        <span class="fm-grand-lbl">Grand Total</span>
+        <span class="fm-grand-val" id="liveTotalAll">0</span>
+      </div>
+    </div>
+
+    <!-- Escale -->
+    <div class="fm-stopover-toggle">
+      <label class="fm-chk-label">
+        <input type="checkbox" id="hasStopover" onchange="toggleStopoverField()">
+        <span class="fm-chk-box"></span>
+        <span>Ce vol comporte une escale</span>
+      </label>
+    </div>
+
+    <div class="fm-stopover-panel" id="stopoverGroup" style="display:none;">
+      <div class="fm-stopover-title">✈ Escale</div>
+      <div class="fm-grid fm-grid-4">
+        <div class="fm-field fm-field-col2">
+          <label>Aéroport d'escale</label>
+          <select id="fStopover"><option value="">— Choisir —</option></select>
+        </div>
+        <div class="fm-field">
+          <label>PAX Escale</label>
+          <div class="fm-counter">
+            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverPax',-1)">−</button>
+            <input type="number" id="fStopoverPax" min="0" value="0" oninput="updateTotals()">
+            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverPax',1)">+</button>
+          </div>
+        </div>
+        <div class="fm-field">
+          <label>Bébés Escale</label>
+          <div class="fm-counter">
+            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',-1)">−</button>
+            <input type="number" id="fStopoverBabies" min="0" value="0" oninput="updateTotals()">
+            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',1)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="fm-footer">
+      <button type="button" class="fm-btn-cancel" onclick="closeModal()">Annuler</button>
+      <button type="submit" class="fm-btn-save">💾 Enregistrer le vol</button>
+    </div>
+
+  </form>
+</div>
 </div>
 
 <div id="notificationContainer"></div>
@@ -1158,16 +1405,57 @@ async function exportPDF() {
     }
 }
 
+// FCT_MOIS — utilisé dans la facturation
+const FCT_MOIS = {1:'Janvier',2:'Février',3:'Mars',4:'Avril',5:'Mai',6:'Juin',7:'Juillet',8:'Août',9:'Septembre',10:'Octobre',11:'Novembre',12:'Décembre'};
+
 function toggleStopoverField() {
-    const type = document.getElementById('fType').value;
-    const show = (type === 'TRANSIT');
-    const grp  = document.getElementById('stopoverGroup');
-    const grpP = document.getElementById('stopoverPaxGroup');
-    const grpB = document.getElementById('stopoverBabiesGroup');
-    if (grp)  grp.style.display  = show ? '' : 'none';
-    if (grpP) grpP.style.display = show ? '' : 'none';
-    if (grpB) grpB.style.display = show ? '' : 'none';
+    const cb  = document.getElementById('hasStopover');
+    const grp = document.getElementById('stopoverGroup');
+    const show = cb && cb.checked;
+    if (grp) {
+        grp.style.display = show ? '' : 'none';
+        if (!show) {
+            const sp = document.getElementById('fStopoverPax');
+            const sb = document.getElementById('fStopoverBabies');
+            if (sp) sp.value = 0;
+            if (sb) sb.value = 0;
+        }
+        updateTotals();
+    }
 }
+
+// Compteur +/−
+window.stepCount = function(fieldId, delta) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    el.value = Math.max(0, (parseInt(el.value) || 0) + delta);
+    updateTotals();
+};
+
+// Total live
+window.updateTotals = function() {
+    const pax    = parseInt(document.getElementById('fPassengers')?.value)    || 0;
+    const babies = parseInt(document.getElementById('fBabies')?.value)         || 0;
+    const cb     = document.getElementById('hasStopover');
+    const hasS   = cb && cb.checked;
+    const sPax   = hasS ? (parseInt(document.getElementById('fStopoverPax')?.value)    || 0) : 0;
+    const sBab   = hasS ? (parseInt(document.getElementById('fStopoverBabies')?.value) || 0) : 0;
+    const tP = pax + sPax, tB = babies + sBab;
+    const tp = document.getElementById('liveTotalPax');
+    const tb = document.getElementById('liveTotalBabies');
+    const ta = document.getElementById('liveTotalAll');
+    if (tp) tp.textContent = tP;
+    if (tb) tb.textContent = tB;
+    if (ta) ta.textContent = tP + tB;
+};
+
+// closeModal global
+window.closeModal = function() {
+    const m = document.getElementById('flightModal');
+    if (m) m.classList.remove('active');
+    document.body.style.overflow = '';
+    if (window._appCloseModal) window._appCloseModal();
+};
 
 // Called from app.js when flights are loaded/updated
 window.refreshChartsFromApp = function(flightsData) {
@@ -1411,8 +1699,6 @@ function runRouteComparison() {
     `;
 }
 
-const FCT_MOIS = {1:'Janvier',2:'Février',3:'Mars',4:'Avril',5:'Mai',6:'Juin',7:'Juillet',8:'Août',9:'Septembre',10:'Octobre',11:'Novembre',12:'Décembre'};
-
 function fctInit() {
     // Années depuis les données Firebase
     const all = getFlights();
@@ -1425,8 +1711,6 @@ function fctInit() {
     document.getElementById('fctDate').value = new Date().toISOString().split('T')[0];
     // Mois courant
     document.getElementById('fctMois').value = new Date().getMonth() + 1;
-
-    // Colonnes toggle — handled by native checkboxes
 
     // Période toggle
     document.getElementById('fctPeriode').addEventListener('change', function() {
@@ -1446,9 +1730,9 @@ function fctPopulateAirlines() {
         <label class="fact-airline-card">
             <input type="checkbox" class="fact-airline-card-cb" data-airline="${a}" checked>
             <span class="fact-airline-card-inner">
-                <span class="fact-airline-card-dot"></span>
-                <span class="fact-airline-card-name">${a}</span>
-                <span class="fact-airline-card-tick">✓</span>
+                <span class="fact-airline-dot"></span>
+                <span class="fact-airline-name">${a}</span>
+                <span class="fact-airline-tick">✓</span>
             </span>
         </label>`).join('');
 }
@@ -1563,7 +1847,7 @@ window.fctGenApercu = function() {
         </div>`;
 
     document.getElementById('fctPreview').innerHTML = html;
-    document.getElementById('btnFctDocx').style.display = rows.length ? 'inline-block' : 'none';
+    document.getElementById('btnFctDocx').style.display = rows.length ? 'inline-flex' : 'none';
 };
 
 // ── Téléchargement DOCX ──────────────────────────────────────────
@@ -1712,7 +1996,7 @@ window.fctTelecharger = async function() {
                 children: [new TextRun({ text: 'Passagers internationaux embarqués au ' + periode, font: 'Arial', size: 22, bold: true })]
             }),
 
-            // ── Tableau DESTINATAIRE / EMETTEUR (2 lignes x 2 col) ─
+            // ── Tableau DESTINATAIRE / EMETTEUR (2 lignes × 2 col) ─
             new Table({ width: { size: contentW, type: WidthType.DXA }, columnWidths: [2400, 7238],
                 rows: [
                     new TableRow({ children: [
@@ -1764,6 +2048,17 @@ window.fctTelecharger = async function() {
     a.download = 'OEF_ANAC_' + label + '.docx';
     a.click();
     URL.revokeObjectURL(url);
+};
+
+// selectType — 2 boutons seulement (DEP/ARR)
+window.selectType = function(type) {
+    const h = document.getElementById('fType');
+    if (h) h.value = type;
+    ['DEP','ARR'].forEach(t => {
+        const btn = document.getElementById('btn'+t);
+        if (btn) btn.classList.toggle('active', t === type);
+    });
+    if (window.updateRouteByType) window.updateRouteByType();
 };
 
 // ── Hook sur switchTab pour init au 1er clic ─────────────────────
