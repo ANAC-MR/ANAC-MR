@@ -182,7 +182,7 @@
         }
 
 /* AUTH WALL FACTURATION */
-#factWall{display:none;padding:60px 20px;text-align:center;background:#f0f4f8;}
+#factWall{display:none;padding:60px 20px;text-align:center;background:#f0f4f8;border-radius:12px;}
 #factWall .fbox{margin:0 auto;max-width:340px;padding:36px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
 #factWall h3{color:#1a365d;font-size:16px;font-weight:800;margin:0 0 4px;}
 #factWall p{color:#718096;font-size:12px;margin:0 0 20px;}
@@ -190,8 +190,60 @@
 #factWall .af label{display:block;font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;margin-bottom:5px;}
 #factWall .af input{width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#1a202c;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;}
 #factWall .af input:focus{border-color:#2B5A8E;}
-#factWall .abtn{width:100%;padding:12px;border:none;border-radius:8px;background:#2B5A8E;color:#fff;font-size:14px;font-weight:800;cursor:pointer;}
+#factWall .abtn{width:100%;padding:12px;border:none;border-radius:8px;background:#2B5A8E;color:#fff;font-size:14px;font-weight:800;cursor:pointer;transition:background 0.2s;}
+#factWall .abtn:hover{background:#1e3f63;}
 #factWall .aerr{color:#e53e3e;font-size:12px;margin-top:8px;min-height:16px;}
+
+/* FACTURATION SECTION */
+.fact-section{padding:4px 0;}
+.fact-config{background:#f7fafc;border:1px solid #e2e8f0;border-radius:12px;padding:22px;margin-bottom:20px;}
+.fact-config h3{font-size:13px;font-weight:700;color:#2d3748;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 16px;}
+.fact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:18px;}
+.fact-field label{display:block;font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;}
+.fact-field input,.fact-field select{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;font-family:inherit;font-size:13px;color:#2d3748;transition:border-color 0.2s;}
+.fact-field input:focus,.fact-field select:focus{outline:none;border-color:#2B5A8E;box-shadow:0 0 0 3px rgba(43,90,142,0.1);}
+
+/* Colonnes toggle */
+.fact-col-bar{display:flex;flex-wrap:wrap;gap:8px;}
+.fact-toggle{padding:6px 14px;border-radius:20px;border:1.5px solid #e2e8f0;font-size:12px;font-weight:600;color:#718096;cursor:pointer;transition:all 0.2s;user-select:none;background:#fff;}
+.fact-toggle.on{background:#2B5A8E;color:#fff;border-color:#2B5A8E;}
+
+/* Airlines grid */
+.fact-airlines-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.fact-airline{display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;font-weight:600;color:#4a5568;cursor:pointer;transition:all 0.2s;background:#fff;}
+.fact-airline.on{background:rgba(43,90,142,0.08);border-color:rgba(43,90,142,0.3);color:#2B5A8E;}
+.fact-airline .chk{font-size:14px;color:#2B5A8E;width:16px;text-align:center;}
+
+/* BOUTONS FACTURATION - bien organisés */
+.fact-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:16px;background:linear-gradient(135deg,rgba(43,90,142,0.04),rgba(43,90,142,0.08));border-radius:10px;border:1px solid rgba(43,90,142,0.12);}
+.btn-apercu{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:linear-gradient(135deg,#2B5A8E,#1e3f63);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(43,90,142,0.3);transition:all 0.2s;}
+.btn-apercu:hover{opacity:0.88;transform:translateY(-1px);box-shadow:0 6px 16px rgba(43,90,142,0.35);}
+.btn-apercu .btn-icon{font-size:16px;}
+.btn-dl-docx{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:linear-gradient(135deg,#006B3F,#005030);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,107,63,0.3);transition:all 0.2s;}
+.btn-dl-docx:hover{opacity:0.88;transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,107,63,0.35);}
+.btn-dl-docx .btn-icon{font-size:16px;}
+
+/* PREVIEW BOX */
+.fact-preview-box{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;min-height:200px;}
+.fact-preview-box h3{font-size:13px;font-weight:700;color:#2d3748;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 16px;padding-bottom:12px;border-bottom:2px solid #e2e8f0;}
+.fact-empty-msg{text-align:center;color:#a0aec0;font-size:13px;padding:40px 20px;}
+
+/* Document preview styles */
+.doc-header-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+.doc-direction{font-weight:700;text-decoration:underline;}
+.doc-service{margin-bottom:24px;color:#4a5568;}
+.doc-title{text-align:center;font-size:18px;font-weight:800;text-decoration:underline;margin-bottom:4px;}
+.doc-numero{text-align:center;font-size:14px;margin-bottom:16px;}
+.doc-periode{text-align:center;font-weight:700;margin-bottom:16px;}
+.doc-mini-tbl{width:100%;border-collapse:collapse;margin-bottom:16px;}
+.doc-mini-tbl td{border:1px solid #000;padding:7px 12px;font-size:13px;}
+.doc-mini-tbl .lbl{background:#e8f0fa;font-weight:700;}
+.doc-data-tbl{width:100%;border-collapse:collapse;margin-bottom:20px;}
+.doc-data-tbl th{background:#0d2240;color:#D4AF37;font-weight:700;padding:9px 14px;text-align:center;border:1px solid #000;font-size:13px;}
+.doc-data-tbl td{border:1px solid #000;padding:8px 14px;font-size:13px;text-align:center;}
+.doc-data-tbl tbody tr:hover td{background:#f7fafc;}
+.tbl-total td{background:#f0f4f8;font-weight:700;}
+.doc-signature{text-align:right;font-weight:700;margin-top:30px;}
 
     </style>
 </head>
@@ -553,8 +605,12 @@
                 </div>
 
                 <div class="fact-actions">
-                    <button class="btn-apercu" onclick="fctGenApercu()">👁 Générer l'aperçu</button>
-                    <button class="btn-dl-docx" id="btnFctDocx" onclick="fctTelecharger()">⬇ Télécharger .docx</button>
+                    <button class="btn-apercu" onclick="fctGenApercu()">
+                        <span class="btn-icon">👁</span> Générer l'aperçu
+                    </button>
+                    <button class="btn-dl-docx" id="btnFctDocx" onclick="fctTelecharger()" style="display:none;">
+                        <span class="btn-icon">⬇</span> Télécharger .docx
+                    </button>
                 </div>
 
                 <div class="fact-preview-box">
@@ -563,6 +619,7 @@
                 </div>
             </div>
         </div><!-- end tab-facturation -->
+    </div><!-- end factContent -->
     </main>
 
 </div>
@@ -1169,6 +1226,12 @@ function runRouteComparison() {
     `;
 }
 
+const FCT_MOIS = {
+    1:'Janvier', 2:'Février', 3:'Mars', 4:'Avril',
+    5:'Mai', 6:'Juin', 7:'Juillet', 8:'Août',
+    9:'Septembre', 10:'Octobre', 11:'Novembre', 12:'Décembre'
+};
+
 function fctInit() {
     // Années depuis les données Firebase
     const all = getFlights();
@@ -1327,7 +1390,7 @@ window.fctGenApercu = function() {
         </div>`;
 
     document.getElementById('fctPreview').innerHTML = html;
-    document.getElementById('btnFctDocx').style.display = rows.length ? 'inline-block' : 'none';
+    document.getElementById('btnFctDocx').style.display = rows.length ? 'inline-flex' : 'none';
 };
 
 // ── Téléchargement DOCX ──────────────────────────────────────────
