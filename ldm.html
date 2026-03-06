@@ -93,14 +93,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .pf label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;}
 .pf input{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:5px 8px;border-radius:6px;width:100%;outline:none;transition:border-color 0.2s;}
 .pf input:focus{border-color:var(--accent);}
-.pf-auth{grid-column:span 2;}
-.auth-input-wrap{position:relative;display:flex;align-items:center;}
-.auth-input-wrap input{padding-right:36px !important;}
-.auth-lookup-btn{position:absolute;right:6px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--accent);padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;opacity:0.7;transition:opacity 0.2s;box-shadow:none;transform:none;}
-.auth-lookup-btn:hover{opacity:1;transform:none;box-shadow:none;}
-.auth-lookup-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;}
-.auth-found{background:rgba(0,201,141,0.15);color:var(--green);border:1px solid rgba(0,201,141,0.25);}
-.auth-notfound{background:rgba(255,165,0,0.12);color:#ffa500;border:1px solid rgba(255,165,0,0.25);}
 .act-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .dup-box{background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#ffa500;width:100%;margin-bottom:8px;}
 .empty{text-align:center;padding:50px 20px;color:var(--dim);}
@@ -587,6 +579,13 @@ function renderEmails() {
         <div class="parsed-sec">
           <div class="parsed-lbl">✦ Données extraites — vérifiez et corrigez si nécessaire</div>
           <div class="pgrid">
+            <div class="pf-auth-wrap">
+              <div class="pf" style="flex:1;">
+                <label>N° Autorisation <span class="auth-badge" id="auth-badge-${i}"></span></label>
+                <input id="p${i}-auth" placeholder="SNA26-XXXX" style="text-transform:uppercase;">
+              </div>
+              <button class="auth-lookup-btn" onclick="lookupAuthNumber(${i})">🔍 Chercher</button>
+            </div>
             <div class="pf"><label>N° Vol</label><input id="p${i}-fn" value="${esc(p.flightNumber||'')}" placeholder="ex: L6212" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>Immatriculation</label><input id="p${i}-rg" value="${esc(p.registration||'')}" placeholder="ex: 5TCLJ" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>Date du vol</label><input type="date" id="p${i}-dt" value="${p.date||em.date||''}"></div>
@@ -595,13 +594,6 @@ function renderEmails() {
             <div class="pf"><label>PAX (adultes+enfants)</label><input type="number" id="p${i}-px" value="${p.totalPax||p.paxAdults||0}" min="0"></div>
             <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
             <div class="pf"><label>Bagages (pièces)</label><input type="number" id="p${i}-bg" value="${p.bags||0}" min="0"></div>
-            <div class="pf pf-auth" id="pf-auth-${i}">
-              <label>N° Autorisation <span class="auth-lookup-badge" id="auth-badge-${i}"></span></label>
-              <div class="auth-input-wrap">
-                <input id="p${i}-auth" value="" placeholder="SNA26-XXXX" oninput="this.value=this.value.toUpperCase()" style="padding-right:32px;">
-                <button type="button" class="auth-lookup-btn" onclick="lookupAuthNumber(${i})" title="Chercher dans Firebase">🔍</button>
-              </div>
-            </div>
           </div>
           <div class="act-row" id="act-${i}">
             ${imp
@@ -621,10 +613,6 @@ function toggleCard(i) {
   const open = b.style.display !== 'none';
   b.style.display = open ? 'none' : 'block';
   a.textContent   = open ? '▼' : '▲';
-  // Auto-lookup auth number quand on ouvre la carte
-  if (!open) {
-    setTimeout(() => lookupAuthNumber(i), 300);
-  }
 }
 
 // ── IMPORT TO FIREBASE ──
@@ -666,6 +654,7 @@ async function importFlight(i, force) {
     const app  = apps.find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
     const db   = getFirestore(app);
 
+    const authEl = document.getElementById('p'+i+'-auth');
     await addDoc(collection(db,'flights'), {
       flightNumber: fn, registration: rg,
       date: dt, from: fr, to,
@@ -676,7 +665,7 @@ async function importFlight(i, force) {
       stopoverBabies: sbb,
       passengers: px, babies: bb,
       company: co || detectCompany(fn),
-      authorizationNumber: (document.getElementById(`p${i}-auth`) ? document.getElementById(`p${i}-auth`).value.trim().toUpperCase() : ''),
+      authorizationNumber: authEl ? authEl.value.trim().toUpperCase() : '',
       source: 'LDM_EMAIL',
       createdAt: new Date().toISOString(),
       timestamp: Date.now()
@@ -706,91 +695,6 @@ async function importFlight(i, force) {
     console.error(e);
     toast('❌ Erreur import : '+e.message,'err');
     if(btn){ btn.disabled=false; btn.innerHTML='⬆️ Importer dans le système'; }
-  }
-}
-
-// ── LOOKUP AUTH NUMBER FROM FIREBASE ────────────────────────────
-// Cherche un vol existant dans Firebase par flightNumber + date
-async function lookupAuthNumber(i) {
-  const fn = document.getElementById(`p${i}-fn`).value.trim().toUpperCase();
-  const dt = document.getElementById(`p${i}-dt`).value;
-  const badge = document.getElementById(`auth-badge-${i}`);
-  const input = document.getElementById(`p${i}-auth`);
-
-  if (!fn || !dt) { toast('⚠️ Renseignez le N° de vol et la date d'abord','warn'); return; }
-
-  const lookupBtn = document.querySelector(`#pf-auth-${i} .auth-lookup-btn`);
-  if (lookupBtn) lookupBtn.innerHTML = '<span class="spin"></span>';
-  if (badge) badge.textContent = '';
-
-  try {
-    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const { getFirestore, collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const apps = getApps();
-    const app  = apps.find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
-    const db   = getFirestore(app);
-
-    // Chercher par flightNumber ET date (les deux champs Firebase)
-    const q = query(
-      collection(db,'flights'),
-      where('flightNumber','==', fn),
-      where('date','==', dt)
-    );
-    const snap = await getDocs(q);
-
-    if (!snap.empty) {
-      // Prendre le premier résultat avec un authorizationNumber
-      let found = null;
-      snap.forEach(doc => {
-        const d = doc.data();
-        if (d.authorizationNumber && !found) found = d.authorizationNumber;
-      });
-
-      if (found) {
-        input.value = found;
-        input.style.borderColor = 'var(--green)';
-        if (badge) { badge.textContent = '✓ Trouvé'; badge.className = 'auth-lookup-badge auth-found'; }
-        toast(`✅ N° autorisation trouvé : ${found}`, 'ok');
-      } else {
-        // Vol existant mais sans auth number
-        input.style.borderColor = 'rgba(255,165,0,0.6)';
-        if (badge) { badge.textContent = 'Vol trouvé, auth manquant'; badge.className = 'auth-lookup-badge auth-notfound'; }
-        toast(`⚠️ Vol trouvé mais sans N° d'autorisation`,'warn');
-      }
-    } else {
-      // Essayer avec juste flightNumber (sans date stricte)
-      const q2 = query(collection(db,'flights'), where('flightNumber','==', fn));
-      const snap2 = await getDocs(q2);
-      if (!snap2.empty) {
-        let closest = null;
-        let minDiff = Infinity;
-        snap2.forEach(doc => {
-          const d = doc.data();
-          if (!d.authorizationNumber) return;
-          const diff = Math.abs(new Date(d.date) - new Date(dt));
-          if (diff < minDiff) { minDiff = diff; closest = d; }
-        });
-        if (closest && minDiff < 7 * 86400000) { // dans les 7 jours
-          input.value = closest.authorizationNumber;
-          input.style.borderColor = 'rgba(212,175,55,0.8)';
-          if (badge) { badge.textContent = `~${closest.date}`; badge.className = 'auth-lookup-badge auth-notfound'; }
-          toast(`⚠️ Auth trouvé (date approx. : ${closest.date}) : ${closest.authorizationNumber}`,'warn');
-        } else {
-          input.style.borderColor = 'rgba(229,62,62,0.5)';
-          if (badge) { badge.textContent = 'Non trouvé'; badge.className = 'auth-lookup-badge auth-notfound'; }
-          toast(`❌ Aucun vol ${fn} du ${dt} dans Firebase`,'err');
-        }
-      } else {
-        input.style.borderColor = 'rgba(229,62,62,0.5)';
-        if (badge) { badge.textContent = 'Non trouvé'; badge.className = 'auth-lookup-badge auth-notfound'; }
-        toast(`❌ Aucun vol ${fn} trouvé dans Firebase`,'err');
-      }
-    }
-  } catch(e) {
-    console.error(e);
-    toast('❌ Erreur Firebase : '+e.message,'err');
-  } finally {
-    if (lookupBtn) lookupBtn.innerHTML = '🔍';
   }
 }
 
@@ -847,6 +751,72 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 updateStats();
 setStatus('idle','Prêt');
 
+
+// ── LOOKUP AUTORISATION ──────────────────────────────────────────
+async function lookupAuthNumber(i) {
+  const fnEl   = document.getElementById('p'+i+'-fn');
+  const dtEl   = document.getElementById('p'+i+'-dt');
+  const authEl = document.getElementById('p'+i+'-auth');
+  const badge  = document.getElementById('auth-badge-'+i);
+  if (!fnEl || !dtEl || !authEl) return;
+
+  const fn = fnEl.value.trim().toUpperCase();
+  const dt = dtEl.value;
+  if (!fn) { toast('Saisissez un numéro de vol d'abord','warn'); return; }
+
+  badge.className = 'auth-badge';
+  badge.textContent = '⏳';
+
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    const db  = getFirestore(app);
+
+    // Recherche exacte: même N° vol + même date
+    if (dt) {
+      const q = query(collection(db,'flights'),
+        where('flightNumber','==',fn),
+        where('date','==',dt)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const auth = snap.docs[0].data().authorizationNumber || '';
+        if (auth) {
+          authEl.value = auth;
+          badge.className = 'auth-badge found';
+          badge.textContent = '✓ Trouvé';
+          return;
+        }
+      }
+    }
+
+    // Recherche approchée: même N° vol, date proche (±7 jours)
+    const q2 = query(collection(db,'flights'), where('flightNumber','==',fn));
+    const snap2 = await getDocs(q2);
+    let best = null, bestDiff = Infinity;
+    snap2.forEach(doc => {
+      const d = doc.data();
+      if (!d.authorizationNumber) return;
+      const diff = dt ? Math.abs(new Date(d.date) - new Date(dt)) / 86400000 : 999;
+      if (diff < bestDiff) { bestDiff = diff; best = d; }
+    });
+
+    if (best && bestDiff <= 7) {
+      authEl.value = best.authorizationNumber;
+      badge.className = 'auth-badge approx';
+      badge.textContent = '~ ' + best.date;
+    } else {
+      badge.className = 'auth-badge notfound';
+      badge.textContent = 'Non trouvé';
+    }
+  } catch(e) {
+    badge.className = 'auth-badge notfound';
+    badge.textContent = 'Erreur';
+    console.error('lookupAuthNumber:', e);
+  }
+}
+
 // ══ LDM AUTH ══════════════════════════════════════════
 const _LS='anac_sess';
 const _LC={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
@@ -883,3 +853,22 @@ window._laLogin = _laLogin;
 </script>
 </body>
 </html>
+/* Auth lookup dans formulaire parsed */
+.pf-auth-wrap { grid-column: 1 / -1; display:flex; gap:8px; align-items:flex-end; }
+.pf-auth-wrap input { flex:1; }
+.auth-lookup-btn {
+    padding:7px 14px; border:none; border-radius:8px;
+    background:linear-gradient(135deg,#2B5A8E,#1a365d); color:#fff;
+    font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;
+    transition:opacity 0.2s; flex-shrink:0;
+}
+.auth-lookup-btn:hover { opacity:0.85; }
+.auth-badge {
+    display:inline-block; font-size:11px; font-weight:700;
+    padding:2px 8px; border-radius:10px; margin-left:8px;
+}
+.auth-badge.found   { background:#d4edda; color:#155724; }
+.auth-badge.approx  { background:#fff3cd; color:#856404; }
+.auth-badge.notfound{ background:#f8d7da; color:#721c24; }
+
+
