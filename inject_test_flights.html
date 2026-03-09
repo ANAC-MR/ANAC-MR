@@ -195,6 +195,68 @@ function generateFlights() {
   return result;
 }
 
+// Version async qui génère par chunks pour ne pas bloquer le navigateur
+async function generateFlightsAsync(onProgress) {
+  const CHUNK = 500; // vols par tick
+  const tasks = []; // liste de { type, from, to, co } à générer
+
+  for (const co of COMPANIES) {
+    if (co.dests) {
+      for (const dest of co.dests) {
+        const nDep = rndInt(1000, 1500);
+        const nArr = rndInt(1000, 1500);
+        for (let i=0;i<nDep;i++) tasks.push({type:'DEP',from:NKC,to:dest,co});
+        for (let i=0;i<nArr;i++) tasks.push({type:'ARR',from:dest,to:NKC,co});
+      }
+    } else {
+      const nDep = rndInt(1000, 1500);
+      const nArr = rndInt(1000, 1500);
+      for (let i=0;i<nDep;i++) tasks.push({type:'DEP',from:NKC,to:co.home,co});
+      for (let i=0;i<nArr;i++) tasks.push({type:'ARR',from:co.home,to:NKC,co});
+    }
+  }
+
+  const result = [];
+  // Construire les N° de vol par compagnie
+  const usedNums = {};
+  COMPANIES.forEach(co => usedNums[co.name] = new Set());
+
+  const nextFn = (co) => {
+    let n; do { n = rndInt(100,999); } while(usedNums[co.name].has(n));
+    usedNums[co.name].add(n); return co.prefix + n;
+  };
+
+  for (let i = 0; i < tasks.length; i += CHUNK) {
+    const chunk = tasks.slice(i, i + CHUNK);
+    for (const t of chunk) {
+      result.push({
+        id:                  uid(),
+        flightNumber:        nextFn(t.co),
+        company:             t.co.name,
+        date:                rndDate(),
+        type:                t.type,
+        from:                t.from,
+        to:                  t.to,
+        registration:        rndImmat(t.co.immatPfx),
+        passengers:          rndInt(30, 220),
+        babies:              rndInt(0, 8),
+        hasStopover:         false,
+        stopover:            '',
+        stopoverPax:         0,
+        stopoverBabies:      0,
+        authorizationNumber: rndAuth(),
+        source:              'TEST',
+        timestamp:           Date.now(),
+        createdAt:           new Date().toISOString(),
+      });
+    }
+    if (onProgress) onProgress(result.length, tasks.length);
+    // Libérer le thread principal entre chaque chunk
+    await new Promise(r => setTimeout(r, 0));
+  }
+  return result;
+}
+
 // ══════════════════════════════════════════════════════
 // LOG + PROGRESS
 // ══════════════════════════════════════════════════════
@@ -266,27 +328,31 @@ function checkConnection() {
 // ══════════════════════════════════════════════════════
 // ACTIONS
 // ══════════════════════════════════════════════════════
-window.injectFlights = function() {
+window.injectFlights = async function() {
   clearLog(); setBtns(true);
   log('Generation des vols en cours...', 'inf');
-  // Génération asynchrone pour ne pas bloquer l'UI
-  setTimeout(function() {
-    testFlights = generateFlights();
-    updateStats();
-    log(testFlights.length.toLocaleString() + ' vols generes.', 'ok');
-    siteConnected = false;
-    ch.postMessage({ cmd: 'ping' });
-    setTimeout(() => {
-      if (!siteConnected) {
-        log('Site ANAC non detecte.', 'err');
-        log('Ouvrez index.html dans un autre onglet du meme navigateur.', 'warn2');
-        setBtns(false); return;
-      }
-      setProgress(40);
-      log('Envoi de ' + testFlights.length.toLocaleString() + ' vols vers le site...', 'inf');
-      ch.postMessage({ cmd: 'inject', flights: testFlights });
-    }, 900);
-  }, 50);
+
+  // Génération par chunks asynchrones pour ne pas bloquer le navigateur
+  testFlights = await generateFlightsAsync(function(done, total) {
+    setProgress(Math.round(done/total*35));
+    document.getElementById('sTotal').textContent = done.toLocaleString();
+  });
+
+  updateStats();
+  log(testFlights.length.toLocaleString() + ' vols generes.', 'ok');
+
+  siteConnected = false;
+  ch.postMessage({ cmd: 'ping' });
+  setTimeout(() => {
+    if (!siteConnected) {
+      log('Site ANAC non detecte.', 'err');
+      log('Ouvrez index.html dans un autre onglet du meme navigateur.', 'warn2');
+      setBtns(false); return;
+    }
+    setProgress(50);
+    log('Envoi vers le site...', 'inf');
+    ch.postMessage({ cmd: 'inject', flights: testFlights });
+  }, 900);
 };
 
 window.removeFlights = function() {
@@ -295,16 +361,17 @@ window.removeFlights = function() {
   setTimeout(() => setBtns(false), 1200);
 };
 
-window.regenFlights = function() {
+window.regenFlights = async function() {
   clearLog(); setBtns(true);
   log('Generation en cours...', 'inf');
-  setTimeout(function() {
-    testFlights = generateFlights();
-    updateStats();
-    log('✓ '+testFlights.length.toLocaleString()+' nouveaux vols generes.','ok');
-    log('Cliquez "Injecter" pour les afficher dans le site.','inf');
-    setBtns(false);
-  }, 50);
+  testFlights = await generateFlightsAsync(function(done, total) {
+    setProgress(Math.round(done/total*100));
+    document.getElementById('sTotal').textContent = done.toLocaleString();
+  });
+  updateStats();
+  log('✓ '+testFlights.length.toLocaleString()+' nouveaux vols generes.','ok');
+  log('Cliquez "Injecter" pour les afficher dans le site.','inf');
+  setBtns(false);
 };
 
 // ══════════════════════════════════════════════════════
