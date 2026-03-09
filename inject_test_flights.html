@@ -268,19 +268,25 @@ function checkConnection() {
 // ══════════════════════════════════════════════════════
 window.injectFlights = function() {
   clearLog(); setBtns(true);
-  siteConnected = false;
-  ch.postMessage({ cmd: 'ping' });
-  setTimeout(() => {
-    if (!siteConnected) {
-      log('Site ANAC non detecte.', 'err');
-      log('Ouvrez index.html dans un autre onglet du meme navigateur.', 'warn2');
-      log('Les deux fichiers doivent etre sur le meme domaine (GitHub Pages).', 'inf');
-      setBtns(false); return;
-    }
-    setProgress(40);
-    log('Envoi de ' + testFlights.length + ' vols vers le site...', 'inf');
-    ch.postMessage({ cmd: 'inject', flights: testFlights });
-  }, 900);
+  log('Generation des vols en cours...', 'inf');
+  // Génération asynchrone pour ne pas bloquer l'UI
+  setTimeout(function() {
+    testFlights = generateFlights();
+    updateStats();
+    log(testFlights.length.toLocaleString() + ' vols generes.', 'ok');
+    siteConnected = false;
+    ch.postMessage({ cmd: 'ping' });
+    setTimeout(() => {
+      if (!siteConnected) {
+        log('Site ANAC non detecte.', 'err');
+        log('Ouvrez index.html dans un autre onglet du meme navigateur.', 'warn2');
+        setBtns(false); return;
+      }
+      setProgress(40);
+      log('Envoi de ' + testFlights.length.toLocaleString() + ' vols vers le site...', 'inf');
+      ch.postMessage({ cmd: 'inject', flights: testFlights });
+    }, 900);
+  }, 50);
 };
 
 window.removeFlights = function() {
@@ -290,11 +296,15 @@ window.removeFlights = function() {
 };
 
 window.regenFlights = function() {
-  clearLog();
-  testFlights = generateFlights();
-  updateStats();
-  log('✓ '+testFlights.length+' nouveaux vols generes en memoire.','ok');
-  log('Cliquez "Injecter" pour les afficher dans le site.','inf');
+  clearLog(); setBtns(true);
+  log('Generation en cours...', 'inf');
+  setTimeout(function() {
+    testFlights = generateFlights();
+    updateStats();
+    log('✓ '+testFlights.length.toLocaleString()+' nouveaux vols generes.','ok');
+    log('Cliquez "Injecter" pour les afficher dans le site.','inf');
+    setBtns(false);
+  }, 50);
 };
 
 // ══════════════════════════════════════════════════════
@@ -308,7 +318,7 @@ function renderGrid() {
     return '<div class="co-card">'
       + '<div class="co-name">'+co.name+' <span style="color:#475569">('+co.prefix+')</span></div>'
       + '<div class="co-info">'+info+'</div>'
-      + '<div><span class="badge bdep">30 DEP</span><span class="badge barr">30 ARR</span></div>'
+      + '<div><span class="badge bdep">1000-1500 DEP</span><span class="badge barr">1000-1500 ARR</span></div>'
       + '</div>';
   }).join('');
 }
@@ -317,10 +327,10 @@ function renderGrid() {
 // INIT
 // ══════════════════════════════════════════════════════
 renderGrid();
-testFlights = generateFlights();
-updateStats();
-log(testFlights.length.toLocaleString() + ' vols generes (' + COMPANIES.length + ' compagnies, 1000-1500 vols chacune).', 'ok');
-log('Cliquez "Injecter dans le site" pour les afficher.', 'inf');
+// Pas de génération au chargement — trop lourd
+// Les vols sont générés au moment du clic "Injecter"
+log('Pret. Cliquez "Injecter dans le site" pour generer et injecter les vols.', 'ok');
+log('~50 000 vols seront generes (1000-1500 par compagnie/destination).', 'inf');
 
 // Ping périodique pour détecter le site
 setInterval(checkConnection, 2000);
