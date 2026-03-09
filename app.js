@@ -191,9 +191,9 @@ async function loadAdminConfig() {
         const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const fbConfig = {
             apiKey: "AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
-            authDomain: "anacmr-e05b4.firebaseapp.com",
-            projectId: "anacmr-e05b4",
-            storageBucket: "anacmr-e05b4.firebasestorage.app",
+            authDomain: "anacmr-67835.firebaseapp.com",
+            projectId: "anacmr-67835",
+            storageBucket: "anacmr-67835.firebasestorage.app",
             messagingSenderId: "857117390430",
             appId: "1:857117390430:web:0231614b880df3196e26cf"
         };
