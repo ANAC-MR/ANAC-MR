@@ -54,7 +54,7 @@ h1  { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 4px; }
 </div>
 
 <div class="card">
-  <h2>✈️ Compagnies — 60 vols chacune (30 DEP + 30 ARR)</h2>
+  <h2>✈️ Compagnies — 1000 à 1500 vols aléatoires (DEP + ARR) — tous les mois</h2>
   <div class="co-grid" id="coGrid"></div>
 </div>
 
@@ -123,10 +123,12 @@ function uid() {
 }
 
 function rndDate() {
-  const now = new Date(), past = new Date(now);
-  past.setMonth(past.getMonth()-3);
-  const d = new Date(past.getTime() + Math.random()*(now.getTime()-past.getTime()));
-  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  // Couvre toute l'année courante — tous les mois
+  const year  = new Date().getFullYear();
+  const month = rndInt(1, 12);
+  const days  = new Date(year, month, 0).getDate(); // nb jours du mois
+  const day   = rndInt(1, days);
+  return year+'-'+pad(month)+'-'+pad(day);
 }
 
 function rndImmat(pfx) {
@@ -175,15 +177,19 @@ function generateFlights() {
     });
 
     if (co.dests) {
-      // Mauritania Airlines — 30 DEP + 30 ARR PAR destination
+      // Mauritania Airlines — N vols aléatoires DEP + ARR PAR destination
       for (const dest of co.dests) {
-        for (let i=0;i<30;i++) result.push(make('DEP', NKC, dest));
-        for (let i=0;i<30;i++) result.push(make('ARR', dest, NKC));
+        const nDep = rndInt(1000, 1500);
+        const nArr = rndInt(1000, 1500);
+        for (let i=0;i<nDep;i++) result.push(make('DEP', NKC, dest));
+        for (let i=0;i<nArr;i++) result.push(make('ARR', dest, NKC));
       }
     } else {
-      // Autres compagnies — hub <-> NKC
-      for (let i=0;i<30;i++) result.push(make('DEP', NKC, co.home));
-      for (let i=0;i<30;i++) result.push(make('ARR', co.home, NKC));
+      // Autres compagnies — N vols aléatoires DEP + ARR
+      const nDep = rndInt(1000, 1500);
+      const nArr = rndInt(1000, 1500);
+      for (let i=0;i<nDep;i++) result.push(make('DEP', NKC, co.home));
+      for (let i=0;i<nArr;i++) result.push(make('ARR', co.home, NKC));
     }
   }
   return result;
@@ -313,7 +319,7 @@ function renderGrid() {
 renderGrid();
 testFlights = generateFlights();
 updateStats();
-log(testFlights.length + ' vols generes (' + COMPANIES.length + ' compagnies x 60).', 'ok');
+log(testFlights.length.toLocaleString() + ' vols generes (' + COMPANIES.length + ' compagnies, 1000-1500 vols chacune).', 'ok');
 log('Cliquez "Injecter dans le site" pour les afficher.', 'inf');
 
 // Ping périodique pour détecter le site
