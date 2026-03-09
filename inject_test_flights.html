@@ -7,163 +7,138 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 28px 20px; }
 h1  { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 4px; }
-.sub { font-size: 12px; color: #64748b; margin-bottom: 24px; }
-.warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 12px 16px; font-size: 12px; color: #fbbf24; margin-bottom: 20px; line-height: 1.6; }
+.sub { font-size: 12px; color: #64748b; margin-bottom: 20px; }
 .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
 .card h2 { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 14px; }
 .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
-.stat { background: #0f172a; border: 1px solid #1e3a5f; border-radius: 9px; padding: 10px 16px; text-align: center; min-width: 100px; }
+.stat { background: #0f172a; border: 1px solid #1e3a5f; border-radius: 9px; padding: 10px 16px; text-align: center; min-width: 110px; }
 .stat-val { font-size: 22px; font-weight: 800; color: #38bdf8; }
 .stat-lbl { font-size: 10px; color: #64748b; margin-top: 2px; }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 20px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; }
 .btn-green { background: linear-gradient(135deg,#059669,#047857); color:#fff; box-shadow: 0 3px 12px rgba(5,150,105,0.3); }
 .btn-red   { background: linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; box-shadow: 0 3px 12px rgba(220,38,38,0.3); }
 .btn-blue  { background: linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; box-shadow: 0 3px 12px rgba(37,99,235,0.3); }
 .btn:hover { opacity: 0.85; transform: translateY(-1px); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
-.progress { height: 5px; background: #0f172a; border-radius: 3px; overflow: hidden; margin-top: 12px; display: none; }
-.progress-fill { height: 100%; background: linear-gradient(90deg,#059669,#34d399); border-radius: 3px; transition: width 0.25s; }
-.log { background: #0f172a; border: 1px solid #1e3a5f; border-radius: 9px; padding: 12px 14px; font-family: monospace; font-size: 11.5px; line-height: 1.8; max-height: 260px; overflow-y: auto; margin-top: 14px; white-space: pre-wrap; }
+.batch-ctrl { display: flex; align-items: center; gap: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 9px; padding: 8px 14px; }
+.batch-ctrl label { font-size: 12px; color: #94a3b8; white-space: nowrap; }
+.batch-ctrl input { background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: #fff; font-size: 13px; font-weight: 700; width: 80px; padding: 4px 8px; text-align: center; }
+.log { background: #0f172a; border: 1px solid #1e3a5f; border-radius: 9px; padding: 12px 14px; font-family: monospace; font-size: 11.5px; line-height: 1.8; max-height: 220px; overflow-y: auto; margin-top: 14px; white-space: pre-wrap; }
 .ok    { color: #34d399; }
 .err   { color: #f87171; }
 .inf   { color: #60a5fa; }
 .warn2 { color: #fbbf24; }
-.co-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
-.co-card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 13px; }
-.co-name { font-size: 12px; font-weight: 700; color: #e2e8f0; margin-bottom: 3px; }
-.co-info { font-size: 11px; color: #64748b; line-height: 1.5; }
-.badge { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 10px; font-weight: 700; margin-top: 5px; margin-right: 4px; }
-.bdep { background: rgba(59,130,246,0.2); color: #60a5fa; }
-.barr { background: rgba(5,150,105,0.2); color: #34d399; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-.dot-ok  { background: #34d399; }
+.dot-ok  { background: #34d399; box-shadow: 0 0 6px #34d399; }
 .dot-off { background: #ef4444; }
+.progress-bar { height: 5px; background: #0f172a; border-radius: 3px; overflow: hidden; margin-top: 10px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg,#059669,#34d399); border-radius: 3px; transition: width 0.3s; }
 </style>
 </head>
 <body>
 
 <h1>🧪 Vols Test — ANAC Mauritanie</h1>
-<p class="sub">Vols fictifs en mémoire locale — <strong>aucune écriture dans Firebase</strong></p>
-
-<div class="warn">
-  <strong>💡 Comment utiliser</strong><br>
-  1. Ce fichier doit être ouvert <strong>depuis le site principal</strong> via un lien ou bouton qui fait <code>window.open('inject_test_flights.html')</code><br>
-  2. Cliquez <strong>Injecter</strong> → les vols apparaissent dans l'onglet du site sans toucher Firebase<br>
-  3. Cliquez <strong>Retirer</strong> ou fermez cet onglet → les vols test disparaissent automatiquement
-</div>
-
-<div class="card">
-  <h2>✈️ Compagnies — 1000 à 1500 vols aléatoires (DEP + ARR) — tous les mois</h2>
-  <div class="co-grid" id="coGrid"></div>
-</div>
+<p class="sub">Injection locale par lots — aucune écriture dans Firebase — chaque clic ajoute un nouveau lot</p>
 
 <div class="card">
   <h2>⚡ Contrôle</h2>
   <div class="stats">
-    <div class="stat"><div class="stat-val" id="sTotal">0</div><div class="stat-lbl">Vols générés</div></div>
+    <div class="stat"><div class="stat-val" id="sTotal">0</div><div class="stat-lbl">Vols injectés</div></div>
     <div class="stat"><div class="stat-val" id="sDep">0</div><div class="stat-lbl">Départs</div></div>
     <div class="stat"><div class="stat-val" id="sArr">0</div><div class="stat-lbl">Arrivées</div></div>
     <div class="stat"><div class="stat-val" id="sCo">0</div><div class="stat-lbl">Compagnies</div></div>
     <div class="stat">
-      <div class="stat-val" style="font-size:13px;padding-top:4px;">
+      <div class="stat-val" style="font-size:13px;padding-top:5px;">
         <span class="dot dot-off" id="siteDot"></span><span id="siteTxt">–</span>
       </div>
       <div class="stat-lbl">Site connecté</div>
     </div>
   </div>
+
   <div class="btn-row">
-    <button class="btn btn-green" id="btnInject" onclick="injectFlights()">🚀 Injecter dans le site</button>
-    <button class="btn btn-red"   id="btnRemove" onclick="removeFlights()">🗑️ Retirer du site</button>
-    <button class="btn btn-blue"  id="btnRegen"  onclick="regenFlights()">🔄 Regénérer les vols</button>
+    <button class="btn btn-green" id="btnInject" onclick="injectBatch()">➕ Injecter un lot</button>
+    <button class="btn btn-red"   id="btnRemove" onclick="removeAll()">🗑️ Tout retirer</button>
+    <div class="batch-ctrl">
+      <label>Vols par lot :</label>
+      <input type="number" id="batchSize" value="500" min="50" max="2000" step="50">
+    </div>
   </div>
-  <div class="progress" id="prog"><div class="progress-fill" id="progFill"></div></div>
-  <div class="log" id="logBox"><span class="inf">Prêt.</span></div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+  <div class="log" id="logBox"><span class="inf">Prêt. Ouvrez index.html dans un autre onglet puis cliquez "Injecter un lot".</span></div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════
-// CONFIGURATION DES COMPAGNIES
-// ══════════════════════════════════════════════════════
 const NKC = 'GQNO';
 
 const COMPANIES = [
-  {
-    name: 'Mauritania Airlines', prefix: 'L6', immatPfx: '5T',
-    home: null,
-    // Toutes destinations SAUF Paris (LFPG) et Istanbul (LTFM)
-    dests: ['DAAG','DTTA','GOBD','GABS','GCLP','GUCY','GMMN','GQPP','GQNI','GQPF','GQPZ','DIAP','DBBP']
-  },
-  { name: 'Air Senegal',       prefix: 'HC', immatPfx: '6V', home: 'GOBD' },
-  { name: 'Turkish Airlines',  prefix: 'TK', immatPfx: 'TC', home: 'LTFM' },
-  { name: 'Binter',            prefix: 'NT', immatPfx: 'EC', home: 'GCLP' },
-  { name: 'Air Algerie',       prefix: 'AH', immatPfx: '7T', home: 'DAAG' },
-  { name: 'ASKY',              prefix: 'KP', immatPfx: 'TU', home: 'GUCY' }, // base Conakry
-  { name: 'Royal Air Maroc',   prefix: 'AT', immatPfx: 'CN', home: 'GMMN' },
-  { name: 'Tunisair',          prefix: 'TU', immatPfx: 'TS', home: 'DTTA' },
-  { name: 'Air France',        prefix: 'AF', immatPfx: 'FH', home: 'LFPG' },
+  { name: 'Mauritania Airlines', prefix: 'L6', immatPfx: '5T', dests: ['DAAG','DTTA','GOBD','GABS','GCLP','GUCY','GMMN','GQPP','GQNI','GQPF','GQPZ','DIAP','DBBP'] },
+  { name: 'Air Senegal',         prefix: 'HC', immatPfx: '6V', home: 'GOBD' },
+  { name: 'Turkish Airlines',    prefix: 'TK', immatPfx: 'TC', home: 'LTFM' },
+  { name: 'Binter',              prefix: 'NT', immatPfx: 'EC', home: 'GCLP' },
+  { name: 'Air Algerie',         prefix: 'AH', immatPfx: '7T', home: 'DAAG' },
+  { name: 'ASKY',                prefix: 'KP', immatPfx: 'TU', home: 'GUCY' },
+  { name: 'Royal Air Maroc',     prefix: 'AT', immatPfx: 'CN', home: 'GMMN' },
+  { name: 'Tunisair',            prefix: 'TU', immatPfx: 'TS', home: 'DTTA' },
+  { name: 'Air France',          prefix: 'AF', immatPfx: 'FH', home: 'LFPG' },
 ];
 
-const DEST_NAMES = {
-  DAAG:'Alger', DTTA:'Tunis', GOBD:'Dakar', GABS:'Bamako', GCLP:'Las Palmas',
-  GUCY:'Conakry', GMMN:'Casablanca', GQPP:'Nouadhibou', GQNI:'Nema',
-  GQPF:'Kiffa', GQPZ:'Zoueratt', DIAP:'Abidjan', DBBP:'Lome',
-  LTFM:'Istanbul', LFPG:'Paris CDG', GQNO:'Nouakchott'
-};
-
-// ══════════════════════════════════════════════════════
-// HELPERS
-// ══════════════════════════════════════════════════════
-function rnd(arr)    { return arr[Math.floor(Math.random()*arr.length)]; }
-function rndInt(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
-function pad(n,l)    { return String(n).padStart(l||2,'0'); }
-
-function uid() {
-  return 'TEST_' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,6).toUpperCase();
+// Toutes les paires from/to possibles
+const PAIRS = [];
+for (const co of COMPANIES) {
+  if (co.dests) {
+    for (const d of co.dests) {
+      PAIRS.push({ co, type:'DEP', from:NKC, to:d });
+      PAIRS.push({ co, type:'ARR', from:d,   to:NKC });
+    }
+  } else {
+    PAIRS.push({ co, type:'DEP', from:NKC,     to:co.home });
+    PAIRS.push({ co, type:'ARR', from:co.home, to:NKC });
+  }
 }
 
+// Helpers
+function rndInt(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
+function pad(n,l)    { return String(n).padStart(l||2,'0'); }
+function uid()       { return 'T'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase(); }
+
 function rndDate() {
-  // Couvre toute l'année courante — tous les mois
-  const year  = new Date().getFullYear();
-  const month = rndInt(1, 12);
-  const days  = new Date(year, month, 0).getDate(); // nb jours du mois
-  const day   = rndInt(1, days);
-  return year+'-'+pad(month)+'-'+pad(day);
+  const y = new Date().getFullYear();
+  const m = rndInt(1,12);
+  const d = rndInt(1, new Date(y,m,0).getDate());
+  return y+'-'+pad(m)+'-'+pad(d);
 }
 
 function rndImmat(pfx) {
-  const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const r = () => L[rndInt(0,L.length-1)];
-  return pfx + r() + r() + r();
+  const L='ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const r=()=>L[rndInt(0,L.length-1)];
+  return pfx+r()+r()+r();
 }
 
 function rndAuth() {
-  const y = String(new Date().getFullYear()).slice(2);
+  const y=String(new Date().getFullYear()).slice(2);
   return 'SNA'+y+'-'+pad(rndInt(1,9999),4);
 }
 
-// ══════════════════════════════════════════════════════
-// GÉNÉRATION EN MÉMOIRE
-// ══════════════════════════════════════════════════════
-let testFlights = [];
+function rndFn(co) {
+  return co.prefix + rndInt(100,999);
+}
 
-function generateFlights() {
-  const result = [];
-  for (const co of COMPANIES) {
-    const used = new Set();
-    const nextFn = () => {
-      let n; do { n = rndInt(100,999); } while(used.has(n));
-      used.add(n); return co.prefix + n;
-    };
-    const make = (type, from, to) => ({
+// Générer N vols aléatoires répartis sur toutes les paires
+function generateBatch(n) {
+  const batch = [];
+  for (let i=0; i<n; i++) {
+    const p   = PAIRS[rndInt(0, PAIRS.length-1)];
+    batch.push({
       id:                  uid(),
-      flightNumber:        nextFn(),
-      company:             co.name,
+      flightNumber:        rndFn(p.co),
+      company:             p.co.name,
       date:                rndDate(),
-      type,
-      from,
-      to,
-      registration:        rndImmat(co.immatPfx),
+      type:                p.type,
+      from:                p.from,
+      to:                  p.to,
+      registration:        rndImmat(p.co.immatPfx),
       passengers:          rndInt(30, 220),
       babies:              rndInt(0, 8),
       hasStopover:         false,
@@ -175,122 +150,44 @@ function generateFlights() {
       timestamp:           Date.now(),
       createdAt:           new Date().toISOString(),
     });
-
-    if (co.dests) {
-      // Mauritania Airlines — N vols aléatoires DEP + ARR PAR destination
-      for (const dest of co.dests) {
-        const nDep = rndInt(1000, 1500);
-        const nArr = rndInt(1000, 1500);
-        for (let i=0;i<nDep;i++) result.push(make('DEP', NKC, dest));
-        for (let i=0;i<nArr;i++) result.push(make('ARR', dest, NKC));
-      }
-    } else {
-      // Autres compagnies — N vols aléatoires DEP + ARR
-      const nDep = rndInt(1000, 1500);
-      const nArr = rndInt(1000, 1500);
-      for (let i=0;i<nDep;i++) result.push(make('DEP', NKC, co.home));
-      for (let i=0;i<nArr;i++) result.push(make('ARR', co.home, NKC));
-    }
   }
-  return result;
+  return batch;
 }
 
-// Version async qui génère par chunks pour ne pas bloquer le navigateur
-async function generateFlightsAsync(onProgress) {
-  const CHUNK = 500; // vols par tick
-  const tasks = []; // liste de { type, from, to, co } à générer
-
-  for (const co of COMPANIES) {
-    if (co.dests) {
-      for (const dest of co.dests) {
-        const nDep = rndInt(1000, 1500);
-        const nArr = rndInt(1000, 1500);
-        for (let i=0;i<nDep;i++) tasks.push({type:'DEP',from:NKC,to:dest,co});
-        for (let i=0;i<nArr;i++) tasks.push({type:'ARR',from:dest,to:NKC,co});
-      }
-    } else {
-      const nDep = rndInt(1000, 1500);
-      const nArr = rndInt(1000, 1500);
-      for (let i=0;i<nDep;i++) tasks.push({type:'DEP',from:NKC,to:co.home,co});
-      for (let i=0;i<nArr;i++) tasks.push({type:'ARR',from:co.home,to:NKC,co});
-    }
-  }
-
-  const result = [];
-  // Construire les N° de vol par compagnie
-  const usedNums = {};
-  COMPANIES.forEach(co => usedNums[co.name] = new Set());
-
-  const nextFn = (co) => {
-    let n; do { n = rndInt(100,999); } while(usedNums[co.name].has(n));
-    usedNums[co.name].add(n); return co.prefix + n;
-  };
-
-  for (let i = 0; i < tasks.length; i += CHUNK) {
-    const chunk = tasks.slice(i, i + CHUNK);
-    for (const t of chunk) {
-      result.push({
-        id:                  uid(),
-        flightNumber:        nextFn(t.co),
-        company:             t.co.name,
-        date:                rndDate(),
-        type:                t.type,
-        from:                t.from,
-        to:                  t.to,
-        registration:        rndImmat(t.co.immatPfx),
-        passengers:          rndInt(30, 220),
-        babies:              rndInt(0, 8),
-        hasStopover:         false,
-        stopover:            '',
-        stopoverPax:         0,
-        stopoverBabies:      0,
-        authorizationNumber: rndAuth(),
-        source:              'TEST',
-        timestamp:           Date.now(),
-        createdAt:           new Date().toISOString(),
-      });
-    }
-    if (onProgress) onProgress(result.length, tasks.length);
-    // Libérer le thread principal entre chaque chunk
-    await new Promise(r => setTimeout(r, 0));
-  }
-  return result;
-}
-
-// ══════════════════════════════════════════════════════
-// LOG + PROGRESS
-// ══════════════════════════════════════════════════════
+// ── Log ──
 const logBox = document.getElementById('logBox');
 function log(msg, cls) {
   const s = document.createElement('span');
   s.className = cls||'inf'; s.textContent = msg+'\n';
   logBox.appendChild(s); logBox.scrollTop = logBox.scrollHeight;
 }
-function clearLog() { logBox.innerHTML = ''; }
-function setProgress(pct) {
-  document.getElementById('prog').style.display = 'block';
-  document.getElementById('progFill').style.width = pct+'%';
-  if (pct>=100) setTimeout(()=> document.getElementById('prog').style.display='none', 700);
-}
+function clearLog() { logBox.innerHTML=''; }
 function setBtns(dis) {
-  ['btnInject','btnRemove','btnRegen'].forEach(id => document.getElementById(id).disabled=dis);
+  document.getElementById('btnInject').disabled = dis;
+  document.getElementById('btnRemove').disabled = dis;
+}
+function setProgress(p) { document.getElementById('progFill').style.width=p+'%'; }
+
+// ── Stats ──
+let totalInjected = 0;
+let totalDep = 0, totalArr = 0;
+const coSet = new Set();
+
+function updateStats(batch) {
+  if (batch) {
+    totalInjected += batch.length;
+    batch.forEach(f => {
+      if(f.type==='DEP') totalDep++; else totalArr++;
+      coSet.add(f.company);
+    });
+  }
+  document.getElementById('sTotal').textContent = totalInjected.toLocaleString();
+  document.getElementById('sDep').textContent   = totalDep.toLocaleString();
+  document.getElementById('sArr').textContent   = totalArr.toLocaleString();
+  document.getElementById('sCo').textContent    = coSet.size;
 }
 
-// ══════════════════════════════════════════════════════
-// STATS
-// ══════════════════════════════════════════════════════
-function updateStats() {
-  document.getElementById('sTotal').textContent = testFlights.length;
-  document.getElementById('sDep').textContent   = testFlights.filter(f=>f.type==='DEP').length;
-  document.getElementById('sArr').textContent   = testFlights.filter(f=>f.type==='ARR').length;
-  document.getElementById('sCo').textContent    = new Set(testFlights.map(f=>f.company)).size;
-}
-
-// ══════════════════════════════════════════════════════
-// CONNEXION VIA BroadcastChannel
-// Fonctionne entre 2 onglets du même navigateur, même domaine
-// Ouvrez juste index.html dans un onglet et ce fichier dans un autre
-// ══════════════════════════════════════════════════════
+// ── BroadcastChannel ──
 let siteConnected = false;
 const ch = new BroadcastChannel('anac_test_flights');
 
@@ -301,111 +198,66 @@ ch.addEventListener('message', (evt) => {
     updateConnStatus(true);
   } else if (cmd === 'ack') {
     setProgress(100);
-    log('✓ ' + evt.data.test + ' vols test injectes dans le site.', 'ok');
-    log('  Total affiche: ' + evt.data.total + ' vols.', 'ok');
-    const s = {};
-    testFlights.forEach(f => { if(!s[f.company])s[f.company]={d:0,a:0}; s[f.company][f.type==='DEP'?'d':'a']++; });
-    log('\nResume par compagnie:', 'warn2');
-    for(const [co,v] of Object.entries(s)) log('  '+co+': '+v.d+' DEP + '+v.a+' ARR', 'ok');
+    log('✓ Lot injecté. Total dans le site: '+evt.data.total.toLocaleString()+' vols.', 'ok');
+    setTimeout(()=>setProgress(0), 800);
     setBtns(false);
   } else if (cmd === 'ack_remove') {
-    log('✓ Vols test retires. Site affiche: '+evt.data.total+' vols Firebase.', 'ok');
+    totalInjected=0; totalDep=0; totalArr=0; coSet.clear();
+    updateStats();
+    log('✓ Tous les vols test retirés du site.', 'ok');
     setBtns(false);
   }
 });
 
 function updateConnStatus(ok) {
-  document.getElementById('siteDot').className = 'dot ' + (ok ? 'dot-ok' : 'dot-off');
-  document.getElementById('siteTxt').textContent = ok ? 'Connecte' : 'Non connecte';
+  document.getElementById('siteDot').className = 'dot '+(ok?'dot-ok':'dot-off');
+  document.getElementById('siteTxt').textContent = ok ? 'Connecté' : 'Non connecté';
 }
 
 function checkConnection() {
   siteConnected = false;
   ch.postMessage({ cmd: 'ping' });
-  setTimeout(() => { if (!siteConnected) updateConnStatus(false); }, 800);
+  setTimeout(()=>{ if(!siteConnected) updateConnStatus(false); }, 800);
 }
 
-// ══════════════════════════════════════════════════════
-// ACTIONS
-// ══════════════════════════════════════════════════════
-window.injectFlights = async function() {
-  clearLog(); setBtns(true);
-  log('Generation des vols en cours...', 'inf');
+// ── Actions ──
+window.injectBatch = function() {
+  const n = parseInt(document.getElementById('batchSize').value) || 500;
+  setBtns(true);
 
-  // Génération par chunks asynchrones pour ne pas bloquer le navigateur
-  testFlights = await generateFlightsAsync(function(done, total) {
-    setProgress(Math.round(done/total*35));
-    document.getElementById('sTotal').textContent = done.toLocaleString();
-  });
-
-  updateStats();
-  log(testFlights.length.toLocaleString() + ' vols generes.', 'ok');
-
+  // Vérifier connexion
   siteConnected = false;
   ch.postMessage({ cmd: 'ping' });
+
   setTimeout(() => {
     if (!siteConnected) {
-      log('Site ANAC non detecte.', 'err');
-      log('Ouvrez index.html dans un autre onglet du meme navigateur.', 'warn2');
+      log('Site non connecté — ouvrez index.html dans un autre onglet.', 'err');
       setBtns(false); return;
     }
-    setProgress(50);
-    log('Envoi vers le site...', 'inf');
-    ch.postMessage({ cmd: 'inject', flights: testFlights });
-  }, 900);
+
+    setProgress(30);
+    const batch = generateBatch(n);
+    updateStats(batch);
+    setProgress(70);
+
+    log('Lot de '+n.toLocaleString()+' vols généré → envoi...', 'inf');
+    ch.postMessage({ cmd: 'inject_add', flights: batch });
+    // ack reçu → setBtns(false) + log
+  }, 700);
 };
 
-window.removeFlights = function() {
-  clearLog(); setBtns(true);
+window.removeAll = function() {
+  setBtns(true);
   ch.postMessage({ cmd: 'remove' });
-  setTimeout(() => setBtns(false), 1200);
+  setTimeout(()=>setBtns(false), 1000);
 };
 
-window.regenFlights = async function() {
-  clearLog(); setBtns(true);
-  log('Generation en cours...', 'inf');
-  testFlights = await generateFlightsAsync(function(done, total) {
-    setProgress(Math.round(done/total*100));
-    document.getElementById('sTotal').textContent = done.toLocaleString();
-  });
-  updateStats();
-  log('✓ '+testFlights.length.toLocaleString()+' nouveaux vols generes.','ok');
-  log('Cliquez "Injecter" pour les afficher dans le site.','inf');
-  setBtns(false);
-};
-
-// ══════════════════════════════════════════════════════
-// GRILLE COMPAGNIES
-// ══════════════════════════════════════════════════════
-function renderGrid() {
-  document.getElementById('coGrid').innerHTML = COMPANIES.map(co => {
-    const info = co.dests
-      ? co.dests.map(d => DEST_NAMES[d]||d).join(', ') + ' — 30 DEP + 30 ARR chacune'
-      : (DEST_NAMES[co.home]||co.home) + ' - Nouakchott';
-    return '<div class="co-card">'
-      + '<div class="co-name">'+co.name+' <span style="color:#475569">('+co.prefix+')</span></div>'
-      + '<div class="co-info">'+info+'</div>'
-      + '<div><span class="badge bdep">1000-1500 DEP</span><span class="badge barr">1000-1500 ARR</span></div>'
-      + '</div>';
-  }).join('');
-}
-
-// ══════════════════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════════════════
-renderGrid();
-// Pas de génération au chargement — trop lourd
-// Les vols sont générés au moment du clic "Injecter"
-log('Pret. Cliquez "Injecter dans le site" pour generer et injecter les vols.', 'ok');
-log('~50 000 vols seront generes (1000-1500 par compagnie/destination).', 'inf');
-
-// Ping périodique pour détecter le site
+// ── Init ──
 setInterval(checkConnection, 2000);
 checkConnection();
 
-// Nettoyage automatique si onglet ferme
-window.addEventListener('beforeunload', function() {
-  try { ch.postMessage({ cmd: 'remove' }); } catch(e) {}
+window.addEventListener('beforeunload', ()=>{
+  try { ch.postMessage({ cmd: 'remove' }); } catch(e){}
 });
 </script>
 </body>
