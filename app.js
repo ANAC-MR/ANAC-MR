@@ -190,12 +190,12 @@ async function loadAdminConfig() {
         const { initializeApp: fbInit, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
         const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
         const fbConfig = {
-            apiKey: "AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+            apiKey: "AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
             authDomain: "anacmr-67835.firebaseapp.com",
             projectId: "anacmr-67835",
             storageBucket: "anacmr-67835.firebasestorage.app",
-            messagingSenderId: "857117390430",
-            appId: "1:857117390430:web:0231614b880df3196e26cf"
+            messagingSenderId: "906668222910",
+            appId: "1:906668222910:web:19d92b627f155bd2dbb1ef"
         };
         const apps = getApps();
         const fbApp = apps.find(a => a.name === 'admin-reader') || fbInit(fbConfig, 'admin-reader');
@@ -1415,9 +1415,18 @@ window.app = {
     ch.addEventListener('message', (evt) => {
       const { cmd, flights: payload } = evt.data || {};
       if (cmd === 'inject' && Array.isArray(payload)) {
+        // Remplace tous les vols test
         const existing = (window._realFlights || flights).filter(f => f.source !== 'TEST');
         if (!window._realFlights) window._realFlights = existing;
         const merged = [...existing, ...payload];
+        updateFlightsData(merged);
+        if (window.refreshChartsFromApp) window.refreshChartsFromApp(merged);
+        ch.postMessage({ cmd: 'ack', total: merged.length, test: payload.length });
+      } else if (cmd === 'inject_add' && Array.isArray(payload)) {
+        // Ajoute un lot aux vols existants (sans écraser)
+        if (!window._realFlights) window._realFlights = flights.filter(f => f.source !== 'TEST');
+        const current = flights; // contient déjà les vrais + les tests précédents
+        const merged  = [...current, ...payload];
         updateFlightsData(merged);
         if (window.refreshChartsFromApp) window.refreshChartsFromApp(merged);
         ch.postMessage({ cmd: 'ack', total: merged.length, test: payload.length });
