@@ -219,17 +219,42 @@ function updateStats() {
 }
 
 // ══════════════════════════════════════════════════════
-// CONNEXION AU SITE VIA window.opener
+// CONNEXION VIA BroadcastChannel
+// Fonctionne entre 2 onglets du même navigateur, même domaine
+// Ouvrez juste index.html dans un onglet et ce fichier dans un autre
 // ══════════════════════════════════════════════════════
-function getSite() {
-  if (window.opener && !window.opener.closed && window.opener.updateFlightsData) return window.opener;
-  return null;
+let siteConnected = false;
+const ch = new BroadcastChannel('anac_test_flights');
+
+ch.addEventListener('message', (evt) => {
+  const { cmd } = evt.data || {};
+  if (cmd === 'pong') {
+    siteConnected = true;
+    updateConnStatus(true);
+  } else if (cmd === 'ack') {
+    setProgress(100);
+    log('✓ ' + evt.data.test + ' vols test injectes dans le site.', 'ok');
+    log('  Total affiche: ' + evt.data.total + ' vols.', 'ok');
+    const s = {};
+    testFlights.forEach(f => { if(!s[f.company])s[f.company]={d:0,a:0}; s[f.company][f.type==='DEP'?'d':'a']++; });
+    log('\nResume par compagnie:', 'warn2');
+    for(const [co,v] of Object.entries(s)) log('  '+co+': '+v.d+' DEP + '+v.a+' ARR', 'ok');
+    setBtns(false);
+  } else if (cmd === 'ack_remove') {
+    log('✓ Vols test retires. Site affiche: '+evt.data.total+' vols Firebase.', 'ok');
+    setBtns(false);
+  }
+});
+
+function updateConnStatus(ok) {
+  document.getElementById('siteDot').className = 'dot ' + (ok ? 'dot-ok' : 'dot-off');
+  document.getElementById('siteTxt').textContent = ok ? 'Connecte' : 'Non connecte';
 }
 
 function checkConnection() {
-  const ok = !!getSite();
-  document.getElementById('siteDot').className = 'dot ' + (ok ? 'dot-ok' : 'dot-off');
-  document.getElementById('siteTxt').textContent = ok ? 'Connecte' : 'Non connecte';
+  siteConnected = false;
+  ch.postMessage({ cmd: 'ping' });
+  setTimeout(() => { if (!siteConnected) updateConnStatus(false); }, 800);
 }
 
 // ══════════════════════════════════════════════════════
@@ -237,42 +262,25 @@ function checkConnection() {
 // ══════════════════════════════════════════════════════
 window.injectFlights = function() {
   clearLog(); setBtns(true);
-  const site = getSite();
-  if (!site) {
-    log('Site non connecte.', 'err');
-    log('Ce fichier doit etre ouvert depuis index.html.', 'err');
-    log('Ajoutez dans index.html: window.open("inject_test_flights.html")', 'warn2');
-    setBtns(false); return;
-  }
-  try {
-    // Fusionner avec les vols Firebase existants (source != TEST)
-    const existing = (site.flights || []).filter(f => f.source !== 'TEST');
-    const merged   = [...existing, ...testFlights];
-    site.updateFlightsData(merged);
-    if (site.refreshChartsFromApp) site.refreshChartsFromApp(merged);
-    setProgress(100);
-    log('✓ ' + testFlights.length + ' vols test injectes dans le site.', 'ok');
-    log('  Vols Firebase conserves: ' + existing.length, 'ok');
-    log('  Total affiche: ' + merged.length, 'ok');
-    // Resumé par compagnie
-    const s = {};
-    testFlights.forEach(f => { if(!s[f.company])s[f.company]={d:0,a:0}; s[f.company][f.type==='DEP'?'d':'a']++; });
-    log('\nResume:', 'warn2');
-    for(const [co,v] of Object.entries(s)) log('  '+co+': '+v.d+' DEP + '+v.a+' ARR', 'ok');
-  } catch(e) { log('Erreur: '+e.message,'err'); }
-  setBtns(false);
+  siteConnected = false;
+  ch.postMessage({ cmd: 'ping' });
+  setTimeout(() => {
+    if (!siteConnected) {
+      log('Site ANAC non detecte.', 'err');
+      log('Ouvrez index.html dans un autre onglet du meme navigateur.', 'warn2');
+      log('Les deux fichiers doivent etre sur le meme domaine (GitHub Pages).', 'inf');
+      setBtns(false); return;
+    }
+    setProgress(40);
+    log('Envoi de ' + testFlights.length + ' vols vers le site...', 'inf');
+    ch.postMessage({ cmd: 'inject', flights: testFlights });
+  }, 900);
 };
 
 window.removeFlights = function() {
-  clearLog();
-  const site = getSite();
-  if (!site) { log('Site non connecte.','err'); return; }
-  try {
-    const without = (site.flights||[]).filter(f=>f.source!=='TEST');
-    site.updateFlightsData(without);
-    if (site.refreshChartsFromApp) site.refreshChartsFromApp(without);
-    log('✓ Vols test retires. Site affiche: '+without.length+' vols (Firebase uniquement).','ok');
-  } catch(e) { log('Erreur: '+e.message,'err'); }
+  clearLog(); setBtns(true);
+  ch.postMessage({ cmd: 'remove' });
+  setTimeout(() => setBtns(false), 1200);
 };
 
 window.regenFlights = function() {
@@ -308,17 +316,13 @@ updateStats();
 log(testFlights.length + ' vols generes (' + COMPANIES.length + ' compagnies x 60).', 'ok');
 log('Cliquez "Injecter dans le site" pour les afficher.', 'inf');
 
-setInterval(checkConnection, 1500);
+// Ping périodique pour détecter le site
+setInterval(checkConnection, 2000);
 checkConnection();
 
 // Nettoyage automatique si onglet ferme
 window.addEventListener('beforeunload', function() {
-  try {
-    const site = getSite();
-    if (site && site.updateFlightsData) {
-      site.updateFlightsData((site.flights||[]).filter(f=>f.source!=='TEST'));
-    }
-  } catch(e) {}
+  try { ch.postMessage({ cmd: 'remove' }); } catch(e) {}
 });
 </script>
 </body>
