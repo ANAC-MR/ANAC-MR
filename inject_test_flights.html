@@ -4,261 +4,149 @@
 <meta charset="UTF-8">
 <title>ANAC — Vols Test</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 28px 20px; }
-h1  { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 4px; }
-.sub { font-size: 12px; color: #64748b; margin-bottom: 20px; }
-.card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
-.card h2 { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 14px; }
-.stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
-.stat { background: #0f172a; border: 1px solid #1e3a5f; border-radius: 9px; padding: 10px 16px; text-align: center; min-width: 110px; }
-.stat-val { font-size: 22px; font-weight: 800; color: #38bdf8; }
-.stat-lbl { font-size: 10px; color: #64748b; margin-top: 2px; }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 20px; border: none; border-radius: 9px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; }
-.btn-green { background: linear-gradient(135deg,#059669,#047857); color:#fff; box-shadow: 0 3px 12px rgba(5,150,105,0.3); }
-.btn-red   { background: linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; box-shadow: 0 3px 12px rgba(220,38,38,0.3); }
-.btn-blue  { background: linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; box-shadow: 0 3px 12px rgba(37,99,235,0.3); }
-.btn:hover { opacity: 0.85; transform: translateY(-1px); }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
-.batch-ctrl { display: flex; align-items: center; gap: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 9px; padding: 8px 14px; }
-.batch-ctrl label { font-size: 12px; color: #94a3b8; white-space: nowrap; }
-.batch-ctrl input { background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: #fff; font-size: 13px; font-weight: 700; width: 80px; padding: 4px 8px; text-align: center; }
-.log { background: #0f172a; border: 1px solid #1e3a5f; border-radius: 9px; padding: 12px 14px; font-family: monospace; font-size: 11.5px; line-height: 1.8; max-height: 220px; overflow-y: auto; margin-top: 14px; white-space: pre-wrap; }
-.ok    { color: #34d399; }
-.err   { color: #f87171; }
-.inf   { color: #60a5fa; }
-.warn2 { color: #fbbf24; }
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-.dot-ok  { background: #34d399; box-shadow: 0 0 6px #34d399; }
-.dot-off { background: #ef4444; }
-.progress-bar { height: 5px; background: #0f172a; border-radius: 3px; overflow: hidden; margin-top: 10px; }
-.progress-fill { height: 100%; background: linear-gradient(90deg,#059669,#34d399); border-radius: 3px; transition: width 0.3s; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',sans-serif; background:#0f172a; color:#e2e8f0; padding:30px 20px; }
+h1 { font-size:20px; font-weight:800; margin-bottom:4px; }
+.sub { font-size:12px; color:#64748b; margin-bottom:24px; }
+.card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:22px; margin-bottom:16px; }
+.card h2 { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:#64748b; margin-bottom:16px; }
+.stats { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+.stat { background:#0f172a; border:1px solid #1e3a5f; border-radius:9px; padding:10px 16px; text-align:center; min-width:110px; }
+.stat-val { font-size:22px; font-weight:800; color:#38bdf8; }
+.stat-lbl { font-size:10px; color:#64748b; margin-top:2px; }
+.row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+.btn { display:inline-flex; align-items:center; gap:7px; padding:12px 22px; border:none; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .2s; }
+.g { background:linear-gradient(135deg,#059669,#047857); color:#fff; box-shadow:0 3px 12px rgba(5,150,105,.3); }
+.r { background:linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; box-shadow:0 3px 12px rgba(220,38,38,.3); }
+.btn:hover { opacity:.85; transform:translateY(-1px); }
+.btn:disabled { opacity:.4; cursor:not-allowed; transform:none !important; }
+.ctrl { display:flex; align-items:center; gap:8px; background:#0f172a; border:1px solid #334155; border-radius:9px; padding:8px 14px; }
+.ctrl label { font-size:12px; color:#94a3b8; white-space:nowrap; }
+.ctrl input[type=number] { background:#1e293b; border:1px solid #475569; border-radius:6px; color:#fff; font-size:14px; font-weight:700; width:90px; padding:5px 8px; text-align:center; }
+.ctrl input[type=range] { width:140px; accent-color:#38bdf8; }
+.log { background:#0f172a; border:1px solid #1e3a5f; border-radius:9px; padding:12px 14px; font-family:monospace; font-size:12px; line-height:1.8; max-height:200px; overflow-y:auto; white-space:pre-wrap; }
+.ok { color:#34d399; } .err { color:#f87171; } .inf { color:#60a5fa; } .w { color:#fbbf24; }
+.dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+.on { background:#34d399; box-shadow:0 0 6px #34d399; }
+.off { background:#ef4444; }
 </style>
 </head>
 <body>
 
 <h1>🧪 Vols Test — ANAC Mauritanie</h1>
-<p class="sub">Injection locale par lots — aucune écriture dans Firebase — chaque clic ajoute un nouveau lot</p>
+<p class="sub">Ouvrez index.html dans un autre onglet · Chaque clic ajoute un lot · Rien n'est écrit dans Firebase</p>
 
 <div class="card">
-  <h2>⚡ Contrôle</h2>
+  <h2>📊 État</h2>
   <div class="stats">
     <div class="stat"><div class="stat-val" id="sTotal">0</div><div class="stat-lbl">Vols injectés</div></div>
     <div class="stat"><div class="stat-val" id="sDep">0</div><div class="stat-lbl">Départs</div></div>
     <div class="stat"><div class="stat-val" id="sArr">0</div><div class="stat-lbl">Arrivées</div></div>
-    <div class="stat"><div class="stat-val" id="sCo">0</div><div class="stat-lbl">Compagnies</div></div>
     <div class="stat">
       <div class="stat-val" style="font-size:13px;padding-top:5px;">
-        <span class="dot dot-off" id="siteDot"></span><span id="siteTxt">–</span>
+        <span class="dot off" id="dot"></span><span id="siteTxt">–</span>
       </div>
-      <div class="stat-lbl">Site connecté</div>
+      <div class="stat-lbl">Site</div>
     </div>
   </div>
+</div>
 
-  <div class="btn-row">
-    <button class="btn btn-green" id="btnInject" onclick="injectBatch()">➕ Injecter un lot</button>
-    <button class="btn btn-red"   id="btnRemove" onclick="removeAll()">🗑️ Tout retirer</button>
-    <div class="batch-ctrl">
+<div class="card">
+  <h2>⚡ Actions</h2>
+  <div class="row">
+    <div class="ctrl">
       <label>Vols par lot :</label>
-      <input type="number" id="batchSize" value="500" min="50" max="2000" step="50">
+      <input type="number" id="batchSize" value="200" min="50" max="1000" step="50">
     </div>
   </div>
-
-  <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
-  <div class="log" id="logBox"><span class="inf">Prêt. Ouvrez index.html dans un autre onglet puis cliquez "Injecter un lot".</span></div>
+  <div class="row">
+    <button class="btn g" id="btnAdd" onclick="addBatch()">➕ Ajouter un lot</button>
+    <button class="btn r" id="btnRem" onclick="removeAll()">🗑️ Tout retirer</button>
+  </div>
+  <div class="log" id="log"><span class="inf">Ouvrez index.html dans un autre onglet du même navigateur.</span>
+</div>
 </div>
 
 <script>
-const NKC = 'GQNO';
-
-const COMPANIES = [
-  { name: 'Mauritania Airlines', prefix: 'L6', immatPfx: '5T', dests: ['DAAG','DTTA','GOBD','GABS','GCLP','GUCY','GMMN','GQPP','GQNI','GQPF','GQPZ','DIAP','DBBP'] },
-  { name: 'Air Senegal',         prefix: 'HC', immatPfx: '6V', home: 'GOBD' },
-  { name: 'Turkish Airlines',    prefix: 'TK', immatPfx: 'TC', home: 'LTFM' },
-  { name: 'Binter',              prefix: 'NT', immatPfx: 'EC', home: 'GCLP' },
-  { name: 'Air Algerie',         prefix: 'AH', immatPfx: '7T', home: 'DAAG' },
-  { name: 'ASKY',                prefix: 'KP', immatPfx: 'TU', home: 'GUCY' },
-  { name: 'Royal Air Maroc',     prefix: 'AT', immatPfx: 'CN', home: 'GMMN' },
-  { name: 'Tunisair',            prefix: 'TU', immatPfx: 'TS', home: 'DTTA' },
-  { name: 'Air France',          prefix: 'AF', immatPfx: 'FH', home: 'LFPG' },
-];
-
-// Toutes les paires from/to possibles
-const PAIRS = [];
-for (const co of COMPANIES) {
-  if (co.dests) {
-    for (const d of co.dests) {
-      PAIRS.push({ co, type:'DEP', from:NKC, to:d });
-      PAIRS.push({ co, type:'ARR', from:d,   to:NKC });
-    }
-  } else {
-    PAIRS.push({ co, type:'DEP', from:NKC,     to:co.home });
-    PAIRS.push({ co, type:'ARR', from:co.home, to:NKC });
-  }
-}
-
-// Helpers
-function rndInt(a,b) { return Math.floor(Math.random()*(b-a+1))+a; }
-function pad(n,l)    { return String(n).padStart(l||2,'0'); }
-function uid()       { return 'T'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase(); }
-
-function rndDate() {
-  const y = new Date().getFullYear();
-  const m = rndInt(1,12);
-  const d = rndInt(1, new Date(y,m,0).getDate());
-  return y+'-'+pad(m)+'-'+pad(d);
-}
-
-function rndImmat(pfx) {
-  const L='ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const r=()=>L[rndInt(0,L.length-1)];
-  return pfx+r()+r()+r();
-}
-
-function rndAuth() {
-  const y=String(new Date().getFullYear()).slice(2);
-  return 'SNA'+y+'-'+pad(rndInt(1,9999),4);
-}
-
-function rndFn(co) {
-  return co.prefix + rndInt(100,999);
-}
-
-// Générer N vols aléatoires répartis sur toutes les paires
-function generateBatch(n) {
-  const batch = [];
-  for (let i=0; i<n; i++) {
-    const p   = PAIRS[rndInt(0, PAIRS.length-1)];
-    batch.push({
-      id:                  uid(),
-      flightNumber:        rndFn(p.co),
-      company:             p.co.name,
-      date:                rndDate(),
-      type:                p.type,
-      from:                p.from,
-      to:                  p.to,
-      registration:        rndImmat(p.co.immatPfx),
-      passengers:          rndInt(30, 220),
-      babies:              rndInt(0, 8),
-      hasStopover:         false,
-      stopover:            '',
-      stopoverPax:         0,
-      stopoverBabies:      0,
-      authorizationNumber: rndAuth(),
-      source:              'TEST',
-      timestamp:           Date.now(),
-      createdAt:           new Date().toISOString(),
-    });
-  }
-  return batch;
-}
-
-// ── Log ──
-const logBox = document.getElementById('logBox');
-function log(msg, cls) {
-  const s = document.createElement('span');
-  s.className = cls||'inf'; s.textContent = msg+'\n';
-  logBox.appendChild(s); logBox.scrollTop = logBox.scrollHeight;
-}
-function clearLog() { logBox.innerHTML=''; }
-function setBtns(dis) {
-  document.getElementById('btnInject').disabled = dis;
-  document.getElementById('btnRemove').disabled = dis;
-}
-function setProgress(p) { document.getElementById('progFill').style.width=p+'%'; }
-
-// ── Stats ──
-let totalInjected = 0;
-let totalDep = 0, totalArr = 0;
-const coSet = new Set();
-
-function updateStats(batch) {
-  if (batch) {
-    totalInjected += batch.length;
-    batch.forEach(f => {
-      if(f.type==='DEP') totalDep++; else totalArr++;
-      coSet.add(f.company);
-    });
-  }
-  document.getElementById('sTotal').textContent = totalInjected.toLocaleString();
-  document.getElementById('sDep').textContent   = totalDep.toLocaleString();
-  document.getElementById('sArr').textContent   = totalArr.toLocaleString();
-  document.getElementById('sCo').textContent    = coSet.size;
-}
-
-// ── BroadcastChannel ──
-let siteConnected = false;
+let total=0, dep=0, arr=0;
 const ch = new BroadcastChannel('anac_test_flights');
 
-ch.addEventListener('message', (evt) => {
-  const { cmd } = evt.data || {};
+// Écouter réponses du site
+ch.addEventListener('message', evt => {
+  const { cmd, total:t, test:n } = evt.data || {};
   if (cmd === 'pong') {
-    siteConnected = true;
-    updateConnStatus(true);
+    setConn(true);
   } else if (cmd === 'ack') {
-    setProgress(100);
-    log('✓ Lot injecté. Total dans le site: '+evt.data.total.toLocaleString()+' vols.', 'ok');
-    setTimeout(()=>setProgress(0), 800);
+    dep = evt.data.dep || dep;
+    arr = evt.data.arr || arr;
+    total = evt.data.test || total;
+    updateStats();
+    addLog('✓ Lot ajouté — '+t+' vols au total dans le site ('+total+' tests).', 'ok');
     setBtns(false);
   } else if (cmd === 'ack_remove') {
-    totalInjected=0; totalDep=0; totalArr=0; coSet.clear();
-    updateStats();
-    log('✓ Tous les vols test retirés du site.', 'ok');
+    total=0; dep=0; arr=0; updateStats();
+    addLog('✓ Vols test retirés. Site: '+t+' vols Firebase.', 'ok');
     setBtns(false);
   }
 });
 
-function updateConnStatus(ok) {
-  document.getElementById('siteDot').className = 'dot '+(ok?'dot-ok':'dot-off');
+function setConn(ok) {
+  document.getElementById('dot').className = 'dot '+(ok?'on':'off');
   document.getElementById('siteTxt').textContent = ok ? 'Connecté' : 'Non connecté';
 }
-
-function checkConnection() {
-  siteConnected = false;
-  ch.postMessage({ cmd: 'ping' });
-  setTimeout(()=>{ if(!siteConnected) updateConnStatus(false); }, 800);
+function updateStats() {
+  document.getElementById('sTotal').textContent = total;
+  document.getElementById('sDep').textContent   = dep;
+  document.getElementById('sArr').textContent   = arr;
+}
+function addLog(msg, cls) {
+  const el = document.getElementById('log');
+  const s = document.createElement('span');
+  s.className=cls||'inf'; s.textContent=msg+'\n';
+  el.appendChild(s); el.scrollTop=el.scrollHeight;
+}
+function setBtns(dis) {
+  document.getElementById('btnAdd').disabled=dis;
+  document.getElementById('btnRem').disabled=dis;
 }
 
-// ── Actions ──
-window.injectBatch = function() {
-  const n = parseInt(document.getElementById('batchSize').value) || 500;
+// Ping périodique
+let connected = false;
+function ping() {
+  connected = false;
+  ch.postMessage({ cmd:'ping' });
+  setTimeout(()=>{ if(!connected) setConn(false); }, 600);
+}
+ch.addEventListener('message', e => { if(e.data?.cmd==='pong') connected=true; });
+setInterval(ping, 2000);
+ping();
+
+window.addBatch = function() {
+  const n = parseInt(document.getElementById('batchSize').value)||200;
   setBtns(true);
-
-  // Vérifier connexion
-  siteConnected = false;
-  ch.postMessage({ cmd: 'ping' });
-
+  // Ping d'abord
+  connected=false;
+  ch.postMessage({ cmd:'ping' });
   setTimeout(() => {
-    if (!siteConnected) {
-      log('Site non connecté — ouvrez index.html dans un autre onglet.', 'err');
+    if (!connected) {
+      addLog('Site non connecté. Ouvrez index.html dans un autre onglet.', 'err');
       setBtns(false); return;
     }
-
-    setProgress(30);
-    const batch = generateBatch(n);
-    updateStats(batch);
-    setProgress(70);
-
-    log('Lot de '+n.toLocaleString()+' vols généré → envoi...', 'inf');
-    ch.postMessage({ cmd: 'inject_add', flights: batch });
-    // ack reçu → setBtns(false) + log
+    // Envoyer juste le nombre — la génération se fait dans app.js
+    addLog('Envoi commande: +'+n+' vols...', 'inf');
+    ch.postMessage({ cmd:'inject_add', n });
+    // Timeout si pas de réponse
+    setTimeout(()=>{ if(document.getElementById('btnAdd').disabled) { addLog('Timeout — réessayez.','err'); setBtns(false); } }, 5000);
   }, 700);
 };
 
 window.removeAll = function() {
   setBtns(true);
-  ch.postMessage({ cmd: 'remove' });
-  setTimeout(()=>setBtns(false), 1000);
+  ch.postMessage({ cmd:'remove' });
+  setTimeout(()=>setBtns(false), 2000);
 };
 
-// ── Init ──
-setInterval(checkConnection, 2000);
-checkConnection();
-
-window.addEventListener('beforeunload', ()=>{
-  try { ch.postMessage({ cmd: 'remove' }); } catch(e){}
-});
+window.addEventListener('beforeunload', ()=>{ try{ ch.postMessage({cmd:'remove'}); }catch(e){} });
 </script>
 </body>
 </html>
