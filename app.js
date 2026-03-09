@@ -1409,35 +1409,79 @@ window.app = {
 };
 
 // ── BroadcastChannel: écoute les commandes de inject_test_flights.html ──
+// Les vols sont générés ICI dans app.js pour ne pas transférer de données lourdes
 (function() {
   try {
+    const NKC = 'GQNO';
+    const CO = [
+      { name:'Mauritania Airlines', prefix:'L6', immatPfx:'5T', dests:['DAAG','DTTA','GOBD','GABS','GCLP','GUCY','GMMN','GQPP','GQNI','GQPF','GQPZ','DIAP','DBBP'] },
+      { name:'Air Senegal',         prefix:'HC', immatPfx:'6V', home:'GOBD' },
+      { name:'Turkish Airlines',    prefix:'TK', immatPfx:'TC', home:'LTFM' },
+      { name:'Binter',              prefix:'NT', immatPfx:'EC', home:'GCLP' },
+      { name:'Air Algerie',         prefix:'AH', immatPfx:'7T', home:'DAAG' },
+      { name:'ASKY',                prefix:'KP', immatPfx:'TU', home:'GUCY' },
+      { name:'Royal Air Maroc',     prefix:'AT', immatPfx:'CN', home:'GMMN' },
+      { name:'Tunisair',            prefix:'TU', immatPfx:'TS', home:'DTTA' },
+      { name:'Air France',          prefix:'AF', immatPfx:'FH', home:'LFPG' },
+    ];
+    const PAIRS = [];
+    CO.forEach(co => {
+      if (co.dests) {
+        co.dests.forEach(d => {
+          PAIRS.push({co,type:'DEP',from:NKC,to:d});
+          PAIRS.push({co,type:'ARR',from:d,to:NKC});
+        });
+      } else {
+        PAIRS.push({co,type:'DEP',from:NKC,to:co.home});
+        PAIRS.push({co,type:'ARR',from:co.home,to:NKC});
+      }
+    });
+
+    function ri(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+    function pad(n,l){return String(n).padStart(l||2,'0');}
+    function rndDate(){const y=new Date().getFullYear(),m=ri(1,12),d=ri(1,new Date(y,m,0).getDate());return y+'-'+pad(m)+'-'+pad(d);}
+    function rndImmat(p){const L='ABCDEFGHJKLMNPQRSTUVWXYZ',r=()=>L[ri(0,L.length-1)];return p+r()+r()+r();}
+    function rndAuth(){const y=String(new Date().getFullYear()).slice(2);return 'SNA'+y+'-'+pad(ri(1,9999),4);}
+    function uid(){return 'T'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();}
+
+    function makeBatch(n) {
+      const batch=[];
+      for(let i=0;i<n;i++){
+        const p=PAIRS[ri(0,PAIRS.length-1)];
+        batch.push({
+          id:uid(), flightNumber:p.co.prefix+ri(100,999), company:p.co.name,
+          date:rndDate(), type:p.type, from:p.from, to:p.to,
+          registration:rndImmat(p.co.immatPfx), passengers:ri(30,220), babies:ri(0,8),
+          hasStopover:false, stopover:'', stopoverPax:0, stopoverBabies:0,
+          authorizationNumber:rndAuth(), source:'TEST',
+          timestamp:Date.now(), createdAt:new Date().toISOString()
+        });
+      }
+      return batch;
+    }
+
     const ch = new BroadcastChannel('anac_test_flights');
     ch.addEventListener('message', (evt) => {
-      const { cmd, flights: payload } = evt.data || {};
-      if (cmd === 'inject' && Array.isArray(payload)) {
-        // Remplace tous les vols test
-        const existing = (window._realFlights || flights).filter(f => f.source !== 'TEST');
-        if (!window._realFlights) window._realFlights = existing;
-        const merged = [...existing, ...payload];
+      const { cmd, n } = evt.data || {};
+      if (cmd === 'ping') {
+        ch.postMessage({ cmd:'pong' });
+      } else if (cmd === 'inject_add') {
+        // Générer n vols côté site et ajouter
+        if (!window._realFlights) window._realFlights = flights.filter(f=>f.source!=='TEST');
+        const batch  = makeBatch(n || 500);
+        const merged = [...flights, ...batch];
         updateFlightsData(merged);
         if (window.refreshChartsFromApp) window.refreshChartsFromApp(merged);
-        ch.postMessage({ cmd: 'ack', total: merged.length, test: payload.length });
-      } else if (cmd === 'inject_add' && Array.isArray(payload)) {
-        // Ajoute un lot aux vols existants (sans écraser)
-        if (!window._realFlights) window._realFlights = flights.filter(f => f.source !== 'TEST');
-        const current = flights; // contient déjà les vrais + les tests précédents
-        const merged  = [...current, ...payload];
-        updateFlightsData(merged);
-        if (window.refreshChartsFromApp) window.refreshChartsFromApp(merged);
-        ch.postMessage({ cmd: 'ack', total: merged.length, test: payload.length });
+        const testCount = merged.filter(f=>f.source==='TEST').length;
+        const tDep = merged.filter(f=>f.source==='TEST'&&f.type==='DEP').length;
+        const tArr = merged.filter(f=>f.source==='TEST'&&f.type==='ARR').length;
+        ch.postMessage({ cmd:'ack', total:merged.length, test:testCount, dep:tDep, arr:tArr });
       } else if (cmd === 'remove') {
-        const real = window._realFlights || flights.filter(f => f.source !== 'TEST');
+        const real = window._realFlights || flights.filter(f=>f.source!=='TEST');
         window._realFlights = null;
         updateFlightsData(real);
         if (window.refreshChartsFromApp) window.refreshChartsFromApp(real);
-        ch.postMessage({ cmd: 'ack_remove', total: real.length });
-      } else if (cmd === 'ping') {
-        ch.postMessage({ cmd: 'pong' });
+        ch.postMessage({ cmd:'ack_remove', total:real.length });
       }
     });
     window._testChannel = ch;
