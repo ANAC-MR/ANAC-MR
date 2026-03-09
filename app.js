@@ -348,7 +348,6 @@ function handleKeyboardShortcuts(event) {
 function openModal(flightId = null) {
     requireAuthentication(() => {
         elements.flightModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
         
         // Validate flightId - ensure it's a string, not an event object
         const validFlightId = (flightId && typeof flightId === 'string') ? flightId : null;
@@ -360,8 +359,8 @@ function openModal(flightId = null) {
             
             if (flight) {
                 // Update modal title
-                const fpTitleEl = document.getElementById('fpTitle');
-                if (fpTitleEl) fpTitleEl.textContent = 'Modifier un vol';
+                const modalTitle = elements.flightModal.querySelector('h2');
+                modalTitle.textContent = 'Modifier un vol';
                 
                 // Pre-fill form with flight data
                 elements.fAuthNumber.value = flight.authorizationNumber || '';
@@ -390,8 +389,8 @@ function openModal(flightId = null) {
             resetForm();
             
             // Update modal title
-            const fpTitleEl2 = document.getElementById('fpTitle');
-            if (fpTitleEl2) fpTitleEl2.textContent = 'Ajouter un vol';
+            const modalTitle = elements.flightModal.querySelector('h2');
+            modalTitle.textContent = 'Ajouter un vol';
             
             // Set default values
             elements.fCompany.value = AIRLINES[0];
@@ -410,7 +409,6 @@ function openModal(flightId = null) {
             setTimeout(() => {
                 if (window.selectType) window.selectType('DEP');
                 updateFlightNumberPrefix();
-                if (window.updateTotals) window.updateTotals();
             }, 60);
         }
     });
@@ -422,19 +420,13 @@ function openEditModal(flightId) {
 
 function closeModal() {
     elements.flightModal.classList.remove('active');
-    document.body.style.overflow = '';
     editingFlightId = null;
     resetForm();
-    // Reset totaux live
-    ['liveTotalPax','liveTotalBabies','liveTotalAll'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.textContent = '0';
-    });
-    const fpTitleEl3 = document.getElementById('fpTitle');
-    if (fpTitleEl3) fpTitleEl3.textContent = 'Ajouter un vol';
+    
+    // Reset modal title
+    const modalTitle = elements.flightModal.querySelector('h2');
+    modalTitle.textContent = 'Ajouter un vol';
 }
-
-// Expose closeModal globally
-window._appCloseModal = closeModal;
 
 function handleModalBackdropClick(event) {
     if (event.target === elements.flightModal) {
@@ -1385,17 +1377,7 @@ function editFlight(flightId) {
 window.toggleStopoverField = function() {
     const cb  = document.getElementById('hasStopover');
     const grp = document.getElementById('stopoverGroup');
-    const show = cb && cb.checked;
-    if (grp) {
-        grp.style.display = show ? '' : 'none';
-        if (!show) {
-            const sp = document.getElementById('fStopoverPax');
-            const sb = document.getElementById('fStopoverBabies');
-            if (sp) sp.value = 0;
-            if (sb) sb.value = 0;
-        }
-    }
-    if (window.updateTotals) window.updateTotals();
+    if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
 };
 
 window.updateRouteByType = updateRouteByType;
@@ -1404,10 +1386,17 @@ window.updateRouteByType = updateRouteByType;
 window.selectType = function(type) {
     const hiddenInput = document.getElementById('fType');
     if (hiddenInput) hiddenInput.value = type;
-    ['DEP','ARR'].forEach(t => {
-        const btn = document.getElementById('btn'+t);
-        if (btn) btn.classList.toggle('active', t === type);
-    });
+    const btnDEP = document.getElementById('btnDEP');
+    const btnARR = document.getElementById('btnARR');
+    if (btnDEP && btnARR) {
+        if (type === 'DEP') {
+            btnDEP.style.cssText += ';background:#2B5A8E!important;color:#fff!important;border-color:#2B5A8E!important;';
+            btnARR.style.cssText += ';background:#f7fafc!important;color:#718096!important;border-color:#e2e8f0!important;';
+        } else {
+            btnARR.style.cssText += ';background:#2B5A8E!important;color:#fff!important;border-color:#2B5A8E!important;';
+            btnDEP.style.cssText += ';background:#f7fafc!important;color:#718096!important;border-color:#e2e8f0!important;';
+        }
+    }
     updateRouteByType();
 };
 
@@ -1418,6 +1407,33 @@ window.app = {
     toggleActionsMenu,
     editFlight
 };
+
+// ── BroadcastChannel: écoute les commandes de inject_test_flights.html ──
+(function() {
+  try {
+    const ch = new BroadcastChannel('anac_test_flights');
+    ch.addEventListener('message', (evt) => {
+      const { cmd, flights: payload } = evt.data || {};
+      if (cmd === 'inject' && Array.isArray(payload)) {
+        const existing = (window._realFlights || flights).filter(f => f.source !== 'TEST');
+        if (!window._realFlights) window._realFlights = existing;
+        const merged = [...existing, ...payload];
+        updateFlightsData(merged);
+        if (window.refreshChartsFromApp) window.refreshChartsFromApp(merged);
+        ch.postMessage({ cmd: 'ack', total: merged.length, test: payload.length });
+      } else if (cmd === 'remove') {
+        const real = window._realFlights || flights.filter(f => f.source !== 'TEST');
+        window._realFlights = null;
+        updateFlightsData(real);
+        if (window.refreshChartsFromApp) window.refreshChartsFromApp(real);
+        ch.postMessage({ cmd: 'ack_remove', total: real.length });
+      } else if (cmd === 'ping') {
+        ch.postMessage({ cmd: 'pong' });
+      }
+    });
+    window._testChannel = ch;
+  } catch(e) { console.warn('BroadcastChannel non supporté:', e); }
+})();
 
 // ============================================
 // INITIALIZATION
@@ -1466,4 +1482,3 @@ const additionalStyles = `
 const styleSheet = document.createElement('style');
 styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
-
