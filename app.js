@@ -170,17 +170,39 @@ const elements = {
 // ============================================
 async function initializeApp() {
     if (isInitialized) return;
-    
     try {
         await loadAdminConfig();
         populateSelects();
         attachEventListeners();
         setupRealtimeListener();
+        // Appliquer les restrictions UI selon permissions
+        setTimeout(applyPermissionsUI, 300);
         isInitialized = true;
         showNotification('Application initialisée avec succès', 'success');
     } catch (error) {
         console.error('Error initializing app:', error);
         showNotification('Erreur lors de l\'initialisation', 'error');
+    }
+}
+
+function applyPermissionsUI() {
+    if (!window._hasPerm) return; // pas de session secondaire = admin = tout OK
+    // Masquer bouton Ajouter un vol
+    if (!window._hasPerm('add_flight')) {
+        document.querySelectorAll('[onclick*="showModal"], [onclick*="openFlightModal"], #addFlightBtn, .add-flight-btn').forEach(el => el.style.display='none');
+    }
+    // Masquer lien LDM/MVT
+    if (!window._hasPerm('ldm')) {
+        const ldmLink = document.querySelector('a[href="ldm.html"]');
+        if (ldmLink) ldmLink.style.display = 'none';
+    }
+    // Masquer onglet Facturation
+    if (!window._hasPerm('facturation')) {
+        document.querySelectorAll('[onclick*=\'facturation\']').forEach(el => el.style.display='none');
+    }
+    // Masquer boutons edit/delete dans le tableau
+    if (!window._hasPerm('edit_flight') && !window._hasPerm('delete_flight')) {
+        document.querySelectorAll('.action-btn, .edit-btn, .delete-btn').forEach(el => el.style.display='none');
     }
 }
 
@@ -450,15 +472,17 @@ function resetForm() {
 // ============================================
 function handleFormSubmit(event) {
     event.preventDefault();
-    
+    // Vérifier permission
+    const perm = editingFlightId ? 'edit_flight' : 'add_flight';
+    if (window._hasPerm && !window._hasPerm(perm)) {
+        showNotification('Accès refusé — permission insuffisante pour ' + (editingFlightId ? 'modifier' : 'ajouter') + ' un vol', 'error');
+        return;
+    }
     if (validateForm()) {
         const flightData = getFormData();
-        
         if (editingFlightId) {
-            // Edit mode - update existing flight
             updateFlight(editingFlightId, flightData);
         } else {
-            // Add mode - create new flight
             addFlight(flightData);
         }
     }
@@ -551,58 +575,56 @@ function getFormData() {
     };
 }
 
-// updateVolField — lit depuis Firebase collection flight_numbers
-async function updateVolField(company) {
-    const fVol   = elements.fVol;
+function updateVolField(company) {
+    if (!adminConfig || !adminConfig.airlines) return;
+    const airlineData = adminConfig.airlines.find(a => a.name === company);
+    if (!airlineData) return;
+
+    const fVol = elements.fVol;
     const parent = fVol.parentNode;
-    // Supprimer select existant
+
+    // Remove existing select if any
     const existingSelect = parent.querySelector('#fVolSelect');
     if (existingSelect) existingSelect.remove();
-    if (!company || !window.db) { fVol.style.display = ''; return; }
 
-    try {
-        const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const q    = query(collection(window.db, 'flight_numbers'), where('company','==', company));
-        const snap = await getDocs(q);
-        const volList = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    const volList   = airlineData.volNumbers || [];
+    const isLocked  = airlineData.volLocked;
 
-        // Vérifier si verrouillé dans adminConfig
-        const airlineData = adminConfig && adminConfig.airlines
-            ? adminConfig.airlines.find(a => a.name === company)
-            : null;
-        const isLocked = airlineData && airlineData.volLocked;
+    if (isLocked && volList.length > 0) {
+        fVol.style.display = 'none';
 
-        if (isLocked && volList.length > 0) {
-            fVol.style.display = 'none';
-            const sel = document.createElement('select');
-            sel.id = 'fVolSelect';
-            sel.required = true;
-            sel.className = fVol.className;
-            sel.style.display = '';
-            const defaultOpt = document.createElement('option');
-            defaultOpt.value = '';
-            defaultOpt.textContent = '— Choisir un numéro de vol —';
-            sel.appendChild(defaultOpt);
-            volList.forEach(v => {
-                const opt = document.createElement('option');
-                opt.value = v.number;
-                opt.textContent = v.number + (v.stopover ? ' (via '+v.stopover+')' : '');
-                if (fVol.value === v.number) opt.selected = true;
-                sel.appendChild(opt);
-            });
-            parent.insertBefore(sel, fVol.nextSibling);
-            sel.addEventListener('change', () => {
-                fVol.value = sel.value;
-                autoFillFromFlightNumber(sel.value);
-                setTimeout(autoFillAuth, 200);
-            });
-            if (fVol.value) sel.value = fVol.value;
-        } else {
-            fVol.style.display = '';
-        }
-    } catch(e) {
-        console.warn('updateVolField Firebase:', e.message);
+        const sel = document.createElement('select');
+        sel.id = 'fVolSelect';
+        sel.required = true;
+        sel.className = fVol.className;
+        sel.style.cssText = fVol.style.cssText;
+        sel.style.display = '';
+
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '— Choisir un numéro de vol —';
+        sel.appendChild(defaultOpt);
+
+        volList.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            if (fVol.value === v) opt.selected = true;
+            sel.appendChild(opt);
+        });
+
+        parent.insertBefore(sel, fVol.nextSibling);
+        sel.addEventListener('change', () => {
+            fVol.value = sel.value;
+            autoFillFromFlightNumber(sel.value);
+            setTimeout(autoFillAuth, 200);
+        });
+        if (fVol.value) sel.value = fVol.value;
+
+    } else {
         fVol.style.display = '';
+        const existingSel = parent.querySelector('#fVolSelect');
+        if (existingSel) existingSel.remove();
     }
 }
 
@@ -667,14 +689,6 @@ async function autoFillFromFlightNumber(flightNum) {
             // Remplir De / Vers
             if (rec.from && elements.fFrom) elements.fFrom.value = rec.from;
             if (rec.to   && elements.fTo)   elements.fTo.value   = rec.to;
-            // Remplir Escale si définie
-            if (rec.stopover) {
-                const hasStopEl = document.getElementById('hasStopover');
-                const stopGroup = document.getElementById('stopoverGroup');
-                if (hasStopEl) hasStopEl.checked = true;
-                if (elements.fStopover) elements.fStopover.value = rec.stopover;
-                if (stopGroup) stopGroup.style.display = '';
-            }
         }
         // Toujours tenter l'auto-fill du numéro d'autorisation
         await autoFillAuth();
@@ -946,6 +960,10 @@ async function updateFlight(flightId, flightData) {
 }
 
 async function deleteFlight(flightId) {
+    if (window._hasPerm && !window._hasPerm('delete_flight')) {
+        showNotification('Accès refusé — permission insuffisante pour supprimer un vol', 'error');
+        return false;
+    }
     console.log('Delete flight called with ID:', flightId);
     
     const success = await requireAuthentication(async () => {
