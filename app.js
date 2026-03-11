@@ -600,25 +600,23 @@ function updateVolField(company) {
 // ── Auto-remplissage depuis la collection flight_numbers ──
 async function autoFillFromFlightNumber(flightNum) {
     if (!flightNum || flightNum.length < 3) return;
-    // Attendre que window.db soit disponible (initialisé par firebase.js)
-    if (!window.db) return;
     try {
         const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const q    = query(collection(window.db, 'flight_numbers'), where('number','==', flightNum.toUpperCase().replace(/[-\s]/g,'')));
+        const q    = query(collection(db, 'flight_numbers'), where('number','==', flightNum.toUpperCase()));
         const snap = await getDocs(q);
         if (snap.empty) return;
         const fn = snap.docs[0].data();
         // Remplir compagnie
         if (fn.company && elements.fCompany) {
             elements.fCompany.value = fn.company;
+            // Déclencher les updates liés à la compagnie
             updateFlightNumberPrefix();
         }
-        // Remplir type DEP/ARR
-        if (fn.type && window.selectType) {
-            window.selectType(fn.type);
-        } else if (fn.type) {
+        // Remplir type
+        if (fn.type) {
             const typeEl = document.getElementById('fType');
             if (typeEl) { typeEl.value = fn.type; updateRouteByType(); }
+            if (window.selectType) window.selectType(fn.type);
         }
         // Remplir De / Vers
         if (fn.from && elements.fFrom) elements.fFrom.value = fn.from;
@@ -1187,22 +1185,8 @@ function renderTotals(filteredFlights) {
 // REAL-TIME UPDATES
 // ============================================
 function setupRealtimeListener() {
-    // This will be called by firebase.js when it's ready
-    console.log('Setting up realtime listener...');
-    console.log('dbService available:', !!window.dbService);
-    console.log('onFlightsUpdate available:', !!(window.dbService && window.dbService.onFlightsUpdate));
-    
-    if (window.dbService && window.dbService.onFlightsUpdate) {
-        window.dbService.onFlightsUpdate((updatedFlights) => {
-            console.log('Real-time update received:', updatedFlights.length, 'flights');
-            flights = updatedFlights;
-            render();
-            if (window.refreshChartsFromApp) window.refreshChartsFromApp(flights);
-        });
-        console.log('Real-time listener setup complete');
-    } else {
-        console.warn('Real-time listener not available - using mock mode');
-    }
+    // firebase.js gère le listener en temps réel via window.app.updateFlightsData
+    // Rien à faire ici — firebase.js appellera updateFlightsData quand les données arrivent
 }
 
 function updateFlightsData(newFlights) {
@@ -1535,7 +1519,17 @@ window.app = {
 // ============================================
 // INITIALIZATION
 // ============================================
-document.addEventListener('DOMContentLoaded', async () => { await initializeApp(); });
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeApp();
+});
+
+// Quand Firebase est prêt (signal de firebase.js), re-setup si besoin
+window.addEventListener('firebaseReady', () => {
+    // Si dbService est maintenant disponible, mettre à jour les données initiales
+    if (window.dbService) {
+        console.log('Firebase ready — dbService connecté');
+    }
+});
 
 // Add CSS for additional styling
 const additionalStyles = `
