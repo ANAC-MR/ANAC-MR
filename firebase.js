@@ -40,6 +40,7 @@ async function initializeFirebase() {
         // Initialize Firebase app
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
+        window.db = db; // Exposé globalement pour autoFill etc.
         flightsCollection = collection(db, 'flights');
         
         // Test connection
