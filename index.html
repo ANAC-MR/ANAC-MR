@@ -1979,7 +1979,7 @@ const _FS='anac_sess';
 const _FC={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
 let _fdb=null;
 async function _fDB(){if(_fdb)return _fdb;const{initializeApp,getApps}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');const{getFirestore}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const a=getApps().find(x=>x.name==='_fa')||initializeApp(_FC,'_fa');_fdb=getFirestore(a);return _fdb;}
-async function _fChk(u,p){try{const db=await _fDB();const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));const s=await getDocs(q);if(!s.empty){const x=s.docs[0].data();return x.password===p;}const c=await getDoc(doc(db,'flights','cfg-auth'));const su=c.exists()?(c.data().username||'DADY'):'DADY';const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';return u.toUpperCase()===su.toUpperCase()&&p===sp;}catch(e){return false;}}
+async function _fChk(u,p){try{const db=await _fDB();const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));const s=await getDocs(q);if(!s.empty){const x=s.docs[0].data();if(x.password!==p)return{ok:false};const perms=x.permissions||[];const hasFact=perms.includes('facturation');if(!hasFact)return{ok:false,noAccess:true};return{ok:true,perms};}const c=await getDoc(doc(db,'flights','cfg-auth'));const su=c.exists()?(c.data().username||'DADY'):'DADY';const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';if(u.toUpperCase()===su.toUpperCase()&&p===sp)return{ok:true,perms:['admin','ldm','facturation','add_flight','edit_flight','delete_flight','import']};return{ok:false};}catch(e){return{ok:false};}}
 async function _fValid(ts){try{const db=await _fDB();const{doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const c=await getDoc(doc(db,'flights','cfg-auth'));if(c.exists()&&(c.data().sessionReset||0)>ts)return false;}catch(e){}return true;}
 function _fSess(){try{return JSON.parse(sessionStorage.getItem(_FS));}catch{return null;}}
 function _showFact(){document.getElementById('factWall').style.display='none';document.getElementById('factContent').style.display='block';if(!window._fctInited){window._fctInited=true;setTimeout(fctInit,80);}}
@@ -1991,9 +1991,10 @@ window._doFactLogin=async function(){
   err.textContent='';
   if(!u||!p){err.textContent='Remplissez tous les champs';return;}
   btn.disabled=true;btn.textContent='...';
-  const ok=await _fChk(u,p);
+  const res=await _fChk(u,p);
   btn.disabled=false;btn.textContent='Connexion';
-  if(ok){sessionStorage.setItem(_FS,JSON.stringify({u:u.toUpperCase(),ts:Date.now()}));_showFact();}
+  if(res.ok){sessionStorage.setItem(_FS,JSON.stringify({u:u.toUpperCase(),ts:Date.now(),perms:res.perms||[]}));_showFact();}
+  else if(res.noAccess){err.textContent='Accès refusé — permission Facturation requise';document.getElementById('factP').value='';}
   else{err.textContent='Identifiants incorrects';document.getElementById('factP').value='';}
 };
 const _oST=window.switchTab;
@@ -2004,6 +2005,19 @@ window.switchTab=async function(tab){
     if(s&&await _fValid(s.ts)){_showFact();}
     else{sessionStorage.removeItem(_FS);document.getElementById('factContent').style.display='none';document.getElementById('factWall').style.display='block';setTimeout(()=>document.getElementById('factU')?.focus(),100);}
   }
+};
+
+// Vérification des permissions sur les actions du site
+// Appelée depuis app.js pour savoir si l'utilisateur peut faire une action
+window._hasPerm = function(perm) {
+  // Vérifier session facturation (utilisateurs secondaires)
+  const fs = _fSess();
+  if (fs && fs.perms) {
+    if (fs.perms.includes('admin')) return true;
+    return fs.perms.includes(perm);
+  }
+  // Pas de session secondaire = compte admin principal = tout autorisé
+  return true;
 };
 
 </script>
