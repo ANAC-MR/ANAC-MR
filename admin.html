@@ -1003,7 +1003,7 @@
             <span class="topbar-badge">Admin</span>
         </div>
         <div class="topbar-right">
-            <a href="index.html" class="btn-back-main">← Retour au suivi des vols</a>
+            <a href="index.html" class="btn-back-main">← Accueil</a>
             <button class="btn-logout" onclick="logout()">Déconnexion</button>
         </div>
     </div>
@@ -1399,12 +1399,14 @@
                 </select>
             </div>
             <div class="field-group">
-                <label>De (ICAO) *</label>
-                <input type="text" id="fnFrom" placeholder="Ex: GQNO" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                <label>De *</label>
+                <select id="fnFrom"><option value="">— Choisir —</option></select>
+                <small id="fnFromIcao" style="color:#64748b;font-size:10px;margin-top:2px;display:block;"></small>
             </div>
             <div class="field-group">
-                <label>Vers (ICAO) *</label>
-                <input type="text" id="fnTo" placeholder="Ex: DAAG" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                <label>Vers *</label>
+                <select id="fnTo"><option value="">— Choisir —</option></select>
+                <small id="fnToIcao" style="color:#64748b;font-size:10px;margin-top:2px;display:block;"></small>
             </div>
         </div>
         <!-- Escale -->
@@ -1417,13 +1419,14 @@
                 <div class="form-grid">
                     <div class="field-group form-full">
                         <label>Aéroport d'escale (ICAO) *</label>
-                        <input type="text" id="fnStopover" placeholder="Ex: GMMN" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                        <select id="fnStopover"><option value="">— Choisir aéroport d'escale —</option></select>
+                        <small id="fnStopoverIcao" style="color:#64748b;font-size:10px;margin-top:2px;display:block;"></small>
                     </div>
                 </div>
             </div>
         </div>
         <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:9px;padding:12px 14px;margin-top:12px;font-size:12px;color:#60a5fa;">
-            💡 Quand un opérateur saisit ce numéro, les champs <strong>Compagnie, De, Vers, Type et Escale</strong> sont remplis automatiquement.
+            💡 Quand un opérateur saisit ce numéro, les champs <strong>Compagnie, De, Vers, Type et Escale</strong> sont remplis automatiquement. Les codes IATA sont affichés.
         </div>
         <div class="modal-footer">
             <button class="btn-secondary" onclick="closeModal('flightNumModal')">Annuler</button>
@@ -2611,13 +2614,17 @@ function renderFlightNums(list) {
     div.innerHTML = '<table class="fn-table"><thead><tr>'+
         '<th>N° Vol</th><th>Compagnie</th><th>Type</th><th>De</th><th>Vers</th><th>Escale</th><th></th>'+
         '</tr></thead><tbody>'+
-        list.map(fn=>`<tr>
+        list.map(fn=>{
+          const apFrom = airports.find(a=>(a.iata||a.icao)===fn.from);
+          const apTo   = airports.find(a=>(a.iata||a.icao)===fn.to);
+          const apStop = fn.stopover ? airports.find(a=>(a.iata||a.icao)===fn.stopover) : null;
+          return `<tr>
             <td><strong style="color:#e2e8f0;font-size:14px;">${fn.number||'—'}</strong></td>
             <td style="color:#94a3b8;">${fn.company||'—'}</td>
             <td><span class="fn-badge ${fn.type==='DEP'?'fn-dep':'fn-arr'}">${fn.type||'—'}</span></td>
-            <td style="color:#94a3b8;">${fn.from||'—'}</td>
-            <td style="color:#94a3b8;">${fn.to||'—'}</td>
-            <td style="color:#94a3b8;">${fn.stopover||'—'}</td>
+            <td><strong style="color:#38bdf8;">${fn.from||'—'}</strong>${apFrom?' <small style="color:#64748b;">('+apFrom.icao+')</small>':''}</td>
+            <td><strong style="color:#38bdf8;">${fn.to||'—'}</strong>${apTo?' <small style="color:#64748b;">('+apTo.icao+')</small>':''}</td>
+            <td>${fn.stopover ? ('<strong style="color:#a78bfa;">'+fn.stopover+'</strong>'+(apStop?(' <small style="color:#64748b;">('+apStop.icao+')</small>'):'')) : '<span style="color:#475569;">—</span>'}</td>
             <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">
                 <button onclick="editFlightNum('${fn.id}')"
                     style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✏️</button>
@@ -2636,11 +2643,15 @@ window.filterFlightNums = function() {
 window.showAddFlightNumModal = async function() {
     document.getElementById('fnEditId').value = '';
     document.getElementById('fnModalTitle').textContent = 'Ajouter un numéro de vol';
-    ['fnNumber','fnFrom','fnTo','fnStopover'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('fnNumber').value = '';
     const fnHasStop = document.getElementById('fnHasStopover');
     if (fnHasStop) { fnHasStop.checked = false; }
     const fnStopPanel = document.getElementById('fnStopoverPanel');
     if (fnStopPanel) fnStopPanel.style.display = 'none';
+    // Peupler les selects aéroports
+    _populateAirportSelect('fnFrom', 'NKC', 'fnFromIcao');
+    _populateAirportSelect('fnTo', '', 'fnToIcao');
+    _populateAirportSelect('fnStopover', '', 'fnStopoverIcao');
     // Remplir le select compagnies depuis Firebase
     const sel = document.getElementById('fnCompany');
     sel.innerHTML = '<option value="">Chargement...</option>';
@@ -2657,16 +2668,38 @@ window.showAddFlightNumModal = async function() {
     openModal('flightNumModal');
 };
 
+// Peupler un select avec les aéroports (affiche IATA - Nom)
+function _populateAirportSelect(selId, selectedIata, icaoSmallId) {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const currentVal = selectedIata || sel.value;
+    sel.innerHTML = '<option value="">— Choisir —</option>';
+    airports.forEach(a => {
+        const iata = a.iata || a.icao || '';
+        const opt  = document.createElement('option');
+        opt.value  = iata;
+        opt.textContent = iata + ' — ' + (a.city || a.name || a.icao || '');
+        if (iata === currentVal) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    // Afficher le code ICAO associé en dessous
+    sel.onchange = function() {
+        if (icaoSmallId) {
+            const ap = airports.find(a => (a.iata||a.icao) === sel.value);
+            const small = document.getElementById(icaoSmallId);
+            if (small) small.textContent = ap ? 'ICAO: ' + (ap.icao||'') : '';
+        }
+    };
+    // Déclencher pour afficher immédiatement
+    sel.dispatchEvent(new Event('change'));
+}
+
 window.fnUpdateRoute = function() {
     const type = document.getElementById('fnType').value;
-    const NKC  = 'GQNO';
-    if (type==='DEP') {
-        document.getElementById('fnFrom').value = NKC;
-        document.getElementById('fnTo').value   = '';
-    } else {
-        document.getElementById('fnFrom').value = '';
-        document.getElementById('fnTo').value   = NKC;
-    }
+    const NKC_IATA = 'NKC';
+    _populateAirportSelect('fnFrom', type==='DEP' ? NKC_IATA : '', 'fnFromIcao');
+    _populateAirportSelect('fnTo',   type==='ARR' ? NKC_IATA : '', 'fnToIcao');
+    _populateAirportSelect('fnStopover', '', 'fnStopoverIcao');
 };
 
 window.toggleFnStopover = function() {
@@ -2682,8 +2715,9 @@ window.editFlightNum = async function(id) {
     document.getElementById('fnModalTitle').textContent = 'Modifier le numéro de vol';
     document.getElementById('fnNumber').value = fn.number||'';
     document.getElementById('fnType').value   = fn.type||'DEP';
-    document.getElementById('fnFrom').value   = fn.from||'';
-    document.getElementById('fnTo').value     = fn.to||'';
+    // Peupler les selects avec la valeur IATA existante
+    _populateAirportSelect('fnFrom', fn.from||'', 'fnFromIcao');
+    _populateAirportSelect('fnTo',   fn.to||'', 'fnToIcao');
     // Remplir select compagnies depuis Firebase
     const sel = document.getElementById('fnCompany');
     sel.innerHTML = '<option value="">Chargement...</option>';
@@ -2703,12 +2737,12 @@ window.editFlightNum = async function(id) {
     const fnStopP2   = document.getElementById('fnStopoverPanel');
     if (fn.stopover) {
         if (fnHasStop2) fnHasStop2.checked = true;
-        if (fnStop2) fnStop2.value = fn.stopover;
         if (fnStopP2) fnStopP2.style.display = '';
+        _populateAirportSelect('fnStopover', fn.stopover, 'fnStopoverIcao');
     } else {
         if (fnHasStop2) fnHasStop2.checked = false;
-        if (fnStop2) fnStop2.value = '';
         if (fnStopP2) fnStopP2.style.display = 'none';
+        _populateAirportSelect('fnStopover', '', 'fnStopoverIcao');
     }
     openModal('flightNumModal');
 };
