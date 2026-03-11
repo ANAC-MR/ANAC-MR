@@ -1031,6 +1031,9 @@
             <div class="nav-item" onclick="showSection('security')" data-section="security">
                 <span class="icon">🛡️</span> Sécurité & Utilisateurs
             </div>
+            <div class="nav-item" onclick="showSection('programme')" data-section="programme">
+                <span class="icon">📋</span> Programme de Vols
+            </div>
             <div class="nav-item" onclick="window.open('import.html','_blank')">
                 <span class="icon">📥</span> Import Programme
             </div>
@@ -1231,6 +1234,46 @@
 
             <!-- ─── SÉCURITÉ ─── -->
             <!-- ─── NUMÉROS DE VOL ─── -->
+            <!-- ─── PROGRAMME DE VOLS ─── -->
+            <div class="section-page" id="section-programme">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>📋 Programme de Vols</h2>
+                        <p>Vols importés non encore saisis dans le système + recherche par N° autorisation</p>
+                    </div>
+                </div>
+
+                <!-- Recherche par N° autorisation -->
+                <div class="card" style="margin-bottom:16px;">
+                    <div class="card-title">🔍 Recherche par N° Autorisation</div>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <input type="text" id="authSearchInput" placeholder="Ex: SNA26-0042"
+                            style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 16px;color:#fff;font-size:14px;font-weight:600;width:260px;text-transform:uppercase;"
+                            oninput="this.value=this.value.toUpperCase()" onkeyup="if(event.key==='Enter')searchByAuth()">
+                        <button class="btn-primary" onclick="searchByAuth()" style="padding:10px 22px;">🔍 Rechercher</button>
+                        <div id="authSearchResult" style="font-size:13px;font-weight:600;padding:8px 14px;border-radius:8px;display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- Vols restants du programme -->
+                <div class="card">
+                    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                        <span>📊 Vols non encore saisis</span>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <input type="text" id="progSearch" placeholder="Rechercher vol, compagnie..."
+                                oninput="filterProgramme()"
+                                style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 12px;color:#fff;font-size:12px;width:200px;">
+                            <select id="progFilterCompany" onchange="filterProgramme()"
+                                style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 10px;color:#fff;font-size:12px;">
+                                <option value="">Toutes les compagnies</option>
+                            </select>
+                            <span id="progCount" style="font-size:12px;color:#64748b;"></span>
+                        </div>
+                    </div>
+                    <div id="programmeList"><div style="text-align:center;color:var(--text-dim);padding:30px;font-size:13px;">Chargement...</div></div>
+                </div>
+            </div>
+
             <div class="section-page" id="section-flightnums">
                 <div class="page-header">
                     <div class="page-header-left">
@@ -1635,8 +1678,8 @@ async function getStoredCredentials() {
             authDomain:"anacmr-67835.firebaseapp.com",
             projectId:"anacmr-67835",
             storageBucket:"anacmr-67835.firebasestorage.app",
-            messagingSenderId:"857117390430",
-            appId:"1:857117390430:web:0231614b880df3196e26cf"
+            messagingSenderId:"906668222910",
+            appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"
         };
         const apps = getApps();
         const app  = apps.find(a=>a.name==='auth-reader') || initializeApp(fbConfig,'auth-reader');
@@ -2726,6 +2769,138 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     });
 });
 
+// ══ PROGRAMME DE VOLS ══════════════════════════════════════════
+
+let _allProgramme  = [];  // tous les vols programme_vols
+let _allSaisis     = new Set(); // clés "vol__date" déjà saisis dans flights
+
+async function loadProgramme() {
+    const div = document.getElementById('programmeList');
+    if (!div) return;
+    div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:30px;">Chargement...</div>';
+    try {
+        // Charger programme_vols ET flights en parallèle
+        const [snapProg, snapFlights] = await Promise.all([
+            window._getDocs(window._collection(window._db, 'programme_vols')),
+            window._getDocs(window._collection(window._db, 'flights'))
+        ]);
+
+        // Construire le set des vols déjà saisis
+        _allSaisis.clear();
+        snapFlights.forEach(d => {
+            const r = d.data();
+            if (d.id.startsWith('cfg-')) return;
+            const fn = (r.flightNumber||'').toUpperCase().replace(/[-\s]/g,'');
+            const dt = (r.date||'').trim();
+            if (fn && dt) _allSaisis.add(fn + '__' + dt);
+        });
+
+        // Garder seulement les vols programme non encore saisis
+        _allProgramme = snapProg.docs
+            .map(d => ({id:d.id,...d.data()}))
+            .filter(r => {
+                if (!r.flight || !r.date) return false;
+                const key = r.flight.toUpperCase().replace(/[-\s]/g,'') + '__' + r.date;
+                return !_allSaisis.has(key);
+            })
+            .sort((a,b) => (a.date||'').localeCompare(b.date||''));
+
+        // Peupler le filtre compagnie
+        const sel = document.getElementById('progFilterCompany');
+        if (sel) {
+            const companies = [...new Set(_allProgramme.map(r=>r.company||r.code||'').filter(Boolean))].sort();
+            sel.innerHTML = '<option value="">Toutes les compagnies</option>';
+            companies.forEach(co => {
+                const o = document.createElement('option'); o.value=o.textContent=co; sel.appendChild(o);
+            });
+        }
+
+        renderProgramme(_allProgramme);
+    } catch(e) {
+        div.innerHTML = '<div style="color:#fc8181;padding:12px;font-size:13px;">Erreur: '+e.message+'</div>';
+    }
+}
+
+function renderProgramme(list) {
+    const div = document.getElementById('programmeList');
+    if (!div) return;
+    document.getElementById('progCount').textContent = list.length + ' vol(s) restant(s)';
+    if (!list.length) {
+        div.innerHTML = '<div style="text-align:center;color:#34d399;padding:30px;font-size:14px;font-weight:700;">✅ Tous les vols du programme ont été saisis !</div>';
+        return;
+    }
+    div.innerHTML = '<table class="fn-table"><thead><tr>'+
+        '<th>N° Auth</th><th>N° Vol</th><th>Compagnie</th><th>Date</th><th>Décision</th>'+
+        '</tr></thead><tbody>'+
+        list.map(r => `<tr>
+            <td><strong style="color:#D4AF37;font-size:13px;">${r.auth||'—'}</strong></td>
+            <td><strong style="color:#e2e8f0;">${r.flight||'—'}</strong></td>
+            <td style="color:#94a3b8;">${r.company||r.code||'—'}</td>
+            <td style="color:#94a3b8;">${r.date||'—'}</td>
+            <td><span style="font-size:11px;padding:2px 8px;border-radius:8px;background:rgba(99,102,241,0.15);color:#818cf8;">${r.decision||'—'}</span></td>
+        </tr>`).join('')+
+        '</tbody></table>';
+}
+
+window.filterProgramme = function() {
+    const q  = (document.getElementById('progSearch').value||'').toUpperCase();
+    const co = (document.getElementById('progFilterCompany').value||'').toUpperCase();
+    const filtered = _allProgramme.filter(r => {
+        const matchQ  = !q  || (r.flight||'').toUpperCase().includes(q) || (r.auth||'').toUpperCase().includes(q) || (r.company||'').toUpperCase().includes(q);
+        const matchCo = !co || (r.company||r.code||'').toUpperCase() === co;
+        return matchQ && matchCo;
+    });
+    renderProgramme(filtered);
+};
+
+window.searchByAuth = async function() {
+    const val = (document.getElementById('authSearchInput').value||'').trim().toUpperCase();
+    const res = document.getElementById('authSearchResult');
+    if (!val) return;
+    res.style.display = 'none';
+
+    try {
+        // Chercher dans programme_vols
+        const q = window._query(
+            window._collection(window._db, 'programme_vols'),
+            window._where('auth', '==', val)
+        );
+        const snapProg = await window._getDocs(q);
+
+        // Chercher dans flights
+        const q2 = window._query(
+            window._collection(window._db, 'flights'),
+            window._where('authorizationNumber', '==', val)
+        );
+        const snapFlights = await window._getDocs(q2);
+
+        res.style.display = 'block';
+
+        if (snapFlights.docs.length > 0) {
+            const d = snapFlights.docs[0].data();
+            res.style.background = 'rgba(52,211,153,0.12)';
+            res.style.border     = '1px solid rgba(52,211,153,0.3)';
+            res.style.color      = '#34d399';
+            res.textContent = '✅ Vol déjà saisi — ' + (d.flightNumber||'') + ' · ' + (d.date||'') + ' · ' + (d.company||'');
+        } else if (snapProg.docs.length > 0) {
+            const d = snapProg.docs[0].data();
+            res.style.background = 'rgba(251,191,36,0.12)';
+            res.style.border     = '1px solid rgba(251,191,36,0.3)';
+            res.style.color      = '#fbbf24';
+            res.textContent = '⚠️ Dans le programme mais pas encore saisi — ' + (d.flight||'') + ' · ' + (d.date||'') + ' · ' + (d.company||'');
+        } else {
+            res.style.background = 'rgba(239,68,68,0.1)';
+            res.style.border     = '1px solid rgba(239,68,68,0.25)';
+            res.style.color      = '#f87171';
+            res.textContent = '❌ N° autorisation non trouvé dans le système';
+        }
+    } catch(e) {
+        res.style.display = 'block';
+        res.style.color = '#f87171';
+        res.textContent = 'Erreur: ' + e.message;
+    }
+};
+
 // ────────────────────────────────────────
 // NAV — avec hooks pour chargement des données
 // ────────────────────────────────────────
@@ -2733,9 +2908,11 @@ window.showSection = function(name) {
     document.querySelectorAll('.section-page').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     document.getElementById(`section-${name}`).classList.add('active');
-    document.querySelector(`[data-section="${name}"]`).classList.add('active');
+    const navEl = document.querySelector(`[data-section="${name}"]`);
+    if (navEl) navEl.classList.add('active');
     if (name === 'security')   loadUsers();
     if (name === 'flightnums') loadFlightNums();
+    if (name === 'programme')  loadProgramme();
 };
 
 // ────────────────────────────────────────
