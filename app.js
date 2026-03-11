@@ -584,7 +584,10 @@ function updateVolField(company) {
         });
 
         parent.insertBefore(sel, fVol.nextSibling);
-        sel.addEventListener('change', () => { fVol.value = sel.value; });
+        sel.addEventListener('change', () => {
+            fVol.value = sel.value;
+            autoFillFromFlightNumber(sel.value);
+        });
         if (fVol.value) sel.value = fVol.value;
 
     } else {
@@ -592,6 +595,33 @@ function updateVolField(company) {
         const existingSel = parent.querySelector('#fVolSelect');
         if (existingSel) existingSel.remove();
     }
+}
+
+// ── Auto-remplissage depuis la collection flight_numbers ──
+async function autoFillFromFlightNumber(flightNum) {
+    if (!flightNum || flightNum.length < 3) return;
+    try {
+        const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const q    = query(collection(db, 'flight_numbers'), where('number','==', flightNum.toUpperCase()));
+        const snap = await getDocs(q);
+        if (snap.empty) return;
+        const fn = snap.docs[0].data();
+        // Remplir compagnie
+        if (fn.company && elements.fCompany) {
+            elements.fCompany.value = fn.company;
+            // Déclencher les updates liés à la compagnie
+            updateFlightNumberPrefix();
+        }
+        // Remplir type
+        if (fn.type) {
+            const typeEl = document.getElementById('fType');
+            if (typeEl) { typeEl.value = fn.type; updateRouteByType(); }
+            if (window.selectType) window.selectType(fn.type);
+        }
+        // Remplir De / Vers
+        if (fn.from && elements.fFrom) elements.fFrom.value = fn.from;
+        if (fn.to   && elements.fTo)   elements.fTo.value   = fn.to;
+    } catch(e) { console.warn('autoFill flight_numbers:', e.message); }
 }
 
 function updateFlightNumberPrefix() {
@@ -615,6 +645,18 @@ function updateFlightNumberPrefix() {
     // Update vol number field based on admin config
     updateVolField(company);
 }
+
+// Listener sur le champ fVol (input texte) pour auto-fill depuis flight_numbers
+(function() {
+    const fv = document.getElementById('fVol');
+    if (fv) {
+        let _autoFillTimer;
+        fv.addEventListener('input', () => {
+            clearTimeout(_autoFillTimer);
+            _autoFillTimer = setTimeout(() => autoFillFromFlightNumber(fv.value.trim()), 600);
+        });
+    }
+})();
 
 // Auto-fill From/To + filtrer le select À selon compagnie + type
 // NKC (GQNO) est toujours la BASE
