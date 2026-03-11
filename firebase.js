@@ -87,6 +87,9 @@ async function initializeFirebase() {
         // Start real-time listener
         startRealtimeListener();
         
+        // Signaler à app.js que Firebase est prêt
+        window.dispatchEvent(new CustomEvent('firebaseReady'));
+        
         return true;
     } catch (error) {
         console.error('Error initializing Firebase:', error);
