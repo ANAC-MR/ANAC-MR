@@ -487,7 +487,7 @@ function validateForm() {
     
     // Validate authorization number format
     if (elements.fAuthNumber.value.trim() && !validateAuthNumber(elements.fAuthNumber.value.trim())) {
-        showFieldError(elements.fAuthNumber, 'Format invalide. Utilisez: SNA26-XXXX (ex: SNA26-0001)');
+        showFieldError(elements.fAuthNumber, 'Format invalide. Utilisez: SNA25-XXXX ou SNA26-XXXX (ex: SNA26-0001)');
         isValid = false;
     }
     
@@ -858,31 +858,19 @@ function updateImmField(company) {
 
 function handleAuthNumberInput(event) {
     let value = event.target.value.toUpperCase();
-    
-    // Auto-add prefix if user starts typing without it
-    if (value && !value.startsWith('SNA26-')) {
-        if (value.startsWith('SNA26')) {
-            value = value.replace('SNA26', 'SNA26-');
-        } else {
-            value = 'SNA26-' + value;
-        }
+    // Garder uniquement majuscules, chiffres et tiret
+    value = value.replace(/[^A-Z0-9-]/g, '');
+    // Auto-insérer tiret après SNA+2chiffres si absent
+    if (/^SNA\d{2}$/.test(value)) {
+        value = value + '-';
     }
-    
-    // Remove any non-numeric characters after the dash
-    if (value.includes('-')) {
-        const parts = value.split('-');
-        if (parts.length >= 2) {
-            const numericPart = parts[1].replace(/\D/g, '');
-            value = 'SNA26-' + numericPart;
-        }
-    }
-    
     event.target.value = value;
 }
 
 function validateAuthNumber(authNumber) {
-    // Format: SNA26-XXXX where XXXX is numeric
-    const pattern = /^SNA26-\d{1,4}$/;
+    // Format: SNA + 2 chiffres (année) + séparateur + numéro
+    // Accepte: SNA25-0001, SNA26-0042, SNA27-0001 etc.
+    const pattern = /^SNA\d{2}[-/]\d{1,4}$/;
     return pattern.test(authNumber);
 }
 
