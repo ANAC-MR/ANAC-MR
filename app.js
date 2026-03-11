@@ -54,24 +54,9 @@ const COMPANY_HOME_AIRPORT = {
     "Air France":          "LFPG"   // Paris CDG
 };
 
-// Destinations autorisées par compagnie (pour filtrer le select À)
-// Mauritania Airlines vole vers toutes ces destinations depuis NKC
-const COMPANY_DESTINATIONS = {
-    "Mauritania Airlines": [
-        "DAAG", // Alger
-        "DTTA", // Tunis
-        "GOBD", // Dakar
-        "GABS", // Bamako
-        "GCLP", // Las Palmas
-        "GUCY", // Conakry
-        "GMMN", // Casablanca
-        "GQPP", // Nouadhibou
-        "GQNI", // Néma
-        "GQPF", // Kiffa
-        "GQPZ", // Zoueratt
-    ]
-    // Les autres compagnies ont un seul aéroport domicile
-};
+// Destinations par compagnie — lu depuis Firebase (adminConfig)
+// Ne plus hardcoder ici — tout est géré dans le panneau admin
+const COMPANY_DESTINATIONS = {}; // gardé pour compatibilité, remplacé par adminConfig
 
 // ===============================
 // LISTE DES DESTINATIONS (ICAO)
@@ -765,7 +750,16 @@ function updateRouteByType() {
     const NKC_ICAO = 'GQNO';
 
     const homeCode = COMPANY_HOME_AIRPORT[company] || '';
-    const multiDests = COMPANY_DESTINATIONS[company] || null;
+    // Lire les destinations depuis adminConfig (Firebase) — priorité sur le hardcode
+    let multiDests = null;
+    if (adminConfig && adminConfig.airlines) {
+        const al = adminConfig.airlines.find(a => a.name === company);
+        if (al && al.destinations && al.destinations.length > 0) {
+            multiDests = al.destinations;
+        }
+    }
+    // Fallback sur COMPANY_DESTINATIONS si adminConfig pas encore chargé
+    if (!multiDests) multiDests = COMPANY_DESTINATIONS[company] || null;
 
     // Rebuild the fTo select options filtered for this company
     const rebuildToSelect = (allowedCodes) => {
