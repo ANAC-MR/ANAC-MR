@@ -6,12 +6,12 @@
 // ═══════════════════════════════════════════════════
 
 const FB_CONFIG = {
-  apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+  apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
   authDomain:"anacmr-67835.firebaseapp.com",
   projectId:"anacmr-67835",
   storageBucket:"anacmr-67835.firebasestorage.app",
-  messagingSenderId:"857117390430",
-  appId:"1:857117390430:web:0231614b880df3196e26cf"
+  messagingSenderId:"906668222910",
+  appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"
 };
 const AUTH_SESSION_KEY = 'anac_auth_v2';
 const DEFAULT_USER = 'DADY';
@@ -39,7 +39,13 @@ export async function checkCredentials(username, password) {
     const snap = await getDocs(q);
     if (!snap.empty) {
       const user = snap.docs[0].data();
-      return user.password === password ? { ok:true, role:user.role||'admin', username:user.username } : { ok:false };
+      if (user.password !== password) return { ok:false };
+      return {
+        ok: true,
+        role: user.role || 'user',
+        username: user.username,
+        permissions: user.permissions || []
+      };
     }
     // Fallback: compte admin par défaut (legacy DADY/ANACdady depuis cfg-auth)
     const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
@@ -47,7 +53,7 @@ export async function checkCredentials(username, password) {
     const storedUser = cfg.exists() ? (cfg.data().username || DEFAULT_USER) : DEFAULT_USER;
     const storedPass = cfg.exists() ? (cfg.data().password || DEFAULT_PASS) : DEFAULT_PASS;
     if (username.toUpperCase() === storedUser.toUpperCase() && password === storedPass) {
-      return { ok:true, role:'admin', username: storedUser };
+      return { ok:true, role:'admin', username: storedUser, permissions: ['admin','ldm','facturation','add_flight','edit_flight','delete_flight','import'] };
     }
     return { ok:false };
   } catch(e) {
@@ -57,8 +63,12 @@ export async function checkCredentials(username, password) {
 }
 
 // ── Session ────────────────────────────────────────────────────
-export function saveSession(username, role) {
-  sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ username, role, ts: Date.now() }));
+export function saveSession(username, role, permissions) {
+  sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
+    username, role,
+    permissions: permissions || [],
+    ts: Date.now()
+  }));
 }
 export function getSession() {
   try { return JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)); }
@@ -66,6 +76,14 @@ export function getSession() {
 }
 export function clearSession() {
   sessionStorage.removeItem(AUTH_SESSION_KEY);
+}
+
+// Vérifier si l'utilisateur connecté a une permission spécifique
+export function hasPerm(perm) {
+  const s = getSession();
+  if (!s) return false;
+  if (s.role === 'admin') return true; // admin a tout
+  return Array.isArray(s.permissions) && s.permissions.includes(perm);
 }
 export function isLoggedIn() {
   return !!getSession();
