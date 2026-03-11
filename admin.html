@@ -1374,7 +1374,7 @@
 
 <!-- Modal Numéro de Vol -->
 <div class="modal-overlay" id="flightNumModal">
-    <div class="modal-box" style="max-width:520px;">
+    <div class="modal-box" style="max-width:560px;max-height:90vh;overflow-y:auto;">
         <div class="modal-header">
             <h3 id="fnModalTitle">Ajouter un numéro de vol</h3>
             <button class="modal-close" onclick="closeModal('flightNumModal')">×</button>
@@ -1407,8 +1407,23 @@
                 <input type="text" id="fnTo" placeholder="Ex: DAAG" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
             </div>
         </div>
-        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:9px;padding:12px 14px;margin-top:8px;font-size:12px;color:#60a5fa;">
-            💡 Quand un opérateur saisit ce numéro dans le modal d'ajout de vol, les champs <strong>Compagnie, De, Vers et Type</strong> sont remplis automatiquement.
+        <!-- Escale -->
+        <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,0.07);padding-top:14px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:10px;">
+                <input type="checkbox" id="fnHasStopover" onchange="toggleFnStopover()" style="width:15px;height:15px;accent-color:#38bdf8;">
+                Ce vol comporte une escale
+            </label>
+            <div id="fnStopoverPanel" style="display:none;">
+                <div class="form-grid">
+                    <div class="field-group form-full">
+                        <label>Aéroport d'escale (ICAO) *</label>
+                        <input type="text" id="fnStopover" placeholder="Ex: GMMN" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:9px;padding:12px 14px;margin-top:12px;font-size:12px;color:#60a5fa;">
+            💡 Quand un opérateur saisit ce numéro, les champs <strong>Compagnie, De, Vers, Type et Escale</strong> sont remplis automatiquement.
         </div>
         <div class="modal-footer">
             <button class="btn-secondary" onclick="closeModal('flightNumModal')">Annuler</button>
@@ -2594,7 +2609,7 @@ function renderFlightNums(list) {
         return;
     }
     div.innerHTML = '<table class="fn-table"><thead><tr>'+
-        '<th>N° Vol</th><th>Compagnie</th><th>Type</th><th>De</th><th>Vers</th><th></th>'+
+        '<th>N° Vol</th><th>Compagnie</th><th>Type</th><th>De</th><th>Vers</th><th>Escale</th><th></th>'+
         '</tr></thead><tbody>'+
         list.map(fn=>`<tr>
             <td><strong style="color:#e2e8f0;font-size:14px;">${fn.number||'—'}</strong></td>
@@ -2602,6 +2617,7 @@ function renderFlightNums(list) {
             <td><span class="fn-badge ${fn.type==='DEP'?'fn-dep':'fn-arr'}">${fn.type||'—'}</span></td>
             <td style="color:#94a3b8;">${fn.from||'—'}</td>
             <td style="color:#94a3b8;">${fn.to||'—'}</td>
+            <td style="color:#94a3b8;">${fn.stopover||'—'}</td>
             <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">
                 <button onclick="editFlightNum('${fn.id}')"
                     style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✏️</button>
@@ -2620,7 +2636,11 @@ window.filterFlightNums = function() {
 window.showAddFlightNumModal = async function() {
     document.getElementById('fnEditId').value = '';
     document.getElementById('fnModalTitle').textContent = 'Ajouter un numéro de vol';
-    ['fnNumber','fnFrom','fnTo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    ['fnNumber','fnFrom','fnTo','fnStopover'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    const fnHasStop = document.getElementById('fnHasStopover');
+    if (fnHasStop) { fnHasStop.checked = false; }
+    const fnStopPanel = document.getElementById('fnStopoverPanel');
+    if (fnStopPanel) fnStopPanel.style.display = 'none';
     // Remplir le select compagnies depuis Firebase
     const sel = document.getElementById('fnCompany');
     sel.innerHTML = '<option value="">Chargement...</option>';
@@ -2640,7 +2660,6 @@ window.showAddFlightNumModal = async function() {
 window.fnUpdateRoute = function() {
     const type = document.getElementById('fnType').value;
     const NKC  = 'GQNO';
-    // Auto-remplir De/Vers selon type
     if (type==='DEP') {
         document.getElementById('fnFrom').value = NKC;
         document.getElementById('fnTo').value   = '';
@@ -2648,6 +2667,12 @@ window.fnUpdateRoute = function() {
         document.getElementById('fnFrom').value = '';
         document.getElementById('fnTo').value   = NKC;
     }
+};
+
+window.toggleFnStopover = function() {
+    const has = document.getElementById('fnHasStopover').checked;
+    document.getElementById('fnStopoverPanel').style.display = has ? '' : 'none';
+    if (!has) document.getElementById('fnStopover').value = '';
 };
 
 window.editFlightNum = async function(id) {
@@ -2672,6 +2697,19 @@ window.editFlightNum = async function(id) {
             sel.appendChild(o);
         });
     } catch(e) { sel.innerHTML = '<option value="">Erreur</option>'; }
+    // Charger escale si existante
+    const fnHasStop2 = document.getElementById('fnHasStopover');
+    const fnStop2    = document.getElementById('fnStopover');
+    const fnStopP2   = document.getElementById('fnStopoverPanel');
+    if (fn.stopover) {
+        if (fnHasStop2) fnHasStop2.checked = true;
+        if (fnStop2) fnStop2.value = fn.stopover;
+        if (fnStopP2) fnStopP2.style.display = '';
+    } else {
+        if (fnHasStop2) fnHasStop2.checked = false;
+        if (fnStop2) fnStop2.value = '';
+        if (fnStopP2) fnStopP2.style.display = 'none';
+    }
     openModal('flightNumModal');
 };
 
@@ -2683,7 +2721,9 @@ window.saveFlightNum = async function() {
     const from    = (document.getElementById('fnFrom').value||'').trim().toUpperCase();
     const to      = (document.getElementById('fnTo').value||'').trim().toUpperCase();
     if (!number||!company||!from||!to) { showNotif('Remplissez tous les champs','error'); return; }
-    const data = { number, company, type, from, to, updatedAt: new Date().toISOString() };
+    const hasStop = document.getElementById('fnHasStopover') && document.getElementById('fnHasStopover').checked;
+    const stopover = hasStop ? (document.getElementById('fnStopover').value||'').trim().toUpperCase() : '';
+    const data = { number, company, type, from, to, stopover, updatedAt: new Date().toISOString() };
     try {
         if (id) {
             await window._updateDoc(window._doc(window._db,'flight_numbers',id), data);
