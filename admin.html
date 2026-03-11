@@ -1586,12 +1586,12 @@ import {
 
 // ─── Firebase ───────────────────────────
 const firebaseConfig = {
-    apiKey: "AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
+    apiKey: "AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
     authDomain: "anacmr-67835.firebaseapp.com",
     projectId: "anacmr-67835",
     storageBucket: "anacmr-67835.firebasestorage.app",
-    messagingSenderId: "857117390430",
-    appId: "1:857117390430:web:0231614b880df3196e26cf"
+    messagingSenderId: "906668222910",
+    appId: "1:906668222910:web:19d92b627f155bd2dbb1ef"
 };
 const fbApp = initializeApp(firebaseConfig);
 const db    = getFirestore(fbApp);
@@ -2574,16 +2574,21 @@ window.filterFlightNums = function() {
     renderFlightNums(q ? allFlightNums.filter(f=>(f.number||'').toUpperCase().includes(q)||(f.company||'').toUpperCase().includes(q)) : allFlightNums);
 };
 
-window.showAddFlightNumModal = function() {
+window.showAddFlightNumModal = async function() {
     document.getElementById('fnEditId').value = '';
     document.getElementById('fnModalTitle').textContent = 'Ajouter un numéro de vol';
     ['fnNumber','fnFrom','fnTo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    // Remplir le select compagnies
+    // Remplir le select compagnies depuis Firebase
     const sel = document.getElementById('fnCompany');
-    sel.innerHTML = '<option value="">— Choisir —</option>';
-    (adminConfig.airlines||[]).forEach(a=>{
-        const o=document.createElement('option'); o.value=o.textContent=a.name; sel.appendChild(o);
-    });
+    sel.innerHTML = '<option value="">Chargement...</option>';
+    try {
+        const snap = await window._getDoc(window._doc(window._db,'flights','cfg-airlines'));
+        const airlines = snap.exists() ? (snap.data().list||[]) : [];
+        sel.innerHTML = '<option value="">— Choisir —</option>';
+        airlines.forEach(a=>{
+            const o=document.createElement('option'); o.value=o.textContent=a.name; sel.appendChild(o);
+        });
+    } catch(e) { sel.innerHTML = '<option value="">Erreur chargement</option>'; }
     document.getElementById('fnType').value = 'DEP';
     fnUpdateRoute();
     openModal('flightNumModal');
@@ -2602,7 +2607,7 @@ window.fnUpdateRoute = function() {
     }
 };
 
-window.editFlightNum = function(id) {
+window.editFlightNum = async function(id) {
     const fn = allFlightNums.find(f=>f.id===id);
     if (!fn) return;
     document.getElementById('fnEditId').value = id;
@@ -2611,14 +2616,19 @@ window.editFlightNum = function(id) {
     document.getElementById('fnType').value   = fn.type||'DEP';
     document.getElementById('fnFrom').value   = fn.from||'';
     document.getElementById('fnTo').value     = fn.to||'';
-    // Remplir select compagnies
+    // Remplir select compagnies depuis Firebase
     const sel = document.getElementById('fnCompany');
-    sel.innerHTML = '<option value="">— Choisir —</option>';
-    (adminConfig.airlines||[]).forEach(a=>{
-        const o=document.createElement('option'); o.value=o.textContent=a.name;
-        if(a.name===fn.company) o.selected=true;
-        sel.appendChild(o);
-    });
+    sel.innerHTML = '<option value="">Chargement...</option>';
+    try {
+        const asnap = await window._getDoc(window._doc(window._db,'flights','cfg-airlines'));
+        const airlines = asnap.exists() ? (asnap.data().list||[]) : [];
+        sel.innerHTML = '<option value="">— Choisir —</option>';
+        airlines.forEach(a=>{
+            const o=document.createElement('option'); o.value=o.textContent=a.name;
+            if(a.name===fn.company) o.selected=true;
+            sel.appendChild(o);
+        });
+    } catch(e) { sel.innerHTML = '<option value="">Erreur</option>'; }
     openModal('flightNumModal');
 };
 
@@ -2653,13 +2663,7 @@ window.deleteFlightNum = async function(id, number) {
     } catch(e) { showNotif('Erreur: '+e.message,'error'); }
 };
 
-// Hook showSection pour charger les bonnes données
-const _origShowSection = window.showSection;
-window.showSection = function(name) {
-    _origShowSection(name);
-    if (name==='security') loadUsers();
-    if (name==='flightnums') loadFlightNums();
-};
+// [hooks intégrés dans showSection final]
 
 // ────────────────────────────────────────
 // DASHBOARD
@@ -2723,14 +2727,29 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 });
 
 // ────────────────────────────────────────
-// NAV
+// NAV — avec hooks pour chargement des données
 // ────────────────────────────────────────
 window.showSection = function(name) {
     document.querySelectorAll('.section-page').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     document.getElementById(`section-${name}`).classList.add('active');
     document.querySelector(`[data-section="${name}"]`).classList.add('active');
+    if (name === 'security')   loadUsers();
+    if (name === 'flightnums') loadFlightNums();
 };
+
+// ────────────────────────────────────────
+// INIT — charger les données au démarrage
+// ────────────────────────────────────────
+// Charger users dès que Firebase est prêt (pas besoin d'attendre le clic sur Security)
+(async function initAdminData() {
+    try {
+        // Petite attente pour s'assurer que window._db est prêt
+        await new Promise(r => setTimeout(r, 300));
+        await loadUsers();
+        await loadFlightNums();
+    } catch(e) { console.warn('initAdminData:', e.message); }
+})();
 
 // ────────────────────────────────────────
 // NOTIFICATIONS
