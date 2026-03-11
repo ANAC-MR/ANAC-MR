@@ -167,9 +167,11 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     </div>
   </div>
   <div class="nav">
+    <span id="ldmUserBadge" style="display:none;font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);"></span>
     <a href="index.html">📋 Suivi des vols</a>
     <a href="admin.html">⚙️ Admin</a>
     <a href="ldm.html" class="active">📨 LDM/MVT</a>
+    <a href="#" onclick="sessionStorage.removeItem('anac_main_sess');location.href='index.html';return false;" style="color:rgba(255,100,100,0.7);">🚪 Déconnexion</a>
   </div>
 </div>
 
@@ -986,13 +988,40 @@ async function lookupAuthNumber(i) {
   }
 }
 
-// ══ LDM AUTH ══════════════════════════════════════════
-const _LS='anac_sess';
+// ══ LDM AUTH — utilise la session globale de index.html ══════════
+const _MS = 'anac_main_sess';
 const _LC={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
 let _ldb=null;
 async function _lDB(){if(_ldb)return _ldb;const{initializeApp,getApps}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');const{getFirestore}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const a=getApps().find(x=>x.name==='_la')||initializeApp(_LC,'_la');_ldb=getFirestore(a);return _ldb;}
-async function _lChk(u,p){try{const db=await _lDB();const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));const s=await getDocs(q);if(!s.empty){const x=s.docs[0].data();return x.password===p;}const c=await getDoc(doc(db,'flights','cfg-auth'));const su=c.exists()?(c.data().username||'DADY'):'DADY';const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';return u.toUpperCase()===su.toUpperCase()&&p===sp;}catch(e){return false;}}
-async function _lValid(ts){try{const db=await _lDB();const{doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const c=await getDoc(doc(db,'flights','cfg-auth'));if(c.exists()&&(c.data().sessionReset||0)>ts)return false;}catch(e){}return true;}
+
+async function _lChk(u,p){
+  try{
+    const db=await _lDB();
+    const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));
+    const s=await getDocs(q);
+    if(!s.empty){
+      const x=s.docs[0].data();
+      if(x.password!==p)return{ok:false};
+      const perms=x.permissions||[];
+      if(!perms.includes('ldm')&&!perms.includes('admin'))return{ok:false,noAccess:true};
+      return{ok:true,username:x.username,role:x.role||'user',perms};
+    }
+    const c=await getDoc(doc(db,'flights','cfg-auth'));
+    const su=c.exists()?(c.data().username||'DADY'):'DADY';
+    const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';
+    if(u.toUpperCase()===su.toUpperCase()&&p===sp)
+      return{ok:true,username:su,role:'admin',perms:['admin','ldm','facturation','add_flight','edit_flight','delete_flight','import']};
+    return{ok:false};
+  }catch(e){return{ok:false};}
+}
+
+async function _lValid(ts){
+  try{const db=await _lDB();const{doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const c=await getDoc(doc(db,'flights','cfg-auth'));if(c.exists()&&(c.data().sessionReset||0)>ts)return false;}catch(e){}return true;
+}
+
+function _lSess(){try{return JSON.parse(sessionStorage.getItem(_MS));}catch{return null;}}
+
 async function _laLogin(){
   const u=(document.getElementById('laUser').value||'').trim();
   const p=document.getElementById('laPass').value||'';
@@ -1001,22 +1030,38 @@ async function _laLogin(){
   err.textContent='';
   if(!u||!p){err.textContent='Remplissez tous les champs';return;}
   btn.disabled=true;btn.textContent='Vérification...';
-  const ok=await _lChk(u,p);
+  const res=await _lChk(u,p);
   btn.disabled=false;btn.textContent='Connexion';
-  if(ok){sessionStorage.setItem(_LS,JSON.stringify({u:u.toUpperCase(),ts:Date.now()}));document.getElementById('ldmAuth').classList.add('hidden');}
-  else{err.textContent='Identifiants incorrects';document.getElementById('laPass').value='';}
+  if(res.ok){
+    sessionStorage.setItem(_MS,JSON.stringify({username:res.username,role:res.role,perms:res.perms,ts:Date.now()}));
+    document.getElementById('ldmAuth').classList.add('hidden');
+    _showUserBadge(res.username);
+  } else if(res.noAccess){
+    err.textContent='Accès refusé — permission LDM/MVT requise';
+    document.getElementById('laPass').value='';
+  } else {
+    err.textContent='Identifiants incorrects';
+    document.getElementById('laPass').value='';
+  }
 }
 window._laLogin = _laLogin;
-// Auto-check session
+
+function _showUserBadge(username){
+  const b=document.getElementById('ldmUserBadge');
+  if(b){b.textContent='👤 '+username;b.style.display='inline-block';}
+}
+
+// Auto-check session globale
 (async function(){
-  const s=sessionStorage.getItem(_LS);
-  if(!s)return;
-  try{
-    const sess=JSON.parse(s);
-    const valid=await _lValid(sess.ts);
-    if(valid){document.getElementById('ldmAuth').classList.add('hidden');return;}
-  }catch(e){}
-  sessionStorage.removeItem(_LS);
+  const s=_lSess();
+  if(!s){return;} // garder le mur visible
+  const valid=await _lValid(s.ts);
+  if(valid&&(s.role==='admin'||s.perms.includes('admin')||s.perms.includes('ldm'))){
+    document.getElementById('ldmAuth').classList.add('hidden');
+    _showUserBadge(s.username);
+  } else {
+    sessionStorage.removeItem(_MS);
+  }
 })();
 
 </script>
