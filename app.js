@@ -6,6 +6,12 @@ const MONTHS = [
     "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
 ];
 
+// ── Normalisation numéro de vol — utilisée partout ──────────────
+// Retire tirets, espaces et points → "L6-301", "L6 301", "L6.301" → "L6301"
+function normFN(s) {
+    return (s || '').toString().toUpperCase().replace(/[-\s.]/g, '');
+}
+
 const AIRLINES = [
     "Mauritania Airlines",
     "Air Sénégal", 
@@ -557,9 +563,9 @@ function getFormData() {
         registration: (document.getElementById('fImmSelect') && document.getElementById('fImmSelect').value
             ? document.getElementById('fImmSelect').value
             : elements.fImm.value.trim().toUpperCase()),
-        flightNumber: (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value
+        flightNumber: normFN(document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value
             ? document.getElementById('fVolSelect').value
-            : elements.fVol.value.trim().toUpperCase()),
+            : elements.fVol.value.trim()),
         type:     elements.fType.value,
         from:     elements.fFrom.value,
         to:       elements.fTo.value,
@@ -639,8 +645,7 @@ async function autoFillAuth() {
     if (!flightNum || !date) return;
     if (!window.db) return;
 
-    // Normaliser le numéro (retirer tirets/espaces)
-    const fn = flightNum.toUpperCase().replace(/[-\s]/g, '');
+    const fn = normFN(flightNum);
     const key = `${fn}__${date}`;
 
     try {
@@ -669,14 +674,13 @@ async function autoFillFromFlightNumber(flightNum) {
     if (!window.db) return;
     try {
         const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const fnRaw  = flightNum.toUpperCase().trim();
-        const fnNorm = fnRaw.replace(/[-\s]/g, ''); // sans tirets: L6301
-        // Chercher avec le numéro original ET sans tirets pour couvrir les deux formats
-        const [snapRaw, snapNorm] = await Promise.all([
-            getDocs(query(collection(window.db, 'flight_numbers'), where('number','==', fnRaw))),
-            getDocs(query(collection(window.db, 'flight_numbers'), where('number','==', fnNorm)))
+        const fnNorm = normFN(flightNum);
+        // Chercher les 2 formes (avec/sans tirets) pour compatibilité
+        const [snapNorm, snapRaw] = await Promise.all([
+            getDocs(query(collection(window.db, 'flight_numbers'), where('number','==', fnNorm))),
+            getDocs(query(collection(window.db, 'flight_numbers'), where('number','==', flightNum.toUpperCase().trim())))
         ]);
-        const snap = !snapRaw.empty ? snapRaw : snapNorm;
+        const snap = !snapNorm.empty ? snapNorm : snapRaw;
         if (!snap.empty) {
             const rec = snap.docs[0].data();
             // Remplir compagnie
@@ -1168,7 +1172,7 @@ function filterFlights() {
         }
         
         // Flight number filter (case-insensitive)
-        if (volFilter && !flight.flightNumber.toUpperCase().includes(volFilter)) {
+        if (volFilter && !normFN(flight.flightNumber).includes(normFN(volFilter))) {
             return false;
         }
         
