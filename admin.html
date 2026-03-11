@@ -2618,20 +2618,22 @@ function renderFlightNums(list) {
           const apFrom = airports.find(a=>(a.iata||a.icao)===fn.from);
           const apTo   = airports.find(a=>(a.iata||a.icao)===fn.to);
           const apStop = fn.stopover ? airports.find(a=>(a.iata||a.icao)===fn.stopover) : null;
-          return `<tr>
-            <td><strong style="color:#e2e8f0;font-size:14px;">${fn.number||'—'}</strong></td>
-            <td style="color:#94a3b8;">${fn.company||'—'}</td>
-            <td><span class="fn-badge ${fn.type==='DEP'?'fn-dep':'fn-arr'}">${fn.type||'—'}</span></td>
-            <td><strong style="color:#38bdf8;">${fn.from||'—'}</strong>${apFrom?' <small style="color:#64748b;">('+apFrom.icao+')</small>':''}</td>
-            <td><strong style="color:#38bdf8;">${fn.to||'—'}</strong>${apTo?' <small style="color:#64748b;">('+apTo.icao+')</small>':''}</td>
-            <td>${fn.stopover ? ('<strong style="color:#a78bfa;">'+fn.stopover+'</strong>'+(apStop?(' <small style="color:#64748b;">('+apStop.icao+')</small>'):'')) : '<span style="color:#475569;">—</span>'}</td>
-            <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">
-                <button onclick="editFlightNum('${fn.id}')"
-                    style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✏️</button>
-                <button onclick="deleteFlightNum('${fn.id}','${fn.number}')"
-                    style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗑️</button>
-            </td>
-        </tr>`).join('')+
+          const tdFrom = '<strong style="color:#38bdf8;">'+(fn.from||'—')+'</strong>'+(apFrom?' <small style="color:#64748b;">('+apFrom.icao+')</small>':'');
+          const tdTo   = '<strong style="color:#38bdf8;">'+(fn.to||'—')+'</strong>'+(apTo?' <small style="color:#64748b;">('+apTo.icao+')</small>':'');
+          const tdStop = fn.stopover ? '<strong style="color:#a78bfa;">'+fn.stopover+'</strong>'+(apStop?' <small style="color:#64748b;">('+apStop.icao+')</small>':'') : '<span style="color:#475569;">—</span>';
+          const badge  = fn.type==='DEP' ? 'fn-dep' : 'fn-arr';
+          return '<tr>'
+            +'<td><strong style="color:#e2e8f0;font-size:14px;">'+(fn.number||'—')+'</strong></td>'
+            +'<td style="color:#94a3b8;">'+(fn.company||'—')+'</td>'
+            +'<td><span class="fn-badge '+badge+'">'+(fn.type||'—')+'</span></td>'
+            +'<td>'+tdFrom+'</td>'
+            +'<td>'+tdTo+'</td>'
+            +'<td>'+tdStop+'</td>'
+            +'<td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">'
+            +'<button onclick="editFlightNum(&quot;'+fn.id+'&quot;)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✏️</button>'
+            +'<button onclick="deleteFlightNum(&quot;'+fn.id+'&quot;,&quot;'+fn.number+'&quot;)" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗑️</button>'
+            +'</td></tr>';
+        }).join('')+
         '</tbody></table>';
 }
 
