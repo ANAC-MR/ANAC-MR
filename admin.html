@@ -1998,7 +1998,6 @@ window.openAirlineModal = function(id = null) {
         document.getElementById('airlineImmPrefix').value = a.immPrefix  || '';
         document.getElementById('immatLocked').checked    = !!a.immLocked;
         currentImmatList = [...(a.immatriculations || [])];
-        selectedColor = a.color || '#2B5A8E';
     } else {
         document.getElementById('airlineName').value      = '';
         document.getElementById('airlinePrefix').value    = '';
@@ -2007,11 +2006,8 @@ window.openAirlineModal = function(id = null) {
         document.getElementById('airlineImmPrefix').value = '';
         document.getElementById('immatLocked').checked    = false;
         currentImmatList = [];
-        selectedColor = '#2B5A8E';
     }
-    document.getElementById('airlineColorPicker').value       = selectedColor;
-    document.getElementById('airlineColorDisplay').textContent = selectedColor;
-    buildColorSwatches(selectedColor);
+    // Couleur supprimée du modal
     // Vol numbers - a peut être undefined ici si id=null
     const airlineForVol = id ? airlines.find(x => x.id === id) : null;
     document.getElementById('volLocked').checked = !!(airlineForVol && airlineForVol.volLocked);
