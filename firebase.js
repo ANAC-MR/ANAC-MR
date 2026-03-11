@@ -2,7 +2,7 @@
 // FIREBASE CONFIGURATION & INITIALIZATION
 // ============================================
 
-// Firebase configuration - REPLACE WITH YOUR CONFIG
+// Firebase configuration - REPLACE WITH YOUR CONFIG 
 const firebaseConfig = {
   apiKey: "AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
   authDomain: "anacmr-67835.firebaseapp.com",
