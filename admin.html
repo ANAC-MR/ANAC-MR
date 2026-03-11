@@ -1570,6 +1570,19 @@
                 </div>
             </div>
         </div>
+        <!-- Destinations autorisées -->
+        <div class="field-group form-full" style="border-top:1px solid var(--border);padding-top:18px;margin-top:4px;">
+            <label>Destinations autorisées <span class="immat-count" id="destCount"></span></label>
+            <span class="hint" style="display:block;margin-bottom:8px;">Aéroports vers lesquels cette compagnie opère depuis/vers NKC. Laisser vide = toutes les destinations.</span>
+            <div class="immat-list" id="destList" style="max-height:160px;overflow-y:auto;"></div>
+            <div class="immat-add-row" style="margin-top:8px;">
+                <select id="destInput" style="flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;">
+                    <option value="">— Choisir un aéroport —</option>
+                </select>
+                <button type="button" class="btn-primary" onclick="addDest()" style="white-space:nowrap;">+ Ajouter</button>
+            </div>
+        </div>
+        </div>
         <div class="modal-footer">
             <button class="btn-ghost" onclick="closeModal('airlineModal')">Annuler</button>
             <button class="btn-gold" onclick="saveAirline()">💾 Enregistrer</button>
@@ -2008,6 +2021,11 @@ window.openAirlineModal = function(id = null) {
     updateImmPrefixHint();
     renderVolList();
     updateVolLockUI();
+    // Destinations
+    const airlineForDest = id ? airlines.find(x => x.id === id) : null;
+    currentDestList = (airlineForDest && airlineForDest.destinations) ? [...airlineForDest.destinations] : [];
+    populateDestSelect();
+    renderDestList();
     openModal('airlineModal');
 };
 
@@ -2041,6 +2059,58 @@ window.addVol = function() {
     input.value = '';
     renderVolList();
 };
+
+// ── Gestion des destinations autorisées ──────────────────────
+let currentDestList = [];
+
+window.addDest = function() {
+    const sel = document.getElementById('destInput');
+    const v = (sel.value||'').trim().toUpperCase();
+    if (!v) return;
+    if (!currentDestList.includes(v)) {
+        currentDestList.push(v);
+        renderDestList();
+    }
+    sel.value = '';
+};
+
+window.removeDest = function(code) {
+    currentDestList = currentDestList.filter(d => d !== code);
+    renderDestList();
+};
+
+function renderDestList() {
+    const div = document.getElementById('destList');
+    if (!div) return;
+    const count = document.getElementById('destCount');
+    if (count) count.textContent = currentDestList.length ? '('+currentDestList.length+')' : '';
+    if (!currentDestList.length) {
+        div.innerHTML = '<span style="color:var(--text-dim);font-size:12px;">Aucune restriction — toutes les destinations disponibles</span>';
+        return;
+    }
+    div.innerHTML = currentDestList.map(function(code) {
+        const ap = airports.find(function(a){ return a.icao===code||a.iata===code; });
+        const label = ap ? (ap.iata||ap.icao)+' — '+(ap.city||ap.name||code) : code;
+        return '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);color:#38bdf8;border-radius:7px;padding:4px 10px;margin:3px;font-size:12px;font-weight:700;">'
+            + label
+            + '<span onclick="removeDest(\"'+code+'\")" style="cursor:pointer;opacity:.6;font-size:14px;line-height:1;">×</span>'
+            + '</span>';
+    }).join('');
+}
+
+function populateDestSelect() {
+    const sel = document.getElementById('destInput');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Choisir un aéroport —</option>';
+    airports.forEach(function(a) {
+        if (a.icao === 'GQNO') return;
+        const iata = a.iata || a.icao;
+        const opt = document.createElement('option');
+        opt.value = a.icao;
+        opt.textContent = iata + ' — ' + (a.city||a.name||a.icao);
+        sel.appendChild(opt);
+    });
+}
 
 // ── Import depuis Programme de Vols Firebase ──────────────────
 window.importFromProgramme = async function() {
@@ -2206,6 +2276,7 @@ window.saveAirline = async function() {
     const data = { name, prefix, iata, color: selectedColor, country,
                    immPrefix, immLocked, immatriculations: currentImmatList,
                    volLocked, volNumbers: currentVolList,
+                   destinations: currentDestList,
                    updatedAt: new Date().toISOString() };
 
     try {
