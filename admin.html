@@ -2639,7 +2639,7 @@ function renderFlightNums(list) {
 
 window.filterFlightNums = function() {
     const q = (document.getElementById('fnSearch').value||'').toUpperCase();
-    renderFlightNums(q ? allFlightNums.filter(f=>(f.number||'').toUpperCase().includes(q)||(f.company||'').toUpperCase().includes(q)) : allFlightNums);
+    renderFlightNums(q ? allFlightNums.filter(f=>(f.number||'').toUpperCase().replace(/[-\s.]/g,'').includes(q.replace(/[-\s.]/g,''))||(f.company||'').toUpperCase().includes(q)) : allFlightNums);
 };
 
 window.showAddFlightNumModal = async function() {
@@ -2866,7 +2866,7 @@ async function loadProgramme() {
         snapFlights.forEach(d => {
             const r = d.data();
             if (d.id.startsWith('cfg-')) return;
-            const fn = (r.flightNumber||'').toUpperCase().replace(/[-\s]/g,'');
+            const fn = (r.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
             const dt = (r.date||'').trim();
             if (fn && dt) _allSaisis.add(fn + '__' + dt);
         });
