@@ -749,17 +749,16 @@ function updateRouteByType() {
     const type     = elements.fType    ? elements.fType.value    : 'DEP';
     const NKC_ICAO = 'GQNO';
 
-    const homeCode = COMPANY_HOME_AIRPORT[company] || '';
-    // Lire les destinations depuis adminConfig (Firebase) — priorité sur le hardcode
-    let multiDests = null;
+    // Lire hub et destinations depuis adminConfig Firebase
+    let homeCode = COMPANY_HOME_AIRPORT[company] || ''; // fallback hardcodé
+    let multiDests = COMPANY_DESTINATIONS[company] || null; // fallback hardcodé
     if (adminConfig && adminConfig.airlines) {
         const al = adminConfig.airlines.find(a => a.name === company);
-        if (al && al.destinations && al.destinations.length > 0) {
-            multiDests = al.destinations;
+        if (al) {
+            if (al.hub) homeCode = al.hub; // hub depuis Firebase
+            if (al.destinations && al.destinations.length > 0) multiDests = al.destinations;
         }
     }
-    // Fallback sur COMPANY_DESTINATIONS si adminConfig pas encore chargé
-    if (!multiDests) multiDests = COMPANY_DESTINATIONS[company] || null;
 
     // Rebuild the fTo select options filtered for this company
     const rebuildToSelect = (allowedCodes) => {
