@@ -600,23 +600,25 @@ function updateVolField(company) {
 // ── Auto-remplissage depuis la collection flight_numbers ──
 async function autoFillFromFlightNumber(flightNum) {
     if (!flightNum || flightNum.length < 3) return;
+    // Attendre que window.db soit disponible (initialisé par firebase.js)
+    if (!window.db) return;
     try {
         const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const q    = query(collection(db, 'flight_numbers'), where('number','==', flightNum.toUpperCase()));
+        const q    = query(collection(window.db, 'flight_numbers'), where('number','==', flightNum.toUpperCase().replace(/[-\s]/g,'')));
         const snap = await getDocs(q);
         if (snap.empty) return;
         const fn = snap.docs[0].data();
         // Remplir compagnie
         if (fn.company && elements.fCompany) {
             elements.fCompany.value = fn.company;
-            // Déclencher les updates liés à la compagnie
             updateFlightNumberPrefix();
         }
-        // Remplir type
-        if (fn.type) {
+        // Remplir type DEP/ARR
+        if (fn.type && window.selectType) {
+            window.selectType(fn.type);
+        } else if (fn.type) {
             const typeEl = document.getElementById('fType');
             if (typeEl) { typeEl.value = fn.type; updateRouteByType(); }
-            if (window.selectType) window.selectType(fn.type);
         }
         // Remplir De / Vers
         if (fn.from && elements.fFrom) elements.fFrom.value = fn.from;
