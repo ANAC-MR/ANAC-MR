@@ -777,6 +777,39 @@
             margin-bottom: 6px;
         }
 
+        /* ── Permissions chips ── */
+        .perm-chip { display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;transition:all .2s;margin:3px; }
+        .perm-chip.on  { background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.4);color:#34d399; }
+        .perm-chip.off { background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);color:#64748b; }
+        .user-row { display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.05);transition:background .15s; }
+        .user-row:hover { background:rgba(255,255,255,0.03); }
+        .user-row:last-child { border-bottom:none; }
+        .user-avatar { width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0; }
+        .user-info { flex:1;min-width:0; }
+        .user-name { font-size:13px;font-weight:700;color:#e2e8f0; }
+        .user-date { font-size:11px;color:#64748b;margin-top:2px; }
+        .user-perms { display:flex;flex-wrap:wrap;gap:4px;margin-top:8px; }
+        .user-expand { cursor:pointer;padding:6px 12px;border-radius:7px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;font-size:11px;font-weight:700;transition:all .2s; }
+        .user-expand:hover { background:rgba(255,255,255,0.1); }
+        .perm-panel { padding:14px 16px 18px 64px;background:rgba(0,0,0,0.2);border-bottom:1px solid rgba(255,255,255,0.05);display:none; }
+        .perm-panel.open { display:block; }
+        .perm-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px; }
+        .perm-item { display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);cursor:pointer;transition:all .2s; }
+        .perm-item:hover { background:rgba(255,255,255,0.07); }
+        .perm-item.active { background:rgba(52,211,153,0.08);border-color:rgba(52,211,153,0.3); }
+        .perm-check { width:18px;height:18px;border-radius:5px;border:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s; }
+        .perm-item.active .perm-check { background:#34d399;border-color:#34d399; }
+        .perm-label { font-size:12px;font-weight:600;color:#e2e8f0; }
+        .perm-desc  { font-size:10px;color:#64748b;margin-top:2px; }
+        /* ── Flight nums table ── */
+        .fn-table { width:100%;border-collapse:collapse;font-size:13px; }
+        .fn-table th { padding:10px 12px;text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.08); }
+        .fn-table td { padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05); }
+        .fn-table tr:last-child td { border-bottom:none; }
+        .fn-badge { display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800; }
+        .fn-dep { background:rgba(59,130,246,0.2);color:#60a5fa; }
+        .fn-arr { background:rgba(52,211,153,0.2);color:#34d399; }
+
         .format-preview-value {
             font-family: 'JetBrains Mono', monospace;
             font-size: 18px; font-weight: 600;
@@ -992,6 +1025,9 @@
             <div class="nav-item" onclick="showSection('formats')" data-section="formats">
                 <span class="icon">🔢</span> Format N° Auth.
             </div>
+            <div class="nav-item" onclick="showSection('flightnums')" data-section="flightnums">
+                <span class="icon">🔢</span> Numéros de Vol
+            </div>
             <div class="nav-item" onclick="showSection('security')" data-section="security">
                 <span class="icon">🛡️</span> Sécurité & Utilisateurs
             </div>
@@ -1194,6 +1230,28 @@
             </div>
 
             <!-- ─── SÉCURITÉ ─── -->
+            <!-- ─── NUMÉROS DE VOL ─── -->
+            <div class="section-page" id="section-flightnums">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>🔢 Numéros de Vol</h2>
+                        <p>Associez un numéro de vol à ses informations (compagnie, origine, destination, type)</p>
+                    </div>
+                    <button class="btn-primary" onclick="showAddFlightNumModal()">+ Ajouter un numéro</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>📋 Numéros enregistrés</span>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" id="fnSearch" placeholder="Rechercher..." oninput="filterFlightNums()"
+                                style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 12px;color:#fff;font-size:12px;width:180px;">
+                        </div>
+                    </div>
+                    <div id="flightNumsList"><div style="text-align:center;color:var(--text-dim);padding:30px;font-size:13px;">Chargement...</div></div>
+                </div>
+            </div>
+
             <div class="section-page" id="section-security">
                 <div class="page-header">
                     <div class="page-header-left">
@@ -1247,7 +1305,7 @@
                         <span>👥 Utilisateurs secondaires</span>
                         <button class="btn-primary" style="padding:7px 16px;font-size:12px;" onclick="showAddUserModal()">+ Ajouter</button>
                     </div>
-                    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Ces comptes ont accès aux mêmes pages protégées que le compte principal.</p>
+                    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Gérez les comptes et leurs permissions d'accès.</p>
                     <div id="usersList"><div style="text-align:center;color:var(--text-dim);padding:20px;font-size:13px;">Chargement...</div></div>
                 </div>
 
@@ -1270,6 +1328,51 @@
 <!-- ════════════════════════════════════
      MODALS
 ════════════════════════════════════ -->
+
+<!-- Modal Numéro de Vol -->
+<div class="modal-overlay" id="flightNumModal">
+    <div class="modal-box" style="max-width:520px;">
+        <div class="modal-header">
+            <h3 id="fnModalTitle">Ajouter un numéro de vol</h3>
+            <button class="modal-close" onclick="closeModal('flightNumModal')">×</button>
+        </div>
+        <input type="hidden" id="fnEditId">
+        <div class="form-grid">
+            <div class="field-group form-full">
+                <label>Numéro de vol *</label>
+                <input type="text" id="fnNumber" placeholder="Ex: L6301" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="field-group">
+                <label>Compagnie *</label>
+                <select id="fnCompany" onchange="fnUpdateRoute()">
+                    <option value="">— Choisir —</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>Type *</label>
+                <select id="fnType" onchange="fnUpdateRoute()">
+                    <option value="DEP">✈️ Départ (DEP)</option>
+                    <option value="ARR">🛬 Arrivée (ARR)</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>De (ICAO) *</label>
+                <input type="text" id="fnFrom" placeholder="Ex: GQNO" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="field-group">
+                <label>Vers (ICAO) *</label>
+                <input type="text" id="fnTo" placeholder="Ex: DAAG" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+            </div>
+        </div>
+        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:9px;padding:12px 14px;margin-top:8px;font-size:12px;color:#60a5fa;">
+            💡 Quand un opérateur saisit ce numéro dans le modal d'ajout de vol, les champs <strong>Compagnie, De, Vers et Type</strong> sont remplis automatiquement.
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('flightNumModal')">Annuler</button>
+            <button class="btn-primary" onclick="saveFlightNum()">💾 Enregistrer</button>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Utilisateur -->
 <div class="modal-overlay" id="userModal">
@@ -1295,6 +1398,23 @@
         <div class="modal-footer">
             <button class="btn-secondary" onclick="closeModal('userModal')">Annuler</button>
             <button class="btn-primary" onclick="saveNewUser()">Créer le compte</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Permissions Utilisateur -->
+<div class="modal-overlay" id="permModal">
+    <div class="modal-box" style="max-width:560px;">
+        <div class="modal-header">
+            <h3>🔐 Permissions — <span id="permUsername"></span></h3>
+            <button class="modal-close" onclick="closeModal('permModal')">×</button>
+        </div>
+        <input type="hidden" id="permUserId">
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Cochez les fonctionnalités auxquelles cet utilisateur a accès.</p>
+        <div class="perm-grid" id="permGrid"></div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('permModal')">Annuler</button>
+            <button class="btn-primary" onclick="savePermissions()">💾 Enregistrer</button>
         </div>
     </div>
 </div>
@@ -1480,6 +1600,7 @@ const db    = getFirestore(fbApp);
 window._db         = db;
 window._collection = collection;
 window._addDoc     = addDoc;
+window._updateDoc  = updateDoc;
 window._query      = query;
 window._where      = where;
 window._getDocs    = getDocs;
@@ -2283,46 +2404,90 @@ window.forceLogoutAll = async function() {
 
 window.clearAllSessions = window.forceLogoutAll;
 
-// ── Utilisateurs secondaires ──────────────────────────────────
-async function _usersDB() {
-    // Réutiliser l'instance db principale déjà initialisée
-    return db;
-}
+// ══ UTILISATEURS SECONDAIRES — avec système de permissions ══════
+
+const ALL_PERMISSIONS = [
+  { key:'admin',        label:'⚙️ Panneau Admin',      desc:'Accès au panneau d\'administration' },
+  { key:'ldm',          label:'📡 LDM/MVT Reader',      desc:'Lecture des emails LDM et MVT' },
+  { key:'facturation',  label:'🧾 Facturation',          desc:'Accès à l\'onglet facturation' },
+  { key:'add_flight',   label:'➕ Ajout de vol',         desc:'Ajouter des vols au système' },
+  { key:'edit_flight',  label:'✏️ Modifier un vol',      desc:'Modifier les vols existants' },
+  { key:'delete_flight',label:'🗑️ Supprimer un vol',    desc:'Supprimer des vols' },
+  { key:'import',       label:'📥 Import Programme',     desc:'Importer le programme des vols' },
+];
 
 async function loadUsers() {
     const div = document.getElementById('usersList');
     if (!div) return;
+    div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;">Chargement...</div>';
     try {
         const snap  = await window._getDocs(window._collection(window._db,'anac_users'));
         const users = snap.docs.map(d=>({id:d.id,...d.data()}));
         if (!users.length) {
-            div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:13px;">Aucun utilisateur secondaire</div>';
+            div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:30px;font-size:13px;">Aucun utilisateur secondaire</div>';
             return;
         }
-        div.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead><tr style="border-bottom:2px solid rgba(255,255,255,0.08);">
-                <th style="padding:10px 12px;text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;font-weight:700;">Identifiant</th>
-                <th style="padding:10px 12px;text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;font-weight:700;">Créé le</th>
-                <th style="padding:10px 12px;text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;font-weight:700;">Par</th>
-                <th></th>
-            </tr></thead>
-            <tbody>${users.map(u=>`
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <td style="padding:10px 12px;font-weight:700;">👤 ${u.username}</td>
-                    <td style="padding:10px 12px;color:var(--text-dim);">${u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR'):'—'}</td>
-                    <td style="padding:10px 12px;color:var(--text-dim);">${u.createdBy||'—'}</td>
-                    <td style="padding:10px 12px;text-align:right;">
-                        <button onclick="deleteSecUser('${u.id}','${u.username}')"
-                            style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">
-                            Supprimer
-                        </button>
-                    </td>
-                </tr>`).join('')}
-            </tbody></table>`;
+        div.innerHTML = users.map(u => {
+            const perms = u.permissions || [];
+            const chips = ALL_PERMISSIONS.map(p =>
+                `<span class="perm-chip ${perms.includes(p.key)?'on':'off'}">${p.label}</span>`
+            ).join('');
+            return `
+            <div class="user-row" id="urow-${u.id}">
+                <div class="user-avatar">${(u.username||'?')[0]}</div>
+                <div class="user-info">
+                    <div class="user-name">👤 ${u.username}</div>
+                    <div class="user-date">Créé le ${u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR'):'—'}${u.createdBy?' · par '+u.createdBy:''}</div>
+                    <div class="user-perms">${chips}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+                    <button class="user-expand" onclick="openPermModal('${u.id}','${u.username}',${JSON.stringify(perms).replace(/"/g,"'")})">🔐 Permissions</button>
+                    <button onclick="deleteSecUser('${u.id}','${u.username}')"
+                        style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.25);color:#fc8181;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">
+                        🗑️ Supprimer
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
     } catch(e) {
         div.innerHTML = `<div style="color:#fc8181;padding:12px;font-size:13px;">Erreur: ${e.message}</div>`;
     }
 }
+
+window.openPermModal = function(id, username, permsRaw) {
+    const perms = Array.isArray(permsRaw) ? permsRaw : [];
+    document.getElementById('permUserId').value = id;
+    document.getElementById('permUsername').textContent = username;
+    const grid = document.getElementById('permGrid');
+    grid.innerHTML = ALL_PERMISSIONS.map(p => `
+        <div class="perm-item ${perms.includes(p.key)?'active':''}" id="perm-${p.key}" onclick="togglePerm('${p.key}')">
+            <div class="perm-check">${perms.includes(p.key)?'<svg width=\"10\" height=\"8\" viewBox=\"0 0 10 8\"><path d=\"M1 4l3 3 5-6\" stroke=\"#0f172a\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"/></svg>':''}</div>
+            <div><div class="perm-label">${p.label}</div><div class="perm-desc">${p.desc}</div></div>
+        </div>`).join('');
+    openModal('permModal');
+};
+
+window.togglePerm = function(key) {
+    const el = document.getElementById('perm-'+key);
+    el.classList.toggle('active');
+    const chk = el.querySelector('.perm-check');
+    if (el.classList.contains('active')) {
+        chk.innerHTML = '<svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+    } else {
+        chk.innerHTML = '';
+    }
+};
+
+window.savePermissions = async function() {
+    const id   = document.getElementById('permUserId').value;
+    const perms = ALL_PERMISSIONS.filter(p => document.getElementById('perm-'+p.key)?.classList.contains('active')).map(p=>p.key);
+    try {
+        await window._updateDoc(window._doc(window._db,'anac_users',id), { permissions: perms });
+        showNotif('✅ Permissions mises à jour','success');
+        closeModal('permModal');
+        loadUsers();
+    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+};
 
 window.showAddUserModal = function() {
     ['newUname','newUpass','newUpass2'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.removeAttribute('readonly');}});
@@ -2343,29 +2508,157 @@ window.saveNewUser = async function() {
         if (!snap.empty) { showNotif('Identifiant déjà existant','error'); return; }
         const creds = await getStoredCredentials();
         await window._addDoc(window._collection(window._db,'anac_users'), {
-            username:uname, password:pass1, role:'admin',
+            username:uname, password:pass1, role:'user',
+            permissions: [],
             createdAt:new Date().toISOString(), createdBy:creds.user
         });
         closeModal('userModal');
-        showNotif(`✅ Compte "${uname}" créé`,'success');
+        showNotif('✅ Compte "'+uname+'" créé — configurez ses permissions','success');
         loadUsers();
     } catch(e) { showNotif('Erreur: '+e.message,'error'); }
 };
 
 window.deleteSecUser = async function(id, uname) {
-    if (!confirm(`Supprimer le compte "${uname}" ?`)) return;
+    if (!confirm('Supprimer le compte "'+uname+'" ?')) return;
     try {
         await window._deleteDoc(window._doc(window._db,'anac_users',id));
-        showNotif(`Compte "${uname}" supprimé`,'success');
+        showNotif('Compte "'+uname+'" supprimé','success');
         loadUsers();
     } catch(e) { showNotif('Erreur: '+e.message,'error'); }
 };
 
-// Hook showSection pour charger users
+// ══ NUMÉROS DE VOL ══════════════════════════════════════════════
+let allFlightNums = [];
+
+async function loadFlightNums() {
+    const div = document.getElementById('flightNumsList');
+    if (!div) return;
+    div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:30px;">Chargement...</div>';
+    try {
+        const snap = await window._getDocs(window._collection(window._db,'flight_numbers'));
+        allFlightNums = snap.docs.map(d=>({id:d.id,...d.data()}));
+        renderFlightNums(allFlightNums);
+    } catch(e) {
+        div.innerHTML = '<div style="color:#fc8181;padding:12px;font-size:13px;">Erreur: '+e.message+'</div>';
+    }
+}
+
+function renderFlightNums(list) {
+    const div = document.getElementById('flightNumsList');
+    if (!div) return;
+    if (!list.length) {
+        div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:30px;font-size:13px;">Aucun numéro de vol enregistré</div>';
+        return;
+    }
+    div.innerHTML = '<table class="fn-table"><thead><tr>'+
+        '<th>N° Vol</th><th>Compagnie</th><th>Type</th><th>De</th><th>Vers</th><th></th>'+
+        '</tr></thead><tbody>'+
+        list.map(fn=>`<tr>
+            <td><strong style="color:#e2e8f0;font-size:14px;">${fn.number||'—'}</strong></td>
+            <td style="color:#94a3b8;">${fn.company||'—'}</td>
+            <td><span class="fn-badge ${fn.type==='DEP'?'fn-dep':'fn-arr'}">${fn.type||'—'}</span></td>
+            <td style="color:#94a3b8;">${fn.from||'—'}</td>
+            <td style="color:#94a3b8;">${fn.to||'—'}</td>
+            <td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">
+                <button onclick="editFlightNum('${fn.id}')"
+                    style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✏️</button>
+                <button onclick="deleteFlightNum('${fn.id}','${fn.number}')"
+                    style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗑️</button>
+            </td>
+        </tr>`).join('')+
+        '</tbody></table>';
+}
+
+window.filterFlightNums = function() {
+    const q = (document.getElementById('fnSearch').value||'').toUpperCase();
+    renderFlightNums(q ? allFlightNums.filter(f=>(f.number||'').toUpperCase().includes(q)||(f.company||'').toUpperCase().includes(q)) : allFlightNums);
+};
+
+window.showAddFlightNumModal = function() {
+    document.getElementById('fnEditId').value = '';
+    document.getElementById('fnModalTitle').textContent = 'Ajouter un numéro de vol';
+    ['fnNumber','fnFrom','fnTo'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    // Remplir le select compagnies
+    const sel = document.getElementById('fnCompany');
+    sel.innerHTML = '<option value="">— Choisir —</option>';
+    (adminConfig.airlines||[]).forEach(a=>{
+        const o=document.createElement('option'); o.value=o.textContent=a.name; sel.appendChild(o);
+    });
+    document.getElementById('fnType').value = 'DEP';
+    fnUpdateRoute();
+    openModal('flightNumModal');
+};
+
+window.fnUpdateRoute = function() {
+    const type = document.getElementById('fnType').value;
+    const NKC  = 'GQNO';
+    // Auto-remplir De/Vers selon type
+    if (type==='DEP') {
+        document.getElementById('fnFrom').value = NKC;
+        document.getElementById('fnTo').value   = '';
+    } else {
+        document.getElementById('fnFrom').value = '';
+        document.getElementById('fnTo').value   = NKC;
+    }
+};
+
+window.editFlightNum = function(id) {
+    const fn = allFlightNums.find(f=>f.id===id);
+    if (!fn) return;
+    document.getElementById('fnEditId').value = id;
+    document.getElementById('fnModalTitle').textContent = 'Modifier le numéro de vol';
+    document.getElementById('fnNumber').value = fn.number||'';
+    document.getElementById('fnType').value   = fn.type||'DEP';
+    document.getElementById('fnFrom').value   = fn.from||'';
+    document.getElementById('fnTo').value     = fn.to||'';
+    // Remplir select compagnies
+    const sel = document.getElementById('fnCompany');
+    sel.innerHTML = '<option value="">— Choisir —</option>';
+    (adminConfig.airlines||[]).forEach(a=>{
+        const o=document.createElement('option'); o.value=o.textContent=a.name;
+        if(a.name===fn.company) o.selected=true;
+        sel.appendChild(o);
+    });
+    openModal('flightNumModal');
+};
+
+window.saveFlightNum = async function() {
+    const id      = document.getElementById('fnEditId').value;
+    const number  = (document.getElementById('fnNumber').value||'').trim().toUpperCase();
+    const company = document.getElementById('fnCompany').value;
+    const type    = document.getElementById('fnType').value;
+    const from    = (document.getElementById('fnFrom').value||'').trim().toUpperCase();
+    const to      = (document.getElementById('fnTo').value||'').trim().toUpperCase();
+    if (!number||!company||!from||!to) { showNotif('Remplissez tous les champs','error'); return; }
+    const data = { number, company, type, from, to, updatedAt: new Date().toISOString() };
+    try {
+        if (id) {
+            await window._updateDoc(window._doc(window._db,'flight_numbers',id), data);
+            showNotif('✅ Numéro "'+number+'" mis à jour','success');
+        } else {
+            await window._addDoc(window._collection(window._db,'flight_numbers'), data);
+            showNotif('✅ Numéro "'+number+'" enregistré','success');
+        }
+        closeModal('flightNumModal');
+        loadFlightNums();
+    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+};
+
+window.deleteFlightNum = async function(id, number) {
+    if (!confirm('Supprimer le numéro "'+number+'" ?')) return;
+    try {
+        await window._deleteDoc(window._doc(window._db,'flight_numbers',id));
+        showNotif('Numéro "'+number+'" supprimé','success');
+        loadFlightNums();
+    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+};
+
+// Hook showSection pour charger les bonnes données
 const _origShowSection = window.showSection;
 window.showSection = function(name) {
     _origShowSection(name);
     if (name==='security') loadUsers();
+    if (name==='flightnums') loadFlightNums();
 };
 
 // ────────────────────────────────────────
