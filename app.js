@@ -298,6 +298,12 @@ function attachEventListeners() {
     
     // Form interactions
     elements.fCompany.addEventListener('change', updateFlightNumberPrefix);
+    // Auto-fill N° autorisation quand date change
+    if (elements.fDate) {
+        elements.fDate.addEventListener('change', () => {
+            setTimeout(autoFillAuth, 100);
+        });
+    }
     if (elements.fType) {
         elements.fType.addEventListener('change', updateRouteByType);
     }
@@ -587,6 +593,7 @@ function updateVolField(company) {
         sel.addEventListener('change', () => {
             fVol.value = sel.value;
             autoFillFromFlightNumber(sel.value);
+            setTimeout(autoFillAuth, 200);
         });
         if (fVol.value) sel.value = fVol.value;
 
@@ -597,30 +604,70 @@ function updateVolField(company) {
     }
 }
 
-// ── Auto-remplissage depuis la collection flight_numbers ──
-async function autoFillFromFlightNumber(flightNum) {
-    if (!flightNum || flightNum.length < 3) return;
+// ── Auto-remplissage depuis flight_numbers + programme_vols ──
+
+// Appelé dès que vol, date ou compagnie change
+async function autoFillAuth() {
+    const flightNum = (elements.fVol && elements.fVol.value.trim()) ||
+                      (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value.trim()) || '';
+    const date      = elements.fDate ? elements.fDate.value.trim() : '';
+    if (!flightNum || !date) return;
+    if (!window.db) return;
+
+    // Normaliser le numéro (retirer tirets/espaces)
+    const fn = flightNum.toUpperCase().replace(/[-\s]/g, '');
+    const key = `${fn}__${date}`;
+
     try {
         const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const q    = query(collection(db, 'flight_numbers'), where('number','==', flightNum.toUpperCase()));
+
+        // 1) Chercher dans programme_vols par clé flight__date
+        const q = query(collection(window.db, 'programme_vols'),
+                        where('flight', '==', fn),
+                        where('date',   '==', date));
         const snap = await getDocs(q);
-        if (snap.empty) return;
-        const fn = snap.docs[0].data();
-        // Remplir compagnie
-        if (fn.company && elements.fCompany) {
-            elements.fCompany.value = fn.company;
-            // Déclencher les updates liés à la compagnie
-            updateFlightNumberPrefix();
+
+        if (!snap.empty) {
+            const rec = snap.docs[0].data();
+            if (rec.auth && elements.fAuthNumber) {
+                elements.fAuthNumber.value = rec.auth.toUpperCase();
+                // Feedback visuel discret
+                elements.fAuthNumber.style.borderColor = '#34d399';
+                setTimeout(() => { elements.fAuthNumber.style.borderColor = ''; }, 2000);
+            }
         }
-        // Remplir type
-        if (fn.type) {
-            const typeEl = document.getElementById('fType');
-            if (typeEl) { typeEl.value = fn.type; updateRouteByType(); }
-            if (window.selectType) window.selectType(fn.type);
+    } catch(e) { console.warn('autoFillAuth programme_vols:', e.message); }
+}
+
+async function autoFillFromFlightNumber(flightNum) {
+    if (!flightNum || flightNum.length < 3) return;
+    if (!window.db) return;
+    try {
+        const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const fn = flightNum.toUpperCase().replace(/[-\s]/g, '');
+        const q  = query(collection(window.db, 'flight_numbers'), where('number','==', fn));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+            const rec = snap.docs[0].data();
+            // Remplir compagnie
+            if (rec.company && elements.fCompany) {
+                elements.fCompany.value = rec.company;
+                updateFlightNumberPrefix();
+            }
+            // Remplir type
+            if (rec.type) {
+                if (window.selectType) window.selectType(rec.type);
+                else {
+                    const typeEl = document.getElementById('fType');
+                    if (typeEl) { typeEl.value = rec.type; updateRouteByType(); }
+                }
+            }
+            // Remplir De / Vers
+            if (rec.from && elements.fFrom) elements.fFrom.value = rec.from;
+            if (rec.to   && elements.fTo)   elements.fTo.value   = rec.to;
         }
-        // Remplir De / Vers
-        if (fn.from && elements.fFrom) elements.fFrom.value = fn.from;
-        if (fn.to   && elements.fTo)   elements.fTo.value   = fn.to;
+        // Toujours tenter l'auto-fill du numéro d'autorisation
+        await autoFillAuth();
     } catch(e) { console.warn('autoFill flight_numbers:', e.message); }
 }
 
