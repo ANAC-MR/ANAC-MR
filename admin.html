@@ -1098,11 +1098,11 @@
                     <table class="data-table" id="airlinesTable">
                         <thead>
                             <tr>
-                                <th></th>
                                 <th>Nom de la compagnie</th>
                                 <th>Préfixe vol</th>
                                 <th>IATA</th>
-                                <th>Couleur</th>
+                                <th>Hub</th>
+                                <th>Destinations</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -1489,6 +1489,7 @@
         </div>
         <input type="hidden" id="airlineEditId">
         <div class="form-grid">
+            <!-- Infos de base -->
             <div class="field-group form-full">
                 <label>Nom de la compagnie *</label>
                 <input type="text" id="airlineName" placeholder="Ex: Mauritania Airlines" required>
@@ -1505,18 +1506,33 @@
                        oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="field-group form-full">
-                <label>Couleur d'identification</label>
-                <div class="color-swatches" id="colorSwatches"></div>
-                <div class="color-preview-row" style="margin-top:10px;">
-                    <input type="color" id="airlineColorPicker" value="#2B5A8E" onchange="syncColorFromPicker(this.value)">
-                    <span style="font-size:12px; color:var(--text-dim);">Couleur personnalisée</span>
-                    <span id="airlineColorDisplay" style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim);">#2B5A8E</span>
-                </div>
-            </div>
-            <div class="field-group form-full">
                 <label>Pays d'origine</label>
                 <input type="text" id="airlineCountry" placeholder="Ex: Mauritanie">
             </div>
+
+            <!-- Aéroport Hub -->
+            <div class="field-group form-full" style="border-top:1px solid var(--border);padding-top:18px;margin-top:4px;">
+                <label>🏠 Aéroport Hub (base de la compagnie)</label>
+                <select id="airlineHub" style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;">
+                    <option value="">— Choisir l'aéroport Hub —</option>
+                </select>
+                <span class="hint">L'aéroport d'origine de cette compagnie (ex: Tunis pour Tunisair). NKC est automatiquement la base ANAC.</span>
+            </div>
+
+            <!-- Destinations -->
+            <div class="field-group form-full" style="border-top:1px solid var(--border);padding-top:18px;margin-top:4px;">
+                <label>Destinations autorisées <span class="immat-count" id="destCount"></span></label>
+                <span class="hint" style="display:block;margin-bottom:8px;">Aéroports desservis depuis/vers NKC. Laisser vide = toutes les destinations.</span>
+                <div class="immat-list" id="destList" style="max-height:140px;overflow-y:auto;"></div>
+                <div class="immat-add-row" style="margin-top:8px;">
+                    <select id="destInput" style="flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;">
+                        <option value="">— Choisir un aéroport —</option>
+                    </select>
+                    <button type="button" class="btn-primary" onclick="addDest()" style="white-space:nowrap;">+ Ajouter</button>
+                </div>
+            </div>
+
+            <!-- Immatriculations -->
             <div class="field-group form-full" style="border-top:1px solid var(--border); padding-top:18px; margin-top:4px;">
                 <label>Préfixe immatriculation <span class="immat-count" id="immatPrefixHint"></span></label>
                 <input type="text" id="airlineImmPrefix" placeholder="Ex: 5T-" maxlength="5"
@@ -1541,7 +1557,8 @@
                     <button type="button" class="btn-primary" onclick="addImmat()" style="white-space:nowrap;">+ Ajouter</button>
                 </div>
             </div>
-        </div>
+
+            <!-- Numéros de vol -->
             <div class="field-group form-full" style="border-top:1px solid var(--border); padding-top:18px; margin-top:4px;">
                 <label>Liste des numéros de vol autorisés <span class="immat-count" id="volCount"></span></label>
                 <div class="lock-immat-row">
@@ -1553,10 +1570,8 @@
                     <span id="volLockBadge" class="unlocked-badge">🔓 Libre</span>
                     <button type="button" id="btnImportProg" onclick="importFromProgramme()"
                         style="margin-left:auto;padding:5px 14px;border-radius:7px;border:1.5px solid #2B5A8E;
-                               background:#fff;color:#2B5A8E;font-size:12px;font-weight:700;cursor:pointer;
-                               display:flex;align-items:center;gap:6px;transition:all 0.2s;"
-                        onmouseover="this.style.background='#2B5A8E';this.style.color='#fff'"
-                        onmouseout="this.style.background='#fff';this.style.color='#2B5A8E'">
+                               background:transparent;color:#60a5fa;font-size:12px;font-weight:700;cursor:pointer;
+                               display:flex;align-items:center;gap:6px;border-color:#2B5A8E;transition:all 0.2s;">
                         📋 Importer depuis Programme de Vols
                     </button>
                 </div>
@@ -1569,19 +1584,6 @@
                     <button type="button" class="btn-primary" onclick="addVol()" style="white-space:nowrap;">+ Ajouter</button>
                 </div>
             </div>
-        </div>
-        <!-- Destinations autorisées -->
-        <div class="field-group form-full" style="border-top:1px solid var(--border);padding-top:18px;margin-top:4px;">
-            <label>Destinations autorisées <span class="immat-count" id="destCount"></span></label>
-            <span class="hint" style="display:block;margin-bottom:8px;">Aéroports vers lesquels cette compagnie opère depuis/vers NKC. Laisser vide = toutes les destinations.</span>
-            <div class="immat-list" id="destList" style="max-height:160px;overflow-y:auto;"></div>
-            <div class="immat-add-row" style="margin-top:8px;">
-                <select id="destInput" style="flex:1;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;">
-                    <option value="">— Choisir un aéroport —</option>
-                </select>
-                <button type="button" class="btn-primary" onclick="addDest()" style="white-space:nowrap;">+ Ajouter</button>
-            </div>
-        </div>
         </div>
         <div class="modal-footer">
             <button class="btn-ghost" onclick="closeModal('airlineModal')">Annuler</button>
@@ -1913,26 +1915,24 @@ function renderAirlines() {
         tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">✈️</div><p>Aucune compagnie</p></div></td></tr>`;
         return;
     }
-    tbody.innerHTML = airlines.map(a => `
-        <tr>
-            <td><div class="airline-color-dot" style="background:${a.color||'#2B5A8E'}"></div></td>
+    tbody.innerHTML = airlines.map(a => {
+        const hubAp = airports.find(ap => ap.icao === a.hub);
+        const hubLabel = hubAp ? (hubAp.iata||hubAp.icao)+' — '+(hubAp.city||hubAp.name||a.hub) : (a.hub||'—');
+        const destCount = (a.destinations && a.destinations.length) ? a.destinations.length+' dest.' : 'Toutes';
+        return `<tr>
             <td style="font-weight:600;">${esc(a.name)}</td>
             <td><span class="prefix-tag">${esc(a.prefix||'–')}</span></td>
             <td><span class="code-tag">${esc(a.iata||'–')}</span></td>
-            <td>
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:20px;height:20px;border-radius:4px;background:${a.color||'#2B5A8E'};border:1px solid rgba(255,255,255,0.15)"></div>
-                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim)">${a.color||'–'}</span>
-                </div>
-            </td>
+            <td><span style="color:#38bdf8;font-size:12px;font-weight:600;">${esc(hubLabel)}</span></td>
+            <td><span style="color:#94a3b8;font-size:12px;">${destCount}</span></td>
             <td>
                 <div class="action-btns">
                     <button class="btn-icon edit" onclick="openAirlineModal('${a.id}')" title="Modifier">✏️</button>
                     <button class="btn-icon delete" onclick="confirmDelete('airline','${a.id}','${esc(a.name)}')" title="Supprimer">🗑️</button>
                 </div>
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 }
 
 function renderAirports() {
@@ -2021,9 +2021,13 @@ window.openAirlineModal = function(id = null) {
     updateImmPrefixHint();
     renderVolList();
     updateVolLockUI();
+    // Hub
+    const airlineForHub = id ? airlines.find(x => x.id === id) : null;
+    populateHubSelect();
+    const hubEl = document.getElementById('airlineHub');
+    if (hubEl) hubEl.value = (airlineForHub && airlineForHub.hub) ? airlineForHub.hub : '';
     // Destinations
-    const airlineForDest = id ? airlines.find(x => x.id === id) : null;
-    currentDestList = (airlineForDest && airlineForDest.destinations) ? [...airlineForDest.destinations] : [];
+    currentDestList = (airlineForHub && airlineForHub.destinations) ? [...airlineForHub.destinations] : [];
     populateDestSelect();
     renderDestList();
     openModal('airlineModal');
@@ -2108,6 +2112,19 @@ function populateDestSelect() {
         const opt = document.createElement('option');
         opt.value = a.icao;
         opt.textContent = iata + ' — ' + (a.city||a.name||a.icao);
+        sel.appendChild(opt);
+    });
+}
+
+function populateHubSelect() {
+    const sel = document.getElementById('airlineHub');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Choisir l\'aéroport Hub —</option>';
+    airports.forEach(function(a) {
+        const iata = a.iata || a.icao;
+        const opt = document.createElement('option');
+        opt.value = a.icao;
+        opt.textContent = iata + ' — ' + (a.city||a.name||a.icao) + ' (' + a.icao + ')';
         sel.appendChild(opt);
     });
 }
@@ -2273,7 +2290,8 @@ window.saveAirline = async function() {
     const immPrefix = document.getElementById('airlineImmPrefix').value.trim().toUpperCase();
     const immLocked = document.getElementById('immatLocked').checked;
     const volLocked = document.getElementById('volLocked').checked;
-    const data = { name, prefix, iata, color: selectedColor, country,
+    const hub = (document.getElementById('airlineHub') && document.getElementById('airlineHub').value) || '';
+    const data = { name, prefix, iata, country, hub,
                    immPrefix, immLocked, immatriculations: currentImmatList,
                    volLocked, volNumbers: currentVolList,
                    destinations: currentDestList,
