@@ -269,11 +269,11 @@ function populateSelects() {
     
     // Use admin config airports if available, else fallback to DESTINATIONS constant
     const destinationsList = (adminConfig && adminConfig.airports && adminConfig.airports.length)
-        ? adminConfig.airports.map(a => ({ code: a.icao, name: a.name }))
+        ? adminConfig.airports.map(a => ({ code: a.icao, iata: a.iata, name: a.city || a.name }))
         : DESTINATIONS;
     
     destinationsList.forEach(dest => {
-        const label = `${dest.code} – ${dest.name}`;
+        const label = dest.iata ? `${dest.iata} (${dest.code}) – ${dest.name}` : `${dest.code} – ${dest.name}`;
         [elements.fromSelect, elements.toSelect, elements.fFrom, elements.fTo, elements.fStopover].forEach(sel => {
             const opt = document.createElement('option');
             opt.value = dest.code;
@@ -686,9 +686,27 @@ async function autoFillFromFlightNumber(flightNum) {
                     if (typeEl) { typeEl.value = rec.type; updateRouteByType(); }
                 }
             }
+            // Convertir IATA → ICAO si nécessaire (flight_numbers stocke IATA)
+            function _iataToIcao(code) {
+                if (!code) return '';
+                if (!adminConfig || !adminConfig.airports) return code;
+                const ap = adminConfig.airports.find(a => a.iata === code);
+                return ap ? ap.icao : code;
+            }
             // Remplir De / Vers
-            if (rec.from && elements.fFrom) elements.fFrom.value = rec.from;
-            if (rec.to   && elements.fTo)   elements.fTo.value   = rec.to;
+            const fromCode = _iataToIcao(rec.from);
+            const toCode   = _iataToIcao(rec.to);
+            if (fromCode && elements.fFrom) elements.fFrom.value = fromCode;
+            if (toCode   && elements.fTo)   elements.fTo.value   = toCode;
+            // Remplir Escale si définie
+            if (rec.stopover) {
+                const hasStopEl = document.getElementById('hasStopover');
+                const stopGroup = document.getElementById('stopoverGroup');
+                if (hasStopEl) hasStopEl.checked = true;
+                const stopCode = _iataToIcao(rec.stopover);
+                if (elements.fStopover) elements.fStopover.value = stopCode;
+                if (stopGroup) stopGroup.style.display = '';
+            }
         }
         // Toujours tenter l'auto-fill du numéro d'autorisation
         await autoFillAuth();
