@@ -551,56 +551,58 @@ function getFormData() {
     };
 }
 
-function updateVolField(company) {
-    if (!adminConfig || !adminConfig.airlines) return;
-    const airlineData = adminConfig.airlines.find(a => a.name === company);
-    if (!airlineData) return;
-
-    const fVol = elements.fVol;
+// updateVolField — lit depuis Firebase collection flight_numbers
+async function updateVolField(company) {
+    const fVol   = elements.fVol;
     const parent = fVol.parentNode;
-
-    // Remove existing select if any
+    // Supprimer select existant
     const existingSelect = parent.querySelector('#fVolSelect');
     if (existingSelect) existingSelect.remove();
+    if (!company || !window.db) { fVol.style.display = ''; return; }
 
-    const volList   = airlineData.volNumbers || [];
-    const isLocked  = airlineData.volLocked;
+    try {
+        const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const q    = query(collection(window.db, 'flight_numbers'), where('company','==', company));
+        const snap = await getDocs(q);
+        const volList = snap.docs.map(d => ({ id:d.id, ...d.data() }));
 
-    if (isLocked && volList.length > 0) {
-        fVol.style.display = 'none';
+        // Vérifier si verrouillé dans adminConfig
+        const airlineData = adminConfig && adminConfig.airlines
+            ? adminConfig.airlines.find(a => a.name === company)
+            : null;
+        const isLocked = airlineData && airlineData.volLocked;
 
-        const sel = document.createElement('select');
-        sel.id = 'fVolSelect';
-        sel.required = true;
-        sel.className = fVol.className;
-        sel.style.cssText = fVol.style.cssText;
-        sel.style.display = '';
-
-        const defaultOpt = document.createElement('option');
-        defaultOpt.value = '';
-        defaultOpt.textContent = '— Choisir un numéro de vol —';
-        sel.appendChild(defaultOpt);
-
-        volList.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v;
-            opt.textContent = v;
-            if (fVol.value === v) opt.selected = true;
-            sel.appendChild(opt);
-        });
-
-        parent.insertBefore(sel, fVol.nextSibling);
-        sel.addEventListener('change', () => {
-            fVol.value = sel.value;
-            autoFillFromFlightNumber(sel.value);
-            setTimeout(autoFillAuth, 200);
-        });
-        if (fVol.value) sel.value = fVol.value;
-
-    } else {
+        if (isLocked && volList.length > 0) {
+            fVol.style.display = 'none';
+            const sel = document.createElement('select');
+            sel.id = 'fVolSelect';
+            sel.required = true;
+            sel.className = fVol.className;
+            sel.style.display = '';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = '— Choisir un numéro de vol —';
+            sel.appendChild(defaultOpt);
+            volList.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.number;
+                opt.textContent = v.number + (v.stopover ? ' (via '+v.stopover+')' : '');
+                if (fVol.value === v.number) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            parent.insertBefore(sel, fVol.nextSibling);
+            sel.addEventListener('change', () => {
+                fVol.value = sel.value;
+                autoFillFromFlightNumber(sel.value);
+                setTimeout(autoFillAuth, 200);
+            });
+            if (fVol.value) sel.value = fVol.value;
+        } else {
+            fVol.style.display = '';
+        }
+    } catch(e) {
+        console.warn('updateVolField Firebase:', e.message);
         fVol.style.display = '';
-        const existingSel = parent.querySelector('#fVolSelect');
-        if (existingSel) existingSel.remove();
     }
 }
 
@@ -665,6 +667,14 @@ async function autoFillFromFlightNumber(flightNum) {
             // Remplir De / Vers
             if (rec.from && elements.fFrom) elements.fFrom.value = rec.from;
             if (rec.to   && elements.fTo)   elements.fTo.value   = rec.to;
+            // Remplir Escale si définie
+            if (rec.stopover) {
+                const hasStopEl = document.getElementById('hasStopover');
+                const stopGroup = document.getElementById('stopoverGroup');
+                if (hasStopEl) hasStopEl.checked = true;
+                if (elements.fStopover) elements.fStopover.value = rec.stopover;
+                if (stopGroup) stopGroup.style.display = '';
+            }
         }
         // Toujours tenter l'auto-fill du numéro d'autorisation
         await autoFillAuth();
