@@ -669,9 +669,14 @@ async function autoFillFromFlightNumber(flightNum) {
     if (!window.db) return;
     try {
         const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const fn = flightNum.toUpperCase().replace(/[-\s]/g, '');
-        const q  = query(collection(window.db, 'flight_numbers'), where('number','==', fn));
-        const snap = await getDocs(q);
+        const fnRaw  = flightNum.toUpperCase().trim();
+        const fnNorm = fnRaw.replace(/[-\s]/g, ''); // sans tirets: L6301
+        // Chercher avec le numéro original ET sans tirets pour couvrir les deux formats
+        const [snapRaw, snapNorm] = await Promise.all([
+            getDocs(query(collection(window.db, 'flight_numbers'), where('number','==', fnRaw))),
+            getDocs(query(collection(window.db, 'flight_numbers'), where('number','==', fnNorm)))
+        ]);
+        const snap = !snapRaw.empty ? snapRaw : snapNorm;
         if (!snap.empty) {
             const rec = snap.docs[0].data();
             // Remplir compagnie
