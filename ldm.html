@@ -269,7 +269,7 @@ let timer       = null;
 // fingerprint = flightNumber|date|registration
 function makeFP(p) {
   return [
-    (p.flightNumber||'').replace(/\s/g,'').toUpperCase(),
+    (p.flightNumber||'').toUpperCase().replace(/[-\s.]/g,''),
     (p.date||'').trim(),
     (p.registration||'').replace(/[\s.\-]/g,'').toUpperCase()
   ].join('|');
@@ -300,7 +300,7 @@ async function checkImportedFromFirebase() {
     if (doc.id.startsWith('cfg-')) return;
     // Fingerprint pour doublon
     const fp = [
-      (d.flightNumber||'').replace(/\s/g,'').toUpperCase(),
+      (d.flightNumber||'').toUpperCase().replace(/[-\s.]/g,''),
       (d.date||'').trim(),
       (d.registration||'').replace(/[\s.\-]/g,'').toUpperCase()
     ].join('|');
@@ -332,7 +332,7 @@ async function checkImportedFromFirebase() {
     em._imported = _fbImported.has(em._fp || '');
     if (em._imported !== wasImported) changed = true;
     // Pré-remplir N° autorisation — priorité: programme_vols (vol+date) > flights (vol seul)
-    const fn   = (em.parsed && em.parsed.flightNumber || '').toUpperCase().replace(/[-\s]/g,'');
+    const fn   = (em.parsed && em.parsed.flightNumber || '').toUpperCase().replace(/[-\s.]/g,'');
     const dt   = (em.parsed && em.parsed.date || '');
     const key  = fn + '__' + dt;
     if (fn && !em.parsed.authorizationNumber) {
