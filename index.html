@@ -182,6 +182,53 @@
             .compare-chart-row { grid-template-columns: 1fr; }
         }
 
+/* ── LOGIN GLOBAL ── */
+#mainLoginOverlay{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+#mainLoginOverlay .login-box{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:20px;
+  padding:44px 40px;
+  width:100%;max-width:380px;
+  backdrop-filter:blur(12px);
+  text-align:center;
+}
+#mainLoginOverlay .login-logo{font-size:48px;margin-bottom:10px;}
+#mainLoginOverlay h2{color:#fff;font-size:20px;font-weight:800;margin:0 0 4px;}
+#mainLoginOverlay .login-sub{color:rgba(255,255,255,0.45);font-size:12px;margin:0 0 28px;}
+#mainLoginOverlay .lf{margin-bottom:14px;text-align:left;}
+#mainLoginOverlay .lf label{display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+#mainLoginOverlay .lf input{
+  width:100%;padding:11px 14px;border-radius:10px;
+  border:1.5px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.07);
+  color:#fff;font-size:14px;font-family:inherit;
+  outline:none;box-sizing:border-box;
+}
+#mainLoginOverlay .lf input:focus{border-color:#38bdf8;}
+#mainLoginOverlay .login-btn{
+  width:100%;padding:13px;border:none;border-radius:10px;
+  background:linear-gradient(135deg,#2B5A8E,#38bdf8);
+  color:#fff;font-size:14px;font-weight:800;cursor:pointer;
+  margin-top:6px;transition:opacity .2s;
+}
+#mainLoginOverlay .login-btn:disabled{opacity:.5;cursor:not-allowed;}
+#mainLoginOverlay .login-err{color:#fc8181;font-size:12px;margin-top:10px;min-height:16px;}
+
+/* ── USER BADGE dans le header ── */
+#userBadge{
+  display:none;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;
+  color:rgba(255,255,255,0.8);cursor:pointer;
+}
+#userBadge:hover{background:rgba(255,255,255,0.14);}
+
 /* AUTH WALL FACTURATION */
 #factWall{display:none;padding:60px 20px;text-align:center;background:#f0f4f8;}
 #factWall .fbox{margin:0 auto;max-width:340px;padding:36px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
@@ -479,13 +526,34 @@
     </style>
 </head>
 <body>
-<div class="container">
+
+<!-- ══ LOGIN GLOBAL ══ -->
+<div id="mainLoginOverlay">
+  <div class="login-box">
+    <div class="login-logo">✈️</div>
+    <h2>ANAC Mauritanie</h2>
+    <p class="login-sub">Suivi des Vols — Accès sécurisé</p>
+    <div class="lf"><label>Identifiant</label>
+      <input type="text" id="mainLoginUser" autocomplete="off" spellcheck="false"
+        onkeydown="if(event.key==='Enter')document.getElementById('mainLoginPass').focus()"></div>
+    <div class="lf"><label>Mot de passe</label>
+      <input type="password" id="mainLoginPass" autocomplete="off"
+        onkeydown="if(event.key==='Enter')doMainLogin()"></div>
+    <button class="login-btn" id="mainLoginBtn" onclick="doMainLogin()">🔓 Connexion</button>
+    <div class="login-err" id="mainLoginErr"></div>
+  </div>
+</div>
+
+<div class="container" id="mainApp" style="display:none;">
     <header>
         <div class="header-content">
             <img src="assets/ANAC-logo.png" alt="ANAC Logo" class="logo">
             <h1>ANAC Mauritanie – Suivi Mensuel des Vols</h1>
             <div style="position:absolute;top:10px;right:10px;display:flex;gap:8px;align-items:center;">
-                <a href="ldm.html" style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.55);text-decoration:none;background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);">📨 LDM/MVT</a>
+                <div id="userBadge" onclick="doLogout()" title="Cliquer pour se déconnecter">
+                  <span id="userBadgeName"></span> <span style="opacity:.5;font-size:10px;">✕</span>
+                </div>
+                <a id="ldmLink" href="ldm.html" style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.55);text-decoration:none;background:rgba(255,255,255,0.08);padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);">📨 LDM/MVT</a>
                 <a href="admin.html" class="admin-link" title="Administration" style="font-size:20px;opacity:0.4;text-decoration:none;position:static;">⚙️</a>
             </div>
         </div>
@@ -754,22 +822,8 @@
     
     <!-- ═══ TAB FACTURATION ═══ -->
     
-<div id="factWall">
-  <div class="fbox">
-    <div style="font-size:30px;margin-bottom:8px;">🧾</div>
-    <h3>Facturation</h3>
-    <p>Connexion requise pour accéder à cet onglet</p>
-    <div class="af"><label>Identifiant</label>
-      <input type="text" id="factU" autocomplete="new-password" spellcheck="false"></div>
-    <div class="af"><label>Mot de passe</label>
-      <input type="password" id="factP" autocomplete="new-password"
-        onkeydown="if(event.key==='Enter')_doFactLogin()"></div>
-    <button class="abtn" id="factBtn" onclick="_doFactLogin()">Connexion</button>
-    <div class="aerr" id="factErr"></div>
-  </div>
-</div>
-
-    <div id="factContent" style="display:none;">
+<div id="factWall" style="display:none;"></div>
+    <div id="factContent">
         <div class="tab-content" id="tab-facturation">
         <div class="fact-section">
 
@@ -1974,50 +2028,129 @@ window.switchTab = function(tab) {
     }
 };
 
-// ══ AUTH FACTURATION ══════════════════════════════════
-const _FS='anac_sess';
-const _FC={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
-let _fdb=null;
-async function _fDB(){if(_fdb)return _fdb;const{initializeApp,getApps}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');const{getFirestore}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const a=getApps().find(x=>x.name==='_fa')||initializeApp(_FC,'_fa');_fdb=getFirestore(a);return _fdb;}
-async function _fChk(u,p){try{const db=await _fDB();const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));const s=await getDocs(q);if(!s.empty){const x=s.docs[0].data();if(x.password!==p)return{ok:false};const perms=x.permissions||[];const hasFact=perms.includes('facturation');if(!hasFact)return{ok:false,noAccess:true};return{ok:true,perms};}const c=await getDoc(doc(db,'flights','cfg-auth'));const su=c.exists()?(c.data().username||'DADY'):'DADY';const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';if(u.toUpperCase()===su.toUpperCase()&&p===sp)return{ok:true,perms:['admin','ldm','facturation','add_flight','edit_flight','delete_flight','import']};return{ok:false};}catch(e){return{ok:false};}}
-async function _fValid(ts){try{const db=await _fDB();const{doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const c=await getDoc(doc(db,'flights','cfg-auth'));if(c.exists()&&(c.data().sessionReset||0)>ts)return false;}catch(e){}return true;}
-function _fSess(){try{return JSON.parse(sessionStorage.getItem(_FS));}catch{return null;}}
-function _showFact(){document.getElementById('factWall').style.display='none';document.getElementById('factContent').style.display='block';if(!window._fctInited){window._fctInited=true;setTimeout(fctInit,80);}}
-window._doFactLogin=async function(){
-  const u=(document.getElementById('factU').value||'').trim();
-  const p=document.getElementById('factP').value||'';
-  const err=document.getElementById('factErr');
-  const btn=document.getElementById('factBtn');
-  err.textContent='';
-  if(!u||!p){err.textContent='Remplissez tous les champs';return;}
-  btn.disabled=true;btn.textContent='...';
-  const res=await _fChk(u,p);
-  btn.disabled=false;btn.textContent='Connexion';
-  if(res.ok){sessionStorage.setItem(_FS,JSON.stringify({u:u.toUpperCase(),ts:Date.now(),perms:res.perms||[]}));_showFact();}
-  else if(res.noAccess){err.textContent='Accès refusé — permission Facturation requise';document.getElementById('factP').value='';}
-  else{err.textContent='Identifiants incorrects';document.getElementById('factP').value='';}
-};
-const _oST=window.switchTab;
-window.switchTab=async function(tab){
-  _oST(tab);
-  if(tab==='facturation'){
-    const s=_fSess();
-    if(s&&await _fValid(s.ts)){_showFact();}
-    else{sessionStorage.removeItem(_FS);document.getElementById('factContent').style.display='none';document.getElementById('factWall').style.display='block';setTimeout(()=>document.getElementById('factU')?.focus(),100);}
-  }
+// ══════════════════════════════════════════════════════
+// AUTH GLOBAL — LOGIN UNIQUE POUR TOUT LE SITE
+// ══════════════════════════════════════════════════════
+const _MS = 'anac_main_sess'; // clé sessionStorage globale
+const _MC = {apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
+let _mdb = null;
+async function _mDB(){if(_mdb)return _mdb;const{initializeApp,getApps}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');const{getFirestore}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const a=getApps().find(x=>x.name==='_ma')||initializeApp(_MC,'_ma');_mdb=getFirestore(a);return _mdb;}
+
+// Vérifier identifiants et retourner les permissions
+async function _mChk(u,p){
+  try{
+    const db=await _mDB();
+    const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));
+    const s=await getDocs(q);
+    if(!s.empty){
+      const x=s.docs[0].data();
+      if(x.password!==p)return{ok:false};
+      return{ok:true,username:x.username,role:x.role||'user',perms:x.permissions||[]};
+    }
+    // Compte admin principal (cfg-auth)
+    const c=await getDoc(doc(db,'flights','cfg-auth'));
+    const su=c.exists()?(c.data().username||'DADY'):'DADY';
+    const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';
+    if(u.toUpperCase()===su.toUpperCase()&&p===sp)
+      return{ok:true,username:su,role:'admin',perms:['admin','ldm','facturation','add_flight','edit_flight','delete_flight','import']};
+    return{ok:false};
+  }catch(e){return{ok:false};}
+}
+
+// Vérifier si la session est encore valide (pas de reset depuis admin)
+async function _mValid(ts){
+  try{const db=await _mDB();const{doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const c=await getDoc(doc(db,'flights','cfg-auth'));if(c.exists()&&(c.data().sessionReset||0)>ts)return false;}catch(e){}return true;
+}
+
+function _mSess(){try{return JSON.parse(sessionStorage.getItem(_MS));}catch{return null;}}
+
+// ── Vérification de permission (utilisée partout) ──────────────
+window._hasPerm = function(perm){
+  const s=_mSess();
+  if(!s)return false;
+  if(s.role==='admin'||s.perms.includes('admin'))return true;
+  return s.perms.includes(perm);
 };
 
-// Vérification des permissions sur les actions du site
-// Appelée depuis app.js pour savoir si l'utilisateur peut faire une action
-window._hasPerm = function(perm) {
-  // Vérifier session facturation (utilisateurs secondaires)
-  const fs = _fSess();
-  if (fs && fs.perms) {
-    if (fs.perms.includes('admin')) return true;
-    return fs.perms.includes(perm);
+// ── Appliquer les permissions à l'UI ──────────────────────────
+function _applyPerms(){
+  const s=_mSess();
+  if(!s)return;
+  const isAdmin=(s.role==='admin'||s.perms.includes('admin'));
+
+  // Badge utilisateur
+  const badge=document.getElementById('userBadge');
+  const badgeName=document.getElementById('userBadgeName');
+  if(badge){badge.style.display='flex';}
+  if(badgeName){badgeName.textContent='👤 '+s.username;}
+
+  // Onglet Facturation
+  const factTab=document.querySelector('[onclick*=\'facturation\']');
+  if(factTab&&!_hasPerm('facturation'))factTab.style.display='none';
+
+  // Lien LDM
+  const ldmLink=document.getElementById('ldmLink');
+  if(ldmLink&&!_hasPerm('ldm'))ldmLink.style.display='none';
+}
+
+// ── Login ──────────────────────────────────────────────────────
+window.doMainLogin = async function(){
+  const u=(document.getElementById('mainLoginUser').value||'').trim();
+  const p=document.getElementById('mainLoginPass').value||'';
+  const err=document.getElementById('mainLoginErr');
+  const btn=document.getElementById('mainLoginBtn');
+  err.textContent='';
+  if(!u||!p){err.textContent='Remplissez tous les champs';return;}
+  btn.disabled=true;btn.textContent='Vérification...';
+  const res=await _mChk(u,p);
+  btn.disabled=false;btn.textContent='🔓 Connexion';
+  if(!res.ok){err.textContent='Identifiants incorrects';document.getElementById('mainLoginPass').value='';return;}
+  // Sauvegarder session
+  sessionStorage.setItem(_MS,JSON.stringify({username:res.username,role:res.role,perms:res.perms,ts:Date.now()}));
+  _showApp();
+};
+
+// ── Déconnexion ────────────────────────────────────────────────
+window.doLogout = function(){
+  if(!confirm('Se déconnecter ?'))return;
+  sessionStorage.removeItem(_MS);
+  location.reload();
+};
+
+// ── Afficher l'application ────────────────────────────────────
+function _showApp(){
+  document.getElementById('mainLoginOverlay').style.display='none';
+  document.getElementById('mainApp').style.display='';
+  _applyPerms();
+  // Init facturation si déjà sur cet onglet
+  if(_hasPerm('facturation')){
+    document.getElementById('factWall').style.display='none';
+    document.getElementById('factContent').style.display='block';
   }
-  // Pas de session secondaire = compte admin principal = tout autorisé
-  return true;
+}
+
+// ── Vérification au chargement ────────────────────────────────
+(async function(){
+  const s=_mSess();
+  if(s&&await _mValid(s.ts)){_showApp();}
+  else{
+    sessionStorage.removeItem(_MS);
+    document.getElementById('mainLoginOverlay').style.display='flex';
+    setTimeout(()=>document.getElementById('mainLoginUser')?.focus(),100);
+  }
+})();
+
+// ── Override switchTab pour facturation ───────────────────────
+const _oST2=window.switchTab;
+window.switchTab=function(tab){
+  if(tab==='facturation'&&!_hasPerm('facturation')){return;}
+  _oST2(tab);
+  if(tab==='facturation'){
+    document.getElementById('factWall').style.display='none';
+    document.getElementById('factContent').style.display='block';
+    if(!window._fctInited){window._fctInited=true;setTimeout(fctInit,80);}
+  }
 };
 
 </script>
