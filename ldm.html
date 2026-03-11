@@ -280,6 +280,8 @@ const _fbImported = new Set();
 
 // Cache: N° vol → authorizationNumber (dernier connu dans Firebase)
 const _authByFlight = {};
+// Cache: "vol__date" → authorizationNumber (depuis programme_vols, prioritaire)
+const _authByFlightDate = {};
 
 async function checkImportedFromFirebase() {
   if (!emails.length) return;
@@ -310,6 +312,17 @@ async function checkImportedFromFirebase() {
     }
   });
 
+  // Lire programme_vols pour auth par vol+date (priorité sur flights)
+  try {
+    const snapProg = await getDocs(collection(db, 'programme_vols'));
+    snapProg.forEach(doc => {
+      const d = doc.data();
+      if (!d.auth || !d.flight || !d.date) return;
+      const key = d.flight.toUpperCase().replace(/[-\s]/g,'') + '__' + d.date;
+      _authByFlightDate[key] = d.auth.toUpperCase();
+    });
+  } catch(e) { console.warn('programme_vols load:', e.message); }
+
   // Mettre à jour chaque email:
   // - marquer importé ou non
   // - pré-remplir authorizationNumber si connu
@@ -318,10 +331,16 @@ async function checkImportedFromFirebase() {
     const wasImported = em._imported;
     em._imported = _fbImported.has(em._fp || '');
     if (em._imported !== wasImported) changed = true;
-    // Pré-remplir N° autorisation depuis Firebase
-    const fn = (em.parsed && em.parsed.flightNumber || '').toUpperCase();
-    if (fn && _authByFlight[fn] && !em.parsed.authorizationNumber) {
-      em.parsed.authorizationNumber = _authByFlight[fn];
+    // Pré-remplir N° autorisation — priorité: programme_vols (vol+date) > flights (vol seul)
+    const fn   = (em.parsed && em.parsed.flightNumber || '').toUpperCase().replace(/[-\s]/g,'');
+    const dt   = (em.parsed && em.parsed.date || '');
+    const key  = fn + '__' + dt;
+    if (fn && !em.parsed.authorizationNumber) {
+      if (dt && _authByFlightDate[key]) {
+        em.parsed.authorizationNumber = _authByFlightDate[key];
+      } else if (_authByFlight[fn]) {
+        em.parsed.authorizationNumber = _authByFlight[fn];
+      }
     }
   });
 
@@ -894,7 +913,36 @@ async function lookupAuthNumber(i) {
     const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
     const db  = getFirestore(app);
 
-    // Recherche exacte: même N° vol + même date
+    // ① Priorité 1: programme_vols (vol + date exacte)
+    if (dt) {
+      const fnNorm = fn.replace(/[-\s]/g,'');
+      const key = fnNorm + '__' + dt;
+      // D'abord dans le cache mémoire
+      if (_authByFlightDate[key]) {
+        authEl.value = _authByFlightDate[key];
+        badge.className = 'auth-badge found';
+        badge.textContent = '✓ Programme';
+        return;
+      }
+      // Sinon requête Firebase
+      const qp = query(collection(db,'programme_vols'),
+        where('flight','==', fnNorm),
+        where('date',  '==', dt)
+      );
+      const snapP = await getDocs(qp);
+      if (!snapP.empty) {
+        const auth = (snapP.docs[0].data().auth || '').toUpperCase();
+        if (auth) {
+          authEl.value = auth;
+          _authByFlightDate[key] = auth;
+          badge.className = 'auth-badge found';
+          badge.textContent = '✓ Programme';
+          return;
+        }
+      }
+    }
+
+    // ② Priorité 2: flights Firebase — recherche exacte vol + date
     if (dt) {
       const q = query(collection(db,'flights'),
         where('flightNumber','==',fn),
@@ -912,7 +960,7 @@ async function lookupAuthNumber(i) {
       }
     }
 
-    // Recherche approchée: même N° vol, date proche (±7 jours)
+    // ③ Priorité 3: flights Firebase — recherche approchée (±7 jours)
     const q2 = query(collection(db,'flights'), where('flightNumber','==',fn));
     const snap2 = await getDocs(q2);
     let best = null, bestDiff = Infinity;
