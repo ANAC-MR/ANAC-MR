@@ -3708,8 +3708,10 @@ window.saveProgImport = async function() {
             const fromFile = authMap[normAuth] || {};
             if (!fromFile.vol && parsedRows.length > 0) missingData.push(auth);
             const docId = company.replace(/[^A-Za-z0-9]/g,'_').substring(0,15)+'__'+auth.replace(/[^A-Za-z0-9]/g,'_');
+            const volRaw  = fromFile.vol||'';
+            const volNorm = volRaw.toUpperCase().replace(/[-\s.]/g,'');
             const d = { auth, company, saison, annee:String(annee),
-                flight:fromFile.vol||'', date:fromFile.date||'',
+                flight:volRaw, flightNorm:volNorm, date:fromFile.date||'',
                 decision:fromFile.dec||'', source:'import',
                 importedAt:new Date().toISOString() };
             await window._setDoc(window._doc(window._db,'programme_vols',docId), d);
