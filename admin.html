@@ -3407,38 +3407,110 @@ window.parseProgFile = async function(input) {
 
 async function parseExcelFile(file) {
     const status = document.getElementById('impStatus');
-    const buf = await file.arrayBuffer();
-    let rows = [];
-    // Charger SheetJS dynamiquement si pas encore disponible
-    if (typeof XLSX === 'undefined') {
-        await new Promise((res, rej) => {
-            const s = document.createElement('script');
-            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-            s.onload = res; s.onerror = rej;
-            document.head.appendChild(s);
-        });
-    }
-    if (typeof XLSX !== 'undefined') {
-        const wb = XLSX.read(buf, {type:'array', cellDates:true, dateNF:'YYYY-MM-DD'});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        // raw:false pour convertir dates automatiquement avec dateNF
-        rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, dateNF:'YYYY-MM-DD'});
-    } else {
-        status.style.color = '#fc8181';
-        status.textContent = 'Impossible de charger le parseur Excel — vérifiez votre connexion';
-        return;
-    }
-    while (rows.length > 0 && rows[0].every(c => !String(c).trim())) rows.shift();
-    if (rows.length < 1) { status.textContent = 'Fichier vide ou illisible'; return; }
+    status.style.color = '#60a5fa';
+    status.textContent = 'Lecture du fichier...';
 
-    // Détecter si la 1ère ligne est un en-tête ou des données
-    // Si col A ressemble à SNA\d+, c'est des données directement (pas d'en-tête)
+    // Charger SheetJS si pas encore disponible
+    if (typeof XLSX === 'undefined') {
+        try {
+            await new Promise((res, rej) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                s.onload = res; s.onerror = rej;
+                document.head.appendChild(s);
+            });
+        } catch(e) {
+            status.style.color = '#fc8181';
+            status.textContent = '❌ Impossible de charger le parseur Excel — vérifiez votre connexion';
+            return;
+        }
+    }
+
+    const buf = await file.arrayBuffer();
+    const uint8 = new Uint8Array(buf);
+    let rows = [];
+
+    try {
+        // Lecture 1 : sans cellDates pour récupérer les numéros de série bruts
+        const wb = XLSX.read(uint8, {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+
+        // Récupérer toutes les cellules avec leurs métadonnées pour détecter les dates
+        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+        rows = [];
+        for (let R = range.s.r; R <= range.e.r; R++) {
+            const row = [];
+            for (let C = range.s.c; C <= range.e.c; C++) {
+                const addr = XLSX.utils.encode_cell({r:R, c:C});
+                const cell = ws[addr];
+                if (!cell) { row.push(''); continue; }
+
+                // Si c'est une date (type 'n' avec format de date, ou type 'd')
+                if (cell.t === 'd') {
+                    // Objet Date direct
+                    row.push(_parseDateObj(cell.v));
+                } else if (cell.t === 'n' && cell.z && _isDateFormat(cell.z)) {
+                    // Numéro de série avec format de date
+                    row.push(_excelSerialToDate(cell.v));
+                } else {
+                    // Valeur texte/nombre normale
+                    row.push(cell.v !== undefined ? cell.v : '');
+                }
+            }
+            rows.push(row);
+        }
+    } catch(e) {
+        // Fallback: lecture basique
+        try {
+            const wb = XLSX.read(uint8, {type:'array'});
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        } catch(e2) {
+            status.style.color = '#fc8181';
+            status.textContent = '❌ Erreur lecture: ' + e2.message;
+            return;
+        }
+    }
+
+    // Nettoyer lignes vides en début
+    while (rows.length > 0 && rows[0].every(c => String(c||'').trim() === '')) rows.shift();
+    if (rows.length < 1) { status.textContent = '❌ Fichier vide ou illisible'; return; }
+
+    // Détecter si ligne 1 = en-tête ou données
     const firstCell = String(rows[0][0]||'').trim().toUpperCase();
     const hasHeader = !/^SNA\d+/.test(firstCell);
 
     window._rawExcelRows = rows;
     window._fileHasHeader = hasHeader;
     showColumnMapper(rows, hasHeader);
+}
+
+// Détecter si un format Excel est une date
+function _isDateFormat(fmt) {
+    if (!fmt) return false;
+    const f = fmt.toLowerCase();
+    return f.includes('yy') || f.includes('mm') || f.includes('dd') ||
+           f.includes('hh') || f.includes('ss') || f === 'general';
+}
+
+// Convertir numéro de série Excel en YYYY-MM-DD
+function _excelSerialToDate(serial) {
+    if (!serial || isNaN(serial)) return String(serial||'');
+    const n = parseFloat(serial);
+    if (n < 1) return String(serial);
+    // Excel commence le 1 janv 1900 = 1 (avec bug 1900 leap year)
+    const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+    return d.getUTCFullYear()+'-'+
+           String(d.getUTCMonth()+1).padStart(2,'0')+'-'+
+           String(d.getUTCDate()).padStart(2,'0');
+}
+
+// Convertir objet Date JS en YYYY-MM-DD
+function _parseDateObj(v) {
+    if (v instanceof Date && !isNaN(v.getTime())) {
+        return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');
+    }
+    return String(v||'');
 }
 
 function showColumnMapper(rows, hasHeader) {
@@ -3586,54 +3658,37 @@ function showColumnMapper(rows, hasHeader) {
     _applyMapping();
 }
 
-// Convertit une date (tout format) en YYYY-MM-DD
+// Convertit n'importe quelle valeur date en YYYY-MM-DD
 function _parseDate(raw) {
     if (raw === null || raw === undefined || raw === '') return '';
 
-    // Objet Date JS (quand cellDates:true)
-    if (raw instanceof Date) {
-        if (isNaN(raw.getTime())) return '';
-        return raw.getFullYear()+'-'+String(raw.getMonth()+1).padStart(2,'0')+'-'+String(raw.getDate()).padStart(2,'0');
-    }
+    // Objet Date JS
+    if (raw instanceof Date) return _parseDateObj(raw);
 
+    // Déjà converti par parseExcelFile (string YYYY-MM-DD)
     const s = String(raw).trim();
     if (!s) return '';
-
-    // Format ISO déjà bon: YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-    // Date française longue: "dimanche 26 octobre 2025" ou "26 octobre 2025"
-    const MOIS = {
-        'JANVIER':1,'FEVRIER':2,'FÉVRIER':2,'MARS':3,'AVRIL':4,'MAI':5,'JUIN':6,
+    // Dates françaises longues: "dimanche 26 octobre 2025"
+    const MOIS = {'JANVIER':1,'FEVRIER':2,'FÉVRIER':2,'MARS':3,'AVRIL':4,'MAI':5,'JUIN':6,
         'JUILLET':7,'AOUT':8,'AOÛT':8,'SEPTEMBRE':9,'OCTOBRE':10,'NOVEMBRE':11,
-        'DECEMBRE':12,'DÉCEMBRE':12
-    };
+        'DECEMBRE':12,'DÉCEMBRE':12};
     const mFR = s.toUpperCase().match(/(\d{1,2})\s+([A-ZÀ-Ü]+)\s+(\d{4})/);
-    if (mFR && MOIS[mFR[2]]) {
+    if (mFR && MOIS[mFR[2]])
         return mFR[3]+'-'+String(MOIS[mFR[2]]).padStart(2,'0')+'-'+mFR[1].padStart(2,'0');
-    }
 
     // DD/MM/YYYY ou DD-MM-YYYY
     const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    if (m1) {
-        // Détecter si c'est DD/MM ou MM/DD selon le contexte
-        const a = parseInt(m1[1]), b = parseInt(m1[2]);
-        // Si premier > 12, c'est forcément le jour
-        if (a > 12) return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
-        // Sinon supposer DD/MM/YYYY (format français)
-        return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
-    }
+    if (m1) return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
 
-    // YYYY/MM/DD
+    // YYYY/MM/DD ou YYYY-MM-DD déjà géré
     const m2 = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
     if (m2) return m2[1]+'-'+m2[2].padStart(2,'0')+'-'+m2[3].padStart(2,'0');
 
-    // Nombre Excel sérialisé (ex: "46030")
+    // Numéro sérialisé Excel (ex: "45957")
     const n = parseFloat(s);
-    if (!isNaN(n) && n > 40000 && n < 60000) {
-        const d = new Date(Math.round((n - 25569) * 86400 * 1000));
-        return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    }
+    if (!isNaN(n) && n > 40000 && n < 60000) return _excelSerialToDate(n);
 
     return s;
 }
