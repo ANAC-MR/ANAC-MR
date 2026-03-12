@@ -639,51 +639,49 @@ async function updateVolField(company) {
 async function autoFillAuth() {
     const flightNum = (elements.fVol && elements.fVol.value.trim()) ||
                       (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value.trim()) || '';
-    const date      = elements.fDate ? elements.fDate.value.trim() : '';
+    const date = elements.fDate ? elements.fDate.value.trim() : '';
     if (!flightNum) return;
     if (!window.db) return;
     // Ne pas écraser un auth déjà saisi manuellement
     if (elements.fAuthNumber && elements.fAuthNumber.value.trim()) return;
 
-    const fn  = normFN(flightNum); // ex: "AT962"
-    const raw = flightNum.trim().toUpperCase(); // format original
+    const fn = normFN(flightNum); // "AT511" — normalise espaces, tirets, majuscules
 
     try {
         const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
-        // Stratégie 1 : flight normalisé + date exacte
         let rec = null;
+
+        // Stratégie 1 : flightNorm + date (nouveau champ stocké depuis la dernière version)
         if (date) {
             const q1 = query(collection(window.db, 'programme_vols'),
-                             where('flight', '==', fn),
-                             where('date',   '==', date));
+                             where('flightNorm', '==', fn),
+                             where('date', '==', date));
             const s1 = await getDocs(q1);
             if (!s1.empty) rec = s1.docs[0].data();
         }
 
-        // Stratégie 2 : flight original + date
-        if (!rec && date) {
+        // Stratégie 2 : flightNorm seul (sans date) — prend le 1er trouvé pour cette compagnie
+        if (!rec) {
             const q2 = query(collection(window.db, 'programme_vols'),
-                             where('flight', '==', raw),
-                             where('date',   '==', date));
+                             where('flightNorm', '==', fn));
             const s2 = await getDocs(q2);
-            if (!s2.empty) rec = s2.docs[0].data();
+            if (!s2.empty) {
+                // Si plusieurs résultats, prendre celui dont la date correspond, sinon le 1er
+                const docs = s2.docs.map(d => d.data());
+                rec = (date && docs.find(d => d.date === date)) || docs[0];
+            }
         }
 
-        // Stratégie 3 : flight normalisé seul (prend le premier trouvé)
+        // Stratégie 3 : anciens docs sans flightNorm — chercher par flight brut normalisé
         if (!rec) {
-            const q3 = query(collection(window.db, 'programme_vols'),
-                             where('flight', '==', fn));
-            const s3 = await getDocs(q3);
-            if (!s3.empty) rec = s3.docs[0].data();
-        }
-
-        // Stratégie 4 : flight original seul
-        if (!rec) {
-            const q4 = query(collection(window.db, 'programme_vols'),
-                             where('flight', '==', raw));
-            const s4 = await getDocs(q4);
-            if (!s4.empty) rec = s4.docs[0].data();
+            const snap = await getDocs(collection(window.db, 'programme_vols'));
+            const all  = snap.docs.map(d => d.data());
+            // Comparer en normalisant le champ flight stocké
+            const match = all.filter(d => normFN(d.flight||'')=== fn);
+            if (match.length > 0) {
+                rec = (date && match.find(d => d.date === date)) || match[0];
+            }
         }
 
         if (rec && rec.auth && elements.fAuthNumber) {
@@ -691,7 +689,7 @@ async function autoFillAuth() {
             elements.fAuthNumber.style.borderColor = '#34d399';
             setTimeout(() => { if (elements.fAuthNumber) elements.fAuthNumber.style.borderColor = ''; }, 2000);
         }
-    } catch(e) { console.warn('autoFillAuth programme_vols:', e.message); }
+    } catch(e) { console.warn('autoFillAuth:', e.message); }
 }
 
 async function autoFillFromFlightNumber(flightNum) {
