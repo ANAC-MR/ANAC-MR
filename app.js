@@ -314,6 +314,11 @@ function attachEventListeners() {
     // Auto-fill N° autorisation quand date change
     if (elements.fDate) {
         elements.fDate.addEventListener('change', () => {
+            // Vider l'auth pour permettre le recalcul selon la nouvelle date
+            if (elements.fAuthNumber) {
+                elements.fAuthNumber.value = '';
+                elements.fAuthNumber.style.borderColor = '';
+            }
             setTimeout(autoFillAuth, 100);
         });
     }
@@ -403,28 +408,37 @@ function openModal(flightId = null) {
                 elements.fAuthNumber.focus();
             }
         } else {
-            // Add mode
+            // Add mode — vider tous les champs
             editingFlightId = null;
             resetForm();
-            
+
             // Update modal title
             const modalTitle = elements.flightModal.querySelector('h2');
             modalTitle.textContent = 'Ajouter un vol';
-            
-            // Set default values
-            elements.fCompany.value = AIRLINES[0];
-            elements.fPassengers.value = '0';
-            elements.fBabies.value = '0';
-            elements.fImm.value = '';
-            elements.fVol.value = '';
+
+            // Vider explicitement chaque champ
+            if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
+            if (elements.fDate)       elements.fDate.value = '';
+            if (elements.fVol)        elements.fVol.value = '';
+            if (elements.fImm)        elements.fImm.value = '';
+            if (elements.fPassengers) elements.fPassengers.value = '0';
+            if (elements.fBabies)     elements.fBabies.value = '0';
             if (elements.hasStopover) elements.hasStopover.checked = false;
-            if (elements.fStopoverPax) elements.fStopoverPax.value = 0;
+            if (elements.fStopover)   elements.fStopover.value = '';
+            if (elements.fStopoverPax)    elements.fStopoverPax.value = 0;
             if (elements.fStopoverBabies) elements.fStopoverBabies.value = 0;
+
+            // Vider le select dynamique fVolSelect si présent
+            const existSel = document.getElementById('fVolSelect');
+            if (existSel) { existSel.value = ''; }
+
             const sg0 = document.getElementById('stopoverGroup');
             if (sg0) sg0.style.display = 'none';
-            
+
+            // Compagnie par défaut
+            elements.fCompany.value = AIRLINES[0];
+
             elements.fDate.focus();
-            // Active bouton DEP + met à jour tout selon la compagnie
             setTimeout(() => {
                 if (window.selectType) window.selectType('DEP');
                 updateFlightNumberPrefix();
@@ -768,14 +782,20 @@ function updateFlightNumberPrefix() {
     updateVolField(company);
 }
 
-// Listener sur le champ fVol (input texte) pour auto-fill depuis flight_numbers
+// Listener sur le champ fVol (input texte) pour auto-fill depuis flight_numbers ET programme_vols
 (function() {
     const fv = document.getElementById('fVol');
     if (fv) {
         let _autoFillTimer;
         fv.addEventListener('input', () => {
             clearTimeout(_autoFillTimer);
-            _autoFillTimer = setTimeout(() => autoFillFromFlightNumber(fv.value.trim()), 600);
+            _autoFillTimer = setTimeout(async () => {
+                await autoFillFromFlightNumber(fv.value.trim());
+                // Après avoir rempli via flight_numbers, tenter le programme_vols
+                if (elements.fAuthNumber && !elements.fAuthNumber.value.trim()) {
+                    await autoFillAuth();
+                }
+            }, 600);
         });
     }
 })();
