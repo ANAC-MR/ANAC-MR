@@ -628,16 +628,21 @@ async function updateVolField(company) {
                 const opt = document.createElement('option');
                 opt.value = v.number;
                 opt.textContent = v.number + (v.stopover ? ' (via ' + v.stopover + ')' : '');
-                if (fVol.value === v.number) opt.selected = true;
+                // Ne pré-sélectionner que si on est en mode édition (editingFlightId défini)
+                if (editingFlightId && fVol.value === v.number) opt.selected = true;
                 sel.appendChild(opt);
             });
             parent.insertBefore(sel, fVol.nextSibling);
             sel.addEventListener('change', () => {
                 fVol.value = sel.value;
+                // Vider auth pour recalcul
+                if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
                 autoFillFromFlightNumber(sel.value);
                 setTimeout(autoFillAuth, 200);
             });
-            if (fVol.value) sel.value = fVol.value;
+            // Restaurer valeur seulement en mode édition
+            if (editingFlightId && fVol.value) sel.value = fVol.value;
+            else sel.value = '';
         } else {
             fVol.style.display = '';
         }
@@ -656,8 +661,7 @@ async function autoFillAuth() {
     const date = elements.fDate ? elements.fDate.value.trim() : '';
     if (!flightNum) return;
     if (!window.db) return;
-    // Ne pas écraser un auth déjà saisi manuellement
-    if (elements.fAuthNumber && elements.fAuthNumber.value.trim()) return;
+    // (pas de blocage — auth est vidé avant chaque déclenchement)
 
     const fn = normFN(flightNum); // "AT511" — normalise espaces, tirets, majuscules
 
@@ -789,12 +793,11 @@ function updateFlightNumberPrefix() {
         let _autoFillTimer;
         fv.addEventListener('input', () => {
             clearTimeout(_autoFillTimer);
+            // Vider auth immédiatement
+            if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
             _autoFillTimer = setTimeout(async () => {
                 await autoFillFromFlightNumber(fv.value.trim());
-                // Après avoir rempli via flight_numbers, tenter le programme_vols
-                if (elements.fAuthNumber && !elements.fAuthNumber.value.trim()) {
-                    await autoFillAuth();
-                }
+                await autoFillAuth();
             }, 600);
         });
     }
