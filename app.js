@@ -640,29 +640,56 @@ async function autoFillAuth() {
     const flightNum = (elements.fVol && elements.fVol.value.trim()) ||
                       (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value.trim()) || '';
     const date      = elements.fDate ? elements.fDate.value.trim() : '';
-    if (!flightNum || !date) return;
+    if (!flightNum) return;
     if (!window.db) return;
+    // Ne pas écraser un auth déjà saisi manuellement
+    if (elements.fAuthNumber && elements.fAuthNumber.value.trim()) return;
 
-    const fn = normFN(flightNum);
-    const key = `${fn}__${date}`;
+    const fn  = normFN(flightNum); // ex: "AT962"
+    const raw = flightNum.trim().toUpperCase(); // format original
 
     try {
         const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
 
-        // 1) Chercher dans programme_vols par clé flight__date
-        const q = query(collection(window.db, 'programme_vols'),
-                        where('flight', '==', fn),
-                        where('date',   '==', date));
-        const snap = await getDocs(q);
+        // Stratégie 1 : flight normalisé + date exacte
+        let rec = null;
+        if (date) {
+            const q1 = query(collection(window.db, 'programme_vols'),
+                             where('flight', '==', fn),
+                             where('date',   '==', date));
+            const s1 = await getDocs(q1);
+            if (!s1.empty) rec = s1.docs[0].data();
+        }
 
-        if (!snap.empty) {
-            const rec = snap.docs[0].data();
-            if (rec.auth && elements.fAuthNumber) {
-                elements.fAuthNumber.value = rec.auth.toUpperCase();
-                // Feedback visuel discret
-                elements.fAuthNumber.style.borderColor = '#34d399';
-                setTimeout(() => { elements.fAuthNumber.style.borderColor = ''; }, 2000);
-            }
+        // Stratégie 2 : flight original + date
+        if (!rec && date) {
+            const q2 = query(collection(window.db, 'programme_vols'),
+                             where('flight', '==', raw),
+                             where('date',   '==', date));
+            const s2 = await getDocs(q2);
+            if (!s2.empty) rec = s2.docs[0].data();
+        }
+
+        // Stratégie 3 : flight normalisé seul (prend le premier trouvé)
+        if (!rec) {
+            const q3 = query(collection(window.db, 'programme_vols'),
+                             where('flight', '==', fn));
+            const s3 = await getDocs(q3);
+            if (!s3.empty) rec = s3.docs[0].data();
+        }
+
+        // Stratégie 4 : flight original seul
+        if (!rec) {
+            const q4 = query(collection(window.db, 'programme_vols'),
+                             where('flight', '==', raw));
+            const s4 = await getDocs(q4);
+            if (!s4.empty) rec = s4.docs[0].data();
+        }
+
+        if (rec && rec.auth && elements.fAuthNumber) {
+            elements.fAuthNumber.value = rec.auth.toUpperCase();
+            elements.fAuthNumber.style.borderColor = '#34d399';
+            setTimeout(() => { if (elements.fAuthNumber) elements.fAuthNumber.style.borderColor = ''; }, 2000);
         }
     } catch(e) { console.warn('autoFillAuth programme_vols:', e.message); }
 }
