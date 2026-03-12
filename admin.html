@@ -3409,40 +3409,179 @@ async function parseExcelFile(file) {
     const buf = await file.arrayBuffer();
     let rows = [];
     if (typeof XLSX !== 'undefined') {
-        const wb = XLSX.read(buf,{type:'array'});
+        const wb = XLSX.read(buf, {type:'array', cellDates:true});
         const ws = wb.Sheets[wb.SheetNames[0]];
-        rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, dateNF:'YYYY-MM-DD'});
     } else {
         const text = new TextDecoder().decode(buf);
-        rows = text.split('\n').map(l=>l.split(/[;,\t]/));
-        status.style.color='#fbbf24';
-        status.textContent='SheetJS non chargé — lecture basique CSV';
+        rows = text.split('\n').map(l => l.split(/[;,\t]/));
+        status.style.color = '#fbbf24';
+        status.textContent = 'SheetJS non chargé — lecture basique CSV';
     }
-    if (rows.length < 2) { status.textContent='Fichier vide'; return; }
-    const header = rows[0].map(h=>String(h).toUpperCase().trim());
-    const iVol  = header.findIndex(h=>h.includes('VOL')||h.includes('FLIGHT')||h.includes('N°'));
-    const iAuth = header.findIndex(h=>h.includes('AUTH')||h.includes('AUTO')||h.includes('SNA')||h.includes('AUTOR'));
-    const iDate = header.findIndex(h=>h.includes('DATE'));
-    const iDec  = header.findIndex(h=>h.includes('DEC')||h.includes('ACCORD')||h.includes('APPRO')||h.includes('REPONSE'));
+    // Ignorer lignes entièrement vides au début
+    while (rows.length > 0 && rows[0].every(c => !String(c).trim())) rows.shift();
+    if (rows.length < 2) { status.textContent = 'Fichier vide ou illisible'; return; }
+
+    window._rawExcelRows = rows;
+    showColumnMapper(rows);
+}
+
+function showColumnMapper(rows) {
+    const status  = document.getElementById('impStatus');
+    const preview = document.getElementById('impPreview');
+    const content = document.getElementById('impPreviewContent');
+
+    const header = rows[0].map((h,i) => ({ label: String(h||'Col '+(i+1)).trim(), idx: i }));
+    const nCols  = header.length;
+
+    // Détection automatique
+    const detect = (keywords) => {
+        const h = header.map(c => c.label.toUpperCase());
+        for (const kw of keywords) {
+            const i = h.findIndex(v => v.includes(kw));
+            if (i >= 0) return i;
+        }
+        return -1;
+    };
+    const autoVol  = detect(['N° VOL','NUM VOL','FLIGHT','N VOL','VOL','NUMÉRO VOL','NUMERO VOL']);
+    const autoAuth = detect(['AUTHOR','AUTH','AUTO','SNA','NUMÉRO AUTO','NUM AUTO','N° AUTO','AUTORISATION']);
+    const autoDate = detect(['DATE']);
+    const autoDec  = detect(['DÉCISION','DECISION','DEC','ACCORD','APPRO','RÉPONSE','REPONSE','STATUT','STATUS']);
+
+    // Aperçu des 3 premières lignes de données
+    const sampleRows = rows.slice(1, 4);
+    const selectStyle = 'background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;';
+    const optNone = '<option value="-1">— Ignorer —</option>';
+    const opts = header.map(c => '<option value="'+c.idx+'">Col '+(c.idx+1)+': '+c.label+'</option>').join('');
+
+    const selVal = (auto) => auto >= 0 ? auto : -1;
+
+    // Table aperçu
+    const thStyle = 'padding:6px 8px;font-size:11px;color:#64748b;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);';
+    const tdStyle = 'padding:5px 8px;font-size:11px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.04);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    const sampleHtml = '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead><tr>'+
+        header.map(c=>'<th style="'+thStyle+'">'+c.label+'</th>').join('')+
+        '</tr></thead><tbody>'+
+        sampleRows.map(row=>'<tr>'+header.map((_,i)=>'<td style="'+tdStyle+'">'+String(row[i]||'')+'</td>').join('')+'</tr>').join('')+
+        '</tbody></table>';
+
+    content.innerHTML =
+        '<div style="font-size:12px;font-weight:700;color:#818cf8;margin-bottom:8px;">📊 Aperçu du fichier ('+rows.length+' lignes) — Associez les colonnes :</div>'+
+        '<div style="overflow-x:auto;margin-bottom:12px;">'+sampleHtml+'</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
+            '<div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">N° Vol</label>'+
+                '<select id="mapVol" style="'+selectStyle+'" onchange="_applyMapping()">'+optNone+opts+'</select></div>'+
+            '<div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">N° Autorisation</label>'+
+                '<select id="mapAuth" style="'+selectStyle+'" onchange="_applyMapping()">'+optNone+opts+'</select></div>'+
+            '<div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">Date</label>'+
+                '<select id="mapDate" style="'+selectStyle+'" onchange="_applyMapping()">'+optNone+opts+'</select></div>'+
+            '<div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">Décision</label>'+
+                '<select id="mapDec" style="'+selectStyle+'" onchange="_applyMapping()">'+optNone+opts+'</select></div>'+
+        '</div>'+
+        '<div id="mapResult" style="margin-top:8px;font-size:12px;"></div>';
+
+    preview.style.display = '';
+
+    // Appliquer la sélection automatique
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val >= 0) el.value = val;
+    };
+    setVal('mapVol',  selVal(autoVol));
+    setVal('mapAuth', selVal(autoAuth));
+    setVal('mapDate', selVal(autoDate));
+    setVal('mapDec',  selVal(autoDec));
+
+    status.style.color = '#34d399';
+    status.textContent = '✅ Fichier lu — vérifiez le mapping des colonnes ci-dessous';
+    _applyMapping();
+}
+
+function _parseDate(raw) {
+    if (!raw) return '';
+    const s = String(raw).trim();
+    // Format ISO déjà bon: YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // DD/MM/YYYY
+    const m1 = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (m1) return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
+    // MM/DD/YYYY
+    const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (m2) {
+        const yr = m2[3].length===2 ? '20'+m2[3] : m2[3];
+        return yr+'-'+m2[1].padStart(2,'0')+'-'+m2[2].padStart(2,'0');
+    }
+    // Nombre Excel (jours depuis 1900)
+    const n = parseFloat(s);
+    if (!isNaN(n) && n > 40000 && n < 60000) {
+        const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+        return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    }
+    return s; // garder tel quel si non reconnu
+}
+
+window._applyMapping = function() {
+    const rows = window._rawExcelRows;
+    if (!rows) return;
+    const iVol  = parseInt(document.getElementById('mapVol')  ? document.getElementById('mapVol').value  : -1);
+    const iAuth = parseInt(document.getElementById('mapAuth') ? document.getElementById('mapAuth').value : -1);
+    const iDate = parseInt(document.getElementById('mapDate') ? document.getElementById('mapDate').value : -1);
+    const iDec  = parseInt(document.getElementById('mapDec')  ? document.getElementById('mapDec').value  : -1);
+
     const parsed = [];
     rows.slice(1).forEach(row => {
-        const vol  = iVol  >=0 ? String(row[iVol] ||'').trim() : '';
-        const auth = iAuth >=0 ? String(row[iAuth]||'').trim() : '';
-        const date = iDate >=0 ? String(row[iDate]||'').trim() : '';
-        const dec  = iDec  >=0 ? String(row[iDec] ||'').trim() : '';
-        if (vol||auth) parsed.push({vol,auth,date,dec});
+        const vol  = iVol  >= 0 ? String(row[iVol] ||'').trim() : '';
+        const auth = iAuth >= 0 ? String(row[iAuth]||'').trim() : '';
+        const date = iDate >= 0 ? _parseDate(row[iDate]) : '';
+        const dec  = iDec  >= 0 ? String(row[iDec] ||'').trim() : '';
+        if (vol || auth) parsed.push({vol, auth, date, dec});
     });
-    status.style.color='#34d399';
-    status.textContent='✅ '+parsed.length+' lignes trouvées.';
-    const auths = parsed.map(p=>p.auth).filter(a=>/SNA\d+[\-\/]\d+/i.test(a)).sort();
+
+    window._parsedProgRows = parsed;
+
+    const res = document.getElementById('mapResult');
+    if (res) {
+        const withDate = parsed.filter(p=>p.date).length;
+        const withVol  = parsed.filter(p=>p.vol).length;
+        const withAuth = parsed.filter(p=>p.auth).length;
+        res.innerHTML = '<span style="color:#34d399;font-weight:700;">'+parsed.length+' lignes</span>'+
+            ' · <span style="color:#60a5fa;">'+withVol+' avec N° vol</span>'+
+            ' · <span style="color:#D4AF37;">'+withAuth+' avec N° auth</span>'+
+            ' · <span style="color:#818cf8;">'+withDate+' avec date</span>';
+    }
+
+    // Auto-remplir les plages auth si des SNA trouvés
+    const auths = parsed.map(p=>p.auth).filter(a=>/SNA\d+[\-\/]\d+/i.test(a))
+                        .sort((a,b)=>a.localeCompare(b));
     if (auths.length > 0) {
-        const fEl=document.getElementById('impAuthFirst'), lEl=document.getElementById('impAuthLast');
-        if (fEl&&!fEl.value) fEl.value=auths[0].toUpperCase();
-        if (lEl&&!lEl.value) lEl.value=auths[auths.length-1].toUpperCase();
+        // Séparer en groupes de préfixes
+        const prefixGroups = {};
+        auths.forEach(a => {
+            const m = a.match(/^(SNA\d+)/i);
+            if (m) {
+                const p = m[1].toUpperCase();
+                if (!prefixGroups[p]) prefixGroups[p] = [];
+                prefixGroups[p].push(a.toUpperCase());
+            }
+        });
+        const prefixes = Object.keys(prefixGroups).sort();
+        const fEl  = document.getElementById('impAuthFirst');
+        const lEl  = document.getElementById('impAuthLast');
+        const fEl2 = document.getElementById('impAuthFirst2');
+        const lEl2 = document.getElementById('impAuthLast2');
+        if (prefixes[0] && fEl && !fEl.value) {
+            const g = prefixGroups[prefixes[0]];
+            fEl.value = g[0];
+            if (lEl && !lEl.value) lEl.value = g[g.length-1];
+        }
+        if (prefixes[1] && fEl2 && !fEl2.value) {
+            const g = prefixGroups[prefixes[1]];
+            fEl2.value = g[0];
+            if (lEl2 && !lEl2.value) lEl2.value = g[g.length-1];
+        }
         previewAuthRange();
     }
-    window._parsedProgRows = parsed;
-}
+};
 
 window.saveProgImport = async function() {
     const company = document.getElementById('impCompany').value;
