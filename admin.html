@@ -3037,7 +3037,7 @@ async function loadProgramme() {
 // ── Rendu par compagnie ────────────────────────────────────────────
 // Compagnie et mois sélectionnés pour les toggles
 let _progSelectedCompany = null;
-let _progSelectedMonth   = null; // null = tous les mois
+let _progSelectedMonth   = new Date().getMonth() + 1; // mois courant par défaut (1-12)
 
 function renderProgrammeByCompany() {
     const container = document.getElementById('programmeByCompany');
@@ -3105,8 +3105,14 @@ function renderProgrammeByCompany() {
 
     // ── Toggles mois ──
     const moisKeys = Object.keys(moisDispo).map(Number).sort((a,b)=>a-b);
-    // Valider _progSelectedMonth
-    if (_progSelectedMonth && !moisDispo[_progSelectedMonth]) _progSelectedMonth = null;
+    // Valider _progSelectedMonth — si le mois sélectionné n'a pas de vols, prendre le 1er dispo
+    if (_progSelectedMonth && !moisDispo[_progSelectedMonth]) {
+        _progSelectedMonth = moisKeys.length > 0 ? moisKeys[0] : null;
+    }
+    // Si aucun mois sélectionné mais qu'il y a des mois disponibles, prendre le 1er
+    if (!_progSelectedMonth && moisKeys.length > 0) {
+        _progSelectedMonth = moisKeys[0];
+    }
 
     const moisHtml = moisKeys.length > 0
         ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">' +
@@ -3225,7 +3231,7 @@ window._selectProgCompanyIdx = function(gi) {
     const g = window._progGroupList && window._progGroupList[parseInt(gi)];
     if (g) {
         _progSelectedCompany = g.company;
-        _progSelectedMonth   = null; // reset mois quand on change de compagnie
+        _progSelectedMonth   = new Date().getMonth() + 1; // reset au mois courant
         renderProgrammeByCompany();
     }
 };
