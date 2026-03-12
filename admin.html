@@ -3418,56 +3418,131 @@ async function parseExcelFile(file) {
         status.style.color = '#fbbf24';
         status.textContent = 'SheetJS non chargé — lecture basique CSV';
     }
-    // Ignorer lignes entièrement vides au début
     while (rows.length > 0 && rows[0].every(c => !String(c).trim())) rows.shift();
-    if (rows.length < 2) { status.textContent = 'Fichier vide ou illisible'; return; }
+    if (rows.length < 1) { status.textContent = 'Fichier vide ou illisible'; return; }
+
+    // Détecter si la 1ère ligne est un en-tête ou des données
+    // Si col A ressemble à SNA\d+, c'est des données directement (pas d'en-tête)
+    const firstCell = String(rows[0][0]||'').trim().toUpperCase();
+    const hasHeader = !/^SNA\d+/.test(firstCell);
 
     window._rawExcelRows = rows;
-    showColumnMapper(rows);
+    window._fileHasHeader = hasHeader;
+    showColumnMapper(rows, hasHeader);
 }
 
-function showColumnMapper(rows) {
+function showColumnMapper(rows, hasHeader) {
     const status  = document.getElementById('impStatus');
     const preview = document.getElementById('impPreview');
     const content = document.getElementById('impPreviewContent');
 
-    const header = rows[0].map((h,i) => ({ label: String(h||'Col '+(i+1)).trim(), idx: i }));
-    const nCols  = header.length;
+    // Si pas d'en-tête, créer des headers génériques ET détecter par contenu
+    let header;
+    let dataRows;
+    if (hasHeader) {
+        header   = rows[0].map((h,i) => ({ label: String(h||'Col '+(i+1)).trim(), idx: i }));
+        dataRows = rows.slice(1);
+    } else {
+        // Détecter les colonnes par contenu de la 1ère ligne de données
+        header   = rows[0].map((_,i) => ({ label: 'Col '+(i+1), idx: i }));
+        dataRows = rows;
+        // Nommer les colonnes intelligemment selon le contenu
+        rows[0].forEach((val,i) => {
+            const s = String(val||'').trim().toUpperCase();
+            if (/^SNA\d+[\/\-]\d+/.test(s))        header[i].label = 'N° Auth';
+            else if (/^[A-Z]{1,2}\s?\d{3,4}/.test(s)) header[i].label = 'N° Vol';
+            else if (/\d{4}/.test(s) && (s.includes('JANVIER')||s.includes('FEVRIER')||
+                     s.includes('MARS')||s.includes('AVRIL')||s.includes('MAI')||
+                     s.includes('JUIN')||s.includes('JUILLET')||s.includes('AOUT')||
+                     s.includes('AOÛT')||s.includes('SEPTEMBRE')||s.includes('OCTOBRE')||
+                     s.includes('NOVEMBRE')||s.includes('DECEMBRE')||s.includes('DÉCEMBRE')))
+                header[i].label = 'Date';
+            else if (/\d{4}\/ANAC/.test(s)||s.includes('ACCORD')||s.includes('APPRO')||
+                     s.includes('DECISION')||s.includes('DEC '))
+                header[i].label = 'Décision';
+        });
+    }
 
-    // Détection automatique
+    const nCols = header.length;
+
+    // Détection auto des colonnes
     const detect = (keywords) => {
-        const h = header.map(c => c.label.toUpperCase());
+        // D'abord chercher dans les labels détectés
         for (const kw of keywords) {
-            const i = h.findIndex(v => v.includes(kw));
+            const i = header.findIndex(c => c.label.toUpperCase().includes(kw));
             if (i >= 0) return i;
+        }
+        // Puis chercher dans le contenu de la 1ère ligne de données
+        const firstData = dataRows[0] || [];
+        for (let i = 0; i < firstData.length; i++) {
+            const s = String(firstData[i]||'').trim().toUpperCase();
+            for (const kw of keywords) {
+                if (s.includes(kw)) return i;
+            }
         }
         return -1;
     };
-    const autoVol  = detect(['N° VOL','NUM VOL','FLIGHT','N VOL','VOL','NUMÉRO VOL','NUMERO VOL']);
-    const autoAuth = detect(['AUTHOR','AUTH','AUTO','SNA','NUMÉRO AUTO','NUM AUTO','N° AUTO','AUTORISATION']);
-    const autoDate = detect(['DATE']);
-    const autoDec  = detect(['DÉCISION','DECISION','DEC','ACCORD','APPRO','RÉPONSE','REPONSE','STATUT','STATUS']);
+
+    // Détection spécialisée: chercher colonne avec SNA dans les données
+    let autoAuth = header.findIndex(h => h.label === 'N° Auth');
+    if (autoAuth < 0) {
+        for (let i = 0; i < nCols; i++) {
+            if (dataRows.slice(0,3).some(r => /^SNA\d+[\/\-]\d+/i.test(String(r[i]||'')))) {
+                autoAuth = i; break;
+            }
+        }
+    }
+    // Chercher colonne avec N° vol (ex: AT 511, TU 511...)
+    let autoVol = header.findIndex(h => h.label === 'N° Vol');
+    if (autoVol < 0) {
+        for (let i = 0; i < nCols; i++) {
+            if (dataRows.slice(0,3).some(r => /^[A-Z]{1,3}\s?\d{3,4}$/i.test(String(r[i]||'').trim()))) {
+                autoVol = i; break;
+            }
+        }
+    }
+    // Chercher colonne avec date (contient un mois ou YYYY-MM-DD)
+    let autoDate = header.findIndex(h => h.label === 'Date');
+    if (autoDate < 0) {
+        const moisFR = ['JANVIER','FÉVRIER','FEVRIER','MARS','AVRIL','MAI','JUIN','JUILLET',
+                        'AOÛT','AOUT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DÉCEMBRE','DECEMBRE'];
+        for (let i = 0; i < nCols; i++) {
+            if (dataRows.slice(0,3).some(r => {
+                const s = String(r[i]||'').toUpperCase();
+                return moisFR.some(m => s.includes(m)) || /^\d{4}-\d{2}-\d{2}$/.test(s.trim());
+            })) { autoDate = i; break; }
+        }
+    }
+    // Chercher décision
+    let autoDec = header.findIndex(h => h.label === 'Décision');
+    if (autoDec < 0) {
+        for (let i = 0; i < nCols; i++) {
+            if (dataRows.slice(0,3).some(r => /ANAC|\/ANAC\//.test(String(r[i]||'')))) {
+                autoDec = i; break;
+            }
+        }
+    }
 
     // Aperçu des 3 premières lignes de données
-    const sampleRows = rows.slice(1, 4);
+    const sampleRows = dataRows.slice(0, 3);
     const selectStyle = 'background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;';
     const optNone = '<option value="-1">— Ignorer —</option>';
-    const opts = header.map(c => '<option value="'+c.idx+'">Col '+(c.idx+1)+': '+c.label+'</option>').join('');
+    const opts = header.map(c => '<option value="'+c.idx+'">Col '+(c.idx+1)+' ('+c.label+')</option>').join('');
 
-    const selVal = (auto) => auto >= 0 ? auto : -1;
+    const thStyle = 'padding:6px 8px;font-size:11px;color:#64748b;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);white-space:nowrap;';
+    const tdStyle = 'padding:5px 8px;font-size:11px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.04);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
 
-    // Table aperçu
-    const thStyle = 'padding:6px 8px;font-size:11px;color:#64748b;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);';
-    const tdStyle = 'padding:5px 8px;font-size:11px;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,0.04);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-    const sampleHtml = '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead><tr>'+
+    const sampleHtml = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead><tr>'+
         header.map(c=>'<th style="'+thStyle+'">'+c.label+'</th>').join('')+
         '</tr></thead><tbody>'+
-        sampleRows.map(row=>'<tr>'+header.map((_,i)=>'<td style="'+tdStyle+'">'+String(row[i]||'')+'</td>').join('')+'</tr>').join('')+
-        '</tbody></table>';
+        sampleRows.map(row=>'<tr>'+header.map((_,i)=>'<td style="'+tdStyle+'" title="'+String(row[i]||'')+'">'+String(row[i]||'').substring(0,25)+(String(row[i]||'').length>25?'…':'')+'</td>').join('')+'</tr>').join('')+
+        '</tbody></table></div>';
 
     content.innerHTML =
-        '<div style="font-size:12px;font-weight:700;color:#818cf8;margin-bottom:8px;">📊 Aperçu du fichier ('+rows.length+' lignes) — Associez les colonnes :</div>'+
-        '<div style="overflow-x:auto;margin-bottom:12px;">'+sampleHtml+'</div>'+
+        '<div style="font-size:12px;font-weight:700;color:#818cf8;margin-bottom:8px;">📊 Aperçu ('+
+        (dataRows.length)+' lignes'+(hasHeader ? ', avec en-tête' : ', sans en-tête détecté')+
+        ') — Vérifiez le mapping :</div>'+
+        sampleHtml+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'+
             '<div><label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">N° Vol</label>'+
                 '<select id="mapVol" style="'+selectStyle+'" onchange="_applyMapping()">'+optNone+opts+'</select></div>'+
@@ -3482,54 +3557,65 @@ function showColumnMapper(rows) {
 
     preview.style.display = '';
 
-    // Appliquer la sélection automatique
-    const setVal = (id, val) => {
-        const el = document.getElementById(id);
-        if (el && val >= 0) el.value = val;
-    };
-    setVal('mapVol',  selVal(autoVol));
-    setVal('mapAuth', selVal(autoAuth));
-    setVal('mapDate', selVal(autoDate));
-    setVal('mapDec',  selVal(autoDec));
+    // Appliquer sélection auto
+    const setVal = (id, val) => { const el=document.getElementById(id); if(el && val>=0) el.value=val; };
+    setVal('mapVol',  autoVol);
+    setVal('mapAuth', autoAuth);
+    setVal('mapDate', autoDate);
+    setVal('mapDec',  autoDec);
 
     status.style.color = '#34d399';
-    status.textContent = '✅ Fichier lu — vérifiez le mapping des colonnes ci-dessous';
+    status.textContent = '✅ Fichier lu — vérifiez le mapping ci-dessous';
     _applyMapping();
 }
 
+// Convertit une date texte en YYYY-MM-DD
 function _parseDate(raw) {
     if (!raw) return '';
     const s = String(raw).trim();
-    // Format ISO déjà bon: YYYY-MM-DD
+    if (!s) return '';
+
+    // Format ISO: YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    // DD/MM/YYYY
-    const m1 = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
-    if (m1) return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
-    // MM/DD/YYYY
-    const m2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-    if (m2) {
-        const yr = m2[3].length===2 ? '20'+m2[3] : m2[3];
-        return yr+'-'+m2[1].padStart(2,'0')+'-'+m2[2].padStart(2,'0');
+
+    // Date française longue: "dimanche 26 octobre 2025" ou "26 octobre 2025"
+    const MOIS = {
+        'JANVIER':1,'FEVRIER':2,'FÉVRIER':2,'MARS':3,'AVRIL':4,'MAI':5,'JUIN':6,
+        'JUILLET':7,'AOUT':8,'AOÛT':8,'SEPTEMBRE':9,'OCTOBRE':10,'NOVEMBRE':11,
+        'DECEMBRE':12,'DÉCEMBRE':12
+    };
+    const mFR = s.toUpperCase().match(/(\d{1,2})\s+([A-ZÀ-Ü]+)\s+(\d{4})/);
+    if (mFR && MOIS[mFR[2]]) {
+        return mFR[3]+'-'+String(MOIS[mFR[2]]).padStart(2,'0')+'-'+mFR[1].padStart(2,'0');
     }
-    // Nombre Excel (jours depuis 1900)
+
+    // DD/MM/YYYY ou DD-MM-YYYY
+    const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m1) return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
+
+    // Nombre Excel (jours depuis 1900-01-00)
     const n = parseFloat(s);
     if (!isNaN(n) && n > 40000 && n < 60000) {
         const d = new Date(Math.round((n - 25569) * 86400 * 1000));
         return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     }
-    return s; // garder tel quel si non reconnu
+
+    return s;
 }
 
 window._applyMapping = function() {
-    const rows = window._rawExcelRows;
+    const rows     = window._rawExcelRows;
+    const hasHdr   = window._fileHasHeader;
     if (!rows) return;
-    const iVol  = parseInt(document.getElementById('mapVol')  ? document.getElementById('mapVol').value  : -1);
-    const iAuth = parseInt(document.getElementById('mapAuth') ? document.getElementById('mapAuth').value : -1);
-    const iDate = parseInt(document.getElementById('mapDate') ? document.getElementById('mapDate').value : -1);
-    const iDec  = parseInt(document.getElementById('mapDec')  ? document.getElementById('mapDec').value  : -1);
+    const dataRows = hasHdr ? rows.slice(1) : rows;
+
+    const iVol  = parseInt((document.getElementById('mapVol')  || {value:'-1'}).value);
+    const iAuth = parseInt((document.getElementById('mapAuth') || {value:'-1'}).value);
+    const iDate = parseInt((document.getElementById('mapDate') || {value:'-1'}).value);
+    const iDec  = parseInt((document.getElementById('mapDec')  || {value:'-1'}).value);
 
     const parsed = [];
-    rows.slice(1).forEach(row => {
+    dataRows.forEach(row => {
         const vol  = iVol  >= 0 ? String(row[iVol] ||'').trim() : '';
         const auth = iAuth >= 0 ? String(row[iAuth]||'').trim() : '';
         const date = iDate >= 0 ? _parseDate(row[iDate]) : '';
@@ -3544,40 +3630,42 @@ window._applyMapping = function() {
         const withDate = parsed.filter(p=>p.date).length;
         const withVol  = parsed.filter(p=>p.vol).length;
         const withAuth = parsed.filter(p=>p.auth).length;
-        res.innerHTML = '<span style="color:#34d399;font-weight:700;">'+parsed.length+' lignes</span>'+
-            ' · <span style="color:#60a5fa;">'+withVol+' avec N° vol</span>'+
-            ' · <span style="color:#D4AF37;">'+withAuth+' avec N° auth</span>'+
-            ' · <span style="color:#818cf8;">'+withDate+' avec date</span>';
+        const sample   = parsed[0] ? ' · Ex: '+parsed[0].auth+' | '+parsed[0].vol+' | '+parsed[0].date : '';
+        res.innerHTML =
+            '<span style="color:#34d399;font-weight:700;">'+parsed.length+' lignes</span>'+
+            ' · <span style="color:#60a5fa;">'+withVol+' vols</span>'+
+            ' · <span style="color:#D4AF37;">'+withAuth+' auth</span>'+
+            ' · <span style="color:#818cf8;">'+withDate+' dates</span>'+
+            '<span style="color:#475569;font-size:11px;">'+sample+'</span>';
     }
 
-    // Auto-remplir les plages auth si des SNA trouvés
-    const auths = parsed.map(p=>p.auth).filter(a=>/SNA\d+[\-\/]\d+/i.test(a))
-                        .sort((a,b)=>a.localeCompare(b));
+    // Auto-remplir plages auth
+    const auths = parsed.map(p=>p.auth).filter(a=>/^SNA\d+[\/\-]\d+$/i.test(a.trim()))
+                        .map(a=>a.trim().toUpperCase()).sort((a,b)=>a.localeCompare(b));
     if (auths.length > 0) {
-        // Séparer en groupes de préfixes
         const prefixGroups = {};
         auths.forEach(a => {
-            const m = a.match(/^(SNA\d+)/i);
+            const m = a.match(/^(SNA\d+)/);
             if (m) {
-                const p = m[1].toUpperCase();
+                const p = m[1];
                 if (!prefixGroups[p]) prefixGroups[p] = [];
-                prefixGroups[p].push(a.toUpperCase());
+                prefixGroups[p].push(a);
             }
         });
         const prefixes = Object.keys(prefixGroups).sort();
-        const fEl  = document.getElementById('impAuthFirst');
-        const lEl  = document.getElementById('impAuthLast');
-        const fEl2 = document.getElementById('impAuthFirst2');
-        const lEl2 = document.getElementById('impAuthLast2');
-        if (prefixes[0] && fEl && !fEl.value) {
+        const setIfEmpty = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = val; // toujours mettre à jour
+        };
+        if (prefixes[0]) {
             const g = prefixGroups[prefixes[0]];
-            fEl.value = g[0];
-            if (lEl && !lEl.value) lEl.value = g[g.length-1];
+            setIfEmpty('impAuthFirst', g[0]);
+            setIfEmpty('impAuthLast',  g[g.length-1]);
         }
-        if (prefixes[1] && fEl2 && !fEl2.value) {
+        if (prefixes[1]) {
             const g = prefixGroups[prefixes[1]];
-            fEl2.value = g[0];
-            if (lEl2 && !lEl2.value) lEl2.value = g[g.length-1];
+            setIfEmpty('impAuthFirst2', g[0]);
+            setIfEmpty('impAuthLast2',  g[g.length-1]);
         }
         previewAuthRange();
     }
