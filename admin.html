@@ -3419,8 +3419,9 @@ async function parseExcelFile(file) {
         });
     }
     if (typeof XLSX !== 'undefined') {
-        const wb = XLSX.read(buf, {type:'array', cellDates:true});
+        const wb = XLSX.read(buf, {type:'array', cellDates:true, dateNF:'YYYY-MM-DD'});
         const ws = wb.Sheets[wb.SheetNames[0]];
+        // raw:false pour convertir dates automatiquement avec dateNF
         rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, dateNF:'YYYY-MM-DD'});
     } else {
         status.style.color = '#fc8181';
@@ -3517,8 +3518,15 @@ function showColumnMapper(rows, hasHeader) {
                         'AOÛT','AOUT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DÉCEMBRE','DECEMBRE'];
         for (let i = 0; i < nCols; i++) {
             if (dataRows.slice(0,3).some(r => {
-                const s = String(r[i]||'').toUpperCase();
-                return moisFR.some(m => s.includes(m)) || /^\d{4}-\d{2}-\d{2}$/.test(s.trim());
+                const v = r[i];
+                // Objet Date JS (SheetJS avec cellDates:true)
+                if (v instanceof Date && !isNaN(v.getTime())) return true;
+                const s = String(v||'').toUpperCase().trim();
+                return moisFR.some(m => s.includes(m)) ||
+                       /^\d{4}-\d{2}-\d{2}$/.test(s) ||
+                       /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(s) ||
+                       // Nombre Excel sérialisé (date)
+                       (!isNaN(parseFloat(s)) && parseFloat(s) > 40000 && parseFloat(s) < 60000);
             })) { autoDate = i; break; }
         }
     }
@@ -3578,13 +3586,20 @@ function showColumnMapper(rows, hasHeader) {
     _applyMapping();
 }
 
-// Convertit une date texte en YYYY-MM-DD
+// Convertit une date (tout format) en YYYY-MM-DD
 function _parseDate(raw) {
-    if (!raw) return '';
+    if (raw === null || raw === undefined || raw === '') return '';
+
+    // Objet Date JS (quand cellDates:true)
+    if (raw instanceof Date) {
+        if (isNaN(raw.getTime())) return '';
+        return raw.getFullYear()+'-'+String(raw.getMonth()+1).padStart(2,'0')+'-'+String(raw.getDate()).padStart(2,'0');
+    }
+
     const s = String(raw).trim();
     if (!s) return '';
 
-    // Format ISO: YYYY-MM-DD
+    // Format ISO déjà bon: YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
     // Date française longue: "dimanche 26 octobre 2025" ou "26 octobre 2025"
@@ -3600,9 +3615,20 @@ function _parseDate(raw) {
 
     // DD/MM/YYYY ou DD-MM-YYYY
     const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    if (m1) return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
+    if (m1) {
+        // Détecter si c'est DD/MM ou MM/DD selon le contexte
+        const a = parseInt(m1[1]), b = parseInt(m1[2]);
+        // Si premier > 12, c'est forcément le jour
+        if (a > 12) return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
+        // Sinon supposer DD/MM/YYYY (format français)
+        return m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
+    }
 
-    // Nombre Excel (jours depuis 1900-01-00)
+    // YYYY/MM/DD
+    const m2 = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (m2) return m2[1]+'-'+m2[2].padStart(2,'0')+'-'+m2[3].padStart(2,'0');
+
+    // Nombre Excel sérialisé (ex: "46030")
     const n = parseFloat(s);
     if (!isNaN(n) && n > 40000 && n < 60000) {
         const d = new Date(Math.round((n - 25569) * 86400 * 1000));
