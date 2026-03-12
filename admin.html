@@ -957,6 +957,7 @@
         .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
         .empty-state p { font-size: 14px; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -3408,15 +3409,23 @@ async function parseExcelFile(file) {
     const status = document.getElementById('impStatus');
     const buf = await file.arrayBuffer();
     let rows = [];
+    // Charger SheetJS dynamiquement si pas encore disponible
+    if (typeof XLSX === 'undefined') {
+        await new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+        });
+    }
     if (typeof XLSX !== 'undefined') {
         const wb = XLSX.read(buf, {type:'array', cellDates:true});
         const ws = wb.Sheets[wb.SheetNames[0]];
         rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, dateNF:'YYYY-MM-DD'});
     } else {
-        const text = new TextDecoder().decode(buf);
-        rows = text.split('\n').map(l => l.split(/[;,\t]/));
-        status.style.color = '#fbbf24';
-        status.textContent = 'SheetJS non chargé — lecture basique CSV';
+        status.style.color = '#fc8181';
+        status.textContent = 'Impossible de charger le parseur Excel — vérifiez votre connexion';
+        return;
     }
     while (rows.length > 0 && rows[0].every(c => !String(c).trim())) rows.shift();
     if (rows.length < 1) { status.textContent = 'Fichier vide ou illisible'; return; }
