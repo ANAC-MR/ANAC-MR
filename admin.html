@@ -3033,7 +3033,7 @@ function renderProgrammeByCompany() {
 
     // ── Toggles compagnies ──
     const togglesHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' +
-        groupList.map(g => {
+        groupList.map((g, gi) => {
             const saisi   = g.vols.filter(r=>_isSaisi(r)).length;
             const total   = g.vols.length;
             const restant = total - saisi;
