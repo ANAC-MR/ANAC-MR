@@ -1239,8 +1239,9 @@
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>📋 Programme de Vols</h2>
-                        <p>Vols importés non encore saisis dans le système + recherche par N° autorisation</p>
+                        <p>Gérez les programmes importés par compagnie — vert = saisi, rouge = manquant</p>
                     </div>
+                    <button class="btn-primary" onclick="openImportProgModal()">📥 Importer un Programme</button>
                 </div>
 
                 <!-- Recherche par N° autorisation -->
@@ -1255,22 +1256,9 @@
                     </div>
                 </div>
 
-                <!-- Vols restants du programme -->
-                <div class="card">
-                    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-                        <span>📊 Vols non encore saisis</span>
-                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                            <input type="text" id="progSearch" placeholder="Rechercher vol, compagnie..."
-                                oninput="filterProgramme()"
-                                style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 12px;color:#fff;font-size:12px;width:200px;">
-                            <select id="progFilterCompany" onchange="filterProgramme()"
-                                style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 10px;color:#fff;font-size:12px;">
-                                <option value="">Toutes les compagnies</option>
-                            </select>
-                            <span id="progCount" style="font-size:12px;color:#64748b;"></span>
-                        </div>
-                    </div>
-                    <div id="programmeList"><div style="text-align:center;color:var(--text-dim);padding:30px;font-size:13px;">Chargement...</div></div>
+                <!-- Liste par compagnie -->
+                <div id="programmeByCompany">
+                    <div style="text-align:center;color:var(--text-dim);padding:40px;font-size:13px;">Chargement...</div>
                 </div>
             </div>
 
@@ -1480,6 +1468,62 @@
     </div>
 </div>
 
+<!-- Modal Import Programme de Vols -->
+<div class="modal-overlay" id="importProgModal">
+    <div class="modal-box" style="max-width:560px;">
+        <div class="modal-header">
+            <h3>📥 Importer un Programme de Vols</h3>
+            <button class="modal-close" onclick="closeModal('importProgModal')">×</button>
+        </div>
+        <div class="form-grid">
+            <div class="field-group form-full">
+                <label>Compagnie *</label>
+                <select id="impCompany" style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;">
+                    <option value="">— Choisir une compagnie —</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>Saison *</label>
+                <select id="impSaison" style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;">
+                    <option value="ETE">Été</option>
+                    <option value="HIVER">Hiver</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <label>Année *</label>
+                <input type="number" id="impAnnee" min="2020" max="2099" style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;">
+            </div>
+            <div class="field-group">
+                <label>Premier N° autorisation *</label>
+                <input type="text" id="impAuthFirst" placeholder="Ex: SNA26-0001" maxlength="20"
+                    oninput="this.value=this.value.toUpperCase();previewAuthRange()"
+                    style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;">
+            </div>
+            <div class="field-group">
+                <label>Dernier N° autorisation *</label>
+                <input type="text" id="impAuthLast" placeholder="Ex: SNA26-0120" maxlength="20"
+                    oninput="this.value=this.value.toUpperCase();previewAuthRange()"
+                    style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;">
+            </div>
+            <div class="field-group form-full">
+                <label>Fichier programme (Excel ou Word)</label>
+                <input type="file" id="impFile" accept=".xlsx,.xls,.docx,.doc,.csv"
+                    style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;"
+                    onchange="parseProgFile(this)">
+                <span class="hint">Optionnel — vous pouvez aussi saisir uniquement la plage de N° auth</span>
+            </div>
+            <div class="field-group form-full" id="impPreview" style="display:none;">
+                <div id="impPreviewContent"></div>
+            </div>
+        </div>
+        <div id="impStatus" style="font-size:13px;font-weight:600;min-height:20px;margin:8px 0;padding:0 4px;"></div>
+        <div class="modal-footer">
+            <button class="btn-ghost" onclick="closeModal('importProgModal')">Annuler</button>
+            <button class="btn-gold" onclick="saveProgImport()">💾 Importer dans Firebase</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Compagnie -->
 <div class="modal-overlay" id="airlineModal">
     <div class="modal-box">
@@ -1656,8 +1700,8 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
     getFirestore, collection, doc,
-    getDocs, getDoc, addDoc, updateDoc, deleteDoc,
-    setDoc, onSnapshot, serverTimestamp, query, orderBy, where
+    getDocs, getDoc, addDoc, updateDoc, deleteDoc, setDoc,
+    onSnapshot, serverTimestamp, query, orderBy, where
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // ─── Firebase ───────────────────────────
@@ -2932,86 +2976,278 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 
 // ══ PROGRAMME DE VOLS ══════════════════════════════════════════
 
-let _allProgramme  = [];  // tous les vols programme_vols
-let _allSaisis     = new Set(); // clés "vol__date" déjà saisis dans flights
+let _allProgramme = [];
+let _allSaisis    = new Set();
 
+// ── Chargement principal ──────────────────────────────────────────
 async function loadProgramme() {
-    const div = document.getElementById('programmeList');
-    if (!div) return;
-    div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:30px;">Chargement...</div>';
+    const container = document.getElementById('programmeByCompany');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;">Chargement...</div>';
     try {
-        // Charger programme_vols ET flights en parallèle
         const [snapProg, snapFlights] = await Promise.all([
             window._getDocs(window._collection(window._db, 'programme_vols')),
             window._getDocs(window._collection(window._db, 'flights'))
         ]);
-
-        // Construire le set des vols déjà saisis
         _allSaisis.clear();
         snapFlights.forEach(d => {
             const r = d.data();
             if (d.id.startsWith('cfg-')) return;
             const fn = (r.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
             const dt = (r.date||'').trim();
-            if (fn && dt) _allSaisis.add(fn + '__' + dt);
+            if (fn && dt) _allSaisis.add(fn+'__'+dt);
+            if (r.authorizationNumber) _allSaisis.add('AUTH__'+r.authorizationNumber.toUpperCase().replace(/[-\s]/g,''));
         });
-
-        // Garder seulement les vols programme non encore saisis
-        _allProgramme = snapProg.docs
-            .map(d => ({id:d.id,...d.data()}))
-            .filter(r => {
-                if (!r.flight || !r.date) return false;
-                const key = r.flight.toUpperCase().replace(/[-\s]/g,'') + '__' + r.date;
-                return !_allSaisis.has(key);
-            })
-            .sort((a,b) => (a.date||'').localeCompare(b.date||''));
-
-        // Peupler le filtre compagnie
-        const sel = document.getElementById('progFilterCompany');
-        if (sel) {
-            const companies = [...new Set(_allProgramme.map(r=>r.company||r.code||'').filter(Boolean))].sort();
-            sel.innerHTML = '<option value="">Toutes les compagnies</option>';
-            companies.forEach(co => {
-                const o = document.createElement('option'); o.value=o.textContent=co; sel.appendChild(o);
-            });
-        }
-
-        renderProgramme(_allProgramme);
+        _allProgramme = snapProg.docs.map(d => ({id:d.id,...d.data()}));
+        renderProgrammeByCompany();
     } catch(e) {
-        div.innerHTML = '<div style="color:#fc8181;padding:12px;font-size:13px;">Erreur: '+e.message+'</div>';
+        container.innerHTML = '<div style="color:#fc8181;padding:20px;">Erreur: '+e.message+'</div>';
     }
 }
 
-function renderProgramme(list) {
-    const div = document.getElementById('programmeList');
-    if (!div) return;
-    document.getElementById('progCount').textContent = list.length + ' vol(s) restant(s)';
-    if (!list.length) {
-        div.innerHTML = '<div style="text-align:center;color:#34d399;padding:30px;font-size:14px;font-weight:700;">✅ Tous les vols du programme ont été saisis !</div>';
+// ── Rendu par compagnie ────────────────────────────────────────────
+function renderProgrammeByCompany() {
+    const container = document.getElementById('programmeByCompany');
+    if (!container) return;
+    if (!_allProgramme.length) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">Aucun programme importé.<br><br><button class=\"btn-primary\" onclick=\"openImportProgModal()\" style=\"margin-top:4px;">📥 Importer un programme</button></div>';
         return;
     }
-    div.innerHTML = '<table class="fn-table"><thead><tr>'+
-        '<th>N° Auth</th><th>N° Vol</th><th>Compagnie</th><th>Date</th><th>Décision</th>'+
-        '</tr></thead><tbody>'+
-        list.map(r => `<tr>
-            <td><strong style="color:#D4AF37;font-size:13px;">${r.auth||'—'}</strong></td>
-            <td><strong style="color:#e2e8f0;">${r.flight||'—'}</strong></td>
-            <td style="color:#94a3b8;">${r.company||r.code||'—'}</td>
-            <td style="color:#94a3b8;">${r.date||'—'}</td>
-            <td><span style="font-size:11px;padding:2px 8px;border-radius:8px;background:rgba(99,102,241,0.15);color:#818cf8;">${r.decision||'—'}</span></td>
-        </tr>`).join('')+
-        '</tbody></table>';
+    const groups = {};
+    _allProgramme.forEach(r => {
+        const key = (r.company||'')+'|||'+(r.saison||'')+'|||'+(r.annee||'');
+        if (!groups[key]) groups[key] = {company:r.company||r.code||'',saison:r.saison||'',annee:r.annee||'',vols:[]};
+        groups[key].vols.push(r);
+    });
+    container.innerHTML = Object.values(groups).sort((a,b)=>a.company.localeCompare(b.company)).map(g => {
+        const saisi   = g.vols.filter(r => _isSaisi(r)).length;
+        const total   = g.vols.length;
+        const restant = total - saisi;
+        const pct     = total ? Math.round(saisi/total*100) : 0;
+        const gk      = encodeURIComponent(g.company+'|||'+g.saison+'|||'+g.annee);
+        const lblSais = g.saison==='ETE' ? '☀️ Été' : g.saison==='HIVER' ? '❄️ Hiver' : g.saison;
+        const rows = g.vols.sort((a,b)=>(a.auth||'').localeCompare(b.auth||'')).map(r => {
+            const ok = _isSaisi(r);
+            const bg = ok ? 'rgba(52,211,153,0.07)' : 'rgba(252,129,129,0.05)';
+            const ac = ok ? '#34d399' : '#fc8181';
+            const ic = ok ? '✅' : '🔴';
+            const btn = ok ? '<td></td>' : '<td><button onclick="addManualFlight(&quot;'+r.id+'&quot;)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">+ Saisir</button></td>';
+            return '<tr style="background:'+bg+'">'+
+                '<td>'+ic+' <strong style="color:'+ac+';font-size:12px;font-family:monospace;">'+esc(r.auth||'—')+'</strong></td>'+
+                '<td style="color:#e2e8f0;font-weight:600;">'+esc(r.flight||'—')+'</td>'+
+                '<td style="color:#94a3b8;font-size:12px;">'+esc(r.date||'—')+'</td>'+
+                '<td style="color:#818cf8;font-size:11px;">'+esc(r.decision||'—')+'</td>'+
+                btn+'</tr>';
+        }).join('');
+        return '<div class="card" style="margin-bottom:16px;">'+
+            '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">'+
+                '<div>'+
+                    '<div style="font-size:15px;font-weight:700;color:#e2e8f0;">'+esc(g.company)+'</div>'+
+                    '<div style="font-size:12px;color:#64748b;margin-top:2px;">'+lblSais+' '+esc(g.annee)+
+                        ' — '+total+' vols · <span style="color:#34d399;">'+saisi+' saisis</span>'+
+                        ' · <span style="color:#fc8181;">'+restant+' restants</span></div>'+
+                '</div>'+
+                '<div style="display:flex;gap:8px;align-items:center;">'+
+                    '<div style="width:120px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">'+
+                        '<div style="width:'+pct+'%;height:100%;background:linear-gradient(90deg,#34d399,#059669);border-radius:3px;"></div>'+
+                    '</div>'+
+                    '<span style="font-size:12px;color:#64748b;">'+pct+'%</span>'+
+                    '<button onclick="confirmDeleteProgramme(&quot;'+gk+'&quot;)" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗑️ Supprimer</button>'+
+                '</div>'+
+            '</div>'+
+            '<table class="fn-table" style="font-size:12px;"><thead><tr>'+
+                '<th>N° Auth</th><th>N° Vol</th><th>Date</th><th>Décision</th><th></th>'+
+            '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    }).join('');
 }
 
-window.filterProgramme = function() {
-    const q  = (document.getElementById('progSearch').value||'').toUpperCase();
-    const co = (document.getElementById('progFilterCompany').value||'').toUpperCase();
-    const filtered = _allProgramme.filter(r => {
-        const matchQ  = !q  || (r.flight||'').toUpperCase().includes(q) || (r.auth||'').toUpperCase().includes(q) || (r.company||'').toUpperCase().includes(q);
-        const matchCo = !co || (r.company||r.code||'').toUpperCase() === co;
-        return matchQ && matchCo;
+function _isSaisi(r) {
+    const fn = (r.flight||'').toUpperCase().replace(/[-\s.]/g,'');
+    const dt = (r.date||'').trim();
+    if (fn && dt && _allSaisis.has(fn+'__'+dt)) return true;
+    if (r.auth && _allSaisis.has('AUTH__'+r.auth.toUpperCase().replace(/[-\s]/g,''))) return true;
+    return false;
+}
+
+window.confirmDeleteProgramme = function(gkEnc) {
+    const gk = decodeURIComponent(gkEnc);
+    const [company,saison,annee] = gk.split('|||');
+    if (!confirm('Supprimer tout le programme de '+company+' ('+saison+' '+annee+') ?')) return;
+    deleteProgramme(company,saison,annee);
+};
+
+async function deleteProgramme(company,saison,annee) {
+    try {
+        const toDel = _allProgramme.filter(r=>r.company===company&&r.saison===saison&&r.annee===annee);
+        await Promise.all(toDel.map(r=>window._deleteDoc(window._doc(window._db,'programme_vols',r.id))));
+        _allProgramme = _allProgramme.filter(r=>!(r.company===company&&r.saison===saison&&r.annee===annee));
+        showNotif(toDel.length+' vols supprimés pour '+company,'success');
+        renderProgrammeByCompany();
+    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+}
+
+window.addManualFlight = function(progId) {
+    const r = _allProgramme.find(x=>x.id===progId);
+    if (!r) return;
+    const params = new URLSearchParams({vol:r.flight||'',auth:r.auth||'',company:r.company||'',date:r.date||'',decision:r.decision||''});
+    window.open('../index.html?'+params.toString(),'_blank');
+};
+
+// ── Modal Import ──────────────────────────────────────────────────
+window.openImportProgModal = function() {
+    const sel = document.getElementById('impCompany');
+    if (sel) {
+        sel.innerHTML = '<option value="">— Choisir une compagnie —</option>';
+        airlines.forEach(a => {
+            const o = document.createElement('option');
+            o.value = o.textContent = a.name;
+            sel.appendChild(o);
+        });
+    }
+    const yr = document.getElementById('impAnnee');
+    if (yr && !yr.value) yr.value = new Date().getFullYear();
+    document.getElementById('impAuthFirst').value = '';
+    document.getElementById('impAuthLast').value  = '';
+    document.getElementById('impStatus').textContent = '';
+    document.getElementById('impPreview').style.display = 'none';
+    const fi = document.getElementById('impFile');
+    if (fi) fi.value = '';
+    window._parsedProgRows = [];
+    openModal('importProgModal');
+};
+
+window.previewAuthRange = function() {
+    const first = (document.getElementById('impAuthFirst').value||'').trim().toUpperCase();
+    const last  = (document.getElementById('impAuthLast').value||'').trim().toUpperCase();
+    const preview = document.getElementById('impPreview');
+    const content = document.getElementById('impPreviewContent');
+    if (!first || !last) { preview.style.display='none'; return; }
+    const range = buildAuthRange(first, last);
+    if (!range) { preview.style.display='none'; return; }
+    preview.style.display = '';
+    content.innerHTML = '<div style="font-size:12px;color:#34d399;">✅ Séquence de '+range.list.length+' N° auth ('+range.list[0]+' → '+range.list[range.list.length-1]+')</div>';
+};
+
+function buildAuthRange(first, last) {
+    const re = /^(SNA\d+)[\-\/](\d+)$/;
+    const mF = first.match(re), mL = last.match(re);
+    if (!mF||!mL||mF[1]!==mL[1]) return null;
+    const prefix = mF[1];
+    const numF = parseInt(mF[2],10), numL = parseInt(mL[2],10);
+    if (isNaN(numF)||isNaN(numL)||numF>numL) return null;
+    const pad = Math.max(mF[2].length, mL[2].length);
+    const list = [];
+    for (let i=numF; i<=numL; i++) list.push(prefix+'-'+String(i).padStart(pad,'0'));
+    return {list};
+}
+
+window.parseProgFile = async function(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const status = document.getElementById('impStatus');
+    status.style.color = '#60a5fa';
+    status.textContent = 'Lecture du fichier...';
+    try {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (['xlsx','xls','csv'].includes(ext)) {
+            await parseExcelFile(file);
+        } else {
+            status.style.color = '#fbbf24';
+            status.textContent = '⚠️ Word non supporté — utilisez Excel/CSV. Saisissez manuellement la plage N° auth.';
+        }
+    } catch(e) {
+        status.style.color = '#fc8181';
+        status.textContent = 'Erreur: '+e.message;
+    }
+};
+
+async function parseExcelFile(file) {
+    const status = document.getElementById('impStatus');
+    const buf = await file.arrayBuffer();
+    let rows = [];
+    if (typeof XLSX !== 'undefined') {
+        const wb = XLSX.read(buf,{type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    } else {
+        const text = new TextDecoder().decode(buf);
+        rows = text.split('\n').map(l=>l.split(/[;,\t]/));
+        status.style.color='#fbbf24';
+        status.textContent='SheetJS non chargé — lecture basique CSV';
+    }
+    if (rows.length < 2) { status.textContent='Fichier vide'; return; }
+    const header = rows[0].map(h=>String(h).toUpperCase().trim());
+    const iVol  = header.findIndex(h=>h.includes('VOL')||h.includes('FLIGHT')||h.includes('N°'));
+    const iAuth = header.findIndex(h=>h.includes('AUTH')||h.includes('AUTO')||h.includes('SNA')||h.includes('AUTOR'));
+    const iDate = header.findIndex(h=>h.includes('DATE'));
+    const iDec  = header.findIndex(h=>h.includes('DEC')||h.includes('ACCORD')||h.includes('APPRO')||h.includes('REPONSE'));
+    const parsed = [];
+    rows.slice(1).forEach(row => {
+        const vol  = iVol  >=0 ? String(row[iVol] ||'').trim() : '';
+        const auth = iAuth >=0 ? String(row[iAuth]||'').trim() : '';
+        const date = iDate >=0 ? String(row[iDate]||'').trim() : '';
+        const dec  = iDec  >=0 ? String(row[iDec] ||'').trim() : '';
+        if (vol||auth) parsed.push({vol,auth,date,dec});
     });
-    renderProgramme(filtered);
+    status.style.color='#34d399';
+    status.textContent='✅ '+parsed.length+' lignes trouvées.';
+    const auths = parsed.map(p=>p.auth).filter(a=>/SNA\d+[\-\/]\d+/i.test(a)).sort();
+    if (auths.length > 0) {
+        const fEl=document.getElementById('impAuthFirst'), lEl=document.getElementById('impAuthLast');
+        if (fEl&&!fEl.value) fEl.value=auths[0].toUpperCase();
+        if (lEl&&!lEl.value) lEl.value=auths[auths.length-1].toUpperCase();
+        previewAuthRange();
+    }
+    window._parsedProgRows = parsed;
+}
+
+window.saveProgImport = async function() {
+    const company = document.getElementById('impCompany').value;
+    const saison  = document.getElementById('impSaison').value;
+    const annee   = document.getElementById('impAnnee').value;
+    const first   = (document.getElementById('impAuthFirst').value||'').trim().toUpperCase();
+    const last    = (document.getElementById('impAuthLast').value||'').trim().toUpperCase();
+    const status  = document.getElementById('impStatus');
+    if (!company) { showNotif('Choisissez une compagnie','error'); return; }
+    if (!first||!last) { showNotif('Entrez le premier et dernier N° autorisation','error'); return; }
+    const range = buildAuthRange(first,last);
+    if (!range) { showNotif('Format invalide — ex: SNA26-0001','error'); return; }
+    status.style.color='#60a5fa'; status.textContent='Enregistrement...';
+    try {
+        const parsedRows = window._parsedProgRows || [];
+        const authMap = {};
+        parsedRows.forEach(p=>{ if(p.auth) authMap[p.auth.toUpperCase().replace(/[-\s]/g,'')] = p; });
+        const existing = _allProgramme.filter(r=>r.company===company&&r.saison===saison&&r.annee===String(annee));
+        const existingAuths = new Set(existing.map(r=>(r.auth||'').toUpperCase()));
+        let added=0, skipped=0;
+        const missingData = [];
+        await Promise.all(range.list.map(async auth => {
+            if (existingAuths.has(auth)) { skipped++; return; }
+            const normAuth = auth.replace(/[-\s]/g,'');
+            const fromFile = authMap[normAuth] || {};
+            if (!fromFile.vol && parsedRows.length > 0) missingData.push(auth);
+            const docId = company.replace(/[^A-Za-z0-9]/g,'_').substring(0,15)+'__'+auth.replace(/[^A-Za-z0-9]/g,'_');
+            const d = { auth, company, saison, annee:String(annee),
+                flight:fromFile.vol||'', date:fromFile.date||'',
+                decision:fromFile.dec||'', source:'import',
+                importedAt:new Date().toISOString() };
+            await window._setDoc(window._doc(window._db,'programme_vols',docId), d);
+            added++;
+        }));
+        status.style.color='#34d399';
+        let msg='✅ '+added+' vols importés';
+        if (skipped) msg+=' · '+skipped+' déjà existants ignorés';
+        if (missingData.length>0) msg+=' · ⚠️ '+missingData.length+' N° sans données fichier';
+        status.textContent=msg;
+        showNotif(added+' vols ajoutés pour '+company,'success');
+        await loadProgramme();
+        closeModal('importProgModal');
+        window._parsedProgRows=[];
+    } catch(e) {
+        status.style.color='#fc8181';
+        status.textContent='Erreur: '+e.message;
+        showNotif('Erreur: '+e.message,'error');
+    }
 };
 
 window.searchByAuth = async function() {
