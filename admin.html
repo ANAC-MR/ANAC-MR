@@ -3006,60 +3006,152 @@ async function loadProgramme() {
 }
 
 // ── Rendu par compagnie ────────────────────────────────────────────
+// Compagnie sélectionnée pour le toggle
+let _progSelectedCompany = null;
+
 function renderProgrammeByCompany() {
     const container = document.getElementById('programmeByCompany');
     if (!container) return;
     if (!_allProgramme.length) {
-        container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">Aucun programme importé.<br><br><button class=\"btn-primary\" onclick=\"openImportProgModal()\" style=\"margin-top:4px;">📥 Importer un programme</button></div>';
+        container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">Aucun programme importé.<br><br><button class="btn-primary" onclick="openImportProgModal()" style="margin-top:8px;">📥 Importer un programme</button></div>';
         return;
     }
+
+    // Grouper par (company + saison + annee)
     const groups = {};
     _allProgramme.forEach(r => {
         const key = (r.company||'')+'|||'+(r.saison||'')+'|||'+(r.annee||'');
         if (!groups[key]) groups[key] = {company:r.company||r.code||'',saison:r.saison||'',annee:r.annee||'',vols:[]};
         groups[key].vols.push(r);
     });
-    container.innerHTML = Object.values(groups).sort((a,b)=>a.company.localeCompare(b.company)).map(g => {
-        const saisi   = g.vols.filter(r => _isSaisi(r)).length;
-        const total   = g.vols.length;
-        const restant = total - saisi;
-        const pct     = total ? Math.round(saisi/total*100) : 0;
-        const gk      = encodeURIComponent(g.company+'|||'+g.saison+'|||'+g.annee);
-        const lblSais = g.saison==='ETE' ? '☀️ Été' : g.saison==='HIVER' ? '❄️ Hiver' : g.saison;
-        const rows = g.vols.sort((a,b)=>(a.auth||'').localeCompare(b.auth||'')).map(r => {
-            const ok = _isSaisi(r);
-            const bg = ok ? 'rgba(52,211,153,0.07)' : 'rgba(252,129,129,0.05)';
-            const ac = ok ? '#34d399' : '#fc8181';
-            const ic = ok ? '✅' : '🔴';
-            const btn = ok ? '<td></td>' : '<td><button onclick="addManualFlight(&quot;'+r.id+'&quot;)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">+ Saisir</button></td>';
-            return '<tr style="background:'+bg+'">'+
-                '<td>'+ic+' <strong style="color:'+ac+';font-size:12px;font-family:monospace;">'+esc(r.auth||'—')+'</strong></td>'+
-                '<td style="color:#e2e8f0;font-weight:600;">'+esc(r.flight||'—')+'</td>'+
-                '<td style="color:#94a3b8;font-size:12px;">'+esc(r.date||'—')+'</td>'+
-                '<td style="color:#818cf8;font-size:11px;">'+esc(r.decision||'—')+'</td>'+
-                btn+'</tr>';
-        }).join('');
-        return '<div class="card" style="margin-bottom:16px;">'+
-            '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">'+
-                '<div>'+
-                    '<div style="font-size:15px;font-weight:700;color:#e2e8f0;">'+esc(g.company)+'</div>'+
-                    '<div style="font-size:12px;color:#64748b;margin-top:2px;">'+lblSais+' '+esc(g.annee)+
-                        ' — '+total+' vols · <span style="color:#34d399;">'+saisi+' saisis</span>'+
-                        ' · <span style="color:#fc8181;">'+restant+' restants</span></div>'+
-                '</div>'+
-                '<div style="display:flex;gap:8px;align-items:center;">'+
-                    '<div style="width:120px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">'+
-                        '<div style="width:'+pct+'%;height:100%;background:linear-gradient(90deg,#34d399,#059669);border-radius:3px;"></div>'+
-                    '</div>'+
-                    '<span style="font-size:12px;color:#64748b;">'+pct+'%</span>'+
-                    '<button onclick="confirmDeleteProgramme(&quot;'+gk+'&quot;)" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗑️ Supprimer</button>'+
-                '</div>'+
-            '</div>'+
-            '<table class="fn-table" style="font-size:12px;"><thead><tr>'+
-                '<th>N° Auth</th><th>N° Vol</th><th>Date</th><th>Décision</th><th></th>'+
-            '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    const groupList = Object.values(groups).sort((a,b)=>a.company.localeCompare(b.company));
+
+    // Sélection initiale
+    if (!_progSelectedCompany || !groupList.find(g=>g.company===_progSelectedCompany)) {
+        _progSelectedCompany = groupList[0].company;
+    }
+
+    // ── Toggles compagnies ──
+    const togglesHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;">' +
+        groupList.map(g => {
+            const saisi   = g.vols.filter(r=>_isSaisi(r)).length;
+            const total   = g.vols.length;
+            const restant = total - saisi;
+            const active  = g.company === _progSelectedCompany;
+            const dotColor= restant===0 ? '#34d399' : '#fc8181';
+            const bgStyle = active
+                ? 'background:rgba(212,175,55,0.18);border-color:#D4AF37;color:#D4AF37;'
+                : 'background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#94a3b8;';
+            return '<button data-gi="' + gi + '" onclick="_selectProgCompanyIdx(this.dataset.gi)" ' +
+                'style="' + bgStyle + 'border:1px solid;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;">' +
+                '<span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;"></span>' +
+                esc(g.company) + ' <span style="opacity:.6;font-weight:400;">(' + restant + '/' + total + ')</span>' +
+                '</button>';
+        }).join('') +
+    '</div>';
+
+    // ── Card de la compagnie sélectionnée ──
+    const g   = groupList.find(x=>x.company===_progSelectedCompany) || groupList[0];
+    const saisi   = g.vols.filter(r=>_isSaisi(r)).length;
+    const total   = g.vols.length;
+    const restant = total - saisi;
+    const pct     = total ? Math.round(saisi/total*100) : 0;
+    const gk      = g.company+'|||'+g.saison+'|||'+g.annee;
+    const lblSais = g.saison==='ETE' ? '☀️ Été' : g.saison==='HIVER' ? '❄️ Hiver' : (g.saison||'');
+
+    // URL de base pour saisir (même domaine que admin.html)
+    const baseUrl = location.href.replace(/admin\.html.*$/, 'index.html');
+
+    const rows = g.vols.sort((a,b)=>(a.auth||'').localeCompare(b.auth||'')).map(r => {
+        const ok  = _isSaisi(r);
+        const bg  = ok ? 'rgba(52,211,153,0.07)' : 'rgba(252,129,129,0.05)';
+        const ac  = ok ? '#34d399' : '#fc8181';
+        const ic  = ok ? '✅' : '🔴';
+        const rid = r.id.replace(/'/g,"\'");
+
+        const saisirBtn = ok ? '' :
+            '<button data-rid="' + rid + '" onclick="_saisirVol(this.dataset.rid)" ' +
+            'style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✏️ Saisir</button>';
+
+        const delBtn =
+            '<button data-rid="' + rid + '" onclick="_deleteOneVol(this.dataset.rid)" ' +
+            'style="background:rgba(229,62,62,0.10);border:1px solid rgba(229,62,62,0.25);color:#fc8181;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">🗑️</button>';
+
+        return '<tr style="background:' + bg + '">' +
+            '<td>' + ic + ' <strong style="color:' + ac + ';font-size:12px;font-family:monospace;">' + esc(r.auth||'—') + '</strong></td>' +
+            '<td style="color:#e2e8f0;font-weight:600;">' + esc(r.flight||'—') + '</td>' +
+            '<td style="color:#94a3b8;font-size:12px;">' + esc(r.date||'—') + '</td>' +
+            '<td style="color:#818cf8;font-size:11px;">' + esc(r.decision||'—') + '</td>' +
+            '<td style="white-space:nowrap;">' + saisirBtn + delBtn + '</td>' +
+            '</tr>';
     }).join('');
+
+    const cardHtml = '<div class="card">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">' +
+            '<div>' +
+                '<div style="font-size:15px;font-weight:700;color:#e2e8f0;">' + esc(g.company) + '</div>' +
+                '<div style="font-size:12px;color:#64748b;margin-top:2px;">' + lblSais + ' ' + esc(g.annee) +
+                    ' — ' + total + ' vols · <span style="color:#34d399;">' + saisi + ' saisis</span>' +
+                    ' · <span style="color:#fc8181;">' + restant + ' restants</span></div>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;align-items:center;">' +
+                '<div style="width:100px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">' +
+                    '<div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,#34d399,#059669);border-radius:3px;"></div>' +
+                '</div>' +
+                '<span style="font-size:12px;color:#64748b;">' + pct + '%</span>' +
+                '<button onclick="_confirmDelProgramme()" ' +
+                    'style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">' +
+                    '🗑️ Supprimer tout</button>' +
+            '</div>' +
+        '</div>' +
+        '<table class="fn-table" style="font-size:12px;"><thead><tr>' +
+            '<th>N° Auth</th><th>N° Vol</th><th>Date</th><th>Décision</th><th style="width:130px;"></th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+
+    container.innerHTML = togglesHtml + cardHtml;
 }
+
+window._selectProgCompanyIdx = function(gi) {
+    const g = window._progGroupList && window._progGroupList[parseInt(gi)];
+    if (g) { _progSelectedCompany = g.company; renderProgrammeByCompany(); }
+};
+window._confirmDelProgramme = function() {
+    const g = (window._progGroupList||[]).find(x=>x.company===_progSelectedCompany);
+    if (!g) return;
+    const gk = g.company+'|||'+g.saison+'|||'+g.annee;
+    if (!confirm('Supprimer TOUT le programme de '+g.company+' ('+g.saison+' '+g.annee+') ?')) return;
+    deleteProgramme(g.company,g.saison,g.annee);
+};
+
+window._saisirVol = function(progId) {
+    const r = _allProgramme.find(x=>x.id===progId);
+    if (!r) return;
+    // URL relative au domaine courant
+    const baseUrl = location.href.replace(/\/admin\.html.*$/, '/index.html');
+    const params = new URLSearchParams({
+        vol: r.flight||'', auth: r.auth||'',
+        company: r.company||'', date: r.date||'', decision: r.decision||''
+    });
+    window.open(baseUrl + '?' + params.toString(), '_blank');
+};
+
+window._deleteOneVol = async function(progId) {
+    const r = _allProgramme.find(x=>x.id===progId);
+    if (!r) return;
+    if (!confirm('Supprimer le vol ' + (r.auth||r.flight||progId) + ' du programme ?')) return;
+    try {
+        await window._deleteDoc(window._doc(window._db,'programme_vols',progId));
+        _allProgramme = _allProgramme.filter(x=>x.id!==progId);
+        showNotif('Vol supprimé du programme','success');
+        renderProgrammeByCompany();
+    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+};
+
+window._confirmDelProg = function(gk) {
+    const [company,saison,annee] = gk.split('|||');
+    if (!confirm('Supprimer TOUT le programme de '+company+' ('+saison+' '+annee+') ? Action irréversible.')) return;
+    deleteProgramme(company,saison,annee);
+};
 
 function _isSaisi(r) {
     const fn = (r.flight||'').toUpperCase().replace(/[-\s.]/g,'');
@@ -3069,12 +3161,7 @@ function _isSaisi(r) {
     return false;
 }
 
-window.confirmDeleteProgramme = function(gkEnc) {
-    const gk = decodeURIComponent(gkEnc);
-    const [company,saison,annee] = gk.split('|||');
-    if (!confirm('Supprimer tout le programme de '+company+' ('+saison+' '+annee+') ?')) return;
-    deleteProgramme(company,saison,annee);
-};
+// confirmDeleteProgramme remplacé par _confirmDelProg
 
 async function deleteProgramme(company,saison,annee) {
     try {
@@ -3086,12 +3173,7 @@ async function deleteProgramme(company,saison,annee) {
     } catch(e) { showNotif('Erreur: '+e.message,'error'); }
 }
 
-window.addManualFlight = function(progId) {
-    const r = _allProgramme.find(x=>x.id===progId);
-    if (!r) return;
-    const params = new URLSearchParams({vol:r.flight||'',auth:r.auth||'',company:r.company||'',date:r.date||'',decision:r.decision||''});
-    window.open('../index.html?'+params.toString(),'_blank');
-};
+// addManualFlight remplacé par _saisirVol
 
 // ── Modal Import ──────────────────────────────────────────────────
 window.openImportProgModal = function() {
