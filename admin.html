@@ -3036,9 +3036,10 @@ async function loadProgramme() {
 }
 
 // ── Rendu par compagnie ────────────────────────────────────────────
-// Compagnie et mois sélectionnés pour les toggles
 let _progSelectedCompany = null;
-let _progSelectedMonth   = new Date().getMonth() + 1; // mois courant par défaut (1-12)
+let _progSelectedMonth   = new Date().getMonth() + 1;
+let _progSelectedSaison  = null; // null = toutes
+let _progSelectedAnnee   = null; // null = toutes
 
 function renderProgrammeByCompany() {
     const container = document.getElementById('programmeByCompany');
@@ -3055,14 +3056,67 @@ function renderProgrammeByCompany() {
         if (!groups[key]) groups[key] = {company:r.company||r.code||'',saison:r.saison||'',annee:r.annee||'',vols:[]};
         groups[key].vols.push(r);
     });
-    const groupList = Object.values(groups).sort((a,b)=>a.company.localeCompare(b.company));
-    window._progGroupList = groupList;
+    const allGroups = Object.values(groups).sort((a,b)=>a.company.localeCompare(b.company));
+    window._progGroupList = allGroups;
 
-    // Sélection initiale compagnie
+    // ── Extraire saisons et années disponibles ──
+    const saisonsSet = new Set(allGroups.map(g=>g.saison).filter(Boolean));
+    const anneesSet  = new Set(allGroups.map(g=>g.annee).filter(Boolean));
+    const saisons    = [...saisonsSet].sort();
+    const annees     = [...anneesSet].sort((a,b)=>b.localeCompare(a)); // plus récente en 1er
+
+    // Auto-sélection initiale saison/annee
+    if (_progSelectedSaison && !saisonsSet.has(_progSelectedSaison)) _progSelectedSaison = null;
+    if (_progSelectedAnnee  && !anneesSet.has(_progSelectedAnnee))   _progSelectedAnnee  = null;
+    if (!_progSelectedSaison && saisons.length) {
+        // Choisir la saison courante intelligemment (Été = avril-oct, Hiver = nov-mars)
+        const mo = new Date().getMonth() + 1;
+        const curSaison = (mo >= 4 && mo <= 10) ? 'ETE' : 'HIVER';
+        _progSelectedSaison = saisonsSet.has(curSaison) ? curSaison : saisons[0];
+    }
+    if (!_progSelectedAnnee && annees.length) _progSelectedAnnee = annees[0];
+
+    // ── Filtrer les groupes selon saison + annee ──
+    const groupList = allGroups.filter(g =>
+        (!_progSelectedSaison || g.saison === _progSelectedSaison) &&
+        (!_progSelectedAnnee  || g.annee  === _progSelectedAnnee)
+    );
+
+    if (!groupList.length) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;">Aucun programme pour ' + (_progSelectedSaison||'') + ' ' + (_progSelectedAnnee||'') + '</div>';
+        return;
+    }
+
+    // Sélection compagnie
     if (!_progSelectedCompany || !groupList.find(g=>g.company===_progSelectedCompany)) {
         _progSelectedCompany = groupList[0].company;
-        _progSelectedMonth   = null;
+        _progSelectedMonth   = new Date().getMonth() + 1;
     }
+
+    // ── Barre filtres Saison / Année ──
+    const btnBase   = 'border:1px solid;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;';
+    const btnActive = btnBase + 'background:rgba(212,175,55,0.2);border-color:#D4AF37;color:#D4AF37;';
+    const btnInact  = btnBase + 'background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#64748b;';
+
+    const saisonBtns = saisons.map(s => {
+        const lbl = s === 'ETE' ? '☀️ Été' : s === 'HIVER' ? '❄️ Hiver' : s;
+        const act = _progSelectedSaison === s;
+        return '<button data-s="'+s+'" onclick="_selectProgSaison(this.dataset.s)" style="'+(act?btnActive:btnInact)+'">'+lbl+'</button>';
+    }).join('');
+
+    const anneeBtns = annees.map(a => {
+        const act = _progSelectedAnnee === a;
+        return '<button data-a="'+a+'" onclick="_selectProgAnnee(this.dataset.a)" style="'+(act?btnActive:btnInact)+'">'+a+'</button>';
+    }).join('');
+
+    const filtresHtml =
+        '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;">' +
+            '<span style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Saison</span>' +
+            '<div style="display:flex;gap:6px;">'+saisonBtns+'</div>' +
+            '<span style="width:1px;height:20px;background:rgba(255,255,255,0.1);display:inline-block;"></span>' +
+            '<span style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Année</span>' +
+            '<div style="display:flex;gap:6px;">'+anneeBtns+'</div>' +
+        '</div>';
 
     // ── Toggles compagnies ──
     const togglesHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;" id="progToggles">' +
@@ -3076,7 +3130,7 @@ function renderProgrammeByCompany() {
                 ? 'background:rgba(212,175,55,0.18);border-color:#D4AF37;color:#D4AF37;'
                 : 'background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#94a3b8;';
             return '<button data-gi="' + gi + '" onclick="_selectProgCompanyIdx(this.dataset.gi)" ' +
-                'style="' + bgStyle + 'border:1px solid;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;">' +
+                'style="' + bgStyle + 'border:1px solid;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">' +
                 '<span style="width:8px;height:8px;border-radius:50%;background:' + dotColor + ';display:inline-block;flex-shrink:0;"></span>' +
                 esc(g.company) + ' <span style="opacity:.6;font-weight:400;">(' + restant + '/' + total + ')</span>' +
                 '</button>';
@@ -3086,12 +3140,11 @@ function renderProgrammeByCompany() {
     // ── Compagnie sélectionnée ──
     const g = groupList.find(x=>x.company===_progSelectedCompany) || groupList[0];
 
-    // Extraire les mois disponibles
+    // ── Mois disponibles ──
     const MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
     const moisDispo = {};
     g.vols.forEach(r => {
         if (!r.date) return;
-        // Date format: YYYY-MM-DD ou DD/MM/YYYY
         let mm = null;
         const m1 = r.date.match(/^(\d{4})-(\d{2})/);
         const m2 = r.date.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
@@ -3104,16 +3157,11 @@ function renderProgrammeByCompany() {
         }
     });
 
-    // ── Toggles mois ──
     const moisKeys = Object.keys(moisDispo).map(Number).sort((a,b)=>a-b);
-    // Valider _progSelectedMonth — si le mois sélectionné n'a pas de vols, prendre le 1er dispo
-    if (_progSelectedMonth && !moisDispo[_progSelectedMonth]) {
+    if (_progSelectedMonth && !moisDispo[_progSelectedMonth])
         _progSelectedMonth = moisKeys.length > 0 ? moisKeys[0] : null;
-    }
-    // Si aucun mois sélectionné mais qu'il y a des mois disponibles, prendre le 1er
-    if (!_progSelectedMonth && moisKeys.length > 0) {
+    if (!_progSelectedMonth && moisKeys.length > 0)
         _progSelectedMonth = moisKeys[0];
-    }
 
     const moisHtml = moisKeys.length > 0
         ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">' +
@@ -3135,7 +3183,7 @@ function renderProgrammeByCompany() {
           '</div>'
         : '';
 
-    // ── Filtrer les vols selon le mois sélectionné ──
+    // ── Filtrer vols par mois ──
     const volsFiltres = _progSelectedMonth
         ? g.vols.filter(r => {
             if (!r.date) return false;
@@ -3146,58 +3194,54 @@ function renderProgrammeByCompany() {
           })
         : g.vols;
 
-    // ── Stats globales ──
+    // ── Stats ──
     const totalG   = g.vols.length;
     const saisiG   = g.vols.filter(r=>_isSaisi(r)).length;
     const restantG = totalG - saisiG;
     const pctG     = totalG ? Math.round(saisiG/totalG*100) : 0;
     const totalF   = volsFiltres.length;
     const saisiF   = volsFiltres.filter(r=>_isSaisi(r)).length;
-    const restantF = totalF - saisiF;
     const lblSais  = g.saison==='ETE' ? '☀️ Été' : g.saison==='HIVER' ? '❄️ Hiver' : (g.saison||'');
 
     const statsHtml =
-        '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;">' +
-            '<div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:10px;padding:10px 16px;min-width:100px;text-align:center;">' +
+        '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">' +
+            '<div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:10px;padding:10px 16px;min-width:90px;text-align:center;">' +
                 '<div style="font-size:22px;font-weight:800;color:#34d399;">' + saisiG + '</div>' +
                 '<div style="font-size:11px;color:#64748b;margin-top:2px;">Vols saisis</div>' +
             '</div>' +
-            '<div style="background:rgba(252,129,129,0.08);border:1px solid rgba(252,129,129,0.2);border-radius:10px;padding:10px 16px;min-width:100px;text-align:center;">' +
+            '<div style="background:rgba(252,129,129,0.08);border:1px solid rgba(252,129,129,0.2);border-radius:10px;padding:10px 16px;min-width:90px;text-align:center;">' +
                 '<div style="font-size:22px;font-weight:800;color:#fc8181;">' + restantG + '</div>' +
                 '<div style="font-size:11px;color:#64748b;margin-top:2px;">Vols restants</div>' +
             '</div>' +
-            '<div style="background:rgba(129,140,248,0.08);border:1px solid rgba(129,140,248,0.2);border-radius:10px;padding:10px 16px;min-width:100px;text-align:center;">' +
+            '<div style="background:rgba(129,140,248,0.08);border:1px solid rgba(129,140,248,0.2);border-radius:10px;padding:10px 16px;min-width:90px;text-align:center;">' +
                 '<div style="font-size:22px;font-weight:800;color:#818cf8;">' + totalG + '</div>' +
                 '<div style="font-size:11px;color:#64748b;margin-top:2px;">Total programme</div>' +
             '</div>' +
-            '<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:10px 16px;min-width:100px;text-align:center;">' +
+            '<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:10px 16px;min-width:90px;text-align:center;">' +
                 '<div style="font-size:22px;font-weight:800;color:#fbbf24;">' + pctG + '%</div>' +
                 '<div style="font-size:11px;color:#64748b;margin-top:2px;">Progression</div>' +
             '</div>' +
-            (_progSelectedMonth ? '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 16px;min-width:100px;text-align:center;">' +
+            (_progSelectedMonth ? '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 16px;min-width:90px;text-align:center;">' +
                 '<div style="font-size:22px;font-weight:800;color:#e2e8f0;">' + totalF + '</div>' +
                 '<div style="font-size:11px;color:#64748b;margin-top:2px;">Ce mois</div>' +
             '</div>' : '') +
         '</div>';
 
     // ── Lignes vols ──
-    const rows = volsFiltres.sort((a,b)=>(a.auth||'').localeCompare(b.auth||'')).map(r => {
+    const rowsHtml = volsFiltres.sort((a,b)=>(a.auth||'').localeCompare(b.auth||'')).map(r => {
         const ok  = _isSaisi(r);
         const bg  = ok ? 'rgba(52,211,153,0.07)' : 'rgba(252,129,129,0.05)';
         const ac  = ok ? '#34d399' : '#fc8181';
         const ic  = ok ? '✅' : '🔴';
         const rid = r.id;
-
         const saisirBtn = ok ? '' :
             '<button data-rid="' + rid + '" onclick="_saisirVol(this.dataset.rid)" ' +
             'style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✏️ Saisir</button>';
-
         const delBtn =
             '<button data-rid="' + rid + '" onclick="_deleteOneVol(this.dataset.rid)" ' +
             'style="background:rgba(229,62,62,0.10);border:1px solid rgba(229,62,62,0.25);color:#fc8181;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">🗑️</button>';
-
-        return '<tr style="background:' + bg + '">' +
-            '<td>' + ic + ' <strong style="color:' + ac + ';font-size:12px;font-family:monospace;">' + esc(r.auth||'—') + '</strong></td>' +
+        return '<tr style="background:'+bg+'">' +
+            '<td>' + ic + ' <strong style="color:'+ac+';font-size:12px;font-family:monospace;">' + esc(r.auth||'—') + '</strong></td>' +
             '<td style="color:#e2e8f0;font-weight:600;">' + esc(r.flight||'—') + '</td>' +
             '<td style="color:#94a3b8;font-size:12px;">' + esc(r.date||'—') + '</td>' +
             '<td style="color:#818cf8;font-size:11px;">' + esc(r.decision||'—') + '</td>' +
@@ -3205,7 +3249,7 @@ function renderProgrammeByCompany() {
             '</tr>';
     }).join('');
 
-    const emptyMsg = !rows
+    const emptyMsg = !rowsHtml
         ? '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:20px;">Aucun vol pour ce mois</td></tr>'
         : '';
 
@@ -3219,20 +3263,39 @@ function renderProgrammeByCompany() {
                 'style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">' +
                 '🗑️ Supprimer tout</button>' +
         '</div>' +
-        statsHtml +
-        moisHtml +
+        statsHtml + moisHtml +
         '<table class="fn-table" style="font-size:12px;"><thead><tr>' +
             '<th>N° Auth</th><th>N° Vol</th><th>Date</th><th>Décision</th><th style="width:130px;"></th>' +
-        '</tr></thead><tbody>' + (rows||emptyMsg) + '</tbody></table></div>';
+        '</tr></thead><tbody>' + (rowsHtml||emptyMsg) + '</tbody></table></div>';
 
-    container.innerHTML = togglesHtml + cardHtml;
+    container.innerHTML = filtresHtml + togglesHtml + cardHtml;
 }
 
+window._selectProgSaison = function(s) {
+    _progSelectedSaison  = s;
+    _progSelectedCompany = null; // reset compagnie pour prendre la 1ère de la nouvelle saison
+    _progSelectedMonth   = new Date().getMonth() + 1;
+    renderProgrammeByCompany();
+};
+window._selectProgAnnee = function(a) {
+    _progSelectedAnnee   = a;
+    _progSelectedCompany = null;
+    _progSelectedMonth   = new Date().getMonth() + 1;
+    renderProgrammeByCompany();
+};
 window._selectProgCompanyIdx = function(gi) {
-    const g = window._progGroupList && window._progGroupList[parseInt(gi)];
+    // gi est l'index dans groupList FILTRÉ (affiché), pas allGroups
+    const container = document.getElementById('programmeByCompany');
+    const btns = container ? container.querySelectorAll('[data-gi]') : [];
+    // Reconstruire groupList filtré
+    const filtred = (window._progGroupList||[]).filter(g =>
+        (!_progSelectedSaison || g.saison === _progSelectedSaison) &&
+        (!_progSelectedAnnee  || g.annee  === _progSelectedAnnee)
+    );
+    const g = filtred[parseInt(gi)];
     if (g) {
         _progSelectedCompany = g.company;
-        _progSelectedMonth   = new Date().getMonth() + 1; // reset au mois courant
+        _progSelectedMonth   = new Date().getMonth() + 1;
         renderProgrammeByCompany();
     }
 };
