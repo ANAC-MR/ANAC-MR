@@ -3025,6 +3025,7 @@ function renderProgrammeByCompany() {
         groups[key].vols.push(r);
     });
     const groupList = Object.values(groups).sort((a,b)=>a.company.localeCompare(b.company));
+    window._progGroupList = groupList; // exposer pour _selectProgCompanyIdx
 
     // Sélection initiale
     if (!_progSelectedCompany || !groupList.find(g=>g.company===_progSelectedCompany)) {
