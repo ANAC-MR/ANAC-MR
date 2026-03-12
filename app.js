@@ -512,6 +512,19 @@ function validateForm() {
         showFieldError(elements.fAuthNumber, 'Ce numéro d\'autorisation existe déjà');
         isValid = false;
     }
+
+    // Validate flight number + date uniqueness (éviter doublon de vol)
+    const fNum = normFN(elements.fVol && elements.fVol.value ? elements.fVol.value : '');
+    const fDate = elements.fDate ? elements.fDate.value.trim() : '';
+    if (fNum && fDate && !editingFlightId) {
+        const dupVol = flights.find(f =>
+            normFN(f.flightNumber) === fNum && f.date === fDate
+        );
+        if (dupVol) {
+            showFieldError(elements.fVol, 'Ce vol existe déjà pour cette date (doublon)');
+            isValid = false;
+        }
+    }
     
     return isValid;
 }
