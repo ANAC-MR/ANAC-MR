@@ -312,8 +312,11 @@ function attachEventListeners() {
     // Form interactions
     elements.fCompany.addEventListener('change', () => {
         const addMode = !editingFlightId;
-        if (addMode && elements.fVol) elements.fVol.value = '';
-        if (addMode && elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
+        // Supprimer l'ancien select pour forcer la recréation avec la nouvelle compagnie
+        const oldSel = document.getElementById('fVolSelect');
+        if (oldSel) oldSel.remove();
+        if (elements.fVol) elements.fVol.value = '';
+        if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
         updateFlightNumberPrefix(addMode);
     });
     // Auto-fill N° autorisation quand date change
@@ -603,6 +606,12 @@ async function updateVolField(company, forceEmpty = false) {
     const fVol   = elements.fVol;
     const parent = fVol.parentNode;
     const existingSelect = parent.querySelector('#fVolSelect');
+
+    // Si le select existe déjà pour la même compagnie et qu'on n'est pas en forceEmpty
+    // ne pas le recréer — ça effacerait la sélection en cours
+    if (existingSelect && !forceEmpty && existingSelect.dataset.company === company) {
+        return;
+    }
     if (existingSelect) existingSelect.remove();
     if (!company || !window.db) { fVol.style.display = ''; return; }
 
@@ -622,6 +631,7 @@ async function updateVolField(company, forceEmpty = false) {
             fVol.style.display = 'none';
             const sel = document.createElement('select');
             sel.id = 'fVolSelect';
+            sel.dataset.company = company;
             sel.required = true;
             sel.className = fVol.className;
             sel.style.display = '';
@@ -732,7 +742,9 @@ async function autoFillFromFlightNumber(flightNum) {
             // Remplir compagnie
             if (rec.company && elements.fCompany) {
                 elements.fCompany.value = rec.company;
-                updateFlightNumberPrefix();
+                // Ne pas reconstruire le select si on est en train de saisir (mode ADD)
+                if (!editingFlightId) updateImmField(rec.company);
+                else updateFlightNumberPrefix();
             }
             // Remplir type
             if (rec.type) {
