@@ -310,7 +310,12 @@ function attachEventListeners() {
     elements.flightForm.addEventListener('submit', handleFormSubmit);
     
     // Form interactions
-    elements.fCompany.addEventListener('change', updateFlightNumberPrefix);
+    elements.fCompany.addEventListener('change', () => {
+        const addMode = !editingFlightId;
+        if (addMode && elements.fVol) elements.fVol.value = '';
+        if (addMode && elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
+        updateFlightNumberPrefix(addMode);
+    });
     // Auto-fill N° autorisation quand date change
     if (elements.fDate) {
         elements.fDate.addEventListener('change', () => {
@@ -441,7 +446,7 @@ function openModal(flightId = null) {
             elements.fDate.focus();
             setTimeout(() => {
                 if (window.selectType) window.selectType('DEP');
-                updateFlightNumberPrefix();
+                updateFlightNumberPrefix(true); // true = isAddMode → champs vides
             }, 60);
         }
     });
@@ -594,7 +599,7 @@ function getFormData() {
 }
 
 // updateVolField — lit depuis Firebase collection flight_numbers
-async function updateVolField(company) {
+async function updateVolField(company, forceEmpty = false) {
     const fVol   = elements.fVol;
     const parent = fVol.parentNode;
     const existingSelect = parent.querySelector('#fVolSelect');
@@ -640,8 +645,8 @@ async function updateVolField(company) {
                 autoFillFromFlightNumber(sel.value);
                 setTimeout(autoFillAuth, 200);
             });
-            // Restaurer valeur seulement en mode édition
-            if (editingFlightId && fVol.value) sel.value = fVol.value;
+            // Restaurer valeur seulement en mode édition ET si pas forceEmpty
+            if (!forceEmpty && editingFlightId && fVol.value) sel.value = fVol.value;
             else sel.value = '';
         } else {
             fVol.style.display = '';
@@ -764,17 +769,19 @@ async function autoFillFromFlightNumber(flightNum) {
     } catch(e) { console.warn('autoFill flight_numbers:', e.message); }
 }
 
-function updateFlightNumberPrefix() {
+function updateFlightNumberPrefix(isAddMode = false) {
     const company = elements.fCompany.value;
     
-    // Update flight number prefix
-    const prefix = AIRLINE_PREFIXES[company] || 
-        (adminConfig && adminConfig.airlines 
-            ? (adminConfig.airlines.find(a => a.name === company) || {}).prefix 
-            : null);
-    const currentValue = elements.fVol.value.trim();
-    if (prefix && (!currentValue || currentValue.match(/^[A-Z0-9]+-$/))) {
-        elements.fVol.value = prefix + '-';
+    // Mettre le préfixe seulement si on est en édition ou si le champ est déjà pré-rempli avec un préfixe
+    if (!isAddMode) {
+        const prefix = AIRLINE_PREFIXES[company] ||
+            (adminConfig && adminConfig.airlines
+                ? (adminConfig.airlines.find(a => a.name === company) || {}).prefix
+                : null);
+        const currentValue = elements.fVol.value.trim();
+        if (prefix && (!currentValue || currentValue.match(/^[A-Z0-9]+-$/))) {
+            elements.fVol.value = prefix + '-';
+        }
     }
     
     // Auto-fill From/To based on company + type
@@ -782,8 +789,8 @@ function updateFlightNumberPrefix() {
     
     // Update immatriculation field based on admin config
     updateImmField(company);
-    // Update vol number field based on admin config
-    updateVolField(company);
+    // Update vol number field based on admin config — forceEmpty en mode ADD
+    updateVolField(company, isAddMode);
 }
 
 // Listener sur le champ fVol (input texte) pour auto-fill depuis flight_numbers ET programme_vols
