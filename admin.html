@@ -1035,6 +1035,9 @@
             <div class="nav-item" onclick="showSection('programme')" data-section="programme">
                 <span class="icon">📋</span> Programme de Vols
             </div>
+            <div class="nav-item" onclick="showSection('chargement')" data-section="chargement">
+                <span class="icon">📂</span> Chargement de Vols
+            </div>
             <div class="nav-item" onclick="window.open('import.html','_blank')">
                 <span class="icon">📥</span> Import Programme
             </div>
@@ -1351,6 +1354,99 @@
                         <strong style="color:var(--text);">⚙️ admin.html</strong> — ce panneau d'administration
                     </div>
                 </div>
+            </div>
+
+        
+            <!-- ─── CHARGEMENT DE VOLS ─── -->
+            <div class="section-page" id="section-chargement">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>📂 Chargement de Vols</h2>
+                        <p>Importez un fichier Excel ou Word pour alimenter automatiquement les vols</p>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom:16px;">
+                    <!-- Étape 1 : Upload fichier -->
+                    <div style="margin-bottom:20px;">
+                        <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:12px;letter-spacing:.04em;">① FICHIER À IMPORTER</div>
+                        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                            <label style="cursor:pointer;background:rgba(129,140,248,0.12);border:1px solid rgba(129,140,248,0.3);border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;color:#818cf8;display:inline-flex;align-items:center;gap:8px;">
+                                📎 Choisir un fichier
+                                <input type="file" id="chgFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="_chgReadFile(this)">
+                            </label>
+                            <span id="chgFileName" style="font-size:13px;color:#64748b;">Aucun fichier sélectionné</span>
+                        </div>
+                        <div style="margin-top:8px;font-size:11px;color:#475569;">Formats acceptés : Excel (.xlsx, .xls), CSV — colonnes : Date, N° Vol, PAX, Bébés (optionnel), Immatriculation (optionnel)</div>
+                    </div>
+
+                    <!-- Mapping colonnes -->
+                    <div id="chgMappingArea" style="display:none;">
+                        <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:12px;letter-spacing:.04em;">② APERÇU & MAPPING DES COLONNES</div>
+                        <div id="chgPreviewTable" style="overflow-x:auto;margin-bottom:14px;"></div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;">
+                            <div>
+                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">Date *</label>
+                                <select id="chgMapDate" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">N° Vol *</label>
+                                <select id="chgMapVol" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">PAX</label>
+                                <select id="chgMapPax" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">PAX Bébés</label>
+                                <select id="chgMapBebe" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">Immatriculation</label>
+                                <select id="chgMapImm" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
+                            </div>
+                        </div>
+                        <div id="chgMapStats" style="font-size:12px;color:#64748b;margin-bottom:4px;"></div>
+                    </div>
+                </div>
+
+                <!-- Aperçu des vols enrichis -->
+                <div id="chgEnrichedArea" style="display:none;">
+                    <div class="card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+                            <div>
+                                <div style="font-size:13px;font-weight:700;color:#818cf8;letter-spacing:.04em;">③ VOLS ENRICHIS — VÉRIFICATION AVANT IMPORT</div>
+                                <div style="font-size:12px;color:#64748b;margin-top:2px;">Données complétées depuis le programme de vols · Vérifiez avant de confirmer</div>
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                <button onclick="_chgReset()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;border-radius:7px;padding:7px 14px;font-size:12px;cursor:pointer;">🔄 Recommencer</button>
+                                <button onclick="_chgImportAll()" id="chgImportBtn" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:7px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;">✅ Importer tout</button>
+                            </div>
+                        </div>
+                        <div id="chgEnrichedStats" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;"></div>
+                        <div style="overflow-x:auto;">
+                            <table class="fn-table" style="font-size:12px;" id="chgEnrichedTable">
+                                <thead><tr>
+                                    <th style="width:32px;"></th>
+                                    <th>Date</th>
+                                    <th>N° Vol</th>
+                                    <th>N° Auth</th>
+                                    <th>Compagnie</th>
+                                    <th>Type</th>
+                                    <th>De</th>
+                                    <th>À</th>
+                                    <th>Immat.</th>
+                                    <th>PAX</th>
+                                    <th>Bébés</th>
+                                    <th>Statut</th>
+                                </tr></thead>
+                                <tbody id="chgEnrichedBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="chgNotif" style="display:none;margin-top:12px;"></div>
             </div>
 
         </main>
@@ -3937,6 +4033,7 @@ window.showSection = function(name) {
     if (name === 'security')   loadUsers();
     if (name === 'flightnums') loadFlightNums();
     if (name === 'programme')  loadProgramme();
+    if (name === 'chargement') _chgInit();
 };
 
 // ────────────────────────────────────────
@@ -3972,6 +4069,328 @@ function esc(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+
+// ════════════════════════════════════════════════════════════
+// CHARGEMENT DE VOLS — Import en masse depuis Excel/CSV
+// ════════════════════════════════════════════════════════════
+let _chgRawRows   = null;
+let _chgHasHeader = false;
+let _chgParsed    = [];   // [{date, vol, pax, bebes, imm}]
+let _chgEnriched  = [];   // [{...parsed, auth, company, type, from, to, ...}]
+
+// Init de la section (appelé à chaque ouverture)
+window._chgInit = function() {
+    // SheetJS doit être chargé
+    if (typeof XLSX === 'undefined') {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        document.head.appendChild(s);
+    }
+};
+
+// ── Lecture du fichier ──
+window._chgReadFile = async function(input) {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('chgFileName').textContent = file.name;
+
+    if (typeof XLSX === 'undefined') {
+        await new Promise((res,rej) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+        });
+    }
+
+    const buf  = await file.arrayBuffer();
+    const uint = new Uint8Array(buf);
+    const wb   = XLSX.read(uint, {type:'array'});
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+
+    // Lecture cellule par cellule avec conversion dates
+    const rows = [];
+    for (let R = range.s.r; R <= range.e.r; R++) {
+        const row = [];
+        for (let Ci = range.s.c; Ci <= range.e.c; Ci++) {
+            const addr = XLSX.utils.encode_cell({r:R, c:Ci});
+            const cell = ws[addr];
+            if (!cell) { row.push(''); continue; }
+            if (cell.t === 'd') {
+                const d = cell.v;
+                row.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+            } else if (cell.t === 'n' && cell.z && /[ymd]/i.test(cell.z)) {
+                const d = new Date(Math.round((cell.v - 25569)*86400*1000));
+                row.push(d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0'));
+            } else {
+                row.push(cell.v !== undefined ? String(cell.v) : '');
+            }
+        }
+        // Ignorer lignes entièrement vides
+        if (row.every(v => !String(v||'').trim())) continue;
+        rows.push(row);
+    }
+
+    if (!rows.length) { alert('Fichier vide ou illisible'); return; }
+
+    // Détecter en-tête
+    const first = String(rows[0][0]||'').trim().toUpperCase();
+    _chgHasHeader = !/^\d{4}-\d{2}-\d{2}/.test(first) && !/^\d{1,2}[\/\-]/.test(first);
+    _chgRawRows = rows;
+
+    _chgShowMapping(rows, _chgHasHeader);
+};
+
+// ── Afficher le mapping ──
+function _chgShowMapping(rows, hasHeader) {
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+    const nCols    = rows[0].length;
+
+    // Détecter colonnes par contenu
+    const MOIS_FR = ['JANVIER','FEVRIER','FÉVRIER','MARS','AVRIL','MAI','JUIN','JUILLET','AOÛT','AOUT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DECEMBRE','DÉCEMBRE'];
+    const sniff = (testFn) => {
+        for (let i = 0; i < nCols; i++) {
+            if (dataRows.slice(0,5).filter(r => testFn(String(r[i]||''))).length >= 2) return i;
+        }
+        return -1;
+    };
+    const autoDate = sniff(v => /^\d{4}-\d{2}-\d{2}$/.test(v.trim()) || MOIS_FR.some(m=>v.toUpperCase().includes(m)) || /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(v.trim()));
+    const autoVol  = sniff(v => /^[A-Z]{1,3}\s?\d{3,4}[A-Z]?$/i.test(v.trim()));
+    const autoPax  = sniff(v => /^\d{1,4}$/.test(v.trim()) && parseInt(v) < 600);
+    const autoBebe = (() => {
+        // Chercher une 2ème colonne numérique qui ressemble à des bébés (petits nombres)
+        for (let i = 0; i < nCols; i++) {
+            if (i === autoPax) continue;
+            if (dataRows.slice(0,5).filter(r => /^\d{1,3}$/.test(String(r[i]||'').trim()) && parseInt(r[i]) < 50).length >= 2) return i;
+        }
+        return -1;
+    })();
+    const autoImm  = sniff(v => /^\d[A-Z]-[A-Z]{3}$/i.test(v.trim()) || /^[A-Z]{2}-[A-Z]{3}$/i.test(v.trim()));
+
+    // Construire options
+    const hdrLabels = rows[0].map((h,i) => hasHeader ? String(h||`Col ${i+1}`) : `Col ${i+1}`);
+    const optNone = '<option value="-1">— Ignorer —</option>';
+    const opts = hdrLabels.map((l,i)=>`<option value="${i}">${l}</option>`).join('');
+
+    const setMapSel = (id, auto) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = optNone + opts;
+        el.value = auto >= 0 ? auto : -1;
+    };
+    setMapSel('chgMapDate', autoDate);
+    setMapSel('chgMapVol',  autoVol);
+    setMapSel('chgMapPax',  autoPax);
+    setMapSel('chgMapBebe', autoBebe);
+    setMapSel('chgMapImm',  autoImm);
+
+    // Tableau aperçu (3 premières lignes de données)
+    const thStyle = 'padding:5px 8px;font-size:11px;color:#64748b;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);';
+    const tdStyle = 'padding:4px 8px;font-size:11px;color:#94a3b8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    const preview = '<table style="width:100%;border-collapse:collapse;"><thead><tr>'+
+        hdrLabels.map(h=>`<th style="${thStyle}">${esc(h)}</th>`).join('')+
+        '</tr></thead><tbody>'+
+        dataRows.slice(0,4).map(row=>'<tr>'+row.map(v=>`<td style="${tdStyle}" title="${esc(String(v))}">${esc(String(v||'').substring(0,22))}</td>`).join('')+'</tr>').join('')+
+        '</tbody></table>';
+    document.getElementById('chgPreviewTable').innerHTML = preview;
+    document.getElementById('chgMappingArea').style.display = '';
+    document.getElementById('chgEnrichedArea').style.display = 'none';
+    _chgApplyMap();
+}
+
+// ── Appliquer le mapping et enrichir ──
+window._chgApplyMap = async function() {
+    if (!_chgRawRows) return;
+    const dataRows = _chgHasHeader ? _chgRawRows.slice(1) : _chgRawRows;
+    const gi = (id) => parseInt((document.getElementById(id)||{value:'-1'}).value);
+    const iDate = gi('chgMapDate'), iVol = gi('chgMapVol');
+    const iPax  = gi('chgMapPax'),  iBebe = gi('chgMapBebe'), iImm = gi('chgMapImm');
+
+    _chgParsed = dataRows.map(row => ({
+        date: iDate>=0 ? _parseDate(row[iDate]) : '',
+        vol:  iVol >=0 ? String(row[iVol]||'').trim().toUpperCase() : '',
+        pax:  iPax >=0 ? (parseInt(row[iPax])||0) : 0,
+        bebes:iBebe>=0 ? (parseInt(row[iBebe])||0) : 0,
+        imm:  iImm >=0 ? String(row[iImm]||'').trim().toUpperCase() : '',
+    })).filter(r => r.date || r.vol);
+
+    const withDate = _chgParsed.filter(r=>r.date).length;
+    const withVol  = _chgParsed.filter(r=>r.vol).length;
+    document.getElementById('chgMapStats').innerHTML =
+        `<span style="color:#34d399;font-weight:700;">${_chgParsed.length} lignes</span> · ` +
+        `<span style="color:#60a5fa;">${withVol} avec N° vol</span> · ` +
+        `<span style="color:#818cf8;">${withDate} avec date</span>`;
+
+    if (_chgParsed.length > 0) await _chgEnrich();
+};
+
+// ── Enrichissement depuis Firebase ──
+async function _chgEnrich() {
+    if (!window.db || !_chgParsed.length) return;
+
+    // Charger le programme de vols + flight_numbers + flights existants
+    const { getDocs, collection, query } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const [snapProg, snapFN, snapFlights] = await Promise.all([
+        getDocs(collection(window.db, 'programme_vols')),
+        getDocs(collection(window.db, 'flight_numbers')),
+        getDocs(collection(window.db, 'flights'))
+    ]);
+
+    const progDocs = snapProg.docs.map(d=>({id:d.id,...d.data()}));
+    const fnDocs   = snapFN.docs.map(d=>({id:d.id,...d.data()}));
+    const existingKeys = new Set(
+        snapFlights.docs.map(d=>{ const r=d.data(); return normFN(r.flightNumber||'')+'__'+(r.date||''); })
+    );
+
+    const normalize = v => String(v||'').toUpperCase().replace(/[-\s.]/g,'');
+
+    _chgEnriched = _chgParsed.map(row => {
+        const fn = normalize(row.vol);
+        const result = {...row, auth:'', company:'', type:'DEP', from:'', to:'', status:'ok', warning:''};
+
+        // 1. Chercher dans programme_vols (vol + date → auth)
+        const progMatch = progDocs.find(p =>
+            (normalize(p.flightNorm||p.flight||'') === fn) && (p.date === row.date)
+        ) || progDocs.find(p => normalize(p.flightNorm||p.flight||'') === fn);
+        if (progMatch) {
+            result.auth    = progMatch.auth || '';
+            result.company = progMatch.company || '';
+        }
+
+        // 2. Chercher dans flight_numbers (company, type, from, to, imm)
+        const fnMatch = fnDocs.find(f => normalize(f.number) === fn);
+        if (fnMatch) {
+            if (!result.company) result.company = fnMatch.company || '';
+            result.type = fnMatch.type || 'DEP';
+            result.from = fnMatch.from || '';
+            result.to   = fnMatch.to   || '';
+            if (!result.imm && fnMatch.registration) result.imm = fnMatch.registration;
+        }
+
+        // 3. Déduire from/to selon type + GQNO
+        if (!result.from && !result.to) {
+            result.from = result.type==='DEP' ? 'GQNO' : '';
+            result.to   = result.type==='ARR' ? 'GQNO' : '';
+        }
+
+        // 4. Statut
+        const key = fn+'__'+row.date;
+        if (existingKeys.has(key)) {
+            result.status = 'doublon'; result.warning = 'Déjà saisi';
+        } else if (!result.auth) {
+            result.status = 'warn'; result.warning = 'Auth introuvable';
+        } else if (!result.company) {
+            result.status = 'warn'; result.warning = 'Compagnie inconnue';
+        }
+
+        return result;
+    });
+
+    _chgRenderEnriched();
+}
+
+// ── Rendu du tableau enrichi ──
+function _chgRenderEnriched() {
+    const ok      = _chgEnriched.filter(r=>r.status==='ok').length;
+    const warn    = _chgEnriched.filter(r=>r.status==='warn').length;
+    const doublon = _chgEnriched.filter(r=>r.status==='doublon').length;
+
+    document.getElementById('chgEnrichedStats').innerHTML =
+        `<div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:8px;padding:8px 14px;text-align:center;">
+            <div style="font-size:20px;font-weight:800;color:#34d399;">${ok}</div>
+            <div style="font-size:11px;color:#64748b;">Prêts</div></div>` +
+        (warn ? `<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:8px 14px;text-align:center;">
+            <div style="font-size:20px;font-weight:800;color:#fbbf24;">${warn}</div>
+            <div style="font-size:11px;color:#64748b;">Avertissements</div></div>` : '') +
+        (doublon ? `<div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:8px 14px;text-align:center;">
+            <div style="font-size:20px;font-weight:800;color:#818cf8;">${doublon}</div>
+            <div style="font-size:11px;color:#64748b;">Doublons</div></div>` : '');
+
+    const tbody = document.getElementById('chgEnrichedBody');
+    tbody.innerHTML = _chgEnriched.map((r,i) => {
+        const bg  = r.status==='doublon' ? 'rgba(99,102,241,0.07)' : r.status==='warn' ? 'rgba(251,191,36,0.06)' : 'rgba(52,211,153,0.05)';
+        const ic  = r.status==='doublon' ? '🔵' : r.status==='warn' ? '⚠️' : '✅';
+        const td  = (v,clr='#94a3b8') => `<td style="color:${clr};padding:5px 8px;">${esc(String(v||'—'))}</td>`;
+        const warnBadge = r.warning ? `<span style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;border-radius:4px;padding:1px 6px;font-size:10px;">${esc(r.warning)}</span>` : '';
+        return `<tr style="background:${bg};" data-ci="${i}">
+            <td style="padding:5px 8px;font-size:14px;">${ic}</td>
+            ${td(r.date,'#60a5fa')}
+            ${td(r.vol,'#e2e8f0')}
+            ${td(r.auth,'#D4AF37')}
+            ${td(r.company,'#94a3b8')}
+            ${td(r.type)}
+            ${td(r.from)}
+            ${td(r.to)}
+            ${td(r.imm)}
+            ${td(r.pax,'#34d399')}
+            ${td(r.bebes)}
+            <td style="padding:5px 8px;">${warnBadge || '<span style="color:#34d399;font-size:11px;">✓</span>'}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('chgEnrichedArea').style.display = '';
+    // Mettre à jour le bouton import
+    const btn = document.getElementById('chgImportBtn');
+    if (btn) btn.textContent = `✅ Importer ${ok + warn} vols`;
+}
+
+// ── Import dans Firebase ──
+window._chgImportAll = async function() {
+    const btn = document.getElementById('chgImportBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Import en cours...'; }
+
+    const toImport = _chgEnriched.filter(r => r.status !== 'doublon');
+    let done = 0, errors = 0;
+
+    for (const r of toImport) {
+        try {
+            const flightData = {
+                authorizationNumber: (r.auth||'').toUpperCase(),
+                date:       r.date,
+                company:    r.company || '',
+                registration: (r.imm||'').toUpperCase(),
+                flightNumber: normFN(r.vol),
+                type:       r.type || 'DEP',
+                from:       r.from || '',
+                to:         r.to   || '',
+                passengers: r.pax  || 0,
+                babies:     r.bebes|| 0,
+                hasStopover:false, stopover:'', stopoverPax:0, stopoverBabies:0,
+                timestamp:  Date.now()
+            };
+            if (window.dbService && window.dbService.addFlight) {
+                await window.dbService.addFlight(flightData);
+                done++;
+            }
+        } catch(e) {
+            errors++;
+            console.warn('chgImport error:', e.message, r);
+        }
+    }
+
+    const notif = document.getElementById('chgNotif');
+    notif.style.display = '';
+    if (errors === 0) {
+        notif.innerHTML = `<div style="background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:8px;padding:12px 16px;font-weight:600;">✅ ${done} vols importés avec succès${_chgEnriched.filter(r=>r.status==='doublon').length ? ` · ${_chgEnriched.filter(r=>r.status==='doublon').length} doublons ignorés` : ''}</div>`;
+    } else {
+        notif.innerHTML = `<div style="background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;border-radius:8px;padding:12px 16px;font-weight:600;">⚠️ ${done} vols importés · ${errors} erreurs</div>`;
+    }
+    if (btn) { btn.disabled = false; btn.textContent = `✅ Importer ${toImport.length} vols`; }
+    // Marquer les lignes importées
+    _chgEnriched.forEach((r,i) => { if (r.status !== 'doublon') r.status = 'done'; });
+    _chgRenderEnriched();
+};
+
+window._chgReset = function() {
+    _chgRawRows = null; _chgParsed = []; _chgEnriched = [];
+    document.getElementById('chgMappingArea').style.display = 'none';
+    document.getElementById('chgEnrichedArea').style.display = 'none';
+    document.getElementById('chgNotif').style.display = 'none';
+    document.getElementById('chgFileName').textContent = 'Aucun fichier sélectionné';
+    document.getElementById('chgFile').value = '';
+};
+// ════════════════════════════════════════════════════════════
 </script>
 
 </body>
