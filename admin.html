@@ -1380,33 +1380,22 @@
                         <div style="margin-top:8px;font-size:11px;color:#475569;">Formats acceptés : Excel (.xlsx, .xls), CSV — colonnes : Date, N° Vol, PAX, Bébés (optionnel), Immatriculation (optionnel)</div>
                     </div>
 
-                    <!-- Mapping colonnes -->
+                    <!-- Aperçu fichier + stats détection -->
                     <div id="chgMappingArea" style="display:none;">
-                        <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:12px;letter-spacing:.04em;">② APERÇU & MAPPING DES COLONNES</div>
-                        <div id="chgPreviewTable" style="overflow-x:auto;margin-bottom:14px;"></div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;">
-                            <div>
-                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">Date *</label>
-                                <select id="chgMapDate" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
-                            </div>
-                            <div>
-                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">N° Vol *</label>
-                                <select id="chgMapVol" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
-                            </div>
-                            <div>
-                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">PAX</label>
-                                <select id="chgMapPax" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
-                            </div>
-                            <div>
-                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">PAX Bébés</label>
-                                <select id="chgMapBebe" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
-                            </div>
-                            <div>
-                                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px;">Immatriculation</label>
-                                <select id="chgMapImm" style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:5px 8px;color:#e2e8f0;font-size:12px;width:100%;" onchange="_chgApplyMap()"></select>
-                            </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <div style="font-size:13px;font-weight:700;color:#818cf8;letter-spacing:.04em;">② APERÇU DU FICHIER</div>
+                            <button onclick="_chgReset()" style="background:rgba(252,129,129,0.1);border:1px solid rgba(252,129,129,0.25);color:#fc8181;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;">✕ Annuler</button>
                         </div>
-                        <div id="chgMapStats" style="font-size:12px;color:#64748b;margin-bottom:4px;"></div>
+                        <div id="chgPreviewTable" style="margin-bottom:10px;"></div>
+                        <div id="chgMapStats" style="font-size:12px;color:#64748b;"></div>
+                        <!-- selects cachés pour le mapping interne -->
+                        <div style="display:none;">
+                            <select id="chgMapDate"></select>
+                            <select id="chgMapVol"></select>
+                            <select id="chgMapPax"></select>
+                            <select id="chgMapBebe"></select>
+                            <select id="chgMapImm"></select>
+                        </div>
                     </div>
                 </div>
 
@@ -4284,23 +4273,27 @@ window._chgApplyMap = async function() {
 
 // ── Enrichissement depuis Firebase ──
 async function _chgEnrich() {
-    if (!window.db || !_chgParsed.length) return;
+    const db = window._db || window.db;
+    if (!db || !_chgParsed.length) return;
 
-    // Charger le programme de vols + flight_numbers + flights existants
-    const { getDocs, collection, query } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const statEl = document.getElementById('chgMapStats');
+    if (statEl) statEl.innerHTML += ' &nbsp;<span style="color:#60a5fa;">⏳ Chargement...</span>';
+
+    const { getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     const [snapProg, snapFN, snapFlights] = await Promise.all([
-        getDocs(collection(window.db, 'programme_vols')),
-        getDocs(collection(window.db, 'flight_numbers')),
-        getDocs(collection(window.db, 'flights'))
+        getDocs(collection(db, 'programme_vols')),
+        getDocs(collection(db, 'flight_numbers')),
+        getDocs(collection(db, 'flights'))
     ]);
 
     const progDocs = snapProg.docs.map(d=>({id:d.id,...d.data()}));
     const fnDocs   = snapFN.docs.map(d=>({id:d.id,...d.data()}));
+    const nrm = v => String(v||'').toUpperCase().replace(/[-\s\.]/g,'');
     const existingKeys = new Set(
-        snapFlights.docs.map(d=>{ const r=d.data(); return normFN(r.flightNumber||'')+'__'+(r.date||''); })
+        snapFlights.docs.map(d=>{ const r=d.data(); return nrm(r.flightNumber||'')+'__'+(r.date||''); })
     );
 
-    const normalize = v => String(v||'').toUpperCase().replace(/[-\s.]/g,'');
+    const normalize = nrm;
 
     _chgEnriched = _chgParsed.map(row => {
         const fn = normalize(row.vol);
@@ -4349,6 +4342,8 @@ async function _chgEnrich() {
 
 // ── Rendu du tableau enrichi ──
 function _chgRenderEnriched() {
+    if (!_chgEnriched.length) return;
+    document.getElementById('chgEnrichedArea').style.display = '';
     const ok      = _chgEnriched.filter(r=>r.status==='ok').length;
     const warn    = _chgEnriched.filter(r=>r.status==='warn').length;
     const doublon = _chgEnriched.filter(r=>r.status==='doublon').length;
@@ -4388,8 +4383,12 @@ function _chgRenderEnriched() {
 
     document.getElementById('chgEnrichedArea').style.display = '';
     // Mettre à jour le bouton import
+    const toImport = ok + warn;
     const btn = document.getElementById('chgImportBtn');
-    if (btn) btn.textContent = `✅ Importer ${ok + warn} vols`;
+    if (btn) {
+        btn.textContent = `✅ Importer ${toImport} vol${toImport>1?'s':''}`;
+        btn.style.display = toImport > 0 ? '' : 'none';
+    }
 }
 
 // ── Import dans Firebase ──
@@ -4407,7 +4406,7 @@ window._chgImportAll = async function() {
                 date:       r.date,
                 company:    r.company || '',
                 registration: (r.imm||'').toUpperCase(),
-                flightNumber: normFN(r.vol),
+                flightNumber: String(r.vol||'').toUpperCase().replace(/[-\s\.]/g,''),
                 type:       r.type || 'DEP',
                 from:       r.from || '',
                 to:         r.to   || '',
@@ -4441,11 +4440,16 @@ window._chgImportAll = async function() {
 
 window._chgReset = function() {
     _chgRawRows = null; _chgParsed = []; _chgEnriched = [];
-    document.getElementById('chgMappingArea').style.display = 'none';
-    document.getElementById('chgEnrichedArea').style.display = 'none';
-    document.getElementById('chgNotif').style.display = 'none';
-    document.getElementById('chgFileName').textContent = 'Aucun fichier sélectionné';
-    document.getElementById('chgFile').value = '';
+    const ma = document.getElementById('chgMappingArea');
+    const ea = document.getElementById('chgEnrichedArea');
+    const ni = document.getElementById('chgNotif');
+    const fn = document.getElementById('chgFileName');
+    const fi = document.getElementById('chgFile');
+    if (ma) ma.style.display = 'none';
+    if (ea) ea.style.display = 'none';
+    if (ni) { ni.style.display = 'none'; ni.innerHTML = ''; }
+    if (fn) fn.textContent = 'Aucun fichier sélectionné';
+    if (fi) fi.value = '';
 };
 // ════════════════════════════════════════════════════════════
 </script>
