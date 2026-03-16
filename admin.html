@@ -1409,7 +1409,8 @@
                             </div>
                             <div style="display:flex;gap:8px;">
                                 <button onclick="_chgReset()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;border-radius:7px;padding:7px 14px;font-size:12px;cursor:pointer;">🔄 Recommencer</button>
-                                <button onclick="_chgImportAll()" id="chgImportBtn" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:7px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;">✅ Importer tout</button>
+                                <button onclick="_chgImportReady()" id="chgImportReadyBtn" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;display:none;">✅ Importer prêts</button>
+                                <button onclick="_chgImportAll()" id="chgImportBtn" style="background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.3);color:#D4AF37;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;display:none;">⚡ Importer tout</button>
                             </div>
                         </div>
                         <div id="chgEnrichedStats" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;"></div>
@@ -4279,12 +4280,17 @@ async function _chgEnrich() {
     const statEl = document.getElementById('chgMapStats');
     if (statEl) statEl.innerHTML += ' &nbsp;<span style="color:#60a5fa;">⏳ Chargement...</span>';
 
-    const { getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const [snapProg, snapFN, snapFlights] = await Promise.all([
+    const { getDocs, collection, getDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const [snapProg, snapFN, snapFlights, snapAirlines] = await Promise.all([
         getDocs(collection(db, 'programme_vols')),
         getDocs(collection(db, 'flight_numbers')),
-        getDocs(collection(db, 'flights'))
+        getDocs(collection(db, 'flights')),
+        getDoc(doc(db, 'flights', 'cfg-airlines'))
     ]);
+    // Construire map hub par compagnie depuis Firebase
+    const airlinesConfig = snapAirlines.exists() ? (snapAirlines.data().list||[]) : [];
+    const hubMap = {};
+    airlinesConfig.forEach(a => { if (a.hub) hubMap[a.name] = a.hub; });
 
     const progDocs = snapProg.docs.map(d=>({id:d.id,...d.data()}));
     const fnDocs   = snapFN.docs.map(d=>({id:d.id,...d.data()}));
@@ -4328,16 +4334,27 @@ async function _chgEnrich() {
         });
         if (fnMatch) {
             if (!result.company) result.company = fnMatch.company || '';
-            result.type = fnMatch.type || 'DEP';
-            result.from = fnMatch.from || '';
-            result.to   = fnMatch.to   || '';
-            if (!result.imm && fnMatch.registration) result.imm = fnMatch.registration;
+            // Type depuis flight_numbers mais seulement DEP ou ARR
+            const rawType = (fnMatch.type||'DEP').toUpperCase();
+            result.type = (rawType === 'ARR') ? 'ARR' : 'DEP';
         }
 
-        // 3. Déduire from/to selon type + GQNO
-        if (!result.from && !result.to) {
-            result.from = result.type==='DEP' ? 'GQNO' : '';
-            result.to   = result.type==='ARR' ? 'GQNO' : '';
+        // 3. Déduire from/to selon type + hub de la compagnie
+        const company = result.company || (progMatch && progMatch.company) || '';
+        const HARD_HUB = {
+            'Mauritania Airlines':'', 'Air Sénégal':'GOBD', 'Turkish Airlines':'LTFM',
+            'Binter':'GCLP', 'Air Algérie':'DAAG', 'ASKY':'DBBP',
+            'Royal Air Maroc':'GMMN', 'Tunisair':'DTTA', 'Air France':'LFPG'
+        };
+        // Priorité : Firebase > fallback hardcodé
+        const hub = hubMap[company] || HARD_HUB[company] || '';
+
+        if (result.type === 'DEP') {
+            result.from = 'GQNO';
+            result.to   = hub || '';
+        } else {
+            result.from = hub || '';
+            result.to   = 'GQNO';
         }
 
         // 4. Statut
@@ -4410,7 +4427,7 @@ function _chgRenderEnriched() {
             <td style="color:#e2e8f0;padding:5px 8px;font-weight:600;">${esc(r.vol||'—')}</td>
             ${inp('auth', r.auth, '#D4AF37', '100px')}
             ${inp('company', r.company, '#94a3b8', '60px')}
-            ${sel('type', r.type||'DEP', ['DEP','ARR','OVF','TRN'])}
+            ${sel('type', r.type||'DEP', ['DEP','ARR'])}
             ${inp('from', r.from, '#94a3b8', '60px')}
             ${inp('to', r.to, '#94a3b8', '60px')}
             ${inp('imm', r.imm, '#94a3b8', '70px')}
@@ -4422,11 +4439,15 @@ function _chgRenderEnriched() {
 
     document.getElementById('chgEnrichedArea').style.display = '';
     // Mettre à jour le bouton import
-    const toImport = ok + warn;
-    const btn = document.getElementById('chgImportBtn');
-    if (btn) {
-        btn.textContent = `✅ Importer ${toImport} vol${toImport>1?'s':''}`;
-        btn.style.display = toImport > 0 ? '' : 'none';
+    const btnReady = document.getElementById('chgImportReadyBtn');
+    const btnAll   = document.getElementById('chgImportBtn');
+    if (btnReady) {
+        btnReady.textContent = `✅ Importer prêts (${ok})`;
+        btnReady.style.display = ok > 0 ? '' : 'none';
+    }
+    if (btnAll) {
+        btnAll.textContent = `⚡ Importer tout (${ok + warn})`;
+        btnAll.style.display = (ok + warn) > 0 ? '' : 'none';
     }
 }
 
@@ -4445,16 +4466,29 @@ window._chgUpdate = function(i, field, value) {
     const ok      = _chgEnriched.filter(r=>r.status==='ok').length;
     const warn    = _chgEnriched.filter(r=>r.status==='warn').length;
     const toImport = ok + warn;
-    const btn = document.getElementById('chgImportBtn');
-    if (btn) btn.textContent = '✅ Importer ' + toImport + ' vol' + (toImport>1?'s':'');
+    const btnR = document.getElementById('chgImportReadyBtn');
+    const btnA = document.getElementById('chgImportBtn');
+    if (btnR) { btnR.textContent = '✅ Importer prêts (' + ok + ')'; btnR.style.display = ok>0?'':'none'; }
+    if (btnA) { btnA.textContent = '⚡ Importer tout (' + toImport + ')'; btnA.style.display = toImport>0?'':'none'; }
 };
 
-// ── Import dans Firebase ──
-window._chgImportAll = async function() {
-    const btn = document.getElementById('chgImportBtn');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Import en cours...'; }
+// ── Import prêts seulement (status === 'ok') ──
+window._chgImportReady = async function() {
+    await _chgDoImport(rows => rows.filter(r => r.status === 'ok'));
+};
 
-    const toImport = _chgEnriched.filter(r => r.status !== 'doublon');
+// ── Import tout (ok + warn, ignore doublons) ──
+window._chgImportAll = async function() {
+    await _chgDoImport(rows => rows.filter(r => r.status !== 'doublon' && r.status !== 'done'));
+};
+
+async function _chgDoImport(filterFn) {
+    const btnR = document.getElementById('chgImportReadyBtn');
+    const btnA = document.getElementById('chgImportBtn');
+    if (btnR) { btnR.disabled = true; }
+    if (btnA) { btnA.disabled = true; btnA.textContent = '⏳ Import en cours...'; }
+
+    const toImport = filterFn(_chgEnriched);
     let done = 0, errors = 0;
 
     for (const r of toImport) {
@@ -4490,11 +4524,12 @@ window._chgImportAll = async function() {
     } else {
         notif.innerHTML = `<div style="background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;border-radius:8px;padding:12px 16px;font-weight:600;">⚠️ ${done} vols importés · ${errors} erreurs</div>`;
     }
-    if (btn) { btn.disabled = false; btn.textContent = `✅ Importer ${toImport.length} vols`; }
+    if (btnR) { btnR.disabled = false; }
+    if (btnA) { btnA.disabled = false; }
     // Marquer les lignes importées
-    _chgEnriched.forEach((r,i) => { if (r.status !== 'doublon') r.status = 'done'; });
+    toImport.forEach(r => { r.status = 'done'; });
     _chgRenderEnriched();
-};
+}
 
 window._chgReset = function() {
     _chgRawRows = null; _chgParsed = []; _chgEnriched = [];
