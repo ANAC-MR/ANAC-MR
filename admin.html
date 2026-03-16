@@ -4295,21 +4295,37 @@ async function _chgEnrich() {
 
     const normalize = nrm;
 
+    // Normalisation qui enlève aussi les zéros de tête du numéro de vol
+    // ex: TK0584 → TK584, AT0511 → AT511
+    const normVol = v => {
+        const s = nrm(v); // ex: "TK0584"
+        return s.replace(/^([A-Z]{1,3})(0+)(\d+)$/, '$1$3'); // TK0584 → TK584
+    };
+
     _chgEnriched = _chgParsed.map(row => {
-        const fn = normalize(row.vol);
+        const fn    = nrm(row.vol);     // TK0584
+        const fnShort = normVol(row.vol); // TK584
         const result = {...row, auth:'', company:'', type:'DEP', from:'', to:'', status:'ok', warning:''};
 
         // 1. Chercher dans programme_vols (vol + date → auth)
-        const progMatch = progDocs.find(p =>
-            (normalize(p.flightNorm||p.flight||'') === fn) && (p.date === row.date)
-        ) || progDocs.find(p => normalize(p.flightNorm||p.flight||'') === fn);
+        // Essayer toutes les variantes : normalisé, sans zéro, flightNorm, flight brut
+        const matchProg = (p) => {
+            const pn  = nrm(p.flightNorm || p.flight || '');
+            const pns = normVol(p.flightNorm || p.flight || '');
+            return pn === fn || pn === fnShort || pns === fn || pns === fnShort;
+        };
+        const progMatch = progDocs.find(p => matchProg(p) && p.date === row.date)
+                       || progDocs.find(p => matchProg(p));
         if (progMatch) {
             result.auth    = progMatch.auth || '';
             result.company = progMatch.company || '';
         }
 
-        // 2. Chercher dans flight_numbers (company, type, from, to, imm)
-        const fnMatch = fnDocs.find(f => normalize(f.number) === fn);
+        // 2. Chercher dans flight_numbers
+        const fnMatch = fnDocs.find(f => {
+            const fn2 = nrm(f.number);
+            return fn2 === fn || fn2 === fnShort || normVol(f.number) === fn || normVol(f.number) === fnShort;
+        });
         if (fnMatch) {
             if (!result.company) result.company = fnMatch.company || '';
             result.type = fnMatch.type || 'DEP';
@@ -4360,24 +4376,47 @@ function _chgRenderEnriched() {
             <div style="font-size:11px;color:#64748b;">Doublons</div></div>` : '');
 
     const tbody = document.getElementById('chgEnrichedBody');
+    const inpStyle = 'background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.15);color:inherit;font-size:12px;width:100%;min-width:60px;padding:1px 2px;outline:none;';
+    const inpFocus = 'onfocus="this.style.borderBottomColor=\x27#818cf8\x27" onblur="this.style.borderBottomColor=\x27rgba(255,255,255,0.15)\x27"';
+    
     tbody.innerHTML = _chgEnriched.map((r,i) => {
-        const bg  = r.status==='doublon' ? 'rgba(99,102,241,0.07)' : r.status==='warn' ? 'rgba(251,191,36,0.06)' : 'rgba(52,211,153,0.05)';
-        const ic  = r.status==='doublon' ? '🔵' : r.status==='warn' ? '⚠️' : '✅';
-        const td  = (v,clr='#94a3b8') => `<td style="color:${clr};padding:5px 8px;">${esc(String(v||'—'))}</td>`;
-        const warnBadge = r.warning ? `<span style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;border-radius:4px;padding:1px 6px;font-size:10px;">${esc(r.warning)}</span>` : '';
+        const bg  = r.status==='done'    ? 'rgba(52,211,153,0.07)' :
+                    r.status==='doublon' ? 'rgba(99,102,241,0.07)' :
+                    r.status==='warn'    ? 'rgba(251,191,36,0.05)' :
+                                          'rgba(52,211,153,0.04)';
+        const ic  = r.status==='done'    ? '✅' :
+                    r.status==='doublon' ? '🔵' :
+                    r.status==='warn'    ? '⚠️' : '✅';
+        const warnBadge = r.status==='done' ? '<span style="color:#34d399;font-size:11px;">Importé</span>' :
+                          r.status==='doublon' ? '<span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:4px;padding:1px 6px;font-size:10px;">Doublon</span>' :
+                          r.warning ? '<span style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;border-radius:4px;padding:1px 6px;font-size:10px;">' + esc(r.warning) + '</span>' :
+                          '<span style="color:#34d399;font-size:11px;">✓</span>';
+        // Champs éditables : auth, company, type, from, to, imm, pax, bebes
+        const editable = r.status !== 'done';
+        const inp = (field, val, clr='#e2e8f0', w='80px') => editable
+            ? `<td style="padding:3px 6px;"><input type="text" value="${esc(String(val||''))}" 
+                style="${inpStyle}color:${clr};min-width:${w};" ${inpFocus}
+                onchange="_chgUpdate(${i},'${field}',this.value)" 
+                oninput="_chgUpdate(${i},'${field}',this.value)"></td>`
+            : `<td style="color:${clr};padding:5px 8px;">${esc(String(val||'—'))}</td>`;
+        const sel = (field, val, opts) => editable
+            ? `<td style="padding:3px 6px;"><select style="background:#1e293b;border:none;border-bottom:1px solid rgba(255,255,255,0.15);color:#94a3b8;font-size:12px;padding:1px 2px;" onchange="_chgUpdate(${i},'${field}',this.value)">
+                ${opts.map(o=>`<option value="${o}" ${o===val?'selected':''}>${o}</option>`).join('')}</select></td>`
+            : `<td style="color:#94a3b8;padding:5px 8px;">${esc(String(val||'—'))}</td>`;
+
         return `<tr style="background:${bg};" data-ci="${i}">
-            <td style="padding:5px 8px;font-size:14px;">${ic}</td>
-            ${td(r.date,'#60a5fa')}
-            ${td(r.vol,'#e2e8f0')}
-            ${td(r.auth,'#D4AF37')}
-            ${td(r.company,'#94a3b8')}
-            ${td(r.type)}
-            ${td(r.from)}
-            ${td(r.to)}
-            ${td(r.imm)}
-            ${td(r.pax,'#34d399')}
-            ${td(r.bebes)}
-            <td style="padding:5px 8px;">${warnBadge || '<span style="color:#34d399;font-size:11px;">✓</span>'}</td>
+            <td style="padding:5px 8px;font-size:13px;">${ic}</td>
+            <td style="color:#60a5fa;padding:5px 8px;white-space:nowrap;">${esc(r.date||'—')}</td>
+            <td style="color:#e2e8f0;padding:5px 8px;font-weight:600;">${esc(r.vol||'—')}</td>
+            ${inp('auth', r.auth, '#D4AF37', '100px')}
+            ${inp('company', r.company, '#94a3b8', '60px')}
+            ${sel('type', r.type||'DEP', ['DEP','ARR','OVF','TRN'])}
+            ${inp('from', r.from, '#94a3b8', '60px')}
+            ${inp('to', r.to, '#94a3b8', '60px')}
+            ${inp('imm', r.imm, '#94a3b8', '70px')}
+            ${inp('pax', r.pax, '#34d399', '45px')}
+            ${inp('bebes', r.bebes, '#94a3b8', '40px')}
+            <td style="padding:5px 8px;white-space:nowrap;">${warnBadge}</td>
         </tr>`;
     }).join('');
 
@@ -4390,6 +4429,25 @@ function _chgRenderEnriched() {
         btn.style.display = toImport > 0 ? '' : 'none';
     }
 }
+
+// ── Mise à jour d'un champ depuis le tableau ──
+window._chgUpdate = function(i, field, value) {
+    if (!_chgEnriched[i]) return;
+    _chgEnriched[i][field] = field === 'pax' || field === 'bebes' ? (parseInt(value)||0) : value.trim().toUpperCase();
+    // Recalculer le statut
+    const r = _chgEnriched[i];
+    if (r.status !== 'doublon' && r.status !== 'done') {
+        if (!r.auth)    { r.status = 'warn'; r.warning = 'Auth introuvable'; }
+        else if (!r.company) { r.status = 'warn'; r.warning = 'Compagnie inconnue'; }
+        else            { r.status = 'ok';   r.warning = ''; }
+    }
+    // Re-rendre seulement les stats + bouton (pas tout le tableau pour ne pas perdre le focus)
+    const ok      = _chgEnriched.filter(r=>r.status==='ok').length;
+    const warn    = _chgEnriched.filter(r=>r.status==='warn').length;
+    const toImport = ok + warn;
+    const btn = document.getElementById('chgImportBtn');
+    if (btn) btn.textContent = '✅ Importer ' + toImport + ' vol' + (toImport>1?'s':'');
+};
 
 // ── Import dans Firebase ──
 window._chgImportAll = async function() {
