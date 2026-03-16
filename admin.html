@@ -4295,9 +4295,17 @@ async function _chgEnrich() {
     const progDocs = snapProg.docs.map(d=>({id:d.id,...d.data()}));
     const fnDocs   = snapFN.docs.map(d=>({id:d.id,...d.data()}));
     const nrm = v => String(v||'').toUpperCase().replace(/[-\s\.]/g,'');
-    const existingKeys = new Set(
-        snapFlights.docs.map(d=>{ const r=d.data(); return nrm(r.flightNumber||'')+'__'+(r.date||''); })
-    );
+    // Clés existantes avec ET sans zéros de tête pour détecter les doublons
+    const existingKeys = new Set();
+    snapFlights.docs.forEach(d => {
+        const r = d.data();
+        if (d.id.startsWith('cfg-')) return;
+        const fn   = nrm(r.flightNumber||'');
+        const fnNZ = fn.replace(/^([A-Z]{1,3})(0+)(\d+)$/, '$1$3'); // sans zéro
+        const dt   = r.date || '';
+        existingKeys.add(fn  +'__'+dt);
+        existingKeys.add(fnNZ+'__'+dt);
+    });
 
     const normalize = nrm;
 
@@ -4491,6 +4499,9 @@ async function _chgDoImport(filterFn) {
     const toImport = filterFn(_chgEnriched);
     let done = 0, errors = 0;
 
+    const { addDoc, collection } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const db = window._db || window.db;
+
     for (const r of toImport) {
         try {
             const flightData = {
@@ -4504,13 +4515,13 @@ async function _chgDoImport(filterFn) {
                 to:         r.to   || '',
                 passengers: r.pax  || 0,
                 babies:     r.bebes|| 0,
-                hasStopover:false, stopover:'', stopoverPax:0, stopoverBabies:0,
-                timestamp:  Date.now()
+                hasStopover: false, stopover:'', stopoverPax:0, stopoverBabies:0,
+                timestamp:   Date.now(),
+                createdAt:   new Date().toISOString(),
+                updatedAt:   new Date().toISOString()
             };
-            if (window.dbService && window.dbService.addFlight) {
-                await window.dbService.addFlight(flightData);
-                done++;
-            }
+            await addDoc(collection(db, 'flights'), flightData);
+            done++;
         } catch(e) {
             errors++;
             console.warn('chgImport error:', e.message, r);
