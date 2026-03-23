@@ -408,13 +408,37 @@ window._ldmSetTab = function(tab) {
 window._ldmParsePaste = function() {
     const text = (document.getElementById('ldmPasteArea').value||'').trim();
     if (!text) { alert('Collez un texte LDM ou MVT'); return; }
-    const refDate = _buildDate(1); // date de référence pour extraire mois/année
+    const refDate = _buildDate(1);
     const parsed  = extractFields(text, refDate);
     const type    = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
-    const result  = { id:'paste_'+Date.now(), type, subject:'(texte collé)', from:'', date: parsed.date||refDate, rawText:text, parsed };
+    const em = { id:'paste_'+Date.now(), type, subject:'(texte collé)', from:'', date: parsed.date||refDate, rawText:text, parsed, _imported:false };
+    // Vérifier si déjà importé
+    const fn = (parsed.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
+    const rg = (parsed.registration||'').replace(/[\s.\-]/g,'').toUpperCase();
+    const dt = parsed.date||refDate;
+    em._fp = `${fn}|${dt}|${rg}`;
+    em._imported = _fbImported && _fbImported.has(em._fp);
+    // Chercher auth dans programme_vols
+    if (fn && dt && !parsed.authorizationNumber && _authByFlightDate) {
+        const key = fn + '__' + dt;
+        if (_authByFlightDate[key]) parsed.authorizationNumber = _authByFlightDate[key];
+        else if (_authByFlight && _authByFlight[fn]) parsed.authorizationNumber = _authByFlight[fn];
+    }
+    // Stocker dans un tableau manuel pour réutiliser importFlight
+    if (!window._manualEntries) window._manualEntries = [];
+    // Préfixer index avec 'm' pour distinguer des emails
+    const mi = window._manualEntries.length;
+    window._manualEntries.push(em);
     const div = document.getElementById('pasteResult');
     div.style.display = '';
-    div.innerHTML = _renderSingleResult(result);
+    div.innerHTML = _renderManualCard(em, mi);
+    // Ouvrir automatiquement la carte
+    setTimeout(() => {
+        const bdy = document.getElementById('mbdy-'+mi);
+        const arr = document.getElementById('marr-'+mi);
+        if (bdy) bdy.style.display = 'block';
+        if (arr) arr.textContent = '▲';
+    }, 50);
 };
 
 // ── Analyser image — OCR côté client avec Tesseract.js (pas d'API externe) ──
@@ -467,18 +491,170 @@ window._ldmParseImage = async function(input) {
         const type    = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
         const result  = { id:'img_'+Date.now(), type, subject:'(image)', from:'', date:parsed.date||refDate, rawText:text, parsed };
 
+        if (!window._manualEntries) window._manualEntries = [];
+        const fn2 = (parsed.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
+        const rg2 = (parsed.registration||'').replace(/[\s.\-]/g,'').toUpperCase();
+        result._fp = fn2+'|'+result.date+'|'+rg2;
+        result._imported = _fbImported && _fbImported.has(result._fp);
+        if (fn2 && result.date && !parsed.authorizationNumber && _authByFlightDate) {
+            const key2 = fn2+'__'+result.date;
+            if (_authByFlightDate[key2]) parsed.authorizationNumber = _authByFlightDate[key2];
+            else if (_authByFlight && _authByFlight[fn2]) parsed.authorizationNumber = _authByFlight[fn2];
+        }
+        const mi2 = window._manualEntries.length;
+        window._manualEntries.push(result);
         resultDiv.innerHTML =
             '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:11px;color:#475569;padding:4px 0;">📄 Texte extrait par OCR</summary>' +
             '<pre style="font-size:11px;color:#64748b;white-space:pre-wrap;margin-top:4px;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">' +
             esc(text) + '</pre></details>' +
-            _renderSingleResult(result);
+            _renderManualCard(result, mi2);
 
     } catch(e) {
         resultDiv.innerHTML = '<div style="color:#fc8181;">Erreur OCR: ' + esc(e.message) + '<br><small style="color:#64748b;">Essayez l\'onglet "Coller texte" à la place</small></div>';
     }
 };
 
-// ── Rendu d'un seul résultat LDM/MVT ──
+// ── Rendu carte manuelle (même structure que email) ──
+function _renderManualCard(em, mi) {
+    const p   = em.parsed || {};
+    const imp = em._imported;
+    const esc2 = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return `<div class="email-card ${imp?'imported':''}" id="mcard-${mi}">
+      <div class="email-hdr" onclick="toggleMCard(${mi})">
+        <span class="type-badge badge-${em.type.toLowerCase()}">${em.type}</span>
+        <div class="email-meta">
+          <div class="email-subj">${esc2(p.flightNumber||'—')} · ${esc2(em.date||'')}</div>
+          <div class="email-from">${em.subject||''}</div>
+        </div>
+        <div class="email-date2">${_ldmMonth}/${_ldmYear}</div>
+        ${imp ? '<span class="st-badge st-ok">✓ Importé</span>' : ''}
+        <span style="color:var(--dim);font-size:16px;margin-left:4px;" id="marr-${mi}">▼</span>
+      </div>
+      <div class="email-body" id="mbdy-${mi}" style="display:none;">
+        <div class="parsed-sec">
+          <div class="parsed-lbl">✦ Données extraites — vérifiez et corrigez si nécessaire</div>
+          <div class="pgrid">
+            <div class="pf-auth-wrap">
+              <div class="pf" style="flex:1;">
+                <label>N° Autorisation <span class="auth-badge ${p.authorizationNumber?'found':''}" id="mauth-badge-${mi}">${p.authorizationNumber?'✓ Auto':''}</span></label>
+                <input id="m${mi}-auth" value="${esc2(p.authorizationNumber||'')}" placeholder="SNA26-XXXX" style="text-transform:uppercase;"
+                       onchange="document.getElementById('mauth-badge-'+${mi}).textContent=''">
+              </div>
+              <button class="auth-lookup-btn" onclick="lookupAuthNumberManual(${mi})">🔍 Chercher</button>
+            </div>
+            <div class="pf"><label>N° Vol</label><input id="m${mi}-fn" value="${esc2(p.flightNumber||'')}" placeholder="ex: AT510" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Immatriculation</label><input id="m${mi}-rg" value="${esc2(p.registration||'')}" placeholder="ex: CNRGE" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Date du vol</label><input type="date" id="m${mi}-dt" value="${p.date||em.date||''}"></div>
+            <div class="pf"><label>Départ</label><input id="m${mi}-fr" value="${esc2(p.from||'')}" placeholder="ex: NKC" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Arrivée</label><input id="m${mi}-to" value="${esc2(p.to||'')}" placeholder="ex: CMN" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>PAX</label><input type="number" id="m${mi}-px" value="${p.totalPax||0}" min="0"></div>
+            <div class="pf"><label>Bébés</label><input type="number" id="m${mi}-bb" value="${p.paxBabies||0}" min="0"></div>
+          </div>
+          <div class="act-row" id="mact-${mi}">
+            ${imp
+              ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>'
+              : `<button class="btn btn-green" onclick="importManualFlight(${mi})">⬆️ Importer dans le système</button>`
+            }
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleMCard(mi) {
+    const b = document.getElementById('mbdy-'+mi);
+    const a = document.getElementById('marr-'+mi);
+    if (!b) return;
+    const open = b.style.display !== 'none';
+    b.style.display = open ? 'none' : 'block';
+    if (a) a.textContent = open ? '▼' : '▲';
+}
+
+// Chercher auth pour une entrée manuelle
+async function lookupAuthNumberManual(mi) {
+    const fn = (document.getElementById('m'+mi+'-fn')||{value:''}).value.trim().toUpperCase();
+    const dt = (document.getElementById('m'+mi+'-dt')||{value:''}).value;
+    if (!fn) { toast('Saisissez d\'abord le N° de vol','warn'); return; }
+    const key = fn.replace(/[-\\s.]/g,'')+'__'+dt;
+    const auth = (_authByFlightDate && _authByFlightDate[key]) || (_authByFlight && _authByFlight[fn.replace(/[-\\s.]/g,'')]);
+    if (auth) {
+        const el = document.getElementById('m'+mi+'-auth');
+        if (el) { el.value = auth; }
+        const badge = document.getElementById('mauth-badge-'+mi);
+        if (badge) { badge.textContent = '✓ Trouvé'; badge.className = 'auth-badge found'; }
+        toast('✅ N° autorisation trouvé : '+auth,'ok');
+    } else {
+        toast('⚠️ Aucun N° autorisation trouvé pour '+fn+' le '+dt,'warn');
+    }
+}
+
+// Importer un vol manuel dans Firebase
+async function importManualFlight(mi, force) {
+    const fn  = (document.getElementById('m'+mi+'-fn')||{value:''}).value.trim().toUpperCase();
+    const rg  = (document.getElementById('m'+mi+'-rg')||{value:''}).value.trim().toUpperCase().replace(/[\\s.\\-]/g,'');
+    const dt  = (document.getElementById('m'+mi+'-dt')||{value:''}).value;
+    const fr  = (document.getElementById('m'+mi+'-fr')||{value:''}).value.trim().toUpperCase();
+    const to  = (document.getElementById('m'+mi+'-to')||{value:''}).value.trim().toUpperCase();
+    const px  = parseInt((document.getElementById('m'+mi+'-px')||{value:'0'}).value)||0;
+    const bb  = parseInt((document.getElementById('m'+mi+'-bb')||{value:'0'}).value)||0;
+    const auth= (document.getElementById('m'+mi+'-auth')||{value:''}).value.trim().toUpperCase();
+
+    if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires','warn'); return; }
+
+    const fp = fn+'|'+dt+'|'+rg;
+    if (!force && _fbImported && _fbImported.has(fp)) {
+        document.getElementById('mact-'+mi).innerHTML =
+            '<div class="dup-box">⚠️ Ce vol ('+fn+' du '+dt+') existe déjà dans Firebase.</div>' +
+            '<button class="btn btn-outline btn-sm" onclick="importManualFlight('+mi+',true)">Forcer l\'import quand même</button>';
+        return;
+    }
+
+    const btn = document.querySelector('#mact-'+mi+' .btn-green');
+    if (btn) { btn.disabled=true; btn.innerHTML='<span class="spin"></span>'; }
+
+    try {
+        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const { getFirestore, collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const apps = getApps();
+        const app  = apps.find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+        const db   = getFirestore(app);
+
+        const type = to === 'NKC' || to === 'GQNO' ? 'ARR' : 'DEP';
+        await addDoc(collection(db,'flights'), {
+            flightNumber: fn, registration: rg,
+            date: dt, from: fr, to,
+            type,
+            hasStopover: false, stopover:'', stopoverPax:0, stopoverBabies:0,
+            passengers: px, babies: bb,
+            company: detectCompany(fn),
+            authorizationNumber: auth,
+            source: 'LDM_MANUAL',
+            createdAt: new Date().toISOString(),
+            timestamp: Date.now()
+        });
+
+        if (_fbImported) _fbImported.add(fp);
+        if (window._manualEntries && window._manualEntries[mi]) window._manualEntries[mi]._imported = true;
+
+        const card = document.getElementById('mcard-'+mi);
+        if (card) card.classList.add('imported');
+        document.getElementById('mact-'+mi).innerHTML =
+            '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Importé avec succès dans le système</span>';
+        const hdr = card && card.querySelector('.email-hdr');
+        if (hdr && !hdr.querySelector('.st-ok')) {
+            const badge = document.createElement('span');
+            badge.className='st-badge st-ok'; badge.textContent='✓ Importé';
+            hdr.insertBefore(badge, document.getElementById('marr-'+mi));
+        }
+        toast('✅ Vol '+fn+' importé avec succès','ok');
+    } catch(e) {
+        console.error(e);
+        toast('❌ Erreur import : '+e.message,'err');
+        if (btn) { btn.disabled=false; btn.innerHTML='⬆️ Importer dans le système'; }
+    }
+}
+
+// ── Ancien rendu simple (gardé pour compatibilité) ──
 function _renderSingleResult(em) {
     const p = em.parsed || {};
     const esc2 = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
