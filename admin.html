@@ -3159,6 +3159,9 @@ function renderProgrammeByCompany() {
     const container = document.getElementById('programmeByCompany');
     if (!container) return;
     if (!_allProgramme.length) {
+        _progStep = 1;
+        _progSelectedAnnee = null; _progSelectedSaison = null;
+        _progSelectedCompany = null; _progSelectedMonth = null;
         container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:14px;">Aucun programme importé.<br><br><button class="btn-primary" onclick="openImportProgModal()" style="margin-top:8px;">📥 Importer un programme</button></div>';
         return;
     }
@@ -3405,6 +3408,16 @@ window._deleteOneVol = async function(progId) {
         await window._deleteDoc(window._doc(window._db,'programme_vols',progId));
         _allProgramme = _allProgramme.filter(x=>x.id!==progId);
         showNotif('Vol supprimé du programme','success');
+        // Si plus de vols pour cette compagnie/saison, retour step précédent
+        const remaining = _allProgramme.filter(r=>
+            r.company===_progSelectedCompany &&
+            r.saison===_progSelectedSaison &&
+            r.annee===_progSelectedAnnee
+        );
+        if (remaining.length === 0) {
+            _progStep = _allProgramme.length > 0 ? 3 : 1;
+            _progSelectedCompany = null;
+        }
         renderProgrammeByCompany();
     } catch(e) { showNotif('Erreur: '+e.message,'error'); }
 };
@@ -3434,6 +3447,12 @@ async function deleteProgramme(company,saison,annee) {
         await Promise.all(toDel.map(r=>window._deleteDoc(window._doc(window._db,'programme_vols',r.id))));
         _allProgramme = _allProgramme.filter(r=>!match(r));
         showNotif(toDel.length+' vols supprimés pour '+company,'success');
+        // Reset navigation au step 1
+        _progStep = 1;
+        _progSelectedAnnee   = null;
+        _progSelectedSaison  = null;
+        _progSelectedCompany = null;
+        _progSelectedMonth   = null;
         renderProgrammeByCompany();
     } catch(e) { showNotif('Erreur: '+e.message,'error'); }
 }
