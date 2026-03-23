@@ -3304,14 +3304,18 @@ function renderProgrammeByCompany() {
 
         const rowsHtml = volsFiltres.sort((a,b)=>(a.auth||'').localeCompare(b.auth||'')).map(r => {
             const ok=_isSaisi(r), bg=ok?'rgba(52,211,153,0.07)':'rgba(252,129,129,0.05)', ac=ok?'#34d399':'#fc8181', ic=ok?'✅':'🔴', rid=r.id;
-            const saisirBtn = ok?'':'<button data-rid="'+rid+'" onclick="_saisirVol(this.dataset.rid)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✏️ Saisir</button>';
+            const cancelled = r.cancelled === true;
+            const rowBg = cancelled ? 'rgba(251,191,36,0.08)' : bg;
+            const rowIc = cancelled ? '🟡' : ic;
+            const cancelBtn = '<button data-rid="'+rid+'" data-cancelled="'+(cancelled?'1':'0')+'" onclick="_toggleCancelVol(this.dataset.rid,this.dataset.cancelled)" title="'+(cancelled?'Réactiver':'Marquer annulé')+'" style="background:'+(cancelled?'rgba(251,191,36,0.2)':'rgba(251,191,36,0.07)')+';border:1px solid rgba(251,191,36,'+(cancelled?'0.5':'0.2')+');color:#fbbf24;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;margin-right:4px;">'+(cancelled?'↩️':'🟡')+'</button>';
+            const saisirBtn = (ok||cancelled)?'':'<button data-rid="'+rid+'" onclick="_saisirVol(this.dataset.rid)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✏️ Saisir</button>';
             const delBtn = '<button data-rid="'+rid+'" onclick="_deleteOneVol(this.dataset.rid)" style="background:rgba(229,62,62,0.10);border:1px solid rgba(229,62,62,0.25);color:#fc8181;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">🗑️</button>';
-            return `<tr style="background:${bg}">
-                <td>${ic} <strong style="color:${ac};font-size:12px;font-family:monospace;">${esc(r.auth||'—')}</strong></td>
-                <td style="color:#e2e8f0;font-weight:600;">${esc(r.flight||'—')}</td>
+            return `<tr style="background:${rowBg};${cancelled?'opacity:0.75;':''}" >
+                <td>${rowIc} <strong style="color:${cancelled?'#fbbf24':ac};font-size:12px;font-family:monospace;${cancelled?'text-decoration:line-through;':''}">${esc(r.auth||'—')}</strong></td>
+                <td style="color:${cancelled?'#fbbf24':'#e2e8f0'};font-weight:600;">${esc(r.flight||'—')}${cancelled?' <span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.15);border-radius:3px;padding:1px 5px;">ANNULÉ</span>':''}</td>
                 <td style="color:#94a3b8;font-size:12px;">${esc(r.date||'—')}</td>
                 <td style="color:#818cf8;font-size:11px;">${esc(r.decision||'—')}</td>
-                <td style="white-space:nowrap;">${saisirBtn}${delBtn}</td>
+                <td style="white-space:nowrap;">${cancelBtn}${saisirBtn}${delBtn}</td>
             </tr>`;
         }).join('');
 
@@ -3400,6 +3404,19 @@ window._saisirVol = function(progId) {
     window.open(baseUrl + '?' + params.toString(), '_blank');
 };
 
+window._toggleCancelVol = async function(progId, cancelledStr) {
+    const r = _allProgramme.find(x=>x.id===progId);
+    if (!r) return;
+    const newState = cancelledStr !== '1'; // toggle
+    const label = newState ? 'annulé' : 'réactivé';
+    try {
+        await window._updateDoc(window._doc(window._db,'programme_vols',progId), { cancelled: newState });
+        r.cancelled = newState;
+        showNotif('Vol '+(r.auth||r.flight)+' '+label,'success');
+        renderProgrammeByCompany();
+    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+};
+
 window._deleteOneVol = async function(progId) {
     const r = _allProgramme.find(x=>x.id===progId);
     if (!r) return;
@@ -3429,6 +3446,8 @@ window._confirmDelProg = function(gk) {
 };
 
 function _isSaisi(r) {
+    // Un vol annulé est considéré comme "traité" — pas dans les restants
+    if (r.cancelled === true) return true;
     const fn = (r.flight||'').toUpperCase().replace(/[-\s.]/g,'');
     const dt = (r.date||'').trim();
     if (fn && dt && _allSaisis.has(fn+'__'+dt)) return true;
