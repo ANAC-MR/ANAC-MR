@@ -412,34 +412,69 @@ window._ldmParsePaste = function() {
     const parsed  = extractFields(text, refDate);
     const type    = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
     const em = { id:'paste_'+Date.now(), type, subject:'(texte collé)', from:'', date: parsed.date||refDate, rawText:text, parsed, _imported:false };
-    // Vérifier si déjà importé
+    // Stocker dans un tableau manuel
+    if (!window._manualEntries) window._manualEntries = [];
+    const mi = window._manualEntries.length;
     const fn = (parsed.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
     const rg = (parsed.registration||'').replace(/[\s.\-]/g,'').toUpperCase();
     const dt = parsed.date||refDate;
-    em._fp = `${fn}|${dt}|${rg}`;
-    em._imported = _fbImported && _fbImported.has(em._fp);
-    // Chercher auth dans programme_vols
-    if (fn && dt && !parsed.authorizationNumber && _authByFlightDate) {
-        const key = fn + '__' + dt;
-        if (_authByFlightDate[key]) parsed.authorizationNumber = _authByFlightDate[key];
-        else if (_authByFlight && _authByFlight[fn]) parsed.authorizationNumber = _authByFlight[fn];
-    }
-    // Stocker dans un tableau manuel pour réutiliser importFlight
-    if (!window._manualEntries) window._manualEntries = [];
-    // Préfixer index avec 'm' pour distinguer des emails
-    const mi = window._manualEntries.length;
+    em._fp = fn+'|'+dt+'|'+rg;
+    em._imported = false;
     window._manualEntries.push(em);
+
     const div = document.getElementById('pasteResult');
     div.style.display = '';
-    div.innerHTML = _renderManualCard(em, mi);
-    // Ouvrir automatiquement la carte
-    setTimeout(() => {
-        const bdy = document.getElementById('mbdy-'+mi);
-        const arr = document.getElementById('marr-'+mi);
-        if (bdy) bdy.style.display = 'block';
-        if (arr) arr.textContent = '▲';
-    }, 50);
+    div.innerHTML = '<div style="color:#60a5fa;font-size:13px;padding:8px;">⏳ Vérification Firebase...</div>';
+
+    // Recharger Firebase pour vérifier doublon + auth en temps réel
+    _checkManualEntry(mi, fn, dt, rg, parsed).then(() => {
+        div.innerHTML = _renderManualCard(em, mi);
+        setTimeout(() => {
+            const bdy = document.getElementById('mbdy-'+mi);
+            const arr = document.getElementById('marr-'+mi);
+            if (bdy) bdy.style.display = 'block';
+            if (arr) arr.textContent = '▲';
+        }, 50);
+    });
 };
+
+async function _checkManualEntry(mi, fn, dt, rg, parsed) {
+    const em = window._manualEntries && window._manualEntries[mi];
+    if (!em) return;
+    try {
+        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const { getFirestore, collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const apps = getApps();
+        const app  = apps.find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+        const db   = getFirestore(app);
+
+        // Vérifier doublon en temps réel
+        if (fn && dt) {
+            const q = query(collection(db,'flights'),
+                where('flightNumber','==',fn), where('date','==',dt));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                em._imported = true;
+                em._fp = fn+'|'+dt+'|'+rg;
+                if (_fbImported) _fbImported.add(em._fp);
+            }
+        }
+
+        // Chercher auth dans programme_vols si pas trouvé
+        if (fn && dt && !parsed.authorizationNumber) {
+            const qp = query(collection(db,'programme_vols'),
+                where('flightNorm','==',fn), where('date','==',dt));
+            const sp = await getDocs(qp);
+            if (!sp.empty) parsed.authorizationNumber = sp.docs[0].data().auth||'';
+            // Fallback: par vol seul
+            if (!parsed.authorizationNumber) {
+                const qp2 = query(collection(db,'programme_vols'), where('flightNorm','==',fn));
+                const sp2 = await getDocs(qp2);
+                if (!sp2.empty) parsed.authorizationNumber = sp2.docs[0].data().auth||'';
+            }
+        }
+    } catch(e) { console.warn('_checkManualEntry:', e.message); }
+}
 
 // ── Analyser image — OCR côté client avec Tesseract.js (pas d'API externe) ──
 window._ldmParseImage = async function(input) {
@@ -1030,23 +1065,57 @@ function extractFields(text, dateReceived) {
       p.from = BASE_IATA; p.to = otherStations[0] || ''; p.type = 'DEP';
     }
 
-    // 3. PAX/BABIES via lignes -XYZ.X/X/X
+    // 3. PAX/BABIES — ne prendre QUE la ligne de la station NKC/GQNO (pour ARR)
+    //    ou la ligne de la destination principale (pour DEP)
+    //    Chaque ligne -XXX.N1/N2/N3/N4 = PAX pour cette escale
+    //    Le dernier chiffre = bébés, les autres = classes de cabine
     let totalPax = 0, totalBabies = 0, foundPax = false;
+
+    // Construire un map station → {pax, babies} depuis les lignes -XXX
+    const stationPax = {};
     routeLines.forEach(line => {
-      const numMatch = line.match(/\.(\d+(?:\/\d+)+)/);
+      const stM = line.match(/^-([A-Z]{2,4})/);
+      if (!stM) return;
+      const st = stM[1];
+      const numMatch = line.match(/\.([0-9]+(?:\/[0-9]+)+)/);
       if (!numMatch) return;
       const nums = numMatch[1].split('/').map(Number);
       if (nums.length >= 2) {
-        totalBabies += nums[nums.length-1];
-        totalPax    += nums.slice(0,-1).reduce((a,b)=>a+b,0);
-        foundPax = true;
+        stationPax[st] = {
+          pax:    nums.slice(0,-1).reduce((a,b)=>a+b,0),
+          babies: nums[nums.length-1]
+        };
       }
     });
+
+    // Choisir la bonne station selon le type de vol
+    const nkcData  = stationPax['NKC'] || stationPax['GQNO'] || null;
+    const otherSts = Object.keys(stationPax).filter(s => s!=='NKC' && s!=='GQNO');
+
+    if (p.type === 'ARR' || p.type === 'TRANSIT') {
+      // ARR/TRANSIT: PAX qui descendent à NKC
+      if (nkcData) { totalPax = nkcData.pax; totalBabies = nkcData.babies; foundPax = true; }
+    } else if (p.type === 'DEP') {
+      // DEP: PAX qui partent vers la destination (pas NKC)
+      if (otherSts.length > 0 && stationPax[otherSts[0]]) {
+        totalPax = stationPax[otherSts[0]].pax;
+        totalBabies = stationPax[otherSts[0]].babies;
+        foundPax = true;
+      }
+    }
+
+    // Fallback: si pas trouvé, prendre toutes les lignes
+    if (!foundPax) {
+      Object.values(stationPax).forEach(d => { totalPax += d.pax; totalBabies += d.babies; });
+      foundPax = Object.keys(stationPax).length > 0;
+    }
+
+    // Fallback 2: PAX/N format
     if (!foundPax) {
       const paxSlash = text.match(/\.?PAX\/(\d+(?:\/\d+)*)/i);
       if (paxSlash) {
         const nums = paxSlash[1].split('/').map(Number);
-        totalPax = nums.length>=2 ? nums.slice(0,-1).reduce((a,b)=>a+b,0) : nums[0];
+        totalPax    = nums.length>=2 ? nums.slice(0,-1).reduce((a,b)=>a+b,0) : nums[0];
         totalBabies = nums.length>=2 ? nums[nums.length-1] : 0;
         foundPax = true;
       }
