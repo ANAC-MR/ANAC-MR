@@ -194,6 +194,24 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     </div>
   </div>
 
+  <!-- SÉLECTEUR MOIS GLOBAL -->
+  <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.2);border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span style="font-size:12px;font-weight:700;color:#D4AF37;white-space:nowrap;">📅 MOIS DU LDM/MVT</span>
+    <select id="ldmMonthSel" onchange="_ldmMonthChanged()"
+      style="background:#1e293b;border:1px solid rgba(212,175,55,0.4);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:13px;font-weight:600;cursor:pointer;">
+      <option value="1">Janvier</option><option value="2">Février</option>
+      <option value="3">Mars</option><option value="4">Avril</option>
+      <option value="5">Mai</option><option value="6">Juin</option>
+      <option value="7">Juillet</option><option value="8">Août</option>
+      <option value="9">Septembre</option><option value="10">Octobre</option>
+      <option value="11">Novembre</option><option value="12">Décembre</option>
+    </select>
+    <select id="ldmYearSel" onchange="_ldmMonthChanged()"
+      style="background:#1e293b;border:1px solid rgba(212,175,55,0.4);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:13px;font-weight:600;cursor:pointer;">
+    </select>
+    <span id="ldmMonthInfo" style="font-size:12px;color:#64748b;">Utilisé pour construire la date dans les LDM/MVT (le mois n'est pas inclus dans le message)</span>
+  </div>
+
   <!-- TABS MODE -->
   <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
     <button id="tabBtnEmail" onclick="_ldmSetTab('email')"
@@ -300,15 +318,63 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 <script>
 
+
+// ══ LDM MOIS GLOBAL ═══════════════════════════════════════════════
+
+// Mois sélectionné (1-12) — persiste pendant toute la session
+let _ldmMonth = new Date().getMonth() + 1;
+let _ldmYear  = new Date().getFullYear();
+
+// Init sélecteurs au chargement
+document.addEventListener('DOMContentLoaded', () => {
+    // Remplir années (3 ans autour de l'année courante)
+    const yrSel = document.getElementById('ldmYearSel');
+    if (yrSel) {
+        const cur = new Date().getFullYear();
+        for (let y = cur - 1; y <= cur + 1; y++) {
+            const o = document.createElement('option');
+            o.value = y; o.textContent = y;
+            if (y === cur) o.selected = true;
+            yrSel.appendChild(o);
+        }
+    }
+    // Pré-sélectionner le mois courant
+    const moSel = document.getElementById('ldmMonthSel');
+    if (moSel) moSel.value = _ldmMonth;
+    _updateMonthInfo();
+});
+
+window._ldmMonthChanged = function() {
+    const moSel = document.getElementById('ldmMonthSel');
+    const yrSel = document.getElementById('ldmYearSel');
+    if (moSel) _ldmMonth = parseInt(moSel.value);
+    if (yrSel) _ldmYear  = parseInt(yrSel.value);
+    _updateMonthInfo();
+    // Re-parser si du texte est déjà analysé
+    const pa = document.getElementById('ldmPasteArea');
+    if (pa && pa.value.trim()) _ldmParsePaste();
+};
+
+function _updateMonthInfo() {
+    const MOIS = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                  'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    const el = document.getElementById('ldmMonthInfo');
+    if (el) el.textContent = `Dates calculées avec : ${MOIS[_ldmMonth]} ${_ldmYear}`;
+}
+
+// Construire une date YYYY-MM-DD depuis jour + mois global
+function _buildDate(day) {
+    if (!day) return '';
+    return `${_ldmYear}-${String(_ldmMonth).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+}
+
 // ══ LDM TABS ══════════════════════════════════════════════════════
 
 window._ldmSetTab = function(tab) {
     const tabs = ['email','paste','image'];
     const btnIds = {email:'tabBtnEmail', paste:'tabBtnPaste', image:'tabBtnImage'};
     const panelIds = {paste:'tabPaste', image:'tabImage'};
-    const emailSections = ['#readBtn','#authActions','.auth-card','.stats-row','.status-bar','.auto-bar','.sec-title','#emailList'];
 
-    // Styles boutons
     tabs.forEach(t => {
         const btn = document.getElementById(btnIds[t]);
         if (!btn) return;
@@ -323,13 +389,11 @@ window._ldmSetTab = function(tab) {
         }
     });
 
-    // Afficher/cacher les panels
     ['paste','image'].forEach(t => {
         const el = document.getElementById(panelIds[t]);
         if (el) el.style.display = t === tab ? '' : 'none';
     });
 
-    // Section email : afficher/cacher
     const emailVisible = tab === 'email';
     document.querySelectorAll('.auth-card, .stats-row, .status-bar, .auto-bar').forEach(el => {
         el.style.display = emailVisible ? '' : 'none';
@@ -340,27 +404,20 @@ window._ldmSetTab = function(tab) {
     if (secTitle)  secTitle.style.display  = emailVisible ? '' : 'none';
 };
 
-// ── Analyser un texte collé ──
+// ── Analyser texte collé ──
 window._ldmParsePaste = function() {
     const text = (document.getElementById('ldmPasteArea').value||'').trim();
     if (!text) { alert('Collez un texte LDM ou MVT'); return; }
-
-    const fakeEmail = {
-        payload: { parts: [], body: { data: btoa(unescape(encodeURIComponent(text))) } },
-        id: 'paste_' + Date.now()
-    };
-    // Simuler parseLDM sans les headers email
-    const today = new Date().toISOString().split('T')[0];
-    const parsed = extractFields(text, today);
-    const result = { id: fakeEmail.id, type: text.toUpperCase().includes('MVT')&&!text.toUpperCase().includes('LDM')?'MVT':'LDM',
-        subject:'(texte collé)', from:'', date:today, rawText:text, parsed };
-
+    const refDate = _buildDate(1); // date de référence pour extraire mois/année
+    const parsed  = extractFields(text, refDate);
+    const type    = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
+    const result  = { id:'paste_'+Date.now(), type, subject:'(texte collé)', from:'', date: parsed.date||refDate, rawText:text, parsed };
     const div = document.getElementById('pasteResult');
     div.style.display = '';
     div.innerHTML = _renderSingleResult(result);
 };
 
-// ── Analyser une image via OCR (Anthropic API) ──
+// ── Analyser image — OCR côté client avec Tesseract.js (pas d'API externe) ──
 window._ldmParseImage = async function(input) {
     const file = input.files[0];
     if (!file) return;
@@ -376,86 +433,97 @@ window._ldmParseImage = async function(input) {
 
     const resultDiv = document.getElementById('imageResult');
     resultDiv.style.display = '';
-    resultDiv.innerHTML = '<div style="color:#60a5fa;font-size:13px;">⏳ Lecture de l\'image en cours...</div>';
+    resultDiv.innerHTML = '<div style="color:#60a5fa;font-size:13px;">⏳ Chargement OCR...</div>';
 
     try {
-        // Convertir en base64
-        const base64 = await new Promise((res, rej) => {
-            const r = new FileReader();
-            r.onload = () => res(r.result.split(',')[1]);
-            r.onerror = rej;
-            r.readAsDataURL(file);
+        // Charger Tesseract.js si pas encore chargé
+        if (typeof Tesseract === 'undefined') {
+            await new Promise((res, rej) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js';
+                s.onload = res; s.onerror = rej;
+                document.head.appendChild(s);
+            });
+        }
+
+        resultDiv.innerHTML = '<div style="color:#60a5fa;font-size:13px;">⏳ Lecture du texte en cours (peut prendre 10-20 secondes)...</div>';
+
+        const { data: { text } } = await Tesseract.recognize(file, 'eng', {
+            logger: m => {
+                if (m.status === 'recognizing text') {
+                    resultDiv.innerHTML = `<div style="color:#60a5fa;font-size:13px;">⏳ OCR : ${Math.round(m.progress*100)}%</div>`;
+                }
+            }
         });
 
-        // Appel Anthropic pour OCR + extraction
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 1000,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } },
-                        { type: 'text', text: 'This is an LDM (Load Distribution Message) or MVT (Movement Message) from aviation. Extract the raw text exactly as it appears. Return ONLY the raw text content, nothing else.' }
-                    ]
-                }]
-            })
-        });
-        const data = await response.json();
-        const extractedText = data.content && data.content[0] ? data.content[0].text : '';
-
-        if (!extractedText) {
-            resultDiv.innerHTML = '<div style="color:#fc8181;">Impossible de lire le texte de l\'image</div>';
+        if (!text || text.trim().length < 5) {
+            resultDiv.innerHTML = '<div style="color:#fc8181;">Impossible de lire le texte — vérifiez la qualité de l\'image</div>';
             return;
         }
 
-        // Parser le texte extrait
-        const today = new Date().toISOString().split('T')[0];
-        const parsed = extractFields(extractedText, today);
-        const type = extractedText.toUpperCase().includes('MVT')&&!extractedText.toUpperCase().includes('LDM')?'MVT':'LDM';
-        const result = { id:'img_'+Date.now(), type, subject:'(image)', from:'', date:today, rawText:extractedText, parsed };
+        // Parser avec la même logique
+        const refDate = _buildDate(1);
+        const parsed  = extractFields(text, refDate);
+        const type    = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
+        const result  = { id:'img_'+Date.now(), type, subject:'(image)', from:'', date:parsed.date||refDate, rawText:text, parsed };
 
-        resultDiv.innerHTML = '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:11px;color:#475569;">Texte extrait</summary>' +
-            '<pre style="font-size:11px;color:#64748b;white-space:pre-wrap;margin-top:4px;">'+esc(extractedText)+'</pre></details>' +
+        resultDiv.innerHTML =
+            '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:11px;color:#475569;padding:4px 0;">📄 Texte extrait par OCR</summary>' +
+            '<pre style="font-size:11px;color:#64748b;white-space:pre-wrap;margin-top:4px;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">' +
+            esc(text) + '</pre></details>' +
             _renderSingleResult(result);
 
     } catch(e) {
-        resultDiv.innerHTML = '<div style="color:#fc8181;">Erreur: ' + esc(e.message) + '</div>';
+        resultDiv.innerHTML = '<div style="color:#fc8181;">Erreur OCR: ' + esc(e.message) + '<br><small style="color:#64748b;">Essayez l\'onglet "Coller texte" à la place</small></div>';
     }
 };
 
-// ── Rendu d'un seul résultat LDM/MVT (même rendu que la liste email) ──
+// ── Rendu d'un seul résultat LDM/MVT ──
 function _renderSingleResult(em) {
     const p = em.parsed || {};
+    const esc2 = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const MOIS = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     const badge = em.type === 'MVT'
         ? '<span style="background:rgba(212,175,55,0.15);color:#D4AF37;border:1px solid rgba(212,175,55,0.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;">MVT</span>'
         : '<span style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;">LDM</span>';
     const typeBadge = p.type
         ? `<span style="background:${p.type==='DEP'?'rgba(52,211,153,0.15)':'rgba(251,191,36,0.15)'};color:${p.type==='DEP'?'#34d399':'#fbbf24'};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700;">${p.type}</span>` : '';
-    const esc2 = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const authBadge = p.authorizationNumber
+        ? `<span style="background:rgba(212,175,55,0.12);color:#D4AF37;border:1px solid rgba(212,175,55,0.25);border-radius:4px;padding:2px 8px;font-size:11px;">🔑 ${esc2(p.authorizationNumber)}</span>` : '';
+
     return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             ${badge} ${typeBadge}
-            <span style="color:#e2e8f0;font-weight:700;font-size:14px;">${esc2(p.flightNumber||'—')}</span>
-            <span style="color:#64748b;font-size:12px;">${esc2(em.date||'')}</span>
+            <span style="color:#e2e8f0;font-weight:700;font-size:15px;">${esc2(p.flightNumber||'—')}</span>
+            <span style="color:#64748b;font-size:12px;">${esc2(p.date||'')} · ${MOIS[_ldmMonth]} ${_ldmYear}</span>
+            ${authBadge}
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;font-size:12px;margin-bottom:10px;">
-            <div><span style="color:#64748b;">Immat.</span><br><strong style="color:#e2e8f0;">${esc2(p.registration||'—')}</strong></div>
-            <div><span style="color:#64748b;">De</span><br><strong style="color:#38bdf8;">${esc2(p.from||'—')}</strong></div>
-            <div><span style="color:#64748b;">À</span><br><strong style="color:#38bdf8;">${esc2(p.to||'—')}</strong></div>
-            <div><span style="color:#64748b;">PAX</span><br><strong style="color:#34d399;">${p.totalPax||0}</strong></div>
-            <div><span style="color:#64748b;">Bébés</span><br><strong style="color:#94a3b8;">${p.paxBabies||0}</strong></div>
-            ${p.fuel?`<div><span style="color:#64748b;">Fuel</span><br><strong style="color:#fbbf24;">${p.fuel}</strong></div>`:''}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;font-size:12px;margin-bottom:12px;">
+            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;">
+                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">Immat.</div>
+                <strong style="color:#e2e8f0;">${esc2(p.registration||'—')}</strong></div>
+            <div style="background:rgba(56,189,248,0.06);border-radius:8px;padding:8px;">
+                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">De</div>
+                <strong style="color:#38bdf8;">${esc2(p.from||'—')}</strong></div>
+            <div style="background:rgba(56,189,248,0.06);border-radius:8px;padding:8px;">
+                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">À</div>
+                <strong style="color:#38bdf8;">${esc2(p.to||'—')}</strong></div>
+            <div style="background:rgba(52,211,153,0.06);border-radius:8px;padding:8px;">
+                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">PAX</div>
+                <strong style="color:#34d399;font-size:16px;">${p.totalPax||0}</strong></div>
+            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;">
+                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">Bébés</div>
+                <strong style="color:#94a3b8;">${p.paxBabies||0}</strong></div>
+            ${p.fuel ? `<div style="background:rgba(251,191,36,0.06);border-radius:8px;padding:8px;">
+                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">Fuel</div>
+                <strong style="color:#fbbf24;">${p.fuel}</strong></div>` : ''}
         </div>
-        <details><summary style="cursor:pointer;font-size:11px;color:#475569;">Texte brut</summary>
-            <pre style="font-size:11px;color:#64748b;white-space:pre-wrap;margin-top:4px;max-height:150px;overflow-y:auto;">${esc2(em.rawText||'')}</pre>
+        <details><summary style="cursor:pointer;font-size:11px;color:#475569;padding:3px 0;">📄 Texte brut</summary>
+            <pre style="font-size:10px;color:#475569;white-space:pre-wrap;margin-top:4px;max-height:120px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">${esc2(em.rawText||'')}</pre>
         </details>
     </div>`;
 }
 
-// Petite fonction esc locale pour les résultats
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── CONSTANTS ──
@@ -728,6 +796,14 @@ function parseLDM(em) {
   const type     = upper.includes('MVT') && !upper.includes('LDM') ? 'MVT' : 'LDM';
   let dateReceived = '';
   try { dateReceived = new Date(dateHdr).toISOString().split('T')[0]; } catch {}
+  // Pour les emails, on peut déduire le mois de la date de réception si pas sélectionné
+  if (dateReceived && typeof _ldmMonth !== 'undefined') {
+      const emailDate = new Date(dateHdr);
+      if (!isNaN(emailDate)) {
+          // Synchroniser le sélecteur avec le mois de l'email (sans forcer)
+          // Le mois utilisé dans extractFields sera toujours _ldmMonth global
+      }
+  }
   const p = extractFields(text, dateReceived);
   return { id: em.id, type, subject, from, date: dateReceived, rawText: text.trim(), parsed: p };
 }
@@ -753,10 +829,8 @@ function extractFields(text, dateReceived) {
       const m = flightLine.match(flightLineRx);
       p.flightNumber = m[1];
       p.registration = m[3];
-      if (dateReceived) {
-        const [yr, mo] = dateReceived.split('-');
-        p.date = `${yr}-${mo}-${m[2].padStart(2,'0')}`;
-      }
+      // Utiliser le mois global sélectionné (pas la date de réception)
+      p.date = _buildDate(parseInt(m[2],10));
     }
 
     // 2. ROUTE via lignes -XYZ
@@ -844,10 +918,8 @@ function extractFields(text, dateReceived) {
       p.registration = m[3];
       const cityCode = m[7];
 
-      if (dateReceived) {
-        const [yr, mo] = dateReceived.split('-');
-        p.date = `${yr}-${mo}-${m[2].padStart(2,'0')}`;
-      }
+      // Utiliser le mois global sélectionné
+      p.date = _buildDate(parseInt(m[2],10));
 
       // Règle: ville dans le MVT = hub de la compagnie
       // NKC → vol ARR à Nouakchott (vient de cityCode)
@@ -869,10 +941,7 @@ function extractFields(text, dateReceived) {
         const m = line.match(fnRx);
         if (m) {
           p.flightNumber = m[1].replace(/-/g,'');
-          if (dateReceived) {
-            const [yr, mo] = dateReceived.split('-');
-            p.date = `${yr}-${mo}-${m[2].padStart(2,'0')}`;
-          }
+          p.date = _buildDate(parseInt(m[2],10));
           break;
         }
       }
