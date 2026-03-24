@@ -3027,7 +3027,7 @@ window.saveFlightNum = async function() {
     const data = { number, company, type, from, to, stopover, updatedAt: new Date().toISOString() };
     try {
         // Vérifier doublon numéro de vol
-        const existingFN = _allFlightNums.find(fn => fn.number === number && fn.id !== id);
+        const existingFN = allFlightNums.find(fn => fn.number === number && fn.id !== id);
         if (existingFN) {
             showNotif('❌ Le numéro de vol "'+number+'" existe déjà pour '+existingFN.company,'error');
             return;
