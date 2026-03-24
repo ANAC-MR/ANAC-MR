@@ -1560,7 +1560,7 @@
 </div>
 
 <!-- Modal Ajout Vol au Programme -->
-<div id="addVolProgModal" class="modal-overlay" style="display:none;z-index:1100;">
+<div id="addVolProgModal" class="modal-overlay" style="z-index:1100;" onclick="if(event.target===this)_closeAddVolProg()">
     <div class="modal-box" style="max-width:520px;background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:28px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
             <h3 style="color:#e2e8f0;font-size:16px;font-weight:700;margin:0;">+ Ajouter un vol au programme</h3>
@@ -3485,12 +3485,12 @@ window._openAddVolProg = function() {
         const mo = String(_progSelectedMonth).padStart(2,'0');
         document.getElementById('addVolProgDate').value = yr+'-'+mo+'-01';
     }
-    document.getElementById('addVolProgModal').style.display = 'flex';
+    document.getElementById('addVolProgModal').classList.add('open');
     setTimeout(() => document.getElementById('addVolProgAuth').focus(), 100);
 };
 
 window._closeAddVolProg = function() {
-    document.getElementById('addVolProgModal').style.display = 'none';
+    document.getElementById('addVolProgModal').classList.remove('open');
 };
 
 window._saveAddVolProg = async function() {
@@ -3538,10 +3538,7 @@ window._saveAddVolProg = async function() {
     }
 };
 
-// Fermer modal sur clic fond
-document.getElementById('addVolProgModal').addEventListener('click', function(e) {
-    if (e.target === this) _closeAddVolProg();
-});
+// Fermer modal sur clic fond — géré via onclick sur l'overlay
 
 window._deleteOneVol = async function(progId) {
     const r = _allProgramme.find(x=>x.id===progId);
