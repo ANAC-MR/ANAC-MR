@@ -1559,6 +1559,51 @@
     </div>
 </div>
 
+<!-- Modal Ajout Vol au Programme -->
+<div id="addVolProgModal" class="modal-overlay" style="display:none;z-index:1100;">
+    <div class="modal-box" style="max-width:520px;background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h3 style="color:#e2e8f0;font-size:16px;font-weight:700;margin:0;">+ Ajouter un vol au programme</h3>
+            <button onclick="_closeAddVolProg()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div id="addVolProgInfo" style="font-size:12px;color:#64748b;margin-bottom:16px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;">
+            Compagnie : <strong id="addVolProgCompany" style="color:#D4AF37;">—</strong> &nbsp;·&nbsp;
+            Saison : <strong id="addVolProgSaison" style="color:#818cf8;">—</strong> &nbsp;·&nbsp;
+            Année : <strong id="addVolProgAnnee" style="color:#60a5fa;">—</strong>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div>
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">N° AUTORISATION *</label>
+                <input id="addVolProgAuth" type="text" placeholder="SNA26-XXXX"
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;text-transform:uppercase;"
+                    oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div>
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">N° VOL</label>
+                <input id="addVolProgFlight" type="text" placeholder="Ex: TK571"
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;text-transform:uppercase;"
+                    oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div>
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">DATE DU VOL</label>
+                <input id="addVolProgDate" type="date"
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">DÉCISION</label>
+                <input id="addVolProgDecision" type="text" placeholder="Ex: 0844/ANAC/DG/DTA/2025"
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;text-transform:uppercase;"
+                    oninput="this.value=this.value.toUpperCase()">
+            </div>
+        </div>
+        <div id="addVolProgError" style="display:none;color:#fc8181;font-size:12px;margin-bottom:10px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button onclick="_closeAddVolProg()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;">Annuler</button>
+            <button onclick="_saveAddVolProg()" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;">✅ Enregistrer</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Import Programme de Vols -->
 <div class="modal-overlay" id="importProgModal">
     <div class="modal-box" style="max-width:560px;">
@@ -3325,7 +3370,10 @@ function renderProgrammeByCompany() {
                     <div style="font-size:15px;font-weight:700;color:#e2e8f0;">${esc(g.company)}</div>
                     <div style="font-size:12px;color:#64748b;margin-top:2px;">${lblSais} ${esc(g.annee)}</div>
                 </div>
-                <button onclick="_confirmDelProgramme()" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">🗑️ Supprimer tout</button>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="_openAddVolProg()" style="background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">+ Ajouter un vol</button>
+                    <button onclick="_confirmDelProgramme()" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">🗑️ Supprimer tout</button>
+                </div>
             </div>
             ${statsHtml}${moisHtml}
             <table class="fn-table" style="font-size:12px;"><thead><tr>
@@ -3416,6 +3464,84 @@ window._toggleCancelVol = async function(progId, cancelledStr) {
         renderProgrammeByCompany();
     } catch(e) { showNotif('Erreur: '+e.message,'error'); }
 };
+
+// ── Ajouter un vol manuellement au programme ──
+window._openAddVolProg = function() {
+    const g = (window._progGroupList||[]).find(x=>x.company===_progSelectedCompany);
+    if (!g) return;
+    // Remplir les infos contextuelles
+    document.getElementById('addVolProgCompany').textContent = g.company;
+    document.getElementById('addVolProgSaison').textContent  = g.saison==='ETE'?'☀️ Été':g.saison==='HIVER'?'❄️ Hiver':g.saison;
+    document.getElementById('addVolProgAnnee').textContent   = g.annee;
+    // Vider les champs
+    document.getElementById('addVolProgAuth').value     = '';
+    document.getElementById('addVolProgFlight').value   = '';
+    document.getElementById('addVolProgDate').value     = '';
+    document.getElementById('addVolProgDecision').value = '';
+    document.getElementById('addVolProgError').style.display = 'none';
+    // Pré-remplir la date avec le mois sélectionné si possible
+    if (_progSelectedMonth && _progSelectedAnnee) {
+        const yr = _progSelectedAnnee;
+        const mo = String(_progSelectedMonth).padStart(2,'0');
+        document.getElementById('addVolProgDate').value = yr+'-'+mo+'-01';
+    }
+    document.getElementById('addVolProgModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('addVolProgAuth').focus(), 100);
+};
+
+window._closeAddVolProg = function() {
+    document.getElementById('addVolProgModal').style.display = 'none';
+};
+
+window._saveAddVolProg = async function() {
+    const auth    = document.getElementById('addVolProgAuth').value.trim().toUpperCase();
+    const flight  = document.getElementById('addVolProgFlight').value.trim().toUpperCase();
+    const date    = document.getElementById('addVolProgDate').value.trim();
+    const decision= document.getElementById('addVolProgDecision').value.trim().toUpperCase();
+    const errEl   = document.getElementById('addVolProgError');
+
+    if (!auth) {
+        errEl.textContent = 'Le N° autorisation est obligatoire';
+        errEl.style.display = '';
+        return;
+    }
+
+    const g = (window._progGroupList||[]).find(x=>x.company===_progSelectedCompany);
+    if (!g) return;
+
+    // Vérifier si le N° auth existe déjà dans ce programme
+    const exists = _allProgramme.find(r => (r.auth||'').toUpperCase() === auth);
+    if (exists) {
+        errEl.textContent = 'Ce N° autorisation existe déjà dans le programme (' + exists.company + ')';
+        errEl.style.display = '';
+        return;
+    }
+
+    const nrm = v => String(v||'').toUpperCase().replace(/[-\s.]/g,'');
+    const docId = g.company.replace(/[^A-Za-z0-9]/g,'_').substring(0,15)+'__'+auth.replace(/[^A-Za-z0-9]/g,'_');
+
+    try {
+        const newVol = {
+            auth, company: g.company, saison: g.saison, annee: String(g.annee),
+            flight: flight, flightNorm: nrm(flight),
+            date: date, decision: decision,
+            source: 'manuel', importedAt: new Date().toISOString()
+        };
+        await window._setDoc(window._doc(window._db,'programme_vols',docId), newVol);
+        _allProgramme.push({id:docId, ...newVol});
+        showNotif('Vol '+auth+' ajouté au programme','success');
+        _closeAddVolProg();
+        renderProgrammeByCompany();
+    } catch(e) {
+        errEl.textContent = 'Erreur: '+e.message;
+        errEl.style.display = '';
+    }
+};
+
+// Fermer modal sur clic fond
+document.getElementById('addVolProgModal').addEventListener('click', function(e) {
+    if (e.target === this) _closeAddVolProg();
+});
 
 window._deleteOneVol = async function(progId) {
     const r = _allProgramme.find(x=>x.id===progId);
