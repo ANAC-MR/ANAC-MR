@@ -13,34 +13,32 @@
   --bg:#07101F;--card:#0F1B2D;--card2:#0C1828;
   --border:rgba(255,255,255,0.06);--gold:#D4AF37;
   --text:#E2EAF4;--dim:#4E6A85;--dim2:#2A4060;
-  --green:#2DD4A0;--blue:#4A9EFF;
+  --green:#2DD4A0;--blue:#4A9EFF;--ma:#FF6B35;
   --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
 }
 html,body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(212,175,55,0.06) 0%,transparent 55%);}
-
 /* Header */
-header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.96);backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);padding:0 32px;height:54px;
+header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);padding:0 28px;height:54px;
   display:flex;align-items:center;justify-content:space-between;}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
-.logo-icon{font-size:22px;filter:drop-shadow(0 0 6px rgba(212,175,55,.5));}
-.logo-text .name{font-size:15px;font-weight:700;color:var(--text);}
-.logo-text .sub{font-size:10px;color:var(--dim);margin-top:1px;}
-.live{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;
+.logo-icon{font-size:20px;}
+.logo-name{font-size:14px;font-weight:700;color:var(--text);}
+.logo-sub{font-size:10px;color:var(--dim);}
+.live{display:flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;
   background:rgba(45,212,160,.1);border:1px solid rgba(45,212,160,.2);font-size:11px;color:var(--green);}
 .ldot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(45,212,160,.4);}50%{opacity:.7;box-shadow:0 0 0 4px rgba(45,212,160,0);}}
-
-/* Banner */
-.wrap{max-width:1200px;margin:0 auto;padding:28px 28px 0;}
+/* Airport banner */
+.wrap{max-width:1200px;margin:0 auto;padding:24px 24px 0;}
 .ap-banner{background:var(--card2);border:1px solid var(--border);border-radius:16px;
   padding:18px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;overflow:hidden;position:relative;}
 .ap-banner::after{content:'NKC';position:absolute;right:-4px;top:50%;transform:translateY(-50%);
   font-family:var(--mono);font-size:100px;font-weight:700;color:rgba(255,255,255,.015);pointer-events:none;user-select:none;}
-.ap-icon{width:44px;height:44px;border-radius:10px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--gold),#7a5f10);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.ap-icon{width:44px;height:44px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),#7a5f10);
+  display:flex;align-items:center;justify-content:center;font-size:20px;}
 .ap-info{flex:1;}
 .ap-iata{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--gold);}
 .ap-name{font-size:14px;font-weight:600;color:var(--text);margin-top:1px;}
@@ -49,121 +47,132 @@ header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.96);backdrop-
 .ast{text-align:center;padding:7px 12px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--border);}
 .ast-v{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--text);}
 .ast-l{font-size:10px;color:var(--dim);margin-top:1px;text-transform:uppercase;letter-spacing:.05em;}
-
-/* MAP */
-.map-wrap{max-width:1200px;margin:16px auto 0;padding:0 28px;}
-.map-box{border-radius:16px;overflow:hidden;border:1px solid var(--border);position:relative;}
-#map{height:300px;width:100%;}
+/* ── TABS NAVIGATION ── */
+.tabs-nav{max-width:1200px;margin:16px auto 0;padding:0 24px;}
+.tabs-row{display:flex;gap:4px;border-bottom:1px solid var(--border);}
+.tab-btn{padding:10px 20px;border:none;border-bottom:2px solid transparent;
+  background:transparent;color:var(--dim);font-size:13px;font-weight:600;font-family:var(--font);
+  cursor:pointer;transition:all .15s;white-space:nowrap;}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--gold);}
+.tab-btn:hover:not(.active){color:var(--text);}
+.tab-btn.ma.active{border-bottom-color:var(--ma);color:var(--ma);}
+/* ── TAB CONTENT ── */
+.tab-content{max-width:1200px;margin:0 auto;padding:20px 24px 60px;}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+/* ── MAP AUJOURD'HUI ── */
+.today-section{display:grid;grid-template-columns:1fr 380px;gap:16px;align-items:start;}
+@media(max-width:900px){.today-section{grid-template-columns:1fr;}}
+/* Map principale */
+.map-box{border-radius:14px;overflow:hidden;border:1px solid var(--border);position:relative;}
+#map{height:380px;width:100%;}
 .map-hint{position:absolute;top:10px;right:10px;z-index:500;
-  background:rgba(7,16,31,.85);backdrop-filter:blur(8px);
-  border:1px solid var(--border);border-radius:8px;padding:5px 10px;
-  font-size:11px;color:var(--dim);pointer-events:none;}
+  background:rgba(7,16,31,.85);backdrop-filter:blur(8px);border:1px solid var(--border);
+  border-radius:8px;padding:5px 10px;font-size:11px;color:var(--dim);pointer-events:none;}
 .map-info{position:absolute;bottom:10px;left:10px;z-index:500;display:none;
   background:rgba(7,16,31,.93);backdrop-filter:blur(12px);
-  border:1px solid rgba(212,175,55,.3);border-radius:10px;padding:12px 16px;min-width:240px;}
-.mi-vol{font-family:var(--mono);font-size:17px;font-weight:600;color:var(--text);}
+  border:1px solid rgba(212,175,55,.35);border-radius:10px;padding:12px 16px;min-width:220px;max-width:260px;}
+.mi-vol{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text);}
 .mi-co{font-size:11px;color:var(--dim);margin-top:1px;}
-.mi-route{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.mi-leg{display:flex;align-items:center;gap:6px;margin-top:8px;}
 .mi-ap{text-align:center;}
-.mi-city{font-size:13px;font-weight:700;color:var(--text);}
-.mi-iata{font-size:10px;color:var(--dim);font-family:var(--mono);margin-top:1px;}
-.mi-arrow{color:var(--gold);font-size:18px;flex:1;text-align:center;}
-.mi-times{display:flex;justify-content:space-between;margin-top:7px;
-  padding-top:7px;border-top:1px solid rgba(255,255,255,.05);}
-.mi-t{font-family:var(--mono);font-size:14px;color:var(--gold);}
-
-/* ── CALENDRIER SEMAINE ── */
-.cal-wrap{max-width:1200px;margin:16px auto 0;padding:0 28px 60px;}
-
-/* Navigation semaine */
-.week-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
-.week-label{font-size:14px;font-weight:700;color:var(--text);flex:1;text-align:center;}
-.week-sub{font-size:11px;color:var(--dim);display:block;font-weight:400;}
-.btn-wk{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;
-  padding:7px 14px;color:var(--dim);font-size:13px;font-family:var(--font);cursor:pointer;transition:all .15s;}
+.mi-city{font-size:12px;font-weight:700;color:var(--text);}
+.mi-iata{font-size:9px;color:var(--dim);font-family:var(--mono);}
+.mi-arr{color:var(--gold);font-size:14px;}
+.mi-stop-badge{font-size:9px;color:var(--gold);background:rgba(212,175,55,.15);
+  border-radius:4px;padding:2px 6px;margin-top:4px;display:inline-block;}
+.mi-times{margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.05);
+  font-family:var(--mono);font-size:12px;color:var(--gold);}
+/* Vols du jour */
+.today-list{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;max-height:380px;overflow-y:auto;}
+.today-list::-webkit-scrollbar{width:4px;}
+.today-list::-webkit-scrollbar-track{background:transparent;}
+.today-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.today-header{padding:12px 16px;font-size:12px;font-weight:700;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.02);display:flex;justify-content:space-between;align-items:center;}
+.today-count{font-family:var(--mono);font-size:14px;color:var(--gold);}
+.today-item{display:flex;align-items:center;gap:10px;padding:10px 16px;
+  border-bottom:1px solid rgba(255,255,255,.03);cursor:pointer;transition:background .12s;}
+.today-item:last-child{border-bottom:none;}
+.today-item:hover,.today-item.active{background:rgba(212,175,55,.06);}
+.today-item.active{border-left:2px solid var(--gold);}
+.ti-num{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text);min-width:55px;}
+.ti-route{flex:1;}
+.ti-cities{font-size:12px;color:var(--text);}
+.ti-stop{font-size:9px;color:var(--gold);background:rgba(212,175,55,.1);border-radius:3px;padding:1px 4px;}
+.ti-time{font-family:var(--mono);font-size:12px;color:var(--gold);text-align:right;}
+.ti-time2{font-size:10px;color:var(--dim);}
+.empty-today{padding:30px;text-align:center;color:var(--dim);font-size:13px;}
+/* ── CALENDRIER ── */
+.cal-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.week-label{font-size:13px;font-weight:700;color:var(--text);flex:1;text-align:center;}
+.week-sub{font-size:10px;color:var(--dim);display:block;font-weight:400;margin-top:1px;}
+.btn-wk{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:7px;
+  padding:6px 12px;color:var(--dim);font-size:12px;font-family:var(--font);cursor:pointer;transition:all .15s;}
 .btn-wk:hover{color:var(--text);border-color:rgba(255,255,255,.15);}
-.btn-today{background:rgba(212,175,55,.12);border-color:var(--gold);color:var(--gold);}
-.btn-today:hover{background:rgba(212,175,55,.2);}
-
+.btn-today{background:rgba(212,175,55,.1);border-color:var(--gold);color:var(--gold);font-weight:600;}
+/* Grid calendrier */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cal-head{text-align:center;padding:7px 4px;font-size:10px;font-weight:700;
+  color:var(--dim);text-transform:uppercase;letter-spacing:.07em;}
+.cal-head.today{color:var(--gold);}
+.cal-day{background:var(--card);border:1px solid var(--border);border-radius:9px;
+  min-height:110px;padding:7px 5px;transition:border-color .15s;overflow:hidden;}
+.cal-day.today{border-color:rgba(212,175,55,.4);background:rgba(212,175,55,.035);}
+.cal-day.empty{background:rgba(255,255,255,.015);border-color:rgba(255,255,255,.03);}
+.cal-day-num{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--dim);
+  margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
+.cal-today-d{color:var(--gold);}
+.day-cnt{font-size:9px;color:var(--gold);background:rgba(212,175,55,.12);
+  border-radius:3px;padding:1px 4px;font-weight:700;}
+.cal-fl{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:5px;
+  padding:4px 6px;margin-bottom:3px;cursor:pointer;transition:all .12s;}
+.cal-fl:hover,.cal-fl.pin{background:rgba(212,175,55,.1);border-color:rgba(212,175,55,.3);}
+.cf-n{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text);}
+.cf-r{font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cf-t{font-family:var(--mono);font-size:9px;color:var(--gold);}
+/* Cal MA */
+.cal-fl.ma{border-color:rgba(255,107,53,.2);}
+.cal-fl.ma:hover,.cal-fl.ma.pin{background:rgba(255,107,53,.1);border-color:rgba(255,107,53,.4);}
 /* Search */
-.cal-search{display:flex;gap:8px;margin-bottom:12px;}
+.cal-search{display:flex;gap:8px;margin-bottom:10px;}
 .sinput-w{flex:1;position:relative;}
 .si-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:12px;pointer-events:none;}
-.sinput{width:100%;background:var(--card);border:1px solid var(--border);border-radius:9px;
-  padding:9px 11px 9px 30px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;}
+.sinput{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;
+  padding:8px 11px 8px 30px;color:var(--text);font-family:var(--font);font-size:12px;outline:none;}
 .sinput:focus{border-color:rgba(212,175,55,.35);}
 .sinput::placeholder{color:var(--dim2);}
-.breset{background:transparent;border:1px solid var(--border);border-radius:9px;
-  padding:9px 12px;color:var(--dim);font-size:12px;font-family:var(--font);cursor:pointer;}
-.breset:hover{color:var(--text);}
-
-/* Grille calendrier */
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
-.cal-day-head{text-align:center;padding:8px 4px;font-size:11px;font-weight:700;
-  color:var(--dim);text-transform:uppercase;letter-spacing:.07em;}
-.cal-day-head.today{color:var(--gold);}
-.cal-day{background:var(--card);border:1px solid var(--border);border-radius:10px;
-  min-height:120px;padding:8px 6px;transition:border-color .15s;position:relative;}
-.cal-day.today{border-color:rgba(212,175,55,.35);background:rgba(212,175,55,.04);}
-.cal-day.empty{background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.03);}
-.cal-day-num{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--dim);
-  margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;}
-.cal-day-num .today-badge{font-size:9px;color:var(--gold);background:rgba(212,175,55,.15);
-  padding:1px 5px;border-radius:4px;font-weight:700;}
-.cal-today-date{color:var(--gold);}
-
-/* Carte vol dans calendrier */
-.cal-flight{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);
-  border-radius:6px;padding:5px 7px;margin-bottom:4px;cursor:pointer;
-  transition:background .12s,border-color .12s;animation:fi .15s ease;}
-.cal-flight:hover{background:rgba(212,175,55,.08);border-color:rgba(212,175,55,.25);}
-.cal-flight.pinned{background:rgba(212,175,55,.12);border-color:rgba(212,175,55,.4);}
-@keyframes fi{from{opacity:0;transform:translateY(2px);}to{opacity:1;transform:translateY(0);}}
-.cf-num{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);}
-.cf-route{font-size:9px;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cf-time{font-family:var(--mono);font-size:10px;color:var(--gold);margin-top:2px;}
-.cf-stop{font-size:8px;color:var(--dim);background:rgba(212,175,55,.08);
-  border-radius:3px;padding:1px 4px;display:inline-block;margin-top:1px;}
-
-/* Compteur vols du jour */
-.day-count{font-size:9px;color:var(--dim);background:rgba(255,255,255,.05);
-  border-radius:4px;padding:1px 5px;}
-.day-count.has{color:var(--gold);background:rgba(212,175,55,.1);}
-
-/* Empty state */
-.cal-empty{text-align:center;padding:20px 10px;color:var(--dim);}
-.cal-empty .ico{font-size:16px;margin-bottom:4px;opacity:.4;}
-.cal-empty p{font-size:10px;}
+.breset{background:transparent;border:1px solid var(--border);border-radius:8px;
+  padding:8px 11px;color:var(--dim);font-size:11px;font-family:var(--font);cursor:pointer;}
+/* ── MAP AEROPORTS ── */
+#mapAirports{height:480px;width:100%;border-radius:14px;overflow:hidden;border:1px solid var(--border);}
+.ap-map-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+/* Loader */
 .loader-r{display:flex;align-items:center;justify-content:center;gap:8px;padding:40px;color:var(--dim);font-size:13px;}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(212,175,55,.15);border-top-color:var(--gold);animation:sp .7s linear infinite;}
 @keyframes sp{to{transform:rotate(360deg);}}
-
 /* Leaflet dark */
 .leaflet-container{background:#080F1C;}
-.leaflet-tile{filter:brightness(.45) saturate(.25) hue-rotate(195deg);}
+.leaflet-tile{filter:brightness(.42) saturate(.2) hue-rotate(195deg);}
 .leaflet-control-attribution{display:none!important;}
 .leaflet-control-zoom a{background:#101E30!important;color:#e2e8f0!important;border-color:#1e3a5f!important;}
-
+.leaflet-tooltip{background:#101E30;border:1px solid rgba(255,255,255,.1);color:#e2e8f0;font-family:'Sora',sans-serif;font-size:11px;border-radius:6px;}
 @media(max-width:700px){
-  header,.wrap,.map-wrap,.cal-wrap{padding-left:10px;padding-right:10px;}
-  .wrap{padding-top:16px;}
-  #map{height:220px;}
-  .cal-grid{grid-template-columns:repeat(7,1fr);gap:3px;}
-  .cal-day{min-height:80px;padding:5px 3px;}
-  .cf-num{font-size:9px;}
-  .cf-route,.cf-time,.cf-stop{display:none;}
+  header,.wrap,.tabs-nav,.tab-content{padding-left:10px;padding-right:10px;}
+  .wrap{padding-top:14px;}
+  .cal-grid{gap:3px;}
+  .cal-day{min-height:75px;padding:4px 3px;}
+  .cf-r,.cf-t{display:none;}
 }
 </style>
 </head>
 <body>
-
 <header>
   <a class="logo" href="index.html">
     <div class="logo-icon">✈️</div>
-    <div class="logo-text">
-      <div class="name">ANAC Mauritanie</div>
-      <div class="sub">Vols Autorisés — Nouakchott</div>
-    </div>
+    <div><div class="logo-name">ANAC Mauritanie</div><div class="logo-sub">Vols Autorisés</div></div>
   </a>
   <div class="live"><div class="ldot"></div>En direct</div>
 </header>
@@ -172,8 +181,7 @@ header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.96);backdrop-
   <div class="ap-banner">
     <div class="ap-icon">🛫</div>
     <div class="ap-info">
-      <div class="ap-iata">NKC</div>
-      <div class="ap-name">Aéroport International de Nouakchott–Oumtounsy</div>
+      <div class="ap-iata">NKC — Aéroport International de Nouakchott–Oumtounsy</div>
       <div class="ap-detail">Mauritanie · GQNO · UTC+0</div>
     </div>
     <div class="ap-stats">
@@ -184,61 +192,94 @@ header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.96);backdrop-
   </div>
 </div>
 
-<div class="map-wrap">
-  <div class="map-box">
-    <div id="map"></div>
-    <div class="map-hint">Cliquez un vol pour voir le trajet</div>
-    <div class="map-info" id="mapInfo">
-      <div class="mi-vol" id="miVol">—</div>
-      <div class="mi-co" id="miCo">—</div>
-      <div class="mi-route">
-        <div class="mi-ap"><div class="mi-city" id="miCity1">—</div><div class="mi-iata" id="miCode1">—</div></div>
-        <div class="mi-arrow">→</div>
-        <div class="mi-ap"><div class="mi-city" id="miCity2">—</div><div class="mi-iata" id="miCode2">—</div></div>
+<!-- Tabs -->
+<div class="tabs-nav">
+  <div class="tabs-row">
+    <button class="tab-btn active" data-tab="today" onclick="switchTab('today')">📅 Aujourd'hui</button>
+    <button class="tab-btn ma" data-tab="cal-ma" onclick="switchTab('cal-ma')">🇲🇷 Mauritania Airlines</button>
+    <button class="tab-btn" data-tab="cal-int" onclick="switchTab('cal-int')">🌍 Compagnies internationales</button>
+    <button class="tab-btn" data-tab="airports" onclick="switchTab('airports')">🗺️ Carte des aéroports</button>
+  </div>
+</div>
+
+<!-- Tab: Aujourd'hui -->
+<div class="tab-content">
+<div id="tab-today" class="tab-pane active">
+  <div class="today-section">
+    <div>
+      <div class="map-box">
+        <div id="map"></div>
+        <div class="map-hint">Cliquez un vol pour voir le trajet</div>
+        <div class="map-info" id="mapInfo">
+          <div class="mi-vol" id="miVol">—</div>
+          <div class="mi-co" id="miCo">—</div>
+          <div id="miLegs"></div>
+          <div class="mi-times" id="miTimes"></div>
+        </div>
       </div>
-      <div class="mi-times">
-        <div class="mi-t" id="miT1">—</div>
-        <div style="color:var(--dim);font-size:11px;">→</div>
-        <div class="mi-t" id="miT2">—</div>
+    </div>
+    <div class="today-list">
+      <div class="today-header">
+        <span id="todayDateLabel">Vols du jour</span>
+        <span class="today-count" id="todayCount">—</span>
       </div>
+      <div id="todayBody"><div class="loader-r"><div class="spin"></div></div></div>
     </div>
   </div>
 </div>
 
-<div class="cal-wrap">
-  <!-- Navigation semaine -->
-  <div class="week-nav">
-    <button class="btn-wk" onclick="prevWeek()">← Semaine préc.</button>
-    <div class="week-label">
-      <span id="weekLabel">—</span>
-      <span class="week-sub" id="weekSub"></span>
-    </div>
-    <button class="btn-wk btn-today" onclick="goToday()">Aujourd'hui</button>
-    <button class="btn-wk" onclick="nextWeek()">Semaine suiv. →</button>
-  </div>
-
-  <!-- Recherche -->
+<!-- Tab: Cal Mauritania Airlines -->
+<div id="tab-cal-ma" class="tab-pane">
   <div class="cal-search">
-    <div class="sinput-w">
-      <span class="si-ico">✈</span>
-      <input class="sinput" id="sVol" type="text"
-        placeholder="Filtrer par vol, ville, compagnie…"
-        oninput="renderCalendar()" autocomplete="off">
+    <div class="sinput-w"><span class="si-ico">✈</span>
+      <input class="sinput" id="sVolMA" type="text" placeholder="Filtrer…" oninput="renderCal('ma')" autocomplete="off">
     </div>
-    <button class="breset" onclick="document.getElementById('sVol').value='';renderCalendar()">✕</button>
+    <button class="breset" onclick="document.getElementById('sVolMA').value='';renderCal('ma')">✕</button>
   </div>
-
-  <!-- Jours de la semaine (entêtes) -->
-  <div class="cal-grid" id="calHeads"></div>
-  <!-- Cellules jours -->
-  <div class="cal-grid" id="calBody">
-    <div class="loader-r" style="grid-column:1/-1;"><div class="spin"></div> Chargement…</div>
+  <div class="cal-nav">
+    <button class="btn-wk" onclick="changeWeek('ma',-1)">← Préc.</button>
+    <div style="flex:1;text-align:center;">
+      <div class="week-label" id="wlMA"></div>
+      <div class="week-sub" id="wsMA"></div>
+    </div>
+    <button class="btn-wk btn-today" onclick="resetWeek('ma')">Aujourd'hui</button>
+    <button class="btn-wk" onclick="changeWeek('ma',1)">Suiv. →</button>
   </div>
+  <div class="cal-grid" id="calHeadMA"></div>
+  <div class="cal-grid" id="calBodyMA"></div>
 </div>
+
+<!-- Tab: Cal International -->
+<div id="tab-cal-int" class="tab-pane">
+  <div class="cal-search">
+    <div class="sinput-w"><span class="si-ico">✈</span>
+      <input class="sinput" id="sVolINT" type="text" placeholder="Filtrer…" oninput="renderCal('int')" autocomplete="off">
+    </div>
+    <button class="breset" onclick="document.getElementById('sVolINT').value='';renderCal('int')">✕</button>
+  </div>
+  <div class="cal-nav">
+    <button class="btn-wk" onclick="changeWeek('int',-1)">← Préc.</button>
+    <div style="flex:1;text-align:center;">
+      <div class="week-label" id="wlINT"></div>
+      <div class="week-sub" id="wsINT"></div>
+    </div>
+    <button class="btn-wk btn-today" onclick="resetWeek('int')">Aujourd'hui</button>
+    <button class="btn-wk" onclick="changeWeek('int',1)">Suiv. →</button>
+  </div>
+  <div class="cal-grid" id="calHeadINT"></div>
+  <div class="cal-grid" id="calBodyINT"></div>
+</div>
+
+<!-- Tab: Carte aéroports -->
+<div id="tab-airports" class="tab-pane">
+  <div class="ap-map-title">🗺️ Réseau de Nouakchott — <span style="color:var(--dim);font-size:12px;font-weight:400;margin-left:4px;" id="apNetCount">—</span></div>
+  <div id="mapAirports"></div>
+</div>
+</div><!-- end tab-content -->
 
 <script type="module">
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, getDocs }
+import { getFirestore, collection, getDocs, doc, getDoc }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const FB={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",
@@ -247,7 +288,7 @@ const FB={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67
 const app=getApps().find(a=>a.name==='vols')||initializeApp(FB,'vols');
 const db=getFirestore(app);
 
-// Aéroports (coordonnées pour la carte)
+// ── Coords hardcodées (enrichies depuis Firebase) ──
 const AP={
   'GQNO':{city:'Nouakchott', iata:'NKC', c:[18.098,-15.948]},
   'LFPG':{city:'Paris',      iata:'CDG', c:[49.009,  2.547]},
@@ -266,225 +307,325 @@ const AP={
   'GMME':{city:'Rabat',      iata:'RBA', c:[33.998, -6.752]},
 };
 const NKC=[18.098,-15.948];
+const getAP=icao=>AP[icao]||{city:icao,iata:icao,c:null};
 
-// ── MAP ──
+// ── MAP AUJOURD'HUI ──
 const map=L.map('map',{zoomControl:true,scrollWheelZoom:false,center:NKC,zoom:4});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:''}).addTo(map);
-const nkcIcon=L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],
+const nkcIco=L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],
   html:'<div style="width:16px;height:16px;border-radius:50%;background:#D4AF37;border:3px solid #fff;box-shadow:0 0 10px rgba(212,175,55,.7);"></div>'});
-L.marker(NKC,{icon:nkcIcon}).addTo(map).bindTooltip('<b>NKC</b> Nouakchott',{permanent:false,direction:'top'});
-let actLine=null,actMark=null,pinnedId=null;
+L.marker(NKC,{icon:nkcIco}).addTo(map).bindTooltip('<b>NKC</b> Nouakchott',{permanent:false,direction:'top'});
+let actLines=[],actMarks=[],pinnedTodayId=null;
+
+function clearRoute(){
+  actLines.forEach(l=>map.removeLayer(l)); actLines=[];
+  actMarks.forEach(m=>map.removeLayer(m)); actMarks=[];
+  document.getElementById('mapInfo').style.display='none';
+  map.setView(NKC,4,{animate:true,duration:.4});
+}
+
+function addArc(c1,c2,color,dashed){
+  const arc=[];
+  for(let t=0;t<=30;t++){const r=t/30;arc.push([c1[0]+(c2[0]-c1[0])*r+Math.sin(Math.PI*r)*3,c1[1]+(c2[1]-c1[1])*r]);}
+  const l=L.polyline(arc,{color,weight:2.5,opacity:.9,dashArray:dashed?'7 5':null});
+  l.addTo(map); actLines.push(l);
+}
+function addDestMark(coord,color){
+  const di=L.divIcon({className:'',iconSize:[11,11],iconAnchor:[5.5,5.5],
+    html:`<div style="width:11px;height:11px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 6px ${color}88;"></div>`});
+  const m=L.marker(coord,{icon:di}); m.addTo(map); actMarks.push(m);
+}
 
 function showRoute(s){
   clearRoute();
   const pr=parseRouting(s.routing);
   if(!pr)return;
-  // Enrichir AP depuis les données Firebase airports si dispo
-  const getAP=icao=>AP[icao]||window._fbAP&&window._fbAP[icao]||null;
   const a1=getAP(pr.dep),a2=getAP(pr.arr);
-  if(!a1||!a2)return;
-  const arc=[];
-  for(let t=0;t<=30;t++){const r=t/30;arc.push([a1.c[0]+(a2.c[0]-a1.c[0])*r+Math.sin(Math.PI*r)*4,a1.c[1]+(a2.c[1]-a1.c[1])*r]);}
-  actLine=L.polyline(arc,{color:'#D4AF37',weight:2.5,opacity:.95,dashArray:'8 5'}).addTo(map);
-  const dest=pr.dep==='GQNO'?pr.arr:pr.dep;
-  const destAP=getAP(dest);
-  if(destAP){
-    const di=L.divIcon({className:'',iconSize:[12,12],iconAnchor:[6,6],
-      html:'<div style="width:12px;height:12px;border-radius:50%;background:#4A9EFF;border:2px solid #fff;box-shadow:0 0 8px rgba(74,158,255,.6);"></div>'});
-    actMark=L.marker(destAP.c,{icon:di}).addTo(map);
+  if(!a1.c||!a2.c)return;
+
+  if(pr.stop){
+    // Vol avec escale: DEP → STOP → ARR
+    const as=getAP(pr.stop);
+    if(as.c){
+      addArc(a1.c,as.c,'#D4AF37',false);   // DEP→escale trait plein
+      addArc(as.c,a2.c,'#60a5fa',true);    // escale→ARR trait pointillé
+      addDestMark(as.c,'#D4AF37');
+      addDestMark(a2.c,'#60a5fa');
+    } else {
+      addArc(a1.c,a2.c,'#D4AF37',false);
+      addDestMark(a2.c,'#60a5fa');
+    }
+    const allCoords=[a1.c,as.c||a2.c,a2.c].filter(Boolean);
+    map.fitBounds(L.latLngBounds(allCoords).pad(.3),{animate:true,duration:.4});
+  } else {
+    addArc(a1.c,a2.c,'#D4AF37',false);
+    addDestMark(pr.dep==='GQNO'?a2.c:a1.c,'#60a5fa');
+    map.fitBounds(L.latLngBounds([a1.c,a2.c]).pad(.3),{animate:true,duration:.4});
   }
-  map.fitBounds(L.latLngBounds([a1.c,a2.c]).pad(.3),{animate:true,duration:.4});
-  const dep=getAP(pr.dep)||{city:pr.dep,iata:pr.dep};
-  const arr=getAP(pr.arr)||{city:pr.arr,iata:pr.arr};
+
+  // Info box
   document.getElementById('mapInfo').style.display='';
   document.getElementById('miVol').textContent=s.vol||'—';
   document.getElementById('miCo').textContent=s.company||'';
-  document.getElementById('miCity1').textContent=dep.city;
-  document.getElementById('miCode1').textContent=dep.iata;
-  document.getElementById('miCity2').textContent=arr.city;
-  document.getElementById('miCode2').textContent=arr.iata;
-  document.getElementById('miT1').textContent=pr.hdep;
-  document.getElementById('miT2').textContent=pr.harr+(pr.offset?' (UTC'+pr.offset+')':'');
-}
-function clearRoute(){
-  if(actLine){map.removeLayer(actLine);actLine=null;}
-  if(actMark){map.removeLayer(actMark);actMark=null;}
-  document.getElementById('mapInfo').style.display='none';
-  map.setView(NKC,4,{animate:true,duration:.4});
+
+  let legsHtml='';
+  if(pr.stop){
+    const as=getAP(pr.stop),dep=getAP(pr.dep),arr=getAP(pr.arr);
+    legsHtml=`<div class="mi-leg">
+      <div class="mi-ap"><div class="mi-city">${esc(dep.city)}</div><div class="mi-iata">${esc(dep.iata)}</div></div>
+      <div class="mi-arr">→</div>
+      <div class="mi-ap"><div class="mi-city" style="color:var(--gold)">${esc(as.city)}</div><div class="mi-iata">${esc(as.iata)}</div></div>
+      <div class="mi-arr">→</div>
+      <div class="mi-ap"><div class="mi-city">${esc(arr.city)}</div><div class="mi-iata">${esc(arr.iata)}</div></div>
+    </div>
+    <div class="mi-stop-badge">⤵ Escale ${esc(as.city)} ${pr.hstop1}–${pr.hstop2}</div>`;
+  } else {
+    const dep=getAP(pr.dep),arr=getAP(pr.arr);
+    legsHtml=`<div class="mi-leg">
+      <div class="mi-ap"><div class="mi-city">${esc(dep.city)}</div><div class="mi-iata">${esc(dep.iata)}</div></div>
+      <div class="mi-arr">→</div>
+      <div class="mi-ap"><div class="mi-city">${esc(arr.city)}</div><div class="mi-iata">${esc(arr.iata)}</div></div>
+    </div>`;
+  }
+  document.getElementById('miLegs').innerHTML=legsHtml;
+  document.getElementById('miTimes').textContent=pr.hdep+' → '+pr.harr+(pr.offset?' (UTC'+pr.offset+')':'');
 }
 
-// ── PARSING ROUTING ──
+// ── MAP AÉROPORTS (onglet) ──
+let mapAP=null;
+function initMapAirports(){
+  if(mapAP)return;
+  mapAP=L.map('mapAirports',{zoomControl:true,scrollWheelZoom:true,center:[20,0],zoom:2});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:''}).addTo(mapAP);
+
+  // NKC hub
+  const hubIcon=L.divIcon({className:'',iconSize:[20,20],iconAnchor:[10,10],
+    html:'<div style="width:20px;height:20px;border-radius:50%;background:#D4AF37;border:3px solid #fff;box-shadow:0 0 14px rgba(212,175,55,.8);"></div>'});
+  L.marker(NKC,{icon:hubIcon}).addTo(mapAP)
+   .bindTooltip('<b>NKC — Nouakchott</b><br>Hub ANAC Mauritanie',{permanent:false,direction:'top'});
+
+  // Destinations depuis les schedules
+  const destSet={};
+  allSchedules.forEach(s=>{
+    const pr=parseRouting(s.routing);
+    if(!pr)return;
+    [pr.dep,pr.arr,pr.stop].filter(Boolean).forEach(icao=>{
+      if(icao!=='GQNO'&&!destSet[icao])destSet[icao]=[];
+      if(icao!=='GQNO')destSet[icao].push(s.company||'');
+    });
+  });
+
+  let destCount=0;
+  Object.entries(destSet).forEach(([icao,companies])=>{
+    const a=getAP(icao);
+    if(!a.c)return;
+    destCount++;
+    // Arc NKC → dest
+    const arc=[];
+    for(let t=0;t<=24;t++){const r=t/24;
+      arc.push([NKC[0]+(a.c[0]-NKC[0])*r+Math.sin(Math.PI*r)*2.5,NKC[1]+(a.c[1]-NKC[1])*r]);}
+    L.polyline(arc,{color:'rgba(212,175,55,0.35)',weight:1.5,dashArray:'4 4'}).addTo(mapAP);
+
+    // Marqueur destination
+    const isMA=companies.some(c=>c.toLowerCase().includes('mauritania'));
+    const color=isMA?'#FF6B35':'#4A9EFF';
+    const di=L.divIcon({className:'',iconSize:[12,12],iconAnchor:[6,6],
+      html:`<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 7px ${color}66;"></div>`});
+    const compList=[...new Set(companies)].join(', ');
+    L.marker(a.c,{icon:di}).addTo(mapAP)
+     .bindTooltip(`<b>${esc(a.city)}</b> (${esc(a.iata)})<br><span style="font-size:10px;">${esc(compList)}</span>`,
+       {permanent:false,direction:'top'});
+  });
+  document.getElementById('apNetCount').textContent=
+    destCount+' destination'+(destCount>1?'s':'')+' depuis NKC';
+}
+
+// ── PARSING ──
 function parseRouting(r){
   if(!r)return null;
-  const stopM=r.match(/([A-Z]{4})\s+(\d{4})\s*-\s*([A-Z]{4})\s+(\d{4})\s+(\d{4})\s*-\s*(\d{4})\s+([A-Z]{4})(\s*[+-]\d)?/);
-  if(stopM){
-    const[,dep,hdep,stop,hstop1,hstop2,harr,arr,offset]=stopM;
-    return{dep,hdep:fmtH(hdep),arr,harr:fmtH(harr),stop,hstop1:fmtH(hstop1),hstop2:fmtH(hstop2),offset:(offset||'').trim()};
-  }
-  const m=r.match(/([A-Z]{4})\s+(\d{4})\s*[-]\s*(\d{4})\s+([A-Z]{4})(\s*[+-]\d)?/);
+  const sM=r.match(/([A-Z]{4})\s+(\d{4})\s*-\s*([A-Z]{4})\s+(\d{4})\s+(\d{4})\s*-\s*(\d{4})\s+([A-Z]{4})(\s*[+-]\d)?/);
+  if(sM){const[,dep,hdep,stop,hs1,hs2,harr,arr,off]=sM;
+    return{dep,hdep:fH(hdep),arr,harr:fH(harr),stop,hstop1:fH(hs1),hstop2:fH(hs2),offset:(off||'').trim()};}
+  const m=r.match(/([A-Z]{4})\s+(\d{4})\s*-\s*(\d{4})\s+([A-Z]{4})(\s*[+-]\d)?/);
   if(!m)return null;
-  return{dep:m[1],hdep:fmtH(m[2]),arr:m[4],harr:fmtH(m[3]),offset:(m[5]||'').trim(),stop:null};
+  return{dep:m[1],hdep:fH(m[2]),arr:m[4],harr:fH(m[3]),offset:(m[5]||'').trim(),stop:null};
 }
-function fmtH(h){return h?h.slice(0,2)+':'+h.slice(2):'';}
+function fH(h){return h?h.slice(0,2)+':'+h.slice(2):'';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-// ── JOURS OPÉRATION ──
-// days: 7 chars, 'J'=actif '-'=inactif, index 0=Lun...6=Dim
-function isActiveOn(days,dateStr){
+// ── DATES ──
+const JOURS_S=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const MOIS=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+const MOIS_L=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+function todayStr(){return new Date().toISOString().split('T')[0];}
+function isActiveOn(days,ds){
   if(!days)return true;
-  const d=new Date(dateStr+'T12:00:00Z');
-  const jsDay=d.getUTCDay(); // 0=dim,1=lun..
-  const idx=jsDay===0?6:jsDay-1; // 0=lun..6=dim
-  const ch=days[idx]||'-';
-  return ch!=='-'; // 'J' ou autre = actif
+  const d=new Date(ds+'T12:00:00Z');
+  const j=d.getUTCDay(); const idx=j===0?6:j-1;
+  return(days[idx]||'-')!=='-';
 }
-function isInPeriod(from,to,dateStr){
+function isInPeriod(from,to,ds){
   if(!from&&!to)return true;
-  if(from&&dateStr<from)return false;
-  if(to&&dateStr>to)return false;
+  if(from&&ds<from)return false;
+  if(to&&ds>to)return false;
   return true;
 }
+function isMA(s){return (s.company||'').toLowerCase().includes('mauritania');}
 
-// ── SEMAINE COURANTE ──
-let weekOffset=0; // 0=semaine courante
+// ── STATE ──
 let allSchedules=[];
+const weekOffsets={ma:0,int:0};
+let pinnedCalId=null;
 
-function getWeekDates(){
-  const today=new Date();
-  const dow=today.getDay(); // 0=dim
-  const lundi=new Date(today);
-  lundi.setDate(today.getDate()-(dow===0?6:dow-1)+(weekOffset*7));
-  return Array.from({length:7},(_,i)=>{
-    const d=new Date(lundi);
-    d.setDate(lundi.getDate()+i);
-    return d.toISOString().split('T')[0];
-  });
+// ── CALENDRIER ──
+function getWeekDates(offset){
+  const t=new Date();
+  const dow=t.getDay();
+  const lun=new Date(t);
+  lun.setDate(t.getDate()-(dow===0?6:dow-1)+(offset*7));
+  return Array.from({length:7},(_,i)=>{const d=new Date(lun);d.setDate(lun.getDate()+i);return d.toISOString().split('T')[0];});
 }
 
-function getTodayStr(){return new Date().toISOString().split('T')[0];}
+window.renderCal=function(type){
+  const offset=weekOffsets[type];
+  const dates=getWeekDates(offset);
+  const today=todayStr();
+  const qId=type==='ma'?'sVolMA':'sVolINT';
+  const q=(document.getElementById(qId).value||'').trim().toUpperCase();
+  const headId=type==='ma'?'calHeadMA':'calHeadINT';
+  const bodyId=type==='ma'?'calBodyMA':'calBodyINT';
+  const wlId=type==='ma'?'wlMA':'wlINT';
+  const wsId=type==='ma'?'wsMA':'wsINT';
 
-const JOURS_LONG=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
-const JOURS_SHORT=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-const MOIS=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
-
-function fmtDateLabel(ds){
-  const d=new Date(ds+'T12:00:00Z');
-  return d.getUTCDate()+' '+MOIS[d.getUTCMonth()];
-}
-
-window.prevWeek=function(){weekOffset--;renderCalendar();}
-window.nextWeek=function(){weekOffset++;renderCalendar();}
-window.goToday =function(){weekOffset=0;renderCalendar();}
-
-function getAP2(icao){return AP[icao]||window._fbAP&&window._fbAP[icao]||{city:icao,iata:icao};}
-
-window.renderCalendar=function(){
-  const dates=getWeekDates();
-  const today=getTodayStr();
-  const q=(document.getElementById('sVol').value||'').trim().toUpperCase();
-
-  // Label semaine
   const d0=new Date(dates[0]+'T12:00:00Z'),d6=new Date(dates[6]+'T12:00:00Z');
-  document.getElementById('weekLabel').textContent=
-    fmtDateLabel(dates[0])+' — '+fmtDateLabel(dates[6])+' '+d6.getUTCFullYear();
-  document.getElementById('weekSub').textContent=
-    weekOffset===0?'Semaine en cours':weekOffset>0?`+${weekOffset} semaine(s)`:`${weekOffset} semaine(s)`;
+  document.getElementById(wlId).textContent=
+    d0.getUTCDate()+' '+MOIS[d0.getUTCMonth()]+' – '+d6.getUTCDate()+' '+MOIS[d6.getUTCMonth()]+' '+d6.getUTCFullYear();
+  document.getElementById(wsId).textContent=
+    offset===0?'Semaine en cours':offset>0?'+'+offset+' sem.':offset+' sem.';
 
-  // Entêtes
-  document.getElementById('calHeads').innerHTML=dates.map((ds,i)=>{
-    const isToday=ds===today;
-    return `<div class="cal-day-head ${isToday?'today':''}">${JOURS_SHORT[i]}</div>`;
-  }).join('');
+  // Filtrer par type compagnie
+  let base=allSchedules.filter(s=>type==='ma'?isMA(s):!isMA(s));
 
-  // Pour chaque jour, trouver les vols actifs
-  const cells=dates.map(ds=>{
+  document.getElementById(headId).innerHTML=dates.map((ds,i)=>`
+    <div class="cal-head ${ds===today?'today':''}">${JOURS_S[i]}</div>`).join('');
+
+  document.getElementById(bodyId).innerHTML=dates.map(ds=>{
+    const dayNum=new Date(ds+'T12:00:00Z').getUTCDate();
     const isToday=ds===today;
-    let flights=allSchedules.filter(s=>
-      isActiveOn(s.days,ds) && isInPeriod(s.dateFrom,s.dateTo,ds)
-    );
-    // Filtre texte
+    let flights=base.filter(s=>isActiveOn(s.days,ds)&&isInPeriod(s.dateFrom,s.dateTo,ds));
     if(q)flights=flights.filter(s=>
-      (s.vol||'').toUpperCase().includes(q)||
-      (s.company||'').toUpperCase().includes(q)||
+      (s.vol||'').toUpperCase().includes(q)||(s.company||'').toUpperCase().includes(q)||
       (s.routing||'').toUpperCase().includes(q)||
-      (getAP2((parseRouting(s.routing)||{}).arr||'').city||'').toUpperCase().includes(q)||
-      (getAP2((parseRouting(s.routing)||{}).dep||'').city||'').toUpperCase().includes(q)
+      (getAP((parseRouting(s.routing)||{}).arr||'').city||'').toUpperCase().includes(q)||
+      (getAP((parseRouting(s.routing)||{}).dep||'').city||'').toUpperCase().includes(q)
     );
-    // Trier par heure départ
-    flights.sort((a,b)=>{
-      const pa=parseRouting(a.routing),pb=parseRouting(b.routing);
-      return (pa?pa.hdep:'').localeCompare(pb?pb.hdep:'');
-    });
-    return {ds,isToday,flights};
-  });
+    flights.sort((a,b)=>{const pa=parseRouting(a.routing),pb=parseRouting(b.routing);return(pa?pa.hdep:'').localeCompare(pb?pb.hdep:'');});
 
-  document.getElementById('calBody').innerHTML=cells.map(({ds,isToday,flights})=>{
-    const d=new Date(ds+'T12:00:00Z');
-    const dayNum=d.getUTCDate();
-    const hasFlights=flights.length>0;
-    const flightCards=flights.map((s,fi)=>{
+    const cards=flights.map(s=>{
       const pr=parseRouting(s.routing);
-      const dep=getAP2(pr?pr.dep:'');
-      const arr=getAP2(pr?pr.arr:'');
-      const routeLabel=dep.iata+'→'+arr.iata;
-      const isPinned=pinnedId===s.id+'_'+ds;
-      return `<div class="cal-flight ${isPinned?'pinned':''}"
-        onclick="window._calClick('${s.id}','${ds}',${fi})"
-        title="${esc(s.vol||'')} · ${esc(s.company||'')} · ${routeLabel}">
-        <div class="cf-num">${esc(s.vol||'—')}</div>
-        <div class="cf-route">${esc(dep.city)}→${esc(arr.city)}</div>
-        ${pr?`<div class="cf-time">${pr.hdep}→${pr.harr}</div>`:''}
-        ${pr&&pr.stop?`<div class="cf-stop">via ${esc(getAP2(pr.stop).city)}</div>`:''}
+      const dep=getAP(pr?pr.dep:''),arr=getAP(pr?pr.arr:'');
+      const key=s.id+'_'+ds;
+      const ma=isMA(s);
+      return `<div class="cal-fl ${ma?'ma':''} ${pinnedCalId===key?'pin':''}"
+        onclick="window._calPin('${s.id}','${ds}')"
+        title="${esc(s.vol||'')} · ${esc(dep.city)}→${esc(arr.city)}">
+        <div class="cf-n">${esc(s.vol||'—')}</div>
+        <div class="cf-r">${esc(dep.city)}→${esc(arr.city)}</div>
+        ${pr?`<div class="cf-t">${pr.hdep}→${pr.harr}</div>`:''}
+        ${pr&&pr.stop?`<div class="cf-t" style="color:var(--gold);">via ${esc(getAP(pr.stop).city)}</div>`:''}
       </div>`;
     }).join('');
 
-    return `<div class="cal-day ${isToday?'today':''} ${!hasFlights?'empty':''}">
+    return `<div class="cal-day ${isToday?'today':''} ${!flights.length?'empty':''}">
       <div class="cal-day-num">
-        <span class="${isToday?'cal-today-date':''}">${dayNum}</span>
-        ${flights.length>0?`<span class="day-count has">${flights.length}</span>`:'<span class="day-count">—</span>'}
+        <span class="${isToday?'cal-today-d':''}">${dayNum}</span>
+        ${flights.length?`<span class="day-cnt">${flights.length}</span>`:''}
       </div>
-      ${hasFlights?flightCards:'<div class="cal-empty"><div class="ico">—</div></div>'}
+      ${cards||''}
     </div>`;
   }).join('');
-
-  // Stocker pour _calClick
-  window._calCells=cells;
 };
 
-window._calClick=function(schedId,ds,fi){
+window._calPin=function(schedId,ds){
   const key=schedId+'_'+ds;
-  if(pinnedId===key){pinnedId=null;clearRoute();}
+  if(pinnedCalId===key){pinnedCalId=null;clearRoute();}
   else{
-    pinnedId=key;
-    const cells=window._calCells||[];
-    const cell=cells.find(c=>c.ds===ds);
-    const s=cell&&cell.flights[fi];
+    pinnedCalId=key;
+    const s=allSchedules.find(x=>x.id===schedId);
     if(s)showRoute(s);
   }
-  window.renderCalendar();
+  window.renderCal('ma');window.renderCal('int');
 };
 
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+window.changeWeek=function(type,delta){weekOffsets[type]+=delta;window.renderCal(type);};
+window.resetWeek=function(type){weekOffsets[type]=0;window.renderCal(type);};
+
+// ── AUJOURD'HUI ──
+function renderToday(){
+  const today=todayStr();
+  const d=new Date(today+'T12:00:00Z');
+  document.getElementById('todayDateLabel').textContent=
+    JOURS_S[d.getUTCDay()===0?6:d.getUTCDay()-1]+' '+d.getUTCDate()+' '+MOIS_L[d.getUTCMonth()]+' '+d.getUTCFullYear();
+
+  let flights=allSchedules.filter(s=>isActiveOn(s.days,today)&&isInPeriod(s.dateFrom,s.dateTo,today));
+  flights.sort((a,b)=>{const pa=parseRouting(a.routing),pb=parseRouting(b.routing);return(pa?pa.hdep:'').localeCompare(pb?pb.hdep:'');});
+  document.getElementById('todayCount').textContent=flights.length+' vol'+(flights.length!==1?'s':'');
+
+  if(!flights.length){
+    document.getElementById('todayBody').innerHTML='<div class="empty-today">Aucun vol aujourd\'hui</div>';
+    return;
+  }
+  document.getElementById('todayBody').innerHTML=flights.map((s,i)=>{
+    const pr=parseRouting(s.routing);
+    const dep=getAP(pr?pr.dep:''),arr=getAP(pr?pr.arr:'');
+    const active=pinnedTodayId===s.id;
+    return `<div class="today-item ${active?'active':''}" onclick="window._todayClick('${s.id}',${i})">
+      <div class="ti-num">${esc(s.vol||'—')}</div>
+      <div class="ti-route">
+        <div class="ti-cities">${esc(dep.city)} → ${esc(arr.city)}</div>
+        ${pr&&pr.stop?`<span class="ti-stop">via ${esc(getAP(pr.stop).city)}</span>`:''}
+      </div>
+      <div style="text-align:right;">
+        <div class="ti-time">${pr?pr.hdep:''}</div>
+        <div class="ti-time2">${esc(s.company||'')}</div>
+      </div>
+    </div>`;
+  }).join('');
+  window._todayFlights=flights;
+}
+
+window._todayClick=function(id,i){
+  if(pinnedTodayId===id){pinnedTodayId=null;clearRoute();}
+  else{pinnedTodayId=id;const s=window._todayFlights[i];if(s)showRoute(s);}
+  renderToday();
+};
+
+// ── TABS ──
+window.switchTab=function(tab){
+  document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelector('[data-tab="'+tab+'"]').classList.add('active');
+  if(tab==='airports')initMapAirports();
+  else if(tab==='cal-ma')window.renderCal('ma');
+  else if(tab==='cal-int')window.renderCal('int');
+  else if(tab==='today')renderToday();
+};
 
 // ── INIT ──
 async function init(){
   try{
     const snap=await getDocs(collection(db,'schedules'));
     allSchedules=snap.docs.map(d=>({id:d.id,...d.data()}));
-
     const comp=new Set(allSchedules.map(s=>s.company).filter(Boolean)).size;
     const dests=new Set();
-    allSchedules.forEach(s=>{
-      const pr=parseRouting(s.routing);
-      if(pr){if(pr.dep!=='GQNO')dests.add(pr.dep);if(pr.arr!=='GQNO')dests.add(pr.arr);}
-    });
+    allSchedules.forEach(s=>{const pr=parseRouting(s.routing);if(pr){if(pr.dep!=='GQNO')dests.add(pr.dep);if(pr.arr!=='GQNO')dests.add(pr.arr);}});
     document.getElementById('stVols').textContent=allSchedules.length;
     document.getElementById('stDest').textContent=dests.size;
     document.getElementById('stComp').textContent=comp;
-
-    window.renderCalendar();
+    renderToday();
   }catch(e){
-    document.getElementById('calBody').innerHTML=
-      `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#fc8181;">Erreur: ${esc(e.message)}</div>`;
+    document.getElementById('todayBody').innerHTML=`<div style="padding:20px;color:#fc8181;">Erreur: ${esc(e.message)}</div>`;
   }
 }
 init();
