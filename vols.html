@@ -104,6 +104,15 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 .ti-stop{font-size:9px;color:var(--gold);background:rgba(212,175,55,.1);border-radius:3px;padding:1px 4px;}
 .ti-time{font-family:var(--mono);font-size:12px;color:var(--gold);text-align:right;}
 .ti-time2{font-size:10px;color:var(--dim);}
+.ti-times{display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-bottom:2px;}
+.ti-dep{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--gold);}
+.ti-arr{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--blue);}
+.ti-arrow{font-size:11px;color:var(--dim);}
+.ti-live{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;
+  background:rgba(45,212,160,.15);border:1px solid rgba(45,212,160,.3);
+  font-size:9px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;}
+.ti-live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);
+  animation:pulse 1.5s ease infinite;}
 .empty-today{padding:30px;text-align:center;color:var(--dim);font-size:13px;}
 /* ── CALENDRIER ── */
 .cal-nav{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
@@ -576,19 +585,43 @@ function renderToday(){
     document.getElementById('todayBody').innerHTML='<div class="empty-today">Aucun vol aujourd\'hui</div>';
     return;
   }
+  // Heure locale Mauritanie (UTC+0)
+  const nowUTC=new Date();
+  const nowMins=nowUTC.getUTCHours()*60+nowUTC.getUTCMinutes();
+
+  function timeToMins(hhmm){
+    if(!hhmm)return -1;
+    const p=hhmm.split(':');
+    return parseInt(p[0]||0)*60+parseInt(p[1]||0);
+  }
+  function isLive(pr){
+    if(!pr||!pr.hdep||!pr.harr)return false;
+    const dep=timeToMins(pr.hdep);
+    let arr=timeToMins(pr.harr);
+    // Si heure arrivée < heure départ → vol de nuit (passe minuit)
+    if(arr<dep)arr+=1440;
+    return nowMins>=dep && nowMins<=arr;
+  }
+
   document.getElementById('todayBody').innerHTML=flights.map((s,i)=>{
     const pr=parseRouting(s.routing);
     const dep=getAP(pr?pr.dep:''),arr=getAP(pr?pr.arr:'');
     const active=pinnedTodayId===s.id;
+    const live=isLive(pr);
     return `<div class="today-item ${active?'active':''}" onclick="window._todayClick('${s.id}',${i})">
       <div class="ti-num">${esc(s.vol||'—')}</div>
       <div class="ti-route">
         <div class="ti-cities">${esc(dep.city)} → ${esc(arr.city)}</div>
         ${pr&&pr.stop?`<span class="ti-stop">via ${esc(getAP(pr.stop).city)}</span>`:''}
+        <div style="font-size:10px;color:var(--dim);margin-top:1px;">${esc(s.company||'')}</div>
       </div>
-      <div style="text-align:right;">
-        <div class="ti-time">${pr?pr.hdep:''}</div>
-        <div class="ti-time2">${esc(s.company||'')}</div>
+      <div style="text-align:right;min-width:90px;">
+        ${pr?`<div class="ti-times">
+          <span class="ti-dep">${pr.hdep}</span>
+          <span class="ti-arrow">→</span>
+          <span class="ti-arr">${pr.harr}${pr.offset?'<sup style="font-size:8px;color:var(--dim);">'+pr.offset+'</sup>':''}</span>
+        </div>`:''}
+        ${live?'<div style="text-align:right;"><span class="ti-live"><span class="ti-live-dot"></span>En direct</span></div>':''}
       </div>
     </div>`;
   }).join('');
