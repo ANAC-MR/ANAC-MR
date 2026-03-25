@@ -193,10 +193,7 @@ header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.95);backdrop-
 
 <div class="search-section">
   <div class="tabs">
-    <button class="tab active" id="tabAll" onclick="setTab('all')">Tous <span class="tab-count" id="tcAll">0</span></button>
-    <button class="tab" id="tabDep" onclick="setTab('dep')">Départs <span class="tab-count" id="tcDep">0</span></button>
-    <button class="tab" id="tabArr" onclick="setTab('arr')">Arrivées <span class="tab-count" id="tcArr">0</span></button>
-    <button class="tab" id="tabSched" onclick="setTab('sched')">Programme <span class="tab-count" id="tcSched">0</span></button>
+    <button class="tab active" id="tabSched">Programme de vols <span class="tab-count" id="tcSched">0</span></button>
   </div>
   <div class="search-bar">
     <div class="sinput-wrap">
@@ -205,22 +202,16 @@ header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.95);backdrop-
         placeholder="Vol ou destination… (ex: TK571, CDG, Istanbul)"
         oninput="doSearch()" autocomplete="off">
     </div>
-    <input class="dinput" id="sDate" type="date" oninput="doSearch()">
+    
     <button class="breset" onclick="resetSearch()">✕</button>
   </div>
 </div>
 
 <div class="flights-section">
   <div class="ftable">
-    <div class="thead" id="theadF">
+    <div class="thead" style="grid-template-columns:130px 160px 1fr 180px;">
       <div class="th">Vol</div>
-      <div class="th">Itinéraire</div>
-      <div class="th">Date</div>
-      <div class="th">Statut</div>
-    </div>
-    <div class="thead thead-sched" id="theadS" style="display:none;">
-      <div class="th">Vol</div>
-      <div class="th">Jours</div>
+      <div class="th">Jours d'opération</div>
       <div class="th">Routing</div>
       <div class="th">Période</div>
     </div>
@@ -232,19 +223,18 @@ header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.95);backdrop-
 
 <script type="module">
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, getDocs, query, orderBy, doc, getDoc }
+import { getFirestore, collection, getDocs, doc, getDoc }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const FB={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",
   projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",
   messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
-
 const app=getApps().find(a=>a.name==='vols')||initializeApp(FB,'vols');
 const db=getFirestore(app);
 
-let allFlights=[],allSchedules=[],airports={},currentTab='all';
+let allSchedules=[], airports={};
 
-// Coordonnées ICAO hardcodées (principales destinations NKC)
+// Coordonnées ICAO
 const COORDS={
   'GQNO':[18.098,15.948],'NKC':[18.098,15.948],
   'LFPG':[49.009,2.547],'CDG':[49.009,2.547],
@@ -254,222 +244,142 @@ const COORDS={
   'GMMN':[33.368,-7.590],'CMN':[33.368,-7.590],
   'GOBD':[14.739,-17.490],'DSS':[14.739,-17.490],
   'GCLP':[27.931,-15.388],'LPA':[27.931,-15.388],
-  'DBBP':[6.160,1.254],'LFW':[6.160,1.254],
   'GBYD':[13.338,-16.652],'BJL':[13.338,-16.652],
+  'GUCY':[9.577,-13.612],'CKY':[9.577,-13.612],
   'DIAP':[5.254,-3.926],'ABJ':[5.254,-3.926],
   'DNMM':[6.577,3.321],'LOS':[6.577,3.321],
-  'FMMI':[-18.797,47.479],'TNR':[-18.797,47.479],
-  'GUCY':[9.577,-13.612],'CKY':[9.577,-13.612],
 };
 const NKC=[18.098,15.948];
 
-// ── Leaflet map ──
-const map=L.map('map',{zoomControl:true,scrollWheelZoom:false}).setView([25,10],3);
+// ── Map Leaflet ──
+const map=L.map('map',{zoomControl:true,scrollWheelZoom:false}).setView([25,5],3);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
-
-// Marqueur NKC permanent
 const nkcIcon=L.divIcon({className:'',html:'<div style="width:12px;height:12px;border-radius:50%;background:#D4AF37;border:2px solid #fff;box-shadow:0 0 8px rgba(212,175,55,0.6);"></div>',iconSize:[12,12],iconAnchor:[6,6]});
 L.marker(NKC,{icon:nkcIcon}).addTo(map).bindTooltip('NKC — Nouakchott',{permanent:false});
+let activeLine=null, activeMarker=null, pinnedIdx=null;
 
-let activePolyline=null,activeMarker=null;
-
-function showRoute(f){
+function showRoute(s){
   clearRoute();
-  const from=f.from||'GQNO',to=f.to||'GQNO';
-  const c1=COORDS[from],c2=COORDS[to];
-  if(!c1||!c2)return;
-
-  // Arc courbe entre les deux points
-  const pts=[];
-  for(let t=0;t<=20;t++){
-    const r=t/20;
-    const lat=c1[0]+(c2[0]-c1[0])*r + Math.sin(Math.PI*r)*3;
-    const lng=c1[1]+(c2[1]-c1[1])*r;
-    pts.push([lat,lng]);
+  // Extraire les codes ICAO du routing (ex: "LFPG 1615 - 2130 GQNO")
+  const codes=(s.routing||'').match(/[A-Z]{4}/g)||[];
+  const pts=codes.map(c=>COORDS[c]).filter(Boolean);
+  if(pts.length<2)return;
+  const c1=pts[0], c2=pts[pts.length-1];
+  // Arc courbe
+  const arc=[];
+  for(let t=0;t<=24;t++){
+    const r=t/24;
+    arc.push([c1[0]+(c2[0]-c1[0])*r + Math.sin(Math.PI*r)*3, c1[1]+(c2[1]-c1[1])*r]);
   }
-  activePolyline=L.polyline(pts,{color:'#D4AF37',weight:2,opacity:.9,dashArray:'6 4'}).addTo(map);
-
-  // Marqueur destination
-  const destCoord=from==='GQNO'||from==='NKC'?c2:c1;
-  const destCode=from==='GQNO'||from==='NKC'?to:from;
-  const destIcon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;border-radius:50%;background:#60a5fa;border:2px solid #fff;box-shadow:0 0 6px rgba(96,165,250,0.5);"></div>',iconSize:[10,10],iconAnchor:[5,5]});
-  activeMarker=L.marker(destCoord,{icon:destIcon}).addTo(map);
-  map.fitBounds(L.latLngBounds([c1,c2]).pad(.25),{animate:true,duration:.5});
-
-  // Info box
-  const dt=fmtDate(f.date);
+  activeLine=L.polyline(arc,{color:'#D4AF37',weight:2,opacity:.9,dashArray:'6 4'}).addTo(map);
+  const destCoord=codes[0]==='GQNO'||codes[0]==='NKC'?c2:c1;
+  const destCode =codes[0]==='GQNO'||codes[0]==='NKC'?codes[codes.length-1]:codes[0];
+  const dIcon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;border-radius:50%;background:#60a5fa;border:2px solid #fff;box-shadow:0 0 6px rgba(96,165,250,.5);"></div>',iconSize:[10,10],iconAnchor:[5,5]});
+  activeMarker=L.marker(destCoord,{icon:dIcon}).addTo(map);
+  map.fitBounds(L.latLngBounds([c1,c2]).pad(.25),{animate:true,duration:.4});
   document.getElementById('mapHover').style.display='';
-  document.getElementById('mhiVol').textContent=f.flightNumber||'—';
-  document.getElementById('mhiRoute').textContent=from+' → '+to+(COORDS[to]?'':' (coord inconnue)');
-  document.getElementById('mhiDate').textContent=dt.m+' · '+dt.d;
+  document.getElementById('mhiVol').textContent=s.vol||'—';
+  document.getElementById('mhiRoute').textContent=s.routing||'—';
+  document.getElementById('mhiDate').textContent=fmtPeriod(s.dateFrom,s.dateTo);
 }
-
 function clearRoute(){
-  if(activePolyline){map.removeLayer(activePolyline);activePolyline=null;}
+  if(activeLine){map.removeLayer(activeLine);activeLine=null;}
   if(activeMarker){map.removeLayer(activeMarker);activeMarker=null;}
   document.getElementById('mapHover').style.display='none';
-  map.setView([25,10],3,{animate:true});
+  map.setView([25,5],3,{animate:true});
 }
 
 // ── Utils ──
-const JOURS=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-const MOIS_F=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
-function fmtDate(ds){
-  if(!ds)return{m:'—',d:''};
-  const d=new Date(ds+'T12:00:00Z');
-  return{m:`${String(d.getUTCDate()).padStart(2,'0')} ${MOIS_F[d.getUTCMonth()]} ${d.getUTCFullYear()}`,d:JOURS[d.getUTCDay()]};
-}
+const MOIS=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+const JOURS_L=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 function fmtPeriod(from,to){
-  const f=v=>{if(!v)return'';const[y,m,d]=v.split('-');return`${parseInt(d)}-${MOIS_F[parseInt(m)-1]}-${y}`;};
+  const f=v=>{if(!v)return'';const[y,m,d]=v.split('-');return`${parseInt(d)}-${MOIS[parseInt(m)-1]}-${y}`;};
   return from&&to?`${f(from)} au ${f(to)}`:f(from)||f(to)||'—';
 }
 function fmtDays(d){
   if(!d)return'—';
-  const L=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'],a=[];
-  for(let i=0;i<7;i++){if(d[i]&&d[i]!=='-')a.push(L[i]);}
-  return a.join(' ')||d;
+  const a=[];
+  for(let i=0;i<7;i++){if(d[i]==='J')a.push(JOURS_L[i]);}
+  // Compatibilité ancien format (J1---J5--)
+  if(!a.length){for(let i=0;i<7;i++){if(d[i]&&d[i]!=='-')a.push(JOURS_L[i]);}}
+  return a.length?a.join(' '):d;
 }
-function apShort(code){const n=airports[code]||'';return(!n||n===code)?code:n.split(' ').slice(0,2).join(' ');}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ── Init ──
 async function init(){
   try{
-    try{
-      const snap=await getDoc(doc(db,'flights','cfg-airports'));
-      if(snap.exists())(snap.data().list||[]).forEach(a=>{
-        if(a.icao)airports[a.icao]=a.name||a.icao;
-        if(a.iata)airports[a.iata]=a.name||a.iata;
-        // Aussi enrichir COORDS si lat/lng dispo
-        if(a.icao&&a.lat&&a.lng)COORDS[a.icao]=[parseFloat(a.lat),parseFloat(a.lng)];
-      });
-    }catch{}
-    const[sf,ss]=await Promise.all([
-      getDocs(query(collection(db,'flights'),orderBy('date','desc'))),
-      getDocs(collection(db,'schedules'))
-    ]);
-    allFlights=sf.docs.filter(d=>!d.id.startsWith('cfg-')).map(d=>({id:d.id,...d.data()}));
-    allSchedules=ss.docs.map(d=>({id:d.id,...d.data()}));
+    // Charger uniquement les horaires (schedules)
+    const snap=await getDocs(collection(db,'schedules'));
+    allSchedules=snap.docs.map(d=>({id:d.id,...d.data()}));
 
-    const dep=allFlights.filter(f=>(f.type||'').toUpperCase()==='DEP').length;
-    const arr=allFlights.filter(f=>(f.type||'').toUpperCase()==='ARR').length;
-    const dests=new Set(allFlights.map(f=>f.type==='DEP'?f.to:f.from).filter(Boolean));
-    const comp=new Set(allFlights.map(f=>f.company).filter(Boolean));
-    document.getElementById('stTotal').textContent=allFlights.length;
+    const comp=new Set(allSchedules.map(s=>s.company).filter(Boolean));
+    const dests=new Set();
+    allSchedules.forEach(s=>{
+      const codes=(s.routing||'').match(/[A-Z]{4}/g)||[];
+      codes.filter(c=>c!=='GQNO').forEach(c=>dests.add(c));
+    });
+    document.getElementById('stTotal').textContent=allSchedules.length;
     document.getElementById('stDest').textContent=dests.size;
     document.getElementById('stComp').textContent=comp.size;
-    document.getElementById('tcAll').textContent=allFlights.length;
-    document.getElementById('tcDep').textContent=dep;
-    document.getElementById('tcArr').textContent=arr;
     document.getElementById('tcSched').textContent=allSchedules.length;
-    doSearch();
+    render();
   }catch(e){
     document.getElementById('flightsBody').innerHTML=`<div class="state-c"><div class="ico">⚠️</div><h3>Erreur</h3><p>${esc(e.message)}</p></div>`;
   }
 }
 
-window.setTab=function(t){
-  currentTab=t;
-  ['all','dep','arr','sched'].forEach(x=>{
-    const el=document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1));
-    if(el)el.classList.toggle('active',x===t);
-  });
-  const isSched=t==='sched';
-  document.getElementById('theadF').style.display=isSched?'none':'';
-  document.getElementById('theadS').style.display=isSched?'':'none';
-  clearRoute();
-  if(isSched)renderSchedules();
-  else doSearch();
-};
-
-window.doSearch=function(){
-  const q=document.getElementById('sVol').value.trim().toUpperCase();
-  const date=document.getElementById('sDate').value.trim();
-  let list=allFlights;
-  if(currentTab==='dep')list=list.filter(f=>(f.type||'').toUpperCase()==='DEP');
-  if(currentTab==='arr')list=list.filter(f=>(f.type||'').toUpperCase()==='ARR');
-  if(date)list=list.filter(f=>f.date===date);
-  if(q)list=list.filter(f=>{
-    const fn=(f.flightNumber||'').toUpperCase().replace(/\s/g,'');
-    const co=(f.company||'').toUpperCase();
-    const fr=(f.from||'').toUpperCase(),to=(f.to||'').toUpperCase();
-    const afr=(airports[fr]||'').toUpperCase(),ato=(airports[to]||'').toUpperCase();
-    return fn.includes(q)||co.includes(q)||fr.includes(q)||to.includes(q)||afr.includes(q)||ato.includes(q);
-  });
-  list=[...list].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(a.flightNumber||'').localeCompare(b.flightNumber||''));
-  render(list);
-};
-
+window.doSearch=function(){ render(); };
 window.resetSearch=function(){
   document.getElementById('sVol').value='';
-  document.getElementById('sDate').value='';
-  clearRoute();
-  doSearch();
+  pinnedIdx=null; clearRoute(); render();
 };
 
-function renderSchedules(){
+function render(){
   const q=document.getElementById('sVol').value.trim().toUpperCase();
   let list=[...allSchedules];
-  if(q)list=list.filter(s=>(s.vol||'').toUpperCase().includes(q)||(s.routing||'').toUpperCase().includes(q));
+  if(q)list=list.filter(s=>
+    (s.vol||'').toUpperCase().includes(q)||
+    (s.company||'').toUpperCase().includes(q)||
+    (s.routing||'').toUpperCase().includes(q)
+  );
   list.sort((a,b)=>(a.company||'').localeCompare(b.company||'')||(a.vol||'').localeCompare(b.vol||''));
+
+  document.getElementById('tcSched').textContent=list.length;
+
   if(!list.length){
-    document.getElementById('flightsBody').innerHTML='<div class="state-c"><div class="ico">📅</div><h3>Aucun programme</h3><p>Les horaires d\'exploitation seront affich\u00e9s ici.</p></div>';
-    return;
+    document.getElementById('flightsBody').innerHTML='<div class="state-c"><div class="ico">🔍</div><h3>Aucun vol trouvé</h3><p>Essayez un autre critère.</p></div>';
+    clearRoute(); return;
   }
+
+  // Grouper par compagnie
   const groups={};
-  list.forEach(s=>{const k=s.company||'—';if(!groups[k])groups[k]=[];groups[k].push(s);});
+  list.forEach((s,i)=>{s._idx=i; const k=s.company||'—'; if(!groups[k])groups[k]=[]; groups[k].push(s);});
+
   document.getElementById('flightsBody').innerHTML=Object.entries(groups).map(([co,rows])=>`
-    <div style="background:rgba(212,175,55,0.04);padding:7px 18px;font-size:10px;font-weight:700;color:#D4AF37;letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.04);">✈ ${esc(co)}</div>
-    ${rows.map((s,i)=>`<div class="frow" style="grid-template-columns:130px 150px 1fr 180px;animation-delay:${i*.02}s">
+    <div style="background:rgba(212,175,55,0.04);padding:7px 18px;font-size:10px;font-weight:700;color:#D4AF37;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.04);">✈ ${esc(co)}</div>
+    ${rows.map((s)=>`
+    <div class="frow ${pinnedIdx===s._idx?'active-row':''}"
+      style="grid-template-columns:130px 160px 1fr 180px;animation-delay:${Math.min(s._idx*.02,.4)}s"
+      onmouseenter="if(pinnedIdx===null)window._hov(${s._idx})"
+      onmouseleave="if(pinnedIdx===null)window._unhov()"
+      onclick="window._pin(${s._idx})">
       <div class="vol-num" style="font-size:15px;">${esc(s.vol||'—')}</div>
-      <div style="font-size:12px;color:#818cf8;font-family:var(--mono);">${esc(fmtDays(s.days))}</div>
+      <div style="font-size:12px;color:#818cf8;font-family:var(--mono);">${esc(fmtDays(s.days||''))}</div>
       <div style="font-family:var(--mono);font-size:12px;color:#60a5fa;">${esc(s.routing||'—')}</div>
       <div style="font-size:11px;color:#94a3b8;">${esc(fmtPeriod(s.dateFrom,s.dateTo))}</div>
     </div>`).join('')}
   `).join('');
+
+  window._allList=list;
 }
 
-let activeRowIndex=null;
-function render(list){
-  if(!list.length){
-    document.getElementById('flightsBody').innerHTML='<div class="state-c"><div class="ico">🔍</div><h3>Aucun vol trouvé</h3><p>Essayez un autre crit\u00e8re ou r\u00e9initialisez.</p></div>';
-    clearRoute();return;
-  }
-  document.getElementById('flightsBody').innerHTML=list.map((f,i)=>{
-    const from=f.from||'—',to=f.to||'—';
-    const dt=fmtDate(f.date);
-    const stop=f.stopover&&f.stopover!=='—'?f.stopover:null;
-    return `<div class="frow" data-i="${i}" style="animation-delay:${Math.min(i*.022,.5)}s"
-      onmouseenter="hoverFlight(${i})" onmouseleave="leaveFlight()"
-      onclick="clickFlight(${i})">
-      <div><div class="vol-num">${esc(f.flightNumber||'—')}</div></div>
-      <div class="route">
-        <div class="apblock"><div class="apc">${esc(from)}</div><div class="apn">${esc(apShort(from))}</div></div>
-        <div class="rmid"><div class="rtrack"></div>${stop?`<div class="vstop">via ${esc(stop)}</div>`:''}</div>
-        <div class="apblock"><div class="apc">${esc(to)}</div><div class="apn">${esc(apShort(to))}</div></div>
-      </div>
-      <div><div class="date-main">${dt.m}</div><div class="date-day">${dt.d}</div></div>
-      <div><div class="spill"><div class="sdot"></div>Autoris\u00e9</div></div>
-    </div>`;
-  }).join('');
-  window._currentList=list;
-}
-
-window.hoverFlight=function(i){
-  if(window._currentList&&window._currentList[i])showRoute(window._currentList[i]);
-};
-window.leaveFlight=function(){
-  if(activeRowIndex===null)clearRoute();
-};
-window.clickFlight=function(i){
-  const rows=document.querySelectorAll('.frow');
-  if(activeRowIndex===i){
-    activeRowIndex=null;rows.forEach(r=>r.classList.remove('active-row'));clearRoute();
-  }else{
-    activeRowIndex=i;
-    rows.forEach((r,j)=>r.classList.toggle('active-row',j===i));
-    if(window._currentList&&window._currentList[i])showRoute(window._currentList[i]);
-  }
+window._hov=function(i){const s=window._allList&&window._allList[i];if(s)showRoute(s);};
+window._unhov=function(){clearRoute();};
+window._pin=function(i){
+  if(pinnedIdx===i){pinnedIdx=null;clearRoute();}
+  else{pinnedIdx=i;const s=window._allList&&window._allList[i];if(s)showRoute(s);}
+  render();
 };
 
 init();
