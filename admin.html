@@ -1955,7 +1955,7 @@
                             style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;margin-bottom:6px;">
                             <option value="">— Ville de départ —</option>
                         </select>
-                        <input id="schedFHDep" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="this.value=this.value.replace(/[^0-9:]/g,'').substring(0,5)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
+                        <input id="schedFHDep" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
                             style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#D4AF37;font-size:13px;font-family:monospace;">
                     </div>
                     <div style="text-align:center;color:#D4AF37;font-size:22px;padding-top:22px;">✈</div>
@@ -1966,7 +1966,7 @@
                             <option value="">— Ville d'arrivée —</option>
                         </select>
                         <div style="display:flex;gap:6px;align-items:center;">
-                            <input id="schedFHArr" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="this.value=this.value.replace(/[^0-9:]/g,'').substring(0,5)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
+                            <input id="schedFHArr" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
                                 style="flex:1;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#60a5fa;font-size:13px;font-family:monospace;">
                             <select id="schedFDayOffset" onchange="_buildRouting()"
                                 title="Décalage horaire par rapport à Nouakchott (UTC+0)"
@@ -1996,9 +1996,9 @@
                                 style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:7px 9px;color:#e2e8f0;font-size:13px;">
                                 <option value="">— Ville d'escale —</option>
                             </select>
-                            <input id="schedFHStop1" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="this.value=this.value.replace(/[^0-9:]/g,'').substring(0,5)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
+                            <input id="schedFHStop1" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
                                 style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:7px 8px;color:#D4AF37;font-size:12px;font-family:monospace;">
-                            <input id="schedFHStop2" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="this.value=this.value.replace(/[^0-9:]/g,'').substring(0,5)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
+                            <input id="schedFHStop2" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
                                 style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:7px 8px;color:#60a5fa;font-size:12px;font-family:monospace;">
                         </div>
                         <div style="font-size:10px;color:#475569;margin-top:4px;">Heure arrivée escale &nbsp;·&nbsp; Heure départ escale</div>
@@ -4994,6 +4994,15 @@ window._toggleStopover = function() {
     document.getElementById('schedFStopDiv').style.display = hasStop ? '' : 'none';
     _buildRouting();
 };
+
+function _autoTimeColon(el) {
+    let v = el.value.replace(/[^0-9]/g, ''); // garder seulement les chiffres
+    if (v.length >= 3) {
+        v = v.slice(0, 2) + ':' + v.slice(2, 4); // insérer ':' après les 2 premiers chiffres
+    }
+    el.value = v;
+    _buildRouting();
+}
 
 function _buildRouting() {
     const dep    = document.getElementById('schedFDep').value;
