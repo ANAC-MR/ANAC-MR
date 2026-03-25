@@ -4,151 +4,161 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vols Nouakchott — ANAC Mauritanie</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#07101F;--card:#101E30;--card2:#0F1D2D;
-  --border:rgba(255,255,255,0.07);--gold:#D4AF37;
-  --text:#E2EAF4;--dim:#5A7A9A;--dim2:#3A5570;
-  --green:#2DD4A0;--font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
+  --bg:#07101F;--card:#0F1B2D;--card2:#0C1828;
+  --border:rgba(255,255,255,0.06);--gold:#D4AF37;
+  --text:#E2EAF4;--dim:#4E6A85;--dim2:#2A4060;
+  --green:#2DD4A0;--blue:#4A9EFF;
+  --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
 }
-html{scroll-behavior:smooth;}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+html,body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(212,175,55,0.05) 0%,transparent 55%);}
+  background:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(212,175,55,0.06) 0%,transparent 55%),
+             radial-gradient(ellipse 40% 40% at 5% 80%,rgba(74,158,255,0.04) 0%,transparent 50%);}
 
 /* Header */
-header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.95);backdrop-filter:blur(16px);
-  border-bottom:1px solid var(--border);padding:0 28px;height:54px;
+header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.95);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);padding:0 32px;height:56px;
   display:flex;align-items:center;justify-content:space-between;}
-.logo{display:flex;align-items:center;gap:9px;text-decoration:none;}
-.logo-plane{font-size:20px;filter:drop-shadow(0 0 5px rgba(212,175,55,0.4));}
-.logo-name{font-size:14px;font-weight:700;color:var(--text);}
-.logo-sub{font-size:10px;color:var(--dim);}
-.live-chip{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;
-  background:rgba(45,212,160,0.1);border:1px solid rgba(45,212,160,0.2);font-size:11px;color:var(--green);}
-.ldot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s ease infinite;}
-@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(45,212,160,.4);}50%{opacity:.7;box-shadow:0 0 0 3px rgba(45,212,160,0);}}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-icon{font-size:22px;filter:drop-shadow(0 0 6px rgba(212,175,55,.5));}
+.logo-text .name{font-size:15px;font-weight:700;color:var(--text);}
+.logo-text .sub{font-size:10px;color:var(--dim);margin-top:1px;}
+.live{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;
+  background:rgba(45,212,160,.1);border:1px solid rgba(45,212,160,.2);font-size:11px;color:var(--green);}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(45,212,160,.4);}50%{opacity:.7;box-shadow:0 0 0 4px rgba(45,212,160,0);}}
 
 /* Airport banner */
-.ap-hero{position:relative;z-index:5;padding:32px 28px 0;max-width:1100px;margin:0 auto;}
+.ap-wrap{max-width:1100px;margin:0 auto;padding:32px 28px 0;}
 .ap-banner{background:var(--card2);border:1px solid var(--border);border-radius:18px;
-  padding:22px 26px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:22px 28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;
   overflow:hidden;position:relative;}
-.ap-banner::before{content:'NKC';position:absolute;right:-8px;top:50%;transform:translateY(-50%);
-  font-family:var(--mono);font-size:120px;font-weight:700;color:rgba(255,255,255,0.018);
-  letter-spacing:-6px;pointer-events:none;user-select:none;}
-.ap-icon{width:48px;height:48px;border-radius:11px;background:linear-gradient(135deg,var(--gold),#8B6914);
-  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.ap-banner::after{content:'NKC';position:absolute;right:-4px;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:110px;font-weight:700;color:rgba(255,255,255,.015);
+  letter-spacing:-5px;pointer-events:none;user-select:none;}
+.ap-icon{width:50px;height:50px;border-radius:12px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--gold),#7a5f10);
+  display:flex;align-items:center;justify-content:center;font-size:22px;}
 .ap-info{flex:1;}
-.ap-code{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--gold);}
-.ap-name{font-size:14px;font-weight:600;color:var(--text);margin-top:2px;}
+.ap-iata{font-family:var(--mono);font-size:28px;font-weight:600;color:var(--gold);}
+.ap-fullname{font-size:15px;font-weight:600;color:var(--text);margin-top:2px;}
 .ap-detail{font-size:11px;color:var(--dim);margin-top:3px;}
 .ap-stats{display:flex;gap:10px;flex-wrap:wrap;}
-.astat{text-align:center;padding:7px 14px;background:rgba(255,255,255,0.04);border-radius:9px;border:1px solid var(--border);}
-.astat-val{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--text);}
-.astat-lbl{font-size:10px;color:var(--dim);margin-top:1px;text-transform:uppercase;letter-spacing:.06em;}
+.ast{text-align:center;padding:8px 14px;background:rgba(255,255,255,.04);
+  border-radius:9px;border:1px solid var(--border);}
+.ast-v{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--text);}
+.ast-l{font-size:10px;color:var(--dim);margin-top:1px;text-transform:uppercase;letter-spacing:.05em;}
 
 /* MAP */
-.map-section{position:relative;z-index:5;max-width:1100px;margin:20px auto 0;padding:0 28px;}
-.map-wrap{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--border);}
-#map{height:340px;width:100%;background:#0a1628;}
-.map-overlay{position:absolute;top:12px;left:12px;z-index:1000;
-  background:rgba(7,16,31,0.85);backdrop-filter:blur(8px);
-  border:1px solid var(--border);border-radius:10px;padding:8px 12px;
+.map-wrap{max-width:1100px;margin:20px auto 0;padding:0 28px;}
+.map-box{border-radius:18px;overflow:hidden;border:1px solid var(--border);position:relative;}
+#map{height:360px;width:100%;}
+.map-hint{position:absolute;top:12px;right:12px;z-index:500;
+  background:rgba(7,16,31,.85);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:8px;padding:6px 11px;
   font-size:11px;color:var(--dim);pointer-events:none;}
-.map-hover-info{position:absolute;bottom:12px;left:12px;right:12px;z-index:1000;
-  background:rgba(7,16,31,0.92);backdrop-filter:blur(10px);
-  border:1px solid var(--border);border-radius:10px;padding:12px 16px;
-  display:none;max-width:420px;}
-.mhi-vol{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text);}
-.mhi-route{font-size:13px;color:var(--dim);margin-top:3px;}
-.mhi-date{font-size:11px;color:var(--gold);font-family:var(--mono);margin-top:4px;}
+/* Info vol survolé */
+.map-info{position:absolute;bottom:14px;left:14px;z-index:500;display:none;
+  background:rgba(7,16,31,.92);backdrop-filter:blur(12px);
+  border:1px solid rgba(212,175,55,.3);border-radius:12px;padding:14px 18px;min-width:260px;}
+.mi-vol{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--text);}
+.mi-co{font-size:12px;color:var(--dim);margin-top:2px;}
+.mi-route{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.mi-ap{text-align:center;}
+.mi-city{font-size:14px;font-weight:700;color:var(--text);}
+.mi-iata{font-size:10px;color:var(--dim);margin-top:1px;font-family:var(--mono);}
+.mi-arrow{color:var(--gold);font-size:20px;flex:1;text-align:center;}
+.mi-times{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);}
+.mi-t{font-family:var(--mono);font-size:14px;color:var(--gold);}
+
+/* Flights section */
+.flights-wrap{max-width:1100px;margin:20px auto 60px;padding:0 28px;}
+
+/* Date tabs */
+.date-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.dt-label{font-size:11px;color:var(--dim);margin-right:4px;}
+.dtab{padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+  background:transparent;color:var(--dim);font-size:12px;font-family:var(--font);
+  cursor:pointer;transition:all .15s;}
+.dtab.active{background:rgba(212,175,55,.12);border-color:var(--gold);color:var(--gold);font-weight:600;}
+.dtab:hover:not(.active){color:var(--text);border-color:rgba(255,255,255,.12);}
 
 /* Search */
-.search-section{position:relative;z-index:5;max-width:1100px;margin:16px auto 0;padding:0 28px;}
-.tabs{display:flex;gap:3px;background:var(--card2);border:1px solid var(--border);
-  border-radius:12px 12px 0 0;padding:5px 6px 0;border-bottom:none;}
-.tab{padding:8px 16px;border-radius:9px 9px 0 0;font-size:12px;font-weight:600;cursor:pointer;
-  color:var(--dim);border:1px solid transparent;border-bottom:none;background:transparent;
-  font-family:var(--font);transition:all .15s;}
-.tab.active{background:var(--card);color:var(--text);border-color:var(--border);}
-.tab:hover:not(.active){color:var(--text);}
-.tab-count{margin-left:5px;padding:1px 6px;border-radius:9px;font-size:10px;font-weight:700;
-  background:rgba(255,255,255,0.07);color:var(--dim);}
-.tab.active .tab-count{background:rgba(212,175,55,0.15);color:var(--gold);}
-.search-bar{background:var(--card);border:1px solid var(--border);border-top:none;
-  border-radius:0 0 12px 12px;padding:12px 16px;display:flex;gap:9px;align-items:center;flex-wrap:wrap;}
-.sinput-wrap{flex:1;min-width:180px;position:relative;}
-.si-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:12px;pointer-events:none;}
-.sinput{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;
-  padding:8px 11px 8px 30px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color .2s;}
-.sinput:focus{border-color:rgba(212,175,55,0.35);}
+.search-row{display:flex;gap:8px;margin-bottom:16px;}
+.sinput-w{flex:1;position:relative;}
+.si-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:13px;pointer-events:none;}
+.sinput{width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px 10px 32px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;}
+.sinput:focus{border-color:rgba(212,175,55,.35);}
 .sinput::placeholder{color:var(--dim2);}
-.dinput{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;
-  padding:8px 11px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;}
-.dinput:focus{border-color:rgba(212,175,55,0.35);}
-.breset{background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px 13px;
-  color:var(--dim);font-size:12px;font-family:var(--font);cursor:pointer;transition:all .15s;}
-.breset:hover{color:var(--text);border-color:rgba(255,255,255,0.15);}
+.breset{background:transparent;border:1px solid var(--border);border-radius:10px;
+  padding:10px 14px;color:var(--dim);font-size:12px;font-family:var(--font);cursor:pointer;}
+.breset:hover{color:var(--text);}
 
-/* Table */
-.flights-section{position:relative;z-index:5;max-width:1100px;margin:0 auto 60px;padding:0 28px;}
-.ftable{width:100%;background:var(--card);border:1px solid var(--border);border-top:none;border-radius:0 0 14px 14px;overflow:hidden;}
-.thead{display:grid;grid-template-columns:150px 1fr 140px 120px;
-  padding:8px 18px;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border);}
-.th{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;}
-.thead-sched{display:grid;grid-template-columns:130px 150px 1fr 180px;}
-.frow{display:grid;grid-template-columns:150px 1fr 140px 120px;
-  padding:13px 18px;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center;
-  transition:background .12s;cursor:pointer;animation:rowIn .2s ease both;}
-.frow:last-child{border-bottom:none;}
-.frow:hover{background:rgba(212,175,55,0.04);}
-.frow.active-row{background:rgba(212,175,55,0.07);border-left:3px solid var(--gold);}
-@keyframes rowIn{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:translateX(0);}}
-.vol-num{font-family:var(--mono);font-size:17px;font-weight:600;color:var(--text);}
-.route{display:flex;align-items:center;gap:9px;}
-.apblock{text-align:center;min-width:50px;}
-.apc{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--text);}
-.apn{font-size:10px;color:var(--dim);margin-top:1px;white-space:nowrap;}
-.rmid{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
-.rtrack{width:100%;max-width:90px;height:1px;background:linear-gradient(90deg,var(--dim2),var(--dim),var(--dim2));position:relative;}
-.rtrack::after{content:'✈';position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--gold);}
-.vstop{font-size:9px;color:var(--dim);background:rgba(255,255,255,0.05);border-radius:3px;padding:1px 4px;}
-.date-main{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);}
-.date-day{font-size:10px;color:var(--dim);margin-top:1px;}
-.spill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;
-  font-size:11px;font-weight:600;background:rgba(45,212,160,0.1);border:1px solid rgba(45,212,160,0.2);color:var(--green);}
-.sdot{width:5px;height:5px;border-radius:50%;background:currentColor;}
-.state-c{padding:60px 20px;text-align:center;color:var(--dim);}
+/* Vols tableau */
+.vol-table{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.vt-head{display:grid;grid-template-columns:1fr 1fr 140px;
+  padding:9px 20px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border);}
+.vth{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;}
+.vrow{display:grid;grid-template-columns:1fr 1fr 140px;
+  padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.04);
+  align-items:center;cursor:pointer;transition:background .12s;
+  animation:ri .2s ease both;}
+.vrow:last-child{border-bottom:none;}
+.vrow:hover,.vrow.pinned{background:rgba(212,175,55,.05);}
+.vrow.pinned{border-left:3px solid var(--gold);}
+@keyframes ri{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:translateX(0);}}
+
+/* Cellule Vol */
+.vc-vol .vnum{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--text);}
+.vc-vol .vco{font-size:11px;color:var(--dim);margin-top:2px;}
+
+/* Cellule Route */
+.vc-route{display:flex;align-items:center;gap:8px;}
+.vc-ap{text-align:center;}
+.vc-city{font-size:14px;font-weight:700;color:var(--text);}
+.vc-iata{font-size:10px;color:var(--dim);font-family:var(--mono);margin-top:2px;}
+.vc-mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.vc-line{width:100%;max-width:80px;height:1px;background:linear-gradient(90deg,var(--dim2),var(--dim),var(--dim2));position:relative;}
+.vc-line::after{content:'✈';position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--gold);}
+
+/* Cellule Horaire */
+.vc-time{display:flex;align-items:center;gap:6px;}
+.vc-t1{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--gold);}
+.vc-tarrow{color:var(--dim);font-size:12px;}
+.vc-t2{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--blue);}
+.vc-plus{font-size:10px;color:var(--dim);margin-left:2px;}
+
+/* État vide / loader */
+.state-c{padding:70px 20px;text-align:center;color:var(--dim);}
 .state-c .ico{font-size:36px;margin-bottom:12px;opacity:.4;}
 .state-c h3{font-size:15px;color:var(--text);margin-bottom:6px;}
 .state-c p{font-size:12px;max-width:280px;margin:0 auto;line-height:1.6;}
-.loader-row{display:flex;align-items:center;justify-content:center;gap:9px;padding:50px;color:var(--dim);font-size:13px;}
-.spinner{width:16px;height:16px;border-radius:50%;border:2px solid rgba(212,175,55,0.15);border-top-color:var(--gold);animation:spin .7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
+.loader-r{display:flex;align-items:center;justify-content:center;gap:8px;padding:50px;color:var(--dim);font-size:13px;}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(212,175,55,.15);border-top-color:var(--gold);animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
 
-/* Leaflet dark override */
-.leaflet-container{background:#0a1628;}
-.leaflet-tile{filter:brightness(0.5) saturate(0.3) hue-rotate(200deg);}
-.leaflet-control-attribution{display:none;}
-.leaflet-control-zoom a{background:#101E30;color:#e2e8f0;border-color:#1e3a5f;}
-.leaflet-popup-content-wrapper{background:#101E30;color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+/* Leaflet dark */
+.leaflet-container{background:#080F1C;}
+.leaflet-tile{filter:brightness(.45) saturate(.25) hue-rotate(195deg);}
+.leaflet-control-attribution{display:none!important;}
+.leaflet-control-zoom a{background:#101E30!important;color:#e2e8f0!important;border-color:#1e3a5f!important;}
+.leaflet-popup-content-wrapper{background:#101E30;color:#e2e8f0;border:1px solid rgba(255,255,255,.1);border-radius:10px;}
 .leaflet-popup-tip{background:#101E30;}
-.leaflet-popup-content{font-family:'Sora',sans-serif;font-size:12px;margin:10px 14px;}
 
 @media(max-width:680px){
-  header,.ap-hero,.map-section,.search-section,.flights-section{padding-left:12px;padding-right:12px;}
-  .ap-hero{padding-top:18px;}
-  .ap-banner{padding:14px;}
-  .thead{display:none;}
-  .frow{grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:8px 6px;}
-  .frow>:nth-child(3){grid-column:1;grid-row:2;}
-  .frow>:nth-child(4){grid-column:2;grid-row:2;justify-self:end;}
-  #map{height:240px;}
+  header,.ap-wrap,.map-wrap,.flights-wrap{padding-left:12px;padding-right:12px;}
+  .ap-wrap{padding-top:18px;}
+  .vt-head{display:none;}
+  .vrow{grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:10px;}
+  .vc-time{grid-column:1/-1;}
+  #map{height:250px;}
 }
 </style>
 </head>
@@ -156,74 +166,87 @@ header{position:sticky;top:0;z-index:200;background:rgba(7,16,31,0.95);backdrop-
 
 <header>
   <a class="logo" href="index.html">
-    <div class="logo-plane">✈️</div>
-    <div><div class="logo-name">ANAC Mauritanie</div><div class="logo-sub">Vols Autorisés — NKC</div></div>
+    <div class="logo-icon">✈️</div>
+    <div class="logo-text">
+      <div class="name">ANAC Mauritanie</div>
+      <div class="sub">Vols Autorisés — Nouakchott</div>
+    </div>
   </a>
-  <div class="live-chip"><div class="ldot"></div>Données en direct</div>
+  <div class="live"><div class="ldot"></div>En direct</div>
 </header>
 
-<div class="ap-hero">
+<!-- Airport banner -->
+<div class="ap-wrap">
   <div class="ap-banner">
     <div class="ap-icon">🛫</div>
     <div class="ap-info">
-      <div class="ap-code">NKC / GQNO</div>
-      <div class="ap-name">Aéroport International de Nouakchott–Oumtounsy</div>
-      <div class="ap-detail">Mauritanie · UTC+0</div>
+      <div class="ap-iata">NKC</div>
+      <div class="ap-fullname">Aéroport International de Nouakchott–Oumtounsy</div>
+      <div class="ap-detail">Mauritanie · GQNO · UTC+0</div>
     </div>
     <div class="ap-stats">
-      <div class="astat"><div class="astat-val" id="stTotal">—</div><div class="astat-lbl">Vols</div></div>
-      <div class="astat"><div class="astat-val" id="stDest">—</div><div class="astat-lbl">Destinations</div></div>
-      <div class="astat"><div class="astat-val" id="stComp">—</div><div class="astat-lbl">Compagnies</div></div>
+      <div class="ast"><div class="ast-v" id="stVols">—</div><div class="ast-l">Vols autorisés</div></div>
+      <div class="ast"><div class="ast-v" id="stDest">—</div><div class="ast-l">Destinations</div></div>
+      <div class="ast"><div class="ast-v" id="stComp">—</div><div class="ast-l">Compagnies</div></div>
     </div>
   </div>
 </div>
 
-<!-- MAP -->
-<div class="map-section">
-  <div class="map-wrap">
+<!-- Map -->
+<div class="map-wrap">
+  <div class="map-box">
     <div id="map"></div>
-    <div class="map-overlay">Survolez un vol pour voir le trajet</div>
-    <div class="map-hover-info" id="mapHover">
-      <div class="mhi-vol" id="mhiVol">—</div>
-      <div class="mhi-route" id="mhiRoute">—</div>
-      <div class="mhi-date" id="mhiDate">—</div>
+    <div class="map-hint">Survolez un vol pour voir le trajet</div>
+    <div class="map-info" id="mapInfo">
+      <div class="mi-vol" id="miVol">—</div>
+      <div class="mi-co" id="miCo">—</div>
+      <div class="mi-route">
+        <div class="mi-ap"><div class="mi-city" id="miCity1">—</div><div class="mi-iata" id="miCode1">—</div></div>
+        <div class="mi-arrow">→</div>
+        <div class="mi-ap"><div class="mi-city" id="miCity2">—</div><div class="mi-iata" id="miCode2">—</div></div>
+      </div>
+      <div class="mi-times">
+        <div class="mi-t" id="miT1">—</div>
+        <div style="color:var(--dim);font-size:12px;">→</div>
+        <div class="mi-t" id="miT2">—</div>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="search-section">
-  <div class="tabs">
-    <button class="tab active" id="tabSched">Programme de vols <span class="tab-count" id="tcSched">0</span></button>
+<!-- Flights -->
+<div class="flights-wrap">
+  <!-- Date tabs -->
+  <div class="date-tabs">
+    <span class="dt-label">Voir :</span>
+    <button class="dtab active" onclick="setDay(0)" id="day0">Aujourd'hui</button>
+    <button class="dtab" onclick="setDay(1)" id="day1">Demain</button>
+    <button class="dtab" onclick="setDay(-1)" id="dayAll">Tous les vols</button>
   </div>
-  <div class="search-bar">
-    <div class="sinput-wrap">
-      <span class="si-icon">✈</span>
+  <!-- Search -->
+  <div class="search-row">
+    <div class="sinput-w">
+      <span class="si-ico">✈</span>
       <input class="sinput" id="sVol" type="text"
-        placeholder="Vol ou destination… (ex: TK571, CDG, Istanbul)"
-        oninput="doSearch()" autocomplete="off">
+        placeholder="Rechercher un vol, une ville, une compagnie…"
+        oninput="render()" autocomplete="off">
     </div>
-    
     <button class="breset" onclick="resetSearch()">✕</button>
   </div>
-</div>
-
-<div class="flights-section">
-  <div class="ftable">
-    <div class="thead" style="grid-template-columns:130px 160px 1fr 180px;">
-      <div class="th">Vol</div>
-      <div class="th">Jours d'opération</div>
-      <div class="th">Routing</div>
-      <div class="th">Période</div>
+  <!-- Table -->
+  <div class="vol-table">
+    <div class="vt-head">
+      <div class="vth">Vol &amp; Compagnie</div>
+      <div class="vth">Itinéraire</div>
+      <div class="vth">Horaires</div>
     </div>
-    <div id="flightsBody">
-      <div class="loader-row"><div class="spinner"></div> Chargement…</div>
-    </div>
+    <div id="volBody"><div class="loader-r"><div class="spin"></div> Chargement…</div></div>
   </div>
 </div>
 
 <script type="module">
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, getDocs, doc, getDoc }
+import { getFirestore, collection, getDocs }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const FB={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",
@@ -232,155 +255,247 @@ const FB={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67
 const app=getApps().find(a=>a.name==='vols')||initializeApp(FB,'vols');
 const db=getFirestore(app);
 
-let allSchedules=[], airports={};
-
-// Coordonnées ICAO
-const COORDS={
-  'GQNO':[18.098,15.948],'NKC':[18.098,15.948],
-  'LFPG':[49.009,2.547],'CDG':[49.009,2.547],
-  'LTFM':[41.262,28.727],'IST':[41.262,28.727],
-  'DAAG':[36.691,3.215],'ALG':[36.691,3.215],
-  'DTTA':[36.851,10.227],'TUN':[36.851,10.227],
-  'GMMN':[33.368,-7.590],'CMN':[33.368,-7.590],
-  'GOBD':[14.739,-17.490],'DSS':[14.739,-17.490],
-  'GCLP':[27.931,-15.388],'LPA':[27.931,-15.388],
-  'GBYD':[13.338,-16.652],'BJL':[13.338,-16.652],
-  'GUCY':[9.577,-13.612],'CKY':[9.577,-13.612],
-  'DIAP':[5.254,-3.926],'ABJ':[5.254,-3.926],
-  'DNMM':[6.577,3.321],'LOS':[6.577,3.321],
+// ── Aéroports: ICAO → {city, iata, coords}
+const AP={
+  'GQNO':{city:'Nouakchott',     iata:'NKC', c:[18.098, 15.948]},
+  'LFPG':{city:'Paris',          iata:'CDG', c:[49.009,  2.547]},
+  'LTFM':{city:'Istanbul',       iata:'IST', c:[41.262, 28.727]},
+  'DAAG':{city:'Alger',          iata:'ALG', c:[36.691,  3.215]},
+  'DTTA':{city:'Tunis',          iata:'TUN', c:[36.851, 10.227]},
+  'GMMN':{city:'Casablanca',     iata:'CMN', c:[33.368, -7.590]},
+  'GOBD':{city:'Dakar',          iata:'DSS', c:[14.739,-17.490]},
+  'GCLP':{city:'Las Palmas',     iata:'LPA', c:[27.931,-15.388]},
+  'GBYD':{city:'Banjul',         iata:'BJL', c:[13.338,-16.652]},
+  'GUCY':{city:'Conakry',        iata:'CKY', c:[ 9.577,-13.612]},
+  'DIAP':{city:'Abidjan',        iata:'ABJ', c:[ 5.254, -3.926]},
+  'DNMM':{city:'Lagos',          iata:'LOS', c:[ 6.577,  3.321]},
+  'GABS':{city:'Bamako',         iata:'BKO', c:[12.534, -7.950]},
+  'GCXO':{city:'Tenerife',       iata:'TFN', c:[28.482,-16.342]},
+  'DBBP':{city:'Lomé',           iata:'LFW', c:[ 6.165,  1.254]},
+  'HAAB':{city:'Addis Abeba',    iata:'ADD', c:[ 8.978, 38.799]},
+  'GMME':{city:'Rabat',          iata:'RBA', c:[33.998, -6.752]},
 };
-const NKC=[18.098,15.948];
+const NKC_COORD=[18.098,15.948];
 
-// ── Map Leaflet ──
-const map=L.map('map',{zoomControl:true,scrollWheelZoom:false}).setView([25,5],3);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
-const nkcIcon=L.divIcon({className:'',html:'<div style="width:12px;height:12px;border-radius:50%;background:#D4AF37;border:2px solid #fff;box-shadow:0 0 8px rgba(212,175,55,0.6);"></div>',iconSize:[12,12],iconAnchor:[6,6]});
-L.marker(NKC,{icon:nkcIcon}).addTo(map).bindTooltip('NKC — Nouakchott',{permanent:false});
-let activeLine=null, activeMarker=null, pinnedIdx=null;
+// ── Parse routing: "LFPG 1615 - 2130 GQNO" ou "GQNO 2350 - 0500 LFPG +1"
+function parseRouting(r){
+  if(!r)return null;
+  const m=r.match(/([A-Z]{4})\s+(\d{4})\s*[-–]\s*(\d{4})\s+([A-Z]{4})(\s*\+1)?/);
+  if(!m)return null;
+  return{
+    dep:m[1], hdep:m[2].slice(0,2)+':'+m[2].slice(2),
+    arr:m[4], harr:m[3].slice(0,2)+':'+m[3].slice(2),
+    plus1:!!m[5]
+  };
+}
+
+// ── Jours opération: 'J------' → aujourd'hui actif?
+const DAY_MAP=[1,2,3,4,5,6,7]; // index 0=Lun...6=Dim (JS: 0=Dim,1=Lun...)
+function isActiveToday(days, targetDate){
+  if(!days)return true;
+  const d=new Date(targetDate+'T12:00:00');
+  const jsDay=d.getDay(); // 0=dim,1=lun,...
+  const schedIdx=jsDay===0?6:jsDay-1; // 0=lun...6=dim
+  const ch=days[schedIdx]||'-';
+  // Compatibilité: 'J' ou tout char != '-'
+  return ch!=='-';
+}
+
+// ── Vérifier si une période couvre une date donnée
+function isInPeriod(dateFrom,dateTo,targetDate){
+  if(!dateFrom&&!dateTo)return true;
+  if(dateFrom&&targetDate<dateFrom)return false;
+  if(dateTo&&targetDate>dateTo)return false;
+  return true;
+}
+
+let allSchedules=[];
+let selectedDay=0; // 0=aujourd'hui, 1=demain, -1=tous
+let pinnedIdx=null;
+
+// ── Leaflet map ──
+const map=L.map('map',{
+  zoomControl:true,
+  scrollWheelZoom:false,
+  center:NKC_COORD,
+  zoom:4
+});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:''}).addTo(map);
+
+// Marqueur NKC
+const nkcIcon=L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],
+  html:'<div style="width:16px;height:16px;border-radius:50%;background:#D4AF37;border:3px solid #fff;box-shadow:0 0 12px rgba(212,175,55,.7);"></div>'});
+L.marker(NKC_COORD,{icon:nkcIcon}).addTo(map)
+ .bindTooltip('<b>NKC</b><br>Nouakchott',{className:'leaflet-dark-tooltip',permanent:false,direction:'top'});
+
+let activeLine=null,activeMark=null;
 
 function showRoute(s){
   clearRoute();
-  // Extraire les codes ICAO du routing (ex: "LFPG 1615 - 2130 GQNO")
-  const codes=(s.routing||'').match(/[A-Z]{4}/g)||[];
-  const pts=codes.map(c=>COORDS[c]).filter(Boolean);
-  if(pts.length<2)return;
-  const c1=pts[0], c2=pts[pts.length-1];
+  const pr=parseRouting(s.routing);
+  if(!pr)return;
+  const a1=AP[pr.dep],a2=AP[pr.arr];
+  if(!a1||!a2)return;
+  const c1=a1.c,c2=a2.c;
   // Arc courbe
   const arc=[];
-  for(let t=0;t<=24;t++){
-    const r=t/24;
-    arc.push([c1[0]+(c2[0]-c1[0])*r + Math.sin(Math.PI*r)*3, c1[1]+(c2[1]-c1[1])*r]);
+  for(let t=0;t<=30;t++){
+    const r=t/30;
+    const lat=c1[0]+(c2[0]-c1[0])*r+Math.sin(Math.PI*r)*4;
+    const lng=c1[1]+(c2[1]-c1[1])*r;
+    arc.push([lat,lng]);
   }
-  activeLine=L.polyline(arc,{color:'#D4AF37',weight:2,opacity:.9,dashArray:'6 4'}).addTo(map);
-  const destCoord=codes[0]==='GQNO'||codes[0]==='NKC'?c2:c1;
-  const destCode =codes[0]==='GQNO'||codes[0]==='NKC'?codes[codes.length-1]:codes[0];
-  const dIcon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;border-radius:50%;background:#60a5fa;border:2px solid #fff;box-shadow:0 0 6px rgba(96,165,250,.5);"></div>',iconSize:[10,10],iconAnchor:[5,5]});
-  activeMarker=L.marker(destCoord,{icon:dIcon}).addTo(map);
-  map.fitBounds(L.latLngBounds([c1,c2]).pad(.25),{animate:true,duration:.4});
-  document.getElementById('mapHover').style.display='';
-  document.getElementById('mhiVol').textContent=s.vol||'—';
-  document.getElementById('mhiRoute').textContent=s.routing||'—';
-  document.getElementById('mhiDate').textContent=fmtPeriod(s.dateFrom,s.dateTo);
+  activeLine=L.polyline(arc,{color:'#D4AF37',weight:2.5,opacity:.95,dashArray:'8 5'}).addTo(map);
+  // Marqueur destination (pas NKC)
+  const dest=pr.dep==='GQNO'?pr.arr:pr.dep;
+  const destC=(AP[dest]||{}).c;
+  if(destC){
+    const di=L.divIcon({className:'',iconSize:[12,12],iconAnchor:[6,6],
+      html:'<div style="width:12px;height:12px;border-radius:50%;background:#4A9EFF;border:2px solid #fff;box-shadow:0 0 8px rgba(74,158,255,.6);"></div>'});
+    activeMark=L.marker(destC,{icon:di}).addTo(map);
+  }
+  map.fitBounds(L.latLngBounds([c1,c2]).pad(.3),{animate:true,duration:.5});
+  // Info box
+  const dep=AP[pr.dep]||{city:pr.dep,iata:pr.dep};
+  const arr=AP[pr.arr]||{city:pr.arr,iata:pr.arr};
+  document.getElementById('mapInfo').style.display='';
+  document.getElementById('miVol').textContent=s.vol||'—';
+  document.getElementById('miCo').textContent=s.company||'';
+  document.getElementById('miCity1').textContent=dep.city;
+  document.getElementById('miCode1').textContent=dep.iata;
+  document.getElementById('miCity2').textContent=arr.city;
+  document.getElementById('miCode2').textContent=arr.iata;
+  document.getElementById('miT1').textContent=pr.hdep;
+  document.getElementById('miT2').textContent=pr.harr+(pr.plus1?' +1':'');
 }
+
 function clearRoute(){
   if(activeLine){map.removeLayer(activeLine);activeLine=null;}
-  if(activeMarker){map.removeLayer(activeMarker);activeMarker=null;}
-  document.getElementById('mapHover').style.display='none';
-  map.setView([25,5],3,{animate:true});
+  if(activeMark){map.removeLayer(activeMark);activeMark=null;}
+  document.getElementById('mapInfo').style.display='none';
+  map.setView(NKC_COORD,4,{animate:true,duration:.4});
 }
 
-// ── Utils ──
-const MOIS=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
-const JOURS_L=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-function fmtPeriod(from,to){
-  const f=v=>{if(!v)return'';const[y,m,d]=v.split('-');return`${parseInt(d)}-${MOIS[parseInt(m)-1]}-${y}`;};
-  return from&&to?`${f(from)} au ${f(to)}`:f(from)||f(to)||'—';
-}
-function fmtDays(d){
-  if(!d)return'—';
-  const a=[];
-  for(let i=0;i<7;i++){if(d[i]==='J')a.push(JOURS_L[i]);}
-  // Compatibilité ancien format (J1---J5--)
-  if(!a.length){for(let i=0;i<7;i++){if(d[i]&&d[i]!=='-')a.push(JOURS_L[i]);}}
-  return a.length?a.join(' '):d;
-}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-// ── Init ──
-async function init(){
-  try{
-    // Charger uniquement les horaires (schedules)
-    const snap=await getDocs(collection(db,'schedules'));
-    allSchedules=snap.docs.map(d=>({id:d.id,...d.data()}));
-
-    const comp=new Set(allSchedules.map(s=>s.company).filter(Boolean));
-    const dests=new Set();
-    allSchedules.forEach(s=>{
-      const codes=(s.routing||'').match(/[A-Z]{4}/g)||[];
-      codes.filter(c=>c!=='GQNO').forEach(c=>dests.add(c));
-    });
-    document.getElementById('stTotal').textContent=allSchedules.length;
-    document.getElementById('stDest').textContent=dests.size;
-    document.getElementById('stComp').textContent=comp.size;
-    document.getElementById('tcSched').textContent=allSchedules.length;
-    render();
-  }catch(e){
-    document.getElementById('flightsBody').innerHTML=`<div class="state-c"><div class="ico">⚠️</div><h3>Erreur</h3><p>${esc(e.message)}</p></div>`;
-  }
+// ── Helpers date ──
+function getTargetDate(offset){
+  const d=new Date();
+  d.setDate(d.getDate()+offset);
+  return d.toISOString().split('T')[0];
 }
 
-window.doSearch=function(){ render(); };
+window.setDay=function(d){
+  selectedDay=d;
+  pinnedIdx=null; clearRoute();
+  ['day0','day1','dayAll'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById(d===0?'day0':d===1?'day1':'dayAll').classList.add('active');
+  render();
+};
+
 window.resetSearch=function(){
   document.getElementById('sVol').value='';
   pinnedIdx=null; clearRoute(); render();
 };
 
-function render(){
+// ── Init ──
+async function init(){
+  try{
+    const snap=await getDocs(collection(db,'schedules'));
+    allSchedules=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const comp=new Set(allSchedules.map(s=>s.company).filter(Boolean)).size;
+    const dests=new Set();
+    allSchedules.forEach(s=>{
+      const pr=parseRouting(s.routing);
+      if(pr){
+        if(pr.dep!=='GQNO')dests.add(pr.dep);
+        if(pr.arr!=='GQNO')dests.add(pr.arr);
+      }
+    });
+    document.getElementById('stVols').textContent=allSchedules.length;
+    document.getElementById('stDest').textContent=dests.size;
+    document.getElementById('stComp').textContent=comp;
+    render();
+  }catch(e){
+    document.getElementById('volBody').innerHTML=`<div class="state-c"><div class="ico">⚠️</div><h3>Erreur de chargement</h3><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+window.render=function(){
   const q=document.getElementById('sVol').value.trim().toUpperCase();
+
   let list=[...allSchedules];
+
+  // Filtre par jour d'opération + période
+  if(selectedDay>=0){
+    const target=getTargetDate(selectedDay);
+    list=list.filter(s=>isActiveToday(s.days,target)&&isInPeriod(s.dateFrom,s.dateTo,target));
+  }
+
+  // Filtre texte
   if(q)list=list.filter(s=>
     (s.vol||'').toUpperCase().includes(q)||
     (s.company||'').toUpperCase().includes(q)||
-    (s.routing||'').toUpperCase().includes(q)
+    (s.routing||'').toUpperCase().includes(q)||
+    ((parseRouting(s.routing)||{}).dep?((AP[(parseRouting(s.routing)||{}).dep]||{}).city||'').toUpperCase().includes(q):false)||
+    ((parseRouting(s.routing)||{}).arr?((AP[(parseRouting(s.routing)||{}).arr]||{}).city||'').toUpperCase().includes(q):false)
   );
-  list.sort((a,b)=>(a.company||'').localeCompare(b.company||'')||(a.vol||'').localeCompare(b.vol||''));
 
-  document.getElementById('tcSched').textContent=list.length;
+  list.sort((a,b)=>{
+    const pa=parseRouting(a.routing),pb=parseRouting(b.routing);
+    return (pa?pa.hdep:'').localeCompare(pb?pb.hdep:'');
+  });
 
   if(!list.length){
-    document.getElementById('flightsBody').innerHTML='<div class="state-c"><div class="ico">🔍</div><h3>Aucun vol trouvé</h3><p>Essayez un autre critère.</p></div>';
+    document.getElementById('volBody').innerHTML=selectedDay>=0
+      ?'<div class="state-c"><div class="ico">✈️</div><h3>Aucun vol aujourd\'hui</h3><p>Essayez "Tous les vols" ou un autre jour.</p></div>'
+      :'<div class="state-c"><div class="ico">🔍</div><h3>Aucun résultat</h3><p>Essayez un autre critère de recherche.</p></div>';
     clearRoute(); return;
   }
 
-  // Grouper par compagnie
-  const groups={};
-  list.forEach((s,i)=>{s._idx=i; const k=s.company||'—'; if(!groups[k])groups[k]=[]; groups[k].push(s);});
+  window._list=list;
 
-  document.getElementById('flightsBody').innerHTML=Object.entries(groups).map(([co,rows])=>`
-    <div style="background:rgba(212,175,55,0.04);padding:7px 18px;font-size:10px;font-weight:700;color:#D4AF37;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.04);">✈ ${esc(co)}</div>
-    ${rows.map((s)=>`
-    <div class="frow ${pinnedIdx===s._idx?'active-row':''}"
-      style="grid-template-columns:130px 160px 1fr 180px;animation-delay:${Math.min(s._idx*.02,.4)}s"
-      onmouseenter="if(pinnedIdx===null)window._hov(${s._idx})"
+  document.getElementById('volBody').innerHTML=list.map((s,i)=>{
+    const pr=parseRouting(s.routing);
+    const dep=pr?AP[pr.dep]||{city:pr.dep,iata:pr.dep}:null;
+    const arr=pr?AP[pr.arr]||{city:pr.arr,iata:pr.arr}:null;
+    return `<div class="vrow ${pinnedIdx===i?'pinned':''}" style="animation-delay:${Math.min(i*.025,.4)}s"
+      onmouseenter="if(pinnedIdx===null)window._hov(${i})"
       onmouseleave="if(pinnedIdx===null)window._unhov()"
-      onclick="window._pin(${s._idx})">
-      <div class="vol-num" style="font-size:15px;">${esc(s.vol||'—')}</div>
-      <div style="font-size:12px;color:#818cf8;font-family:var(--mono);">${esc(fmtDays(s.days||''))}</div>
-      <div style="font-family:var(--mono);font-size:12px;color:#60a5fa;">${esc(s.routing||'—')}</div>
-      <div style="font-size:11px;color:#94a3b8;">${esc(fmtPeriod(s.dateFrom,s.dateTo))}</div>
-    </div>`).join('')}
-  `).join('');
+      onclick="window._pin(${i})">
+      <div class="vc-vol">
+        <div class="vnum">${esc(s.vol||'—')}</div>
+        <div class="vco">${esc(s.company||'')}</div>
+      </div>
+      ${dep&&arr?`<div class="vc-route">
+        <div class="vc-ap">
+          <div class="vc-city">${esc(dep.city)}</div>
+          <div class="vc-iata">${esc(dep.iata)}</div>
+        </div>
+        <div class="vc-mid"><div class="vc-line"></div></div>
+        <div class="vc-ap">
+          <div class="vc-city">${esc(arr.city)}</div>
+          <div class="vc-iata">${esc(arr.iata)}</div>
+        </div>
+      </div>`:'<div class="vc-route" style="color:var(--dim);font-size:12px;">'+esc(s.routing||'—')+'</div>'}
+      ${pr?`<div class="vc-time">
+        <div class="vc-t1">${pr.hdep}</div>
+        <div class="vc-tarrow">→</div>
+        <div class="vc-t2">${pr.harr}${pr.plus1?'<span class="vc-plus">+1</span>':''}</div>
+      </div>`:'<div></div>'}
+    </div>`;
+  }).join('');
+};
 
-  window._allList=list;
-}
-
-window._hov=function(i){const s=window._allList&&window._allList[i];if(s)showRoute(s);};
+window._hov=function(i){const s=window._list[i];if(s)showRoute(s);};
 window._unhov=function(){clearRoute();};
 window._pin=function(i){
-  if(pinnedIdx===i){pinnedIdx=null;clearRoute();}
-  else{pinnedIdx=i;const s=window._allList&&window._allList[i];if(s)showRoute(s);}
+  pinnedIdx=(pinnedIdx===i)?null:i;
+  const s=window._list[i];
+  if(pinnedIdx===i&&s)showRoute(s);
+  else clearRoute();
   render();
 };
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 init();
 </script>
