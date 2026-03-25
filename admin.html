@@ -1458,8 +1458,8 @@
                     <button class="btn-primary" onclick="_schedOpenAdd()">+ Ajouter un vol</button>
                 </div>
 
-                <!-- Filtre compagnie -->
-                <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+                <!-- Filtres -->
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
                     <select id="schedCompanyFilter" onchange="_schedRender()"
                         style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;min-width:200px;">
                         <option value="">Toutes les compagnies</option>
@@ -1468,6 +1468,18 @@
                         oninput="_schedRender()"
                         style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;width:220px;">
                     <span id="schedCount" style="font-size:12px;color:#64748b;"></span>
+                </div>
+                <!-- Filtre par jour de la semaine -->
+                <div style="display:flex;gap:6px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+                    <span style="font-size:11px;color:#64748b;font-weight:600;margin-right:2px;">Jour :</span>
+                    <button class="sday-filter-btn active" data-day="" onclick="_schedFilterDay(this)">Tous</button>
+                    <button class="sday-filter-btn" data-day="0" onclick="_schedFilterDay(this)">Lun</button>
+                    <button class="sday-filter-btn" data-day="1" onclick="_schedFilterDay(this)">Mar</button>
+                    <button class="sday-filter-btn" data-day="2" onclick="_schedFilterDay(this)">Mer</button>
+                    <button class="sday-filter-btn" data-day="3" onclick="_schedFilterDay(this)">Jeu</button>
+                    <button class="sday-filter-btn" data-day="4" onclick="_schedFilterDay(this)">Ven</button>
+                    <button class="sday-filter-btn" data-day="5" onclick="_schedFilterDay(this)">Sam</button>
+                    <button class="sday-filter-btn" data-day="6" onclick="_schedFilterDay(this)">Dim</button>
                 </div>
 
                 <div class="card" style="padding:0;overflow:hidden;">
@@ -2037,6 +2049,11 @@
 .sday-btn{padding:5px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:6px;
   background:rgba(255,255,255,0.05);color:#64748b;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;}
 .sday-btn.on{background:rgba(212,175,55,0.15);border-color:#D4AF37;color:#D4AF37;}
+.sday-filter-btn{padding:5px 11px;border:1px solid rgba(255,255,255,0.1);border-radius:6px;
+  background:rgba(255,255,255,0.04);color:#64748b;font-size:11px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:all .15s;}
+.sday-filter-btn:hover{color:#e2e8f0;border-color:rgba(255,255,255,0.2);}
+.sday-filter-btn.active{background:rgba(129,140,248,0.15);border-color:rgba(129,140,248,0.4);color:#818cf8;}
 </style>
 
 <script type="module">
@@ -4944,6 +4961,7 @@ let _schedEditId = null;
 
 // Jours sélectionnés dans le modal (1=lun...7=dim)
 let _schedSelDays = new Set();
+let _schedDayFilter = ''; // '' = tous, '0'=Lun...'6'=Dim
 
 // ── Aéroports disponibles pour les sélecteurs Horaires
 const SCHED_AIRPORTS = [
@@ -5107,6 +5125,13 @@ function _schedFillCompanyFilter() {
         companies.map(c => `<option value="${c}">${c}</option>`).join('');
 }
 
+window._schedFilterDay = function(btn) {
+    document.querySelectorAll('.sday-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _schedDayFilter = btn.dataset.day; // '' = tous les jours
+    _schedRender();
+};
+
 window._schedRender = function() {
     const tbody = document.getElementById('schedBody');
     if (!tbody) return;
@@ -5121,6 +5146,14 @@ window._schedRender = function() {
         (s.company||'').toUpperCase().includes(q) ||
         (s.notes||'').toUpperCase().includes(q)
     );
+    // Filtre par jour: index 0=Lun...6=Dim → position dans days string
+    if (_schedDayFilter !== '') {
+        const idx = parseInt(_schedDayFilter); // 0=Lun...6=Dim
+        list = list.filter(s => {
+            const days = s.days || '-------';
+            return days[idx] && days[idx] !== '-';
+        });
+    }
 
     // Trier par compagnie puis vol
     list = [...list].sort((a,b) =>
@@ -5157,9 +5190,7 @@ window._schedRender = function() {
                 <td style="padding:10px 14px;font-family:monospace;font-weight:700;color:#e2e8f0;font-size:13px;">${esc(s.vol||'—')}</td>
                 <td style="padding:10px 14px;color:#94a3b8;font-size:12px;">${esc(s.company||'—')}</td>
                 <td style="padding:10px 14px;">
-                    <span style="font-family:monospace;font-size:12px;color:#818cf8;background:rgba(129,140,248,0.1);padding:2px 8px;border-radius:4px;">
-                        ${esc(_schedDaysDisplay(s.days||'-------'))}
-                    </span>
+                    ${_schedDaysHtml(s.days||'-------')}
                 </td>
                 <td style="padding:10px 14px;font-family:monospace;font-size:12px;color:#60a5fa;">${esc(s.routing||'—')}</td>
                 <td style="padding:10px 14px;font-size:11px;color:#94a3b8;">${esc(period)}</td>
@@ -5181,13 +5212,28 @@ function _schedFmtDate(d) {
 }
 
 function _schedDaysDisplay(days) {
-    // "J1---J5--" → "Lun-Ven" ou "Lun Mar Mer Jeu Ven"
-    const LABELS = ['','Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+    const LABELS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
     const active = [];
     for (let i = 0; i < 7; i++) {
-        if (days[i] !== '-') active.push(LABELS[i+1]);
+        if (days[i] && days[i] !== '-') active.push(LABELS[i]);
     }
     return active.length ? active.join(' ') : days;
+}
+
+function _schedDaysHtml(days) {
+    const LABELS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+    const filterIdx = _schedDayFilter !== '' ? parseInt(_schedDayFilter) : -1;
+    return LABELS.map((lbl, i) => {
+        const active = days[i] && days[i] !== '-';
+        if (!active) return '';
+        const highlighted = (i === filterIdx);
+        const bg     = highlighted ? 'rgba(212,175,55,0.25)' : 'rgba(129,140,248,0.1)';
+        const border = highlighted ? 'rgba(212,175,55,0.6)'  : 'rgba(129,140,248,0.25)';
+        const color  = highlighted ? '#D4AF37' : '#818cf8';
+        return '<span style="display:inline-block;font-family:monospace;font-size:11px;background:'
+            + bg + ';border:1px solid ' + border + ';color:' + color
+            + ';border-radius:4px;padding:1px 5px;margin:1px 2px;">' + lbl + '</span>';
+    }).join('');
 }
 
 // ── Modal ──
