@@ -257,7 +257,7 @@ const db=getFirestore(app);
 
 // ── Aéroports: ICAO → {city, iata, coords}
 const AP={
-  'GQNO':{city:'Nouakchott',     iata:'NKC', c:[18.098, 15.948]},
+  'GQNO':{city:'Nouakchott',     iata:'NKC', c:[18.098,-15.948]},
   'LFPG':{city:'Paris',          iata:'CDG', c:[49.009,  2.547]},
   'LTFM':{city:'Istanbul',       iata:'IST', c:[41.262, 28.727]},
   'DAAG':{city:'Alger',          iata:'ALG', c:[36.691,  3.215]},
@@ -275,7 +275,7 @@ const AP={
   'HAAB':{city:'Addis Abeba',    iata:'ADD', c:[ 8.978, 38.799]},
   'GMME':{city:'Rabat',          iata:'RBA', c:[33.998, -6.752]},
 };
-const NKC_COORD=[18.098,15.948];
+const NKC_COORD=[18.098,-15.948];
 
 // ── Parse routing: "LFPG 1615 - 2130 GQNO" ou "GQNO 2350 - 0500 LFPG +1"
 function parseRouting(r){
