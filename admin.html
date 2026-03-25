@@ -1039,6 +1039,9 @@
             <div class="nav-item" onclick="showSection('chargement')" data-section="chargement">
                 <span class="icon">📂</span> Chargement de Vols
             </div>
+            <div class="nav-item" onclick="showSection('schedules')" data-section="schedules">
+                <span class="icon">🗓️</span> Horaires & Vols
+            </div>
             <div class="nav-item" onclick="window.open('import.html','_blank')">
                 <span class="icon">📥</span> Import Programme
             </div>
@@ -1442,6 +1445,48 @@
                 </div>
 
                 <div id="chgNotif" style="display:none;margin-top:12px;"></div>
+            </div>
+
+        
+            <!-- ─── HORAIRES & VOLS ─── -->
+            <div class="section-page" id="section-schedules">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>🗓️ Horaires & Vols</h2>
+                        <p>Programme d'exploitation par compagnie — jours d'opération, routing et périodes</p>
+                    </div>
+                    <button class="btn-primary" onclick="_schedOpenAdd()">+ Ajouter un vol</button>
+                </div>
+
+                <!-- Filtre compagnie -->
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+                    <select id="schedCompanyFilter" onchange="_schedRender()"
+                        style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;min-width:200px;">
+                        <option value="">Toutes les compagnies</option>
+                    </select>
+                    <input type="text" id="schedSearch" placeholder="Rechercher vol, routing..."
+                        oninput="_schedRender()"
+                        style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;width:220px;">
+                    <span id="schedCount" style="font-size:12px;color:#64748b;"></span>
+                </div>
+
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <table class="fn-table" id="schedTable" style="font-size:12px;">
+                        <thead>
+                            <tr style="background:rgba(255,255,255,0.04);">
+                                <th style="padding:10px 14px;width:110px;">Vol</th>
+                                <th style="padding:10px 14px;width:120px;">Compagnie</th>
+                                <th style="padding:10px 14px;width:120px;">Jours d'opération</th>
+                                <th style="padding:10px 14px;">Routing</th>
+                                <th style="padding:10px 14px;width:180px;">Période</th>
+                                <th style="padding:10px 14px;width:90px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedBody">
+                            <tr><td colspan="6" style="text-align:center;padding:40px;color:#64748b;">Chargement…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
         </main>
@@ -1856,6 +1901,87 @@
 <!-- ════════════════════════════════════
      SCRIPTS
 ════════════════════════════════════ -->
+
+<!-- ── Modal Horaire ── -->
+<div id="schedModal" class="modal-overlay" onclick="if(event.target===this)_schedCloseModal()">
+    <div class="modal-box" style="max-width:620px;">
+        <div class="modal-header">
+            <h3 id="schedModalTitle" style="font-size:16px;font-weight:700;color:#e2e8f0;">Ajouter un vol</h3>
+            <button onclick="_schedCloseModal()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;">
+            <div>
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">N° VOL *</label>
+                <input id="schedFVol" type="text" placeholder="Ex: AFR0594"
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;text-transform:uppercase;"
+                    oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div>
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">COMPAGNIE *</label>
+                <select id="schedFCompany"
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;">
+                    <option value="">— Choisir —</option>
+                </select>
+            </div>
+            <div style="grid-column:1/-1;">
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">JOURS D'OPÉRATION</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <label style="font-size:11px;color:#64748b;margin-bottom:4px;display:block;">Format IATA ex: J1---J5-- (Lun à Ven) ou cocher ci-dessous :</label>
+                </div>
+                <div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap;" id="schedDayBtns">
+                    <button type="button" class="sday-btn" data-d="1" onclick="_schedToggleDay(this)">Lun</button>
+                    <button type="button" class="sday-btn" data-d="2" onclick="_schedToggleDay(this)">Mar</button>
+                    <button type="button" class="sday-btn" data-d="3" onclick="_schedToggleDay(this)">Mer</button>
+                    <button type="button" class="sday-btn" data-d="4" onclick="_schedToggleDay(this)">Jeu</button>
+                    <button type="button" class="sday-btn" data-d="5" onclick="_schedToggleDay(this)">Ven</button>
+                    <button type="button" class="sday-btn" data-d="6" onclick="_schedToggleDay(this)">Sam</button>
+                    <button type="button" class="sday-btn" data-d="7" onclick="_schedToggleDay(this)">Dim</button>
+                </div>
+                <div style="font-size:11px;color:#64748b;margin-top:4px;">
+                    Code généré : <span id="schedDayCode" style="color:#D4AF37;font-family:monospace;">-------</span>
+                    &nbsp;·&nbsp;
+                    <input id="schedFDays" placeholder="Ou saisir manuellement: J1---J5--"
+                        style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;width:160px;"
+                        oninput="_schedDaysFromText(this.value)">
+                </div>
+            </div>
+            <div style="grid-column:1/-1;">
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">ROUTING *</label>
+                <input id="schedFRouting" type="text" placeholder="Ex: LFPG 1615 - 2130 GQNO"
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;text-transform:uppercase;"
+                    oninput="this.value=this.value.toUpperCase()">
+                <div style="font-size:10px;color:#475569;margin-top:3px;">Format: ICAO_DEP HHmm - HHmm ICAO_ARR [+1] · ex: GQNO 2350 - 0500 LFPG +1</div>
+            </div>
+            <div>
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">DÉBUT DE PÉRIODE *</label>
+                <input id="schedFDateFrom" type="date"
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;">
+            </div>
+            <div>
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">FIN DE PÉRIODE *</label>
+                <input id="schedFDateTo" type="date"
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;">
+            </div>
+            <div style="grid-column:1/-1;">
+                <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">NOTES (optionnel)</label>
+                <input id="schedFNotes" type="text" placeholder="Ex: Saisonnier, charter..."
+                    style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;">
+            </div>
+        </div>
+        <div id="schedModalErr" style="display:none;color:#fc8181;font-size:12px;margin-top:10px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
+            <button onclick="_schedCloseModal()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;">Annuler</button>
+            <button onclick="_schedSave()" style="background:linear-gradient(135deg,#1A6EBD,#0D4A8C);border:none;color:#fff;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;">✅ Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.sday-btn{padding:5px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:6px;
+  background:rgba(255,255,255,0.05);color:#64748b;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;}
+.sday-btn.on{background:rgba(212,175,55,0.15);border-color:#D4AF37;color:#D4AF37;}
+</style>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
@@ -4174,6 +4300,7 @@ window.showSection = function(name) {
     if (name === 'flightnums') loadFlightNums();
     if (name === 'programme')  loadProgramme();
     if (name === 'chargement') _chgInit();
+    if (name === 'schedules')  _schedInit();
 };
 
 // ────────────────────────────────────────
@@ -4748,6 +4875,255 @@ window._chgReset = function() {
     if (fi) fi.value = '';
 };
 // ════════════════════════════════════════════════════════════
+
+
+
+
+// ══════════════════════════════════════════════════════
+// HORAIRES & VOLS (schedules)
+// ══════════════════════════════════════════════════════
+let _schedules = [];
+let _schedEditId = null;
+
+// Jours sélectionnés dans le modal (1=lun...7=dim)
+let _schedSelDays = new Set();
+
+window._schedInit = async function() {
+    await _schedLoad();
+    _schedFillCompanyFilter();
+};
+
+async function _schedLoad() {
+    const tbody = document.getElementById('schedBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#64748b;">Chargement…</td></tr>';
+    try {
+        const snap = await window._getDocs(window._collection(window._db, 'schedules'));
+        _schedules = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _schedRender();
+    } catch(e) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="color:#fc8181;padding:12px;">${e.message}</td></tr>`;
+    }
+}
+
+function _schedFillCompanyFilter() {
+    const sel = document.getElementById('schedCompanyFilter');
+    if (!sel) return;
+    const companies = [...new Set(_schedules.map(s => s.company).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">Toutes les compagnies</option>' +
+        companies.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+window._schedRender = function() {
+    const tbody = document.getElementById('schedBody');
+    if (!tbody) return;
+    const co = (document.getElementById('schedCompanyFilter')?.value||'').toUpperCase();
+    const q  = (document.getElementById('schedSearch')?.value||'').toUpperCase();
+
+    let list = _schedules;
+    if (co) list = list.filter(s => (s.company||'').toUpperCase() === co);
+    if (q)  list = list.filter(s =>
+        (s.vol||'').toUpperCase().includes(q) ||
+        (s.routing||'').toUpperCase().includes(q) ||
+        (s.company||'').toUpperCase().includes(q) ||
+        (s.notes||'').toUpperCase().includes(q)
+    );
+
+    // Trier par compagnie puis vol
+    list = [...list].sort((a,b) =>
+        (a.company||'').localeCompare(b.company||'') || (a.vol||'').localeCompare(b.vol||'')
+    );
+
+    const cnt = document.getElementById('schedCount');
+    if (cnt) cnt.textContent = list.length + ' vol(s)';
+
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#64748b;">Aucun horaire enregistré</td></tr>';
+        return;
+    }
+
+    // Grouper par compagnie pour un affichage en sections
+    const groups = {};
+    list.forEach(s => {
+        const k = s.company || '—';
+        if (!groups[k]) groups[k] = [];
+        groups[k].push(s);
+    });
+
+    tbody.innerHTML = Object.entries(groups).map(([company, rows]) => {
+        const groupHeader = `<tr style="background:rgba(212,175,55,0.06);">
+            <td colspan="6" style="padding:8px 14px;font-size:11px;font-weight:700;color:#D4AF37;letter-spacing:.05em;text-transform:uppercase;">
+                ✈ ${esc(company)}
+            </td>
+        </tr>`;
+        const rowsHtml = rows.map(s => {
+            const period = s.dateFrom && s.dateTo
+                ? `${_schedFmtDate(s.dateFrom)} au ${_schedFmtDate(s.dateTo)}`
+                : (s.period || '—');
+            return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="padding:10px 14px;font-family:monospace;font-weight:700;color:#e2e8f0;font-size:13px;">${esc(s.vol||'—')}</td>
+                <td style="padding:10px 14px;color:#94a3b8;font-size:12px;">${esc(s.company||'—')}</td>
+                <td style="padding:10px 14px;">
+                    <span style="font-family:monospace;font-size:12px;color:#818cf8;background:rgba(129,140,248,0.1);padding:2px 8px;border-radius:4px;">
+                        ${esc(_schedDaysDisplay(s.days||'-------'))}
+                    </span>
+                </td>
+                <td style="padding:10px 14px;font-family:monospace;font-size:12px;color:#60a5fa;">${esc(s.routing||'—')}</td>
+                <td style="padding:10px 14px;font-size:11px;color:#94a3b8;">${esc(period)}</td>
+                <td style="padding:10px 14px;white-space:nowrap;">
+                    <button onclick="_schedEdit('${s.id}')" style="background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.25);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✏️</button>
+                    <button onclick="_schedDelete('${s.id}')" style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.22);color:#fc8181;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">🗑️</button>
+                </td>
+            </tr>`;
+        }).join('');
+        return groupHeader + rowsHtml;
+    }).join('');
+};
+
+function _schedFmtDate(d) {
+    if (!d) return '—';
+    const [y,m,day] = d.split('-');
+    const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+    return `${parseInt(day)}-${MOIS[parseInt(m)-1]}-${y}`;
+}
+
+function _schedDaysDisplay(days) {
+    // "J1---J5--" → "Lun-Ven" ou "Lun Mar Mer Jeu Ven"
+    const LABELS = ['','Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+    const active = [];
+    for (let i = 0; i < 7; i++) {
+        if (days[i] !== '-') active.push(LABELS[i+1]);
+    }
+    return active.length ? active.join(' ') : days;
+}
+
+// ── Modal ──
+window._schedOpenAdd = function() {
+    _schedEditId = null;
+    document.getElementById('schedModalTitle').textContent = 'Ajouter un vol';
+    document.getElementById('schedFVol').value = '';
+    document.getElementById('schedFRouting').value = '';
+    document.getElementById('schedFDateFrom').value = '';
+    document.getElementById('schedFDateTo').value = '';
+    document.getElementById('schedFNotes').value = '';
+    document.getElementById('schedFDays').value = '';
+    document.getElementById('schedModalErr').style.display = 'none';
+    _schedSelDays = new Set();
+    _schedUpdateDayBtns();
+    _schedFillCompanySelect('');
+    document.getElementById('schedModal').classList.add('open');
+};
+
+window._schedEdit = function(id) {
+    const s = _schedules.find(x => x.id === id);
+    if (!s) return;
+    _schedEditId = id;
+    document.getElementById('schedModalTitle').textContent = 'Modifier le vol';
+    document.getElementById('schedFVol').value = s.vol||'';
+    document.getElementById('schedFRouting').value = s.routing||'';
+    document.getElementById('schedFDateFrom').value = s.dateFrom||'';
+    document.getElementById('schedFDateTo').value = s.dateTo||'';
+    document.getElementById('schedFNotes').value = s.notes||'';
+    document.getElementById('schedFDays').value = s.days||'';
+    document.getElementById('schedModalErr').style.display = 'none';
+    // Reconstruire les jours sélectionnés
+    _schedSelDays = new Set();
+    const days = s.days || '-------';
+    for (let i = 0; i < 7; i++) { if (days[i] !== '-') _schedSelDays.add(i+1); }
+    _schedUpdateDayBtns();
+    _schedFillCompanySelect(s.company||'');
+    document.getElementById('schedModal').classList.add('open');
+};
+
+window._schedCloseModal = function() {
+    document.getElementById('schedModal').classList.remove('open');
+};
+
+function _schedFillCompanySelect(selected) {
+    const sel = document.getElementById('schedFCompany');
+    if (!sel) return;
+    const cos = [...new Set([...(airlines||[]).map(a=>a.name), ..._schedules.map(s=>s.company)].filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">— Choisir —</option>' +
+        cos.map(c => `<option value="${c}" ${c===selected?'selected':''}>${c}</option>`).join('');
+}
+
+window._schedToggleDay = function(btn) {
+    const d = parseInt(btn.dataset.d);
+    if (_schedSelDays.has(d)) _schedSelDays.delete(d);
+    else _schedSelDays.add(d);
+    _schedUpdateDayBtns();
+};
+
+function _schedUpdateDayBtns() {
+    document.querySelectorAll('.sday-btn').forEach(btn => {
+        const d = parseInt(btn.dataset.d);
+        btn.classList.toggle('on', _schedSelDays.has(d));
+    });
+    // Mettre à jour le code
+    const code = Array.from({length:7},(_,i) => _schedSelDays.has(i+1) ? `J${i+1}` : '-').join('');
+    document.getElementById('schedDayCode').textContent = code;
+    document.getElementById('schedFDays').value = code;
+}
+
+window._schedDaysFromText = function(val) {
+    // Reconstruire _schedSelDays depuis le texte saisi
+    _schedSelDays = new Set();
+    for (let i = 0; i < 7; i++) {
+        if (val[i] && val[i] !== '-') _schedSelDays.add(i+1);
+    }
+    _schedUpdateDayBtns();
+};
+
+window._schedSave = async function() {
+    const vol     = document.getElementById('schedFVol').value.trim().toUpperCase();
+    const company = document.getElementById('schedFCompany').value.trim();
+    const routing = document.getElementById('schedFRouting').value.trim().toUpperCase();
+    const dateFrom= document.getElementById('schedFDateFrom').value.trim();
+    const dateTo  = document.getElementById('schedFDateTo').value.trim();
+    const notes   = document.getElementById('schedFNotes').value.trim();
+    const days    = document.getElementById('schedFDays').value.trim() || '-------';
+    const errEl   = document.getElementById('schedModalErr');
+
+    if (!vol || !company || !routing) {
+        errEl.textContent = 'N° vol, compagnie et routing sont obligatoires';
+        errEl.style.display = '';
+        return;
+    }
+
+    const data = { vol, company, routing, days, dateFrom, dateTo, notes, updatedAt: new Date().toISOString() };
+
+    try {
+        if (_schedEditId) {
+            await window._updateDoc(window._doc(window._db,'schedules',_schedEditId), data);
+            const idx = _schedules.findIndex(s => s.id === _schedEditId);
+            if (idx >= 0) _schedules[idx] = { id: _schedEditId, ...data };
+            showNotif('Horaire mis à jour','success');
+        } else {
+            const ref = await window._addDoc(window._collection(window._db,'schedules'), { ...data, createdAt: new Date().toISOString() });
+            _schedules.push({ id: ref.id, ...data });
+            showNotif('Horaire ajouté','success');
+        }
+        _schedCloseModal();
+        _schedFillCompanyFilter();
+        _schedRender();
+    } catch(e) {
+        errEl.textContent = 'Erreur: ' + e.message;
+        errEl.style.display = '';
+    }
+};
+
+window._schedDelete = async function(id) {
+    const s = _schedules.find(x => x.id === id);
+    if (!s) return;
+    if (!confirm(`Supprimer le vol ${s.vol} (${s.company}) ?`)) return;
+    try {
+        await window._deleteDoc(window._doc(window._db,'schedules',id));
+        _schedules = _schedules.filter(x => x.id !== id);
+        showNotif('Vol supprimé','success');
+        _schedFillCompanyFilter();
+        _schedRender();
+    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+};
+
 </script>
 
 </body>
