@@ -1947,8 +1947,8 @@
             </div>
             <div style="grid-column:1/-1;">
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:8px;">ITINÉRAIRE *</label>
-                <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;">
-                    <!-- Départ -->
+                <!-- Ligne principale: DEP → ARR -->
+                <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;margin-bottom:10px;">
                     <div>
                         <div style="font-size:10px;color:#4A9EFF;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Départ</div>
                         <select id="schedFDep" onchange="_buildRouting()"
@@ -1956,28 +1956,56 @@
                             <option value="">— Ville de départ —</option>
                         </select>
                         <input id="schedFHDep" type="time" onchange="_buildRouting()"
-                            style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#D4AF37;font-size:13px;font-family:'JetBrains Mono',monospace;">
+                            style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#D4AF37;font-size:13px;font-family:monospace;">
                     </div>
-                    <!-- Flèche -->
-                    <div style="text-align:center;color:#D4AF37;font-size:22px;padding-top:20px;">✈</div>
-                    <!-- Arrivée -->
+                    <div style="text-align:center;color:#D4AF37;font-size:22px;padding-top:22px;">✈</div>
                     <div>
-                        <div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Arrivée</div>
+                        <div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Arrivée finale</div>
                         <select id="schedFArr" onchange="_buildRouting()"
                             style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;margin-bottom:6px;">
                             <option value="">— Ville d'arrivée —</option>
                         </select>
                         <div style="display:flex;gap:6px;align-items:center;">
                             <input id="schedFHArr" type="time" onchange="_buildRouting()"
-                                style="flex:1;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#4A9EFF;font-size:13px;font-family:'JetBrains Mono',monospace;">
-                            <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#64748b;white-space:nowrap;">
-                                <input type="checkbox" id="schedFPlus1" onchange="_buildRouting()" style="accent-color:#D4AF37;"> +1 jour
-                            </label>
+                                style="flex:1;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#60a5fa;font-size:13px;font-family:monospace;">
+                            <select id="schedFDayOffset" onchange="_buildRouting()"
+                                title="Décalage horaire par rapport à Nouakchott (UTC+0)"
+                                style="background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 8px;color:#94a3b8;font-size:11px;min-width:80px;">
+                                <option value="">UTC+0</option>
+                                <option value="-1">UTC-1</option>
+                                <option value="-2">UTC-2</option>
+                                <option value="-3">UTC-3</option>
+                                <option value="+1">UTC+1</option>
+                                <option value="+2">UTC+2</option>
+                                <option value="+3">UTC+3</option>
+                                <option value="+4">UTC+4</option>
+                            </select>
                         </div>
                     </div>
                 </div>
-                <!-- Preview -->
-                <div id="schedRoutingPreview" style="margin-top:8px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:6px;font-family:monospace;font-size:11px;color:#64748b;">
+                <!-- Escale optionnelle -->
+                <div style="margin-bottom:8px;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b;cursor:pointer;margin-bottom:6px;user-select:none;">
+                        <input type="checkbox" id="schedFHasStop" onchange="_toggleStopover()" style="accent-color:#D4AF37;">
+                        Ce vol comporte une escale
+                    </label>
+                    <div id="schedFStopDiv" style="display:none;background:rgba(212,175,55,0.05);border:1px solid rgba(212,175,55,0.15);border-radius:8px;padding:10px;">
+                        <div style="font-size:10px;color:#D4AF37;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">🛬 Escale</div>
+                        <div style="display:grid;grid-template-columns:1fr 100px 100px;gap:8px;align-items:center;">
+                            <select id="schedFStop" onchange="_buildRouting()"
+                                style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:7px 9px;color:#e2e8f0;font-size:13px;">
+                                <option value="">— Ville d'escale —</option>
+                            </select>
+                            <input id="schedFHStop1" type="time" onchange="_buildRouting()"
+                                style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:7px 8px;color:#D4AF37;font-size:12px;font-family:monospace;">
+                            <input id="schedFHStop2" type="time" onchange="_buildRouting()"
+                                style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:7px 8px;color:#60a5fa;font-size:12px;font-family:monospace;">
+                        </div>
+                        <div style="font-size:10px;color:#475569;margin-top:4px;">Heure arrivée escale &nbsp;·&nbsp; Heure départ escale</div>
+                    </div>
+                </div>
+                <!-- Aperçu routing -->
+                <div id="schedRoutingPreview" style="padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;font-family:monospace;font-size:12px;color:#64748b;min-height:32px;">
                     — Sélectionnez départ et arrivée —
                 </div>
             </div>
@@ -4942,42 +4970,89 @@ function _fillAirportSelects() {
     const opts = SCHED_AIRPORTS.map(a =>
         `<option value="${a.icao}">${a.city} (${a.iata})</option>`).join('');
     const baseOpts = '<option value="">— Choisir —</option>' + opts;
-    const dep = document.getElementById('schedFDep');
-    const arr = document.getElementById('schedFArr');
-    if (dep) dep.innerHTML = baseOpts;
-    if (arr) arr.innerHTML = baseOpts;
+    ['schedFDep','schedFArr','schedFStop'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = baseOpts;
+    });
 }
 
+window._toggleStopover = function() {
+    const hasStop = document.getElementById('schedFHasStop').checked;
+    document.getElementById('schedFStopDiv').style.display = hasStop ? '' : 'none';
+    _buildRouting();
+};
+
 function _buildRouting() {
-    const dep  = document.getElementById('schedFDep').value;
-    const arr  = document.getElementById('schedFArr').value;
-    const hdep = document.getElementById('schedFHDep').value.replace(':','');
-    const harr = document.getElementById('schedFHArr').value.replace(':','');
-    const plus = document.getElementById('schedFPlus1').checked;
-    if (!dep || !arr || !hdep || !harr) return '';
-    const routing = `${dep} ${hdep} - ${harr} ${arr}${plus?' +1':''}`;
-    // Update preview
-    const prev = document.getElementById('schedRoutingPreview');
+    const dep    = document.getElementById('schedFDep').value;
+    const arr    = document.getElementById('schedFArr').value;
+    const hdep   = (document.getElementById('schedFHDep').value||'').replace(':','');
+    const harr   = (document.getElementById('schedFHArr').value||'').replace(':','');
+    const offset = document.getElementById('schedFDayOffset').value;   // '' | '+1' | '+2'
+    const hasStop= document.getElementById('schedFHasStop').checked;
+    const stop   = hasStop ? document.getElementById('schedFStop').value : '';
+    const hstop1 = hasStop ? (document.getElementById('schedFHStop1').value||'').replace(':','') : '';
+    const hstop2 = hasStop ? (document.getElementById('schedFHStop2').value||'').replace(':','') : '';
+
+    if (!dep || !arr || !hdep || !harr) {
+        const prev = document.getElementById('schedRoutingPreview');
+        if (prev) prev.textContent = '— Sélectionnez départ et arrivée —';
+        return '';
+    }
+
+    // Format: "GQNO 1000 - STOP 1200 1300 - 1500 LFPG +1"
+    let routing;
+    if (hasStop && stop && hstop1 && hstop2) {
+        routing = `${dep} ${hdep} - ${stop} ${hstop1} ${hstop2} - ${harr} ${arr}${offset?' '+offset:''}`;
+    } else {
+        routing = `${dep} ${hdep} - ${harr} ${arr}${offset?' '+offset:''}`;
+    }
+
+    // Aperçu lisible
     const da = SCHED_AIRPORTS.find(x=>x.icao===dep)||{city:dep,iata:dep};
     const aa = SCHED_AIRPORTS.find(x=>x.icao===arr)||{city:arr,iata:arr};
-    if (prev) prev.innerHTML = `<span style="color:#4A9EFF;">${da.city}</span> ${hdep.slice(0,2)}:${hdep.slice(2)} <span style="color:#D4AF37;">✈</span> ${aa.city} ${harr.slice(0,2)}:${harr.slice(2)}${plus?' <span style=\"color:#94a3b8;\">+1 jour</span>':''}`;
+    const sa = stop ? (SCHED_AIRPORTS.find(x=>x.icao===stop)||{city:stop,iata:stop}) : null;
+    const fmtH = h => h ? h.slice(0,2)+':'+h.slice(2) : '';
+    let preview = `<span style="color:#4A9EFF;">${da.city}</span> ${fmtH(hdep)}`;
+    if (sa && hstop1 && hstop2) {
+        preview += ` → <span style="color:#D4AF37;">✈ ${sa.city}</span> ${fmtH(hstop1)}–${fmtH(hstop2)}`;
+    }
+    preview += ` → <span style="color:#34d399;">${aa.city}</span> ${fmtH(harr)}`;
+    if (offset) preview += ` <span style="color:#94a3b8;font-size:11px;">(${offset} vs NKC)</span>`;
+    const prev = document.getElementById('schedRoutingPreview');
+    if (prev) prev.innerHTML = preview;
     return routing;
 }
 
 function _setEditRouting(routing) {
-    // Parser "LFPG 1615 - 2130 GQNO +1" pour remplir les sélecteurs
     if (!routing) return;
-    const m = routing.match(/([A-Z]{4})\s+(\d{4})\s*-\s*(\d{4})\s+([A-Z]{4})(\s*\+1)?/);
-    if (!m) return;
-    const [,dep,hdep,harr,arr,plus] = m;
-    const depEl = document.getElementById('schedFDep');
-    const arrEl = document.getElementById('schedFArr');
-    if (depEl) depEl.value = dep;
-    if (arrEl) arrEl.value = arr;
-    document.getElementById('schedFHDep').value = hdep.slice(0,2)+':'+hdep.slice(2);
-    document.getElementById('schedFHArr').value = harr.slice(0,2)+':'+harr.slice(2);
-    document.getElementById('schedFPlus1').checked = !!plus;
-    _buildRouting(); // mettre à jour le preview
+    // Format avec escale: "GQNO 1000 - STOP 1200 1300 - 1500 LFPG +1"
+    // Format simple:      "GQNO 1000 - 1500 LFPG +1"
+    const stopM = routing.match(/([A-Z]{4})\s+(\d{4})\s*-\s*([A-Z]{4})\s+(\d{4})\s+(\d{4})\s*-\s*(\d{4})\s+([A-Z]{4})(\s*[+]\d)?/);
+    const simpleM = routing.match(/([A-Z]{4})\s+(\d{4})\s*-\s*(\d{4})\s+([A-Z]{4})(\s*[+]\d)?/);
+
+    if (stopM) {
+        const [,dep,hdep,stop,hstop1,hstop2,harr,arr,offset] = stopM;
+        document.getElementById('schedFDep').value  = dep;
+        document.getElementById('schedFArr').value  = arr;
+        document.getElementById('schedFHDep').value = hdep.slice(0,2)+':'+hdep.slice(2);
+        document.getElementById('schedFHArr').value = harr.slice(0,2)+':'+harr.slice(2);
+        document.getElementById('schedFDayOffset').value = (offset||'').trim();
+        document.getElementById('schedFHasStop').checked = true;
+        document.getElementById('schedFStopDiv').style.display = '';
+        document.getElementById('schedFStop').value  = stop;
+        document.getElementById('schedFHStop1').value = hstop1.slice(0,2)+':'+hstop1.slice(2);
+        document.getElementById('schedFHStop2').value = hstop2.slice(0,2)+':'+hstop2.slice(2);
+    } else if (simpleM) {
+        const [,dep,hdep,harr,arr,offset] = simpleM;
+        document.getElementById('schedFDep').value  = dep;
+        document.getElementById('schedFArr').value  = arr;
+        document.getElementById('schedFHDep').value = hdep.slice(0,2)+':'+hdep.slice(2);
+        document.getElementById('schedFHArr').value = harr.slice(0,2)+':'+harr.slice(2);
+        document.getElementById('schedFDayOffset').value = (offset||'').trim();
+        document.getElementById('schedFHasStop').checked = false;
+        document.getElementById('schedFStopDiv').style.display = 'none';
+    }
+    _buildRouting();
 }
 
 window._schedInit = async function() {
@@ -5097,7 +5172,12 @@ window._schedOpenAdd = function() {
     document.getElementById('schedFArr').value = '';
     document.getElementById('schedFHDep').value = '';
     document.getElementById('schedFHArr').value = '';
-    document.getElementById('schedFPlus1').checked = false;
+    document.getElementById('schedFDayOffset').value = '';
+    document.getElementById('schedFHasStop').checked = false;
+    document.getElementById('schedFStopDiv').style.display = 'none';
+    document.getElementById('schedFStop').value = '';
+    document.getElementById('schedFHStop1').value = '';
+    document.getElementById('schedFHStop2').value = '';
     document.getElementById('schedRoutingPreview').textContent = '— Sélectionnez départ et arrivée —';
     document.getElementById('schedFDateFrom').value = '';
     document.getElementById('schedFDateTo').value = '';
@@ -5117,7 +5197,6 @@ window._schedEdit = function(id) {
     _schedEditId = id;
     document.getElementById('schedModalTitle').textContent = 'Modifier le vol';
     document.getElementById('schedFVol').value = s.vol||'';
-    document.getElementById('schedFRouting').value = s.routing||'';
     document.getElementById('schedFDateFrom').value = s.dateFrom||'';
     document.getElementById('schedFDateTo').value = s.dateTo||'';
     document.getElementById('schedFNotes').value = s.notes||'';
