@@ -5053,24 +5053,30 @@ window._schedToggleDay = function(btn) {
     _schedUpdateDayBtns();
 };
 
+let _schedNoLoop = false; // anti-boucle oninput
+
 function _schedUpdateDayBtns() {
+    // Mettre à jour les boutons visuels
     document.querySelectorAll('.sday-btn').forEach(btn => {
-        const d = parseInt(btn.dataset.d);
-        btn.classList.toggle('on', _schedSelDays.has(d));
+        btn.classList.toggle('on', _schedSelDays.has(parseInt(btn.dataset.d)));
     });
-    // Mettre à jour le code
-    const code = Array.from({length:7},(_,i) => _schedSelDays.has(i+1) ? `J${i+1}` : '-').join('');
+    // Format de stockage: 7 chars, 'J'=actif '-'=inactif
+    // Position 0=Lun, 1=Mar ... 6=Dim
+    const code = [1,2,3,4,5,6,7].map(d => _schedSelDays.has(d) ? 'J' : '-').join('');
     document.getElementById('schedDayCode').textContent = code;
+    // Écrire dans le champ sans déclencher oninput
+    _schedNoLoop = true;
     document.getElementById('schedFDays').value = code;
+    _schedNoLoop = false;
 }
 
 window._schedDaysFromText = function(val) {
-    // Format attendu: 7 caractères, '-' = inactif, tout autre char = actif
-    // ex: "J1---J5--" → jours 1 et 5 actifs (indices 0 et 4)
+    if (_schedNoLoop) return; // éviter la boucle infinie
+    // Lire 7 chars: 'J'=actif, '-'=inactif
     _schedSelDays = new Set();
-    const str = (val||'').padEnd(7, '-');
+    const s = (val || '').padEnd(7, '-');
     for (let i = 0; i < 7; i++) {
-        if (str[i] !== '-') _schedSelDays.add(i + 1);
+        if (s[i] === 'J') _schedSelDays.add(i + 1);
     }
     _schedUpdateDayBtns();
 };
