@@ -277,15 +277,30 @@ const AP={
 };
 const NKC_COORD=[18.098,-15.948];
 
-// ── Parse routing: "LFPG 1615 - 2130 GQNO" ou "GQNO 2350 - 0500 LFPG +1"
+// ── Parse routing
+// Simple:  "GQNO 1000 - 1500 LFPG +1"
+// Escale:  "GQNO 1000 - BJL 1200 1300 - 1500 LFPG +2"
 function parseRouting(r){
   if(!r)return null;
-  const m=r.match(/([A-Z]{4})\s+(\d{4})\s*[-–]\s*(\d{4})\s+([A-Z]{4})(\s*\+1)?/);
+  // Format avec escale
+  const stopM=r.match(/([A-Z]{4})\s+(\d{4})\s*-\s*([A-Z]{4})\s+(\d{4})\s+(\d{4})\s*-\s*(\d{4})\s+([A-Z]{4})(\s*[+]\d)?/);
+  if(stopM){
+    const [,dep,hdep,stop,hstop1,hstop2,harr,arr,offset]=stopM;
+    return{
+      dep, hdep:hdep.slice(0,2)+':'+hdep.slice(2),
+      arr, harr:harr.slice(0,2)+':'+harr.slice(2),
+      stop, hstop1:hstop1.slice(0,2)+':'+hstop1.slice(2),
+             hstop2:hstop2.slice(0,2)+':'+hstop2.slice(2),
+      offset:(offset||'').trim()
+    };
+  }
+  // Format simple
+  const m=r.match(/([A-Z]{4})\s+(\d{4})\s*[-–]\s*(\d{4})\s+([A-Z]{4})(\s*[+]\d)?/);
   if(!m)return null;
   return{
     dep:m[1], hdep:m[2].slice(0,2)+':'+m[2].slice(2),
     arr:m[4], harr:m[3].slice(0,2)+':'+m[3].slice(2),
-    plus1:!!m[5]
+    offset:(m[5]||'').trim(), stop:null
   };
 }
 
@@ -366,7 +381,16 @@ function showRoute(s){
   document.getElementById('miCity2').textContent=arr.city;
   document.getElementById('miCode2').textContent=arr.iata;
   document.getElementById('miT1').textContent=pr.hdep;
-  document.getElementById('miT2').textContent=pr.harr+(pr.plus1?' +1':'');
+  const offsetLabel = pr.offset ? ' (UTC'+pr.offset+')' : '';
+  document.getElementById('miT2').textContent=pr.harr+offsetLabel;
+  // Afficher escale si présente
+  const miCoEl=document.getElementById('miCo');
+  if(pr.stop){
+    const sa=AP[pr.stop]||{city:pr.stop,iata:pr.stop};
+    if(miCoEl)miCoEl.innerHTML=esc(s.company||'')+'<span style="color:#D4AF37;font-size:10px;margin-left:6px;">via '+esc(sa.city)+'</span>';
+  } else {
+    if(miCoEl)miCoEl.textContent=s.company||'';
+  }
 }
 
 function clearRoute(){
@@ -478,8 +502,8 @@ window.render=function(){
       </div>`:'<div class="vc-route" style="color:var(--dim);font-size:12px;">'+esc(s.routing||'—')+'</div>'}
       ${pr?`<div class="vc-time">
         <div class="vc-t1">${pr.hdep}</div>
-        <div class="vc-tarrow">→</div>
-        <div class="vc-t2">${pr.harr}${pr.plus1?'<span class="vc-plus">+1</span>':''}</div>
+        <div class="vc-tarrow">${pr.stop?'⤵':'→'}</div>
+        <div class="vc-t2">${pr.harr}${pr.offset?'<span class="vc-plus" title="Fuseau local: UTC'+pr.offset+'">'+pr.offset+'</span>':''}</div>
       </div>`:'<div></div>'}
     </div>`;
   }).join('');
