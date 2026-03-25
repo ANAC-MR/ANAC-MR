@@ -198,7 +198,6 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
     <button class="tab-btn active" data-tab="today" onclick="switchTab('today')">📅 Aujourd'hui</button>
     <button class="tab-btn ma" data-tab="cal-ma" onclick="switchTab('cal-ma')">🇲🇷 Mauritania Airlines</button>
     <button class="tab-btn" data-tab="cal-int" onclick="switchTab('cal-int')">🌍 Compagnies internationales</button>
-    <button class="tab-btn" data-tab="airports" onclick="switchTab('airports')">🗺️ Carte des aéroports</button>
   </div>
 </div>
 
@@ -270,11 +269,6 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
   <div class="cal-grid" id="calBodyINT"></div>
 </div>
 
-<!-- Tab: Carte aéroports -->
-<div id="tab-airports" class="tab-pane">
-  <div class="ap-map-title">🗺️ Réseau de Nouakchott — <span style="color:var(--dim);font-size:12px;font-weight:400;margin-left:4px;" id="apNetCount">—</span></div>
-  <div id="mapAirports"></div>
-</div>
 </div><!-- end tab-content -->
 
 <script type="module">
@@ -392,8 +386,8 @@ function showRoute(s){
 }
 
 // ── MAP AÉROPORTS (onglet) ──
-let mapAP=null;
-function initMapAirports(){
+// initMapAirports supprimé
+function _initMapAirports_UNUSED(){
   if(mapAP)return;
   mapAP=L.map('mapAirports',{zoomControl:true,scrollWheelZoom:true,center:[20,0],zoom:2});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:''}).addTo(mapAP);
@@ -606,11 +600,44 @@ window.switchTab=function(tab){
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   document.querySelector('[data-tab="'+tab+'"]').classList.add('active');
-  if(tab==='airports')initMapAirports();
-  else if(tab==='cal-ma')window.renderCal('ma');
+  if(tab==='cal-ma')window.renderCal('ma');
   else if(tab==='cal-int')window.renderCal('int');
   else if(tab==='today')renderToday();
 };
+
+// ── MARQUEURS AÉROPORTS SUR MAP PRINCIPALE ──
+function _showAirportsOnMap(){
+  const destSet={};
+  allSchedules.forEach(s=>{
+    const pr=parseRouting(s.routing);
+    if(!pr)return;
+    [pr.dep,pr.arr,pr.stop].filter(Boolean).forEach(icao=>{
+      if(icao==='GQNO')return;
+      if(!destSet[icao])destSet[icao]={companies:new Set(),isStop:false};
+      destSet[icao].companies.add(s.company||'');
+      if(icao===pr.stop)destSet[icao].isStop=true;
+    });
+  });
+  Object.entries(destSet).forEach(([icao,info])=>{
+    const a=getAP(icao);
+    if(!a.c)return;
+    const hasMA=([...info.companies]).some(c=>c.toLowerCase().includes('mauritania'));
+    const color=hasMA?'#FF6B35':'#4A9EFF';
+    const sz=info.isStop?9:11;
+    const di=L.divIcon({className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],
+      html:`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${color};border:2px solid #fff;
+             box-shadow:0 0 8px ${color}66;transition:transform .15s;"></div>`});
+    const companies=[...info.companies].join(', ');
+    L.marker(a.c,{icon:di}).addTo(map)
+     .bindTooltip(`<b>${esc(a.city)}</b> (${esc(a.iata)})<br><span style="font-size:10px;color:#94a3b8;">${esc(companies)}</span>`,
+       {direction:'top',offset:[0,-6]});
+    // Petit arc discret NKC→dest (en arrière-plan)
+    const arc=[];
+    for(let t=0;t<=20;t++){const r=t/20;
+      arc.push([NKC[0]+(a.c[0]-NKC[0])*r+Math.sin(Math.PI*r)*1.5,NKC[1]+(a.c[1]-NKC[1])*r]);}
+    L.polyline(arc,{color:'rgba(212,175,55,0.15)',weight:1,dashArray:'3 5'}).addTo(map);
+  });
+}
 
 // ── INIT ──
 async function init(){
@@ -624,6 +651,8 @@ async function init(){
     document.getElementById('stDest').textContent=dests.size;
     document.getElementById('stComp').textContent=comp;
     renderToday();
+    // Afficher tous les aéroports actifs sur la carte principale
+    _showAirportsOnMap();
   }catch(e){
     document.getElementById('todayBody').innerHTML=`<div style="padding:20px;color:#fc8181;">Erreur: ${esc(e.message)}</div>`;
   }
