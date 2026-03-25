@@ -282,9 +282,13 @@ const FB={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67
 const app=getApps().find(a=>a.name==='vols')||initializeApp(FB,'vols');
 const db=getFirestore(app);
 
-// ── Coords hardcodées (enrichies depuis Firebase) ──
-const AP={
+// ── Coordonnées de fallback (enrichies depuis Firebase) ──
+const AP_FALLBACK={
   'GQNO':{city:'Nouakchott', iata:'NKC', c:[18.098,-15.948]},
+  'GQPP':{city:'Nouadhibou', iata:'NDB', c:[20.933,-17.030]},
+  'GQPZ':{city:'Zouerate',   iata:'OUZ', c:[22.756,-12.483]},
+  'GQNI':{city:'Nema',       iata:'EMN', c:[16.622,-7.316]},
+  'GQPF':{city:'Kiffa',      iata:'KFA', c:[16.590,-11.406]},
   'LFPG':{city:'Paris',      iata:'CDG', c:[49.009,  2.547]},
   'LTFM':{city:'Istanbul',   iata:'IST', c:[41.262, 28.727]},
   'DAAG':{city:'Alger',      iata:'ALG', c:[36.691,  3.215]},
@@ -299,9 +303,12 @@ const AP={
   'GABS':{city:'Bamako',     iata:'BKO', c:[12.534, -7.950]},
   'GCXO':{city:'Tenerife',   iata:'TFN', c:[28.482,-16.342]},
   'GMME':{city:'Rabat',      iata:'RBA', c:[33.998, -6.752]},
+  'OEMA':{city:'Madinah',    iata:'MED', c:[24.553, 39.705]},
 };
+// AP sera enrichi depuis Firebase cfg-airports
+let AP={...AP_FALLBACK};
 const NKC=[18.098,-15.948];
-const getAP=icao=>AP[icao]||{city:icao,iata:icao,c:null};
+const getAP=icao=>AP[icao]||AP_FALLBACK[icao]||{city:icao,iata:icao,c:null};
 
 // ── MAP AUJOURD'HUI ──
 const map=L.map('map',{zoomControl:true,scrollWheelZoom:false,center:NKC,zoom:4});
@@ -642,6 +649,24 @@ function _showAirportsOnMap(){
 // ── INIT ──
 async function init(){
   try{
+    // Charger les aéroports depuis Firebase et enrichir AP
+    try{
+      const apSnap=await getDoc(doc(db,'flights','cfg-airports'));
+      if(apSnap.exists()){
+        (apSnap.data().list||[]).forEach(a=>{
+          const icao=a.icao||'';
+          const iata=a.iata||icao;
+          const city=a.city||a.name||icao;
+          // Utiliser lat/lng si disponibles, sinon fallback
+          const fallback=AP_FALLBACK[icao];
+          const coords=a.lat&&a.lng?[parseFloat(a.lat),parseFloat(a.lng)]:(fallback?fallback.c:null);
+          if(icao) AP[icao]={city,iata,c:coords};
+          // Index aussi par IATA
+          if(iata&&iata!==icao) AP[iata]={city,iata,c:coords};
+        });
+      }
+    }catch(e){console.warn('cfg-airports:',e.message);}
+
     const snap=await getDocs(collection(db,'schedules'));
     allSchedules=snap.docs.map(d=>({id:d.id,...d.data()}));
     const comp=new Set(allSchedules.map(s=>s.company).filter(Boolean)).size;
