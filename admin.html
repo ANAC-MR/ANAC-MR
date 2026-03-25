@@ -5065,10 +5065,12 @@ function _schedUpdateDayBtns() {
 }
 
 window._schedDaysFromText = function(val) {
-    // Reconstruire _schedSelDays depuis le texte saisi
+    // Format attendu: 7 caractères, '-' = inactif, tout autre char = actif
+    // ex: "J1---J5--" → jours 1 et 5 actifs (indices 0 et 4)
     _schedSelDays = new Set();
+    const str = (val||'').padEnd(7, '-');
     for (let i = 0; i < 7; i++) {
-        if (val[i] && val[i] !== '-') _schedSelDays.add(i+1);
+        if (str[i] !== '-') _schedSelDays.add(i + 1);
     }
     _schedUpdateDayBtns();
 };
