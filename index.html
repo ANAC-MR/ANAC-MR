@@ -705,7 +705,7 @@
   <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">🛤️ Compagnies sur le même trajet</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-      <select id="routeFilter" onchange="runRouteComparison()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;font-family:inherit;min-width:220px;">
+      <select id="routeFilter" onchange="runRouteComparison()" style="background:rgba(212,175,55,.12);border:2px solid rgba(212,175,55,.5);border-radius:8px;padding:7px 12px;color:#D4AF37;font-size:13px;font-family:inherit;min-width:220px;font-weight:600;">
         <option value="">— Choisir une destination —</option>
       </select>
       <select id="routeYear" onchange="runRouteComparison()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
@@ -1360,21 +1360,28 @@ function runComparison(){
 
 // ── Trajet unique : lister les destinations depuis NKC ──
 function populateRouteSelect(flights){
-    // Destinations depuis NKC (vols où NKC est départ ou arrivée)
+    // Grouper par NOM DE VILLE canonique pour TOUTES les villes
+    // Chaque ville peut avoir plusieurs codes (ICAO + IATA) → on les regroupe tous
     const dests={};
     flights.forEach(f=>{
-        const dest=isNKC(f.from)?f.to:isNKC(f.to)?f.from:null;
-        if(!dest)return;
-        const city=cityName(dest);
-        if(!dests[city])dests[city]={key:dest,count:0};
+        const destCode=isNKC(f.from)?f.to:isNKC(f.to)?f.from:null;
+        if(!destCode)return;
+        const city=cityName(destCode);
+        if(!dests[city])dests[city]={codes:new Set(),count:0};
+        dests[city].codes.add(destCode);
         dests[city].count++;
     });
-    const sel=document.getElementById('routeFilter');const cur=sel.value;
+    const sel=document.getElementById('routeFilter');
+    const cur=sel.value;
+    const curCodes=cur?cur.split('|'):[];
     sel.innerHTML='<option value="">— Choisir une destination —</option>';
-    Object.entries(dests).sort((a,b)=>b[1].count-a[1].count).forEach(([city,{key,count}])=>{
+    Object.entries(dests).sort((a,b)=>b[1].count-a[1].count).forEach(([city,{codes,count}])=>{
         const o=document.createElement('option');
-        o.value=key; o.textContent=`${city} (${count} vols)`;
-        if(key===cur)o.selected=true;sel.appendChild(o);
+        o.value=[...codes].join('|');
+        o.textContent=`${city} (${count})`;
+        // Restaurer la sélection si un des codes correspond
+        if(curCodes.some(k=>[...codes].includes(k)))o.selected=true;
+        sel.appendChild(o);
     });
     const years=[...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
     const ySel=document.getElementById('routeYear');const curY=ySel.value;
@@ -1387,12 +1394,14 @@ function runRouteComparison(){
     const year=document.getElementById('routeYear').value;
     const res=document.getElementById('routeCmpResult');
     if(!destCode){res.innerHTML='<span style="color:#5A7A9A;">Sélectionnez une destination</span>';return;}
-    const destCity=cityName(destCode);
+    const destCity=cityName(destCode.split('|')[0]);
     // Tous les vols NKC <-> destCode
     const all=getFlights();
+    // Gérer plusieurs codes pour la même ville (ex: ALG|DAAG)
+    const destCodes=destCode.split('|');
     const flt=all.filter(f=>{
         if(year!=='ALL'&&f.date&&new Date(f.date).getFullYear()!==+year)return false;
-        const isRoute=(isNKC(f.from)&&f.to===destCode)||(isNKC(f.to)&&f.from===destCode);
+        const isRoute=(isNKC(f.from)&&destCodes.includes(f.to))||(isNKC(f.to)&&destCodes.includes(f.from));
         return isRoute;
     });
     if(!flt.length){res.innerHTML='<span style="color:#5A7A9A;">Aucun vol sur ce trajet</span>';return;}
