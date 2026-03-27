@@ -1052,7 +1052,22 @@ const CITY_NAMES={
   'DBBP':'Lomé','LFW':'Lomé',
 };
 function cityName(code){return CITY_NAMES[code]||code;}
-function isNKC(code){return code==='GQNO'||code==='NKC';}
+function isNKC(code){
+    if(!code)return false;
+    const NKC_CODES=['GQNO','NKC'];
+    return NKC_CODES.includes(code.toUpperCase().trim());
+}
+// Obtenir la ville non-NKC d'un vol (peu importe le sens)
+function getDestCity(f){
+    const from=(f.from||'').trim();
+    const to=(f.to||'').trim();
+    if(!from&&!to)return null;
+    // Si l'un des deux est NKC, retourner l'autre
+    if(isNKC(from))return to||null;
+    if(isNKC(to))return from||null;
+    // Ni l'un ni l'autre n'est NKC → on prend "to" par défaut
+    return to||from||null;
+}
 
 function getFlights(){return window.appFlights||[];}
 
@@ -1119,7 +1134,7 @@ function refreshCharts(){
 
     const pax=flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
     const comp=new Set(flt.map(f=>f.company).filter(Boolean));
-    const dest=new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(d=>d&&!isNKC(d)));
+    const dest=new Set(flt.map(f=>cityName(getDestCity(f)||'')).filter(d=>d&&d!=='Nouakchott'&&d!==''&&d!=='undefined'));
     const babies=flt.reduce((s,f)=>s+(+f.babies||0),0);
 
     document.getElementById('kpi-vols').textContent=flt.length.toLocaleString('fr-FR');
@@ -1195,8 +1210,7 @@ function refreshCharts(){
 function renderDestCards(flt){
     const dc={};
     flt.forEach(f=>{
-        // On prend la ville qui N'EST PAS NKC
-        const dest=isNKC(f.from)?f.to:isNKC(f.to)?f.from:null;
+        const dest=getDestCity(f);
         if(!dest)return;
         const city=cityName(dest);
         if(!dc[city])dc[city]={vols:0,pax:0,companies:{}};
@@ -1360,13 +1374,13 @@ function runComparison(){
 
 // ── Trajet unique : lister les destinations depuis NKC ──
 function populateRouteSelect(flights){
-    // Grouper par NOM DE VILLE canonique pour TOUTES les villes
-    // Chaque ville peut avoir plusieurs codes (ICAO + IATA) → on les regroupe tous
+    // Grouper par NOM DE VILLE canonique
+    // Utilise getDestCity pour trouver la ville non-NKC peu importe le sens
     const dests={};
     flights.forEach(f=>{
-        const destCode=isNKC(f.from)?f.to:isNKC(f.to)?f.from:null;
+        const destCode=getDestCity(f);
         if(!destCode)return;
-        const city=cityName(destCode);
+        const city=cityName(destCode); // nom canonique (Paris, Alger, etc.)
         if(!dests[city])dests[city]={codes:new Set(),count:0};
         dests[city].codes.add(destCode);
         dests[city].count++;
@@ -1375,11 +1389,11 @@ function populateRouteSelect(flights){
     const cur=sel.value;
     const curCodes=cur?cur.split('|'):[];
     sel.innerHTML='<option value="">— Choisir une destination —</option>';
+    // Trier par nombre de vols décroissant, afficher seulement le nom de ville
     Object.entries(dests).sort((a,b)=>b[1].count-a[1].count).forEach(([city,{codes,count}])=>{
         const o=document.createElement('option');
         o.value=[...codes].join('|');
-        o.textContent=`${city} (${count})`;
-        // Restaurer la sélection si un des codes correspond
+        o.textContent=`${city} (${count} vols)`;
         if(curCodes.some(k=>[...codes].includes(k)))o.selected=true;
         sel.appendChild(o);
     });
@@ -1397,12 +1411,13 @@ function runRouteComparison(){
     const destCity=cityName(destCode.split('|')[0]);
     // Tous les vols NKC <-> destCode
     const all=getFlights();
-    // Gérer plusieurs codes pour la même ville (ex: ALG|DAAG)
+    // Gérer plusieurs codes pour la même ville (ex: ALG|DAAG|DXXX)
     const destCodes=destCode.split('|');
     const flt=all.filter(f=>{
         if(year!=='ALL'&&f.date&&new Date(f.date).getFullYear()!==+year)return false;
-        const isRoute=(isNKC(f.from)&&destCodes.includes(f.to))||(isNKC(f.to)&&destCodes.includes(f.from));
-        return isRoute;
+        // Match si la ville non-NKC du vol correspond à un des codes
+        const dc=getDestCity(f);
+        return dc&&destCodes.includes(dc);
     });
     if(!flt.length){res.innerHTML='<span style="color:#5A7A9A;">Aucun vol sur ce trajet</span>';return;}
     const byComp={};
