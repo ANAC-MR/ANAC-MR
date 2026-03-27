@@ -142,6 +142,10 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 .cal-fl.search-card{cursor:pointer;}
 .cal-fl.search-card:hover{background:rgba(96,165,250,.12);border-color:rgba(96,165,250,.35);}
 .cal-fl.search-card:hover .cf-n::after{content:' ↗';font-size:9px;color:var(--blue);}
+.swap-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  border-radius:5px;padding:2px 5px;color:var(--gold);font-size:12px;cursor:pointer;
+  line-height:1;flex-shrink:0;transition:background .15s;}
+.swap-btn:hover{background:rgba(212,175,55,.2);border-color:var(--gold);}
 .cf-n{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text);}
 .cf-r{font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cf-t{font-family:var(--mono);font-size:9px;color:var(--gold);}
@@ -366,6 +370,7 @@ function changeWeek(t,d){window._changeWeek&&window._changeWeek(t,d);}
 function resetWeek(t){window._resetWeek&&window._resetWeek(t);}
 function runSearch(){window._runSearch&&window._runSearch();}
 function clearSearch(){window._clearSearch&&window._clearSearch();}
+function _swapSearch(){window._swapSearch&&window._swapSearch();}
 </script>
 <script type="module">
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -627,13 +632,26 @@ window._renderCal=function(type){
       const ma=isMA(s);
       const clickFn=type==='sr'?`window._calSearch('${s.id}','${ds}')`:`window._calPin('${s.id}','${ds}')`;
     const isSearch=type==='sr';
+    // Pour le calendrier recherche: afficher Compagnie · Vol, route, heure
+    const coShort=(s.company||'').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,3);
     return `<div class="cal-fl ${ma?'ma':''} ${!isSearch&&pinnedCalId===key?'pin':''} ${isSearch?'search-card':''}"
         onclick="${clickFn}"
-        title="${esc(s.vol||'')} · ${esc(dep.city)}→${esc(arr.city)}${isSearch?' · Cliquez pour réserver':''}">
-        <div class="cf-n">${esc(s.vol||'—')}</div>
+        title="${esc(s.vol||'')} · ${esc(s.company||'')} · ${esc(dep.city)}→${esc(arr.city)}${isSearch?' · Cliquez pour réserver':''}">
+        ${isSearch?`
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:2px;">
+          <div>
+            <div class="cf-n" style="font-size:10px;">${esc(s.company||'—')}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:1px;">${esc(s.vol||'')}</div>
+          </div>
+          <button class="swap-btn" onclick="event.stopPropagation();window._swapSearch()" title="Inverser départ/arrivée">⇄</button>
+        </div>
+        <div class="cf-r" style="display:block;">${esc(dep.city)}→${esc(arr.city)}</div>
+        ${pr?`<div class="cf-t" style="display:block;">${pr.hdep}→${pr.harr}</div>`:''}
+        `:
+        `<div class="cf-n">${esc(s.vol||'—')}</div>
         <div class="cf-r">${esc(dep.city)}→${esc(arr.city)}</div>
         ${pr?`<div class="cf-t">${pr.hdep}→${pr.harr}</div>`:''}
-        ${pr&&pr.stop?`<div class="cf-t" style="color:var(--gold);">via ${esc(getAP(pr.stop).city)}</div>`:''}
+        ${pr&&pr.stop?`<div class="cf-t" style="color:var(--gold);">via ${esc(getAP(pr.stop).city)}</div>`:''}`}
       </div>`;
     }).join('');
 
@@ -803,25 +821,28 @@ function _showAirportsOnMap(){
 const AIRLINE_URLS={
   'mauritania airlines':   {url:'https://booking.mauritaniaairline.com', short:'booking.mauritaniaairline.com'},
   'mauritania airlines international': {url:'https://booking.mauritaniaairline.com', short:'booking.mauritaniaairline.com'},
-  'air sénégal':    {url:'https://www.air-senegal.com',      short:'air-senegal.com'},
-  'air senegal':    {url:'https://www.air-senegal.com',      short:'air-senegal.com'},
-  'turkish airlines':{url:'https://www.turkishairlines.com', short:'turkishairlines.com'},
-  'air algérie':    {url:'https://www.airalgerie.dz',        short:'airalgerie.dz'},
-  'air algerie':    {url:'https://www.airalgerie.dz',        short:'airalgerie.dz'},
-  'tunisair':       {url:'https://www.tunisair.com',         short:'tunisair.com'},
-  'royal air maroc':{url:'https://www.royalairmaroc.com',    short:'royalairmaroc.com'},
-  'air france':     {url:'https://www.airfrance.fr',         short:'airfrance.fr'},
-  'asky':           {url:'https://www.flyasky.com',          short:'flyasky.com'},
-  'binter':         {url:'https://www.bintercanarias.com',   short:'bintercanarias.com'},
-  'transair':       {url:'https://www.transair.sn',          short:'transair.sn'},
+  'turkish airlines':      {url:'https://www.turkishairlines.com/fr-fr/flights/booking/', short:'turkishairlines.com'},
+  'air france':            {url:'https://wwws.airfrance.fr/', short:'airfrance.fr'},
+  'asky':                  {url:'https://www.flyasky.com/tg/fr/', short:'flyasky.com'},
+  'royal air maroc':       {url:'https://www.royalairmaroc.com/int-fr', short:'royalairmaroc.com'},
+  'air algérie':           {url:'https://airalgerie.dz/', short:'airalgerie.dz'},
+  'air algerie':           {url:'https://airalgerie.dz/', short:'airalgerie.dz'},
+  'air sénégal':           {url:'https://flights.flyairsenegal.com/fr/', short:'flyairsenegal.com'},
+  'air senegal':           {url:'https://flights.flyairsenegal.com/fr/', short:'flyairsenegal.com'},
+  'tunisair':              {url:'https://www.tunisair.com/fr', short:'tunisair.com'},
+  'binter':                {url:'https://www.bintercanarias.com/fr', short:'bintercanarias.com'},
+  'binter canarias':       {url:'https://www.bintercanarias.com/fr', short:'bintercanarias.com'},
+  'transair':              {url:'https://www.transair.sn', short:'transair.sn'},
 };
+
 function getAirlineUrl(company){
   const k=(company||'').toLowerCase().trim();
-  return AIRLINE_URLS[k]||null;
+  // Cherche exact puis partiel
+  if(AIRLINE_URLS[k]) return AIRLINE_URLS[k];
+  const found=Object.entries(AIRLINE_URLS).find(([key])=>k.includes(key)||key.includes(k));
+  return found?found[1]:null;
 }
 
-// Construire l'URL de recherche sur le site de la compagnie
-// avec les dates et villes pré-remplies si possible
 function buildSearchUrl(company, pr, targetDate){
   const dep=getAP(pr.dep), arr=getAP(pr.arr);
   const depIata=dep.iata||pr.dep, arrIata=arr.iata||pr.arr;
@@ -829,20 +850,34 @@ function buildSearchUrl(company, pr, targetDate){
   const d=targetDate||'';
   const dy=d.slice(0,4), dm=d.slice(5,7), dj=d.slice(8,10);
 
-  // ── Mauritania Airlines ──
-  // Format moteur MAI Booking: ?dep=NKC&dest=CDG&date=YYYY-MM-DD
-  if(k.includes('mauritania')){
-    let url='https://booking.mauritaniaairline.com/';
-    if(depIata&&arrIata){
-      // Essayer le format query string du moteur MAI
-      url+='?dep='+depIata+'&dest='+arrIata;
-      if(d) url+='&date='+d;
-    }
-    return url;
-  }
+  if(k.includes('mauritania'))
+    return 'https://booking.mauritaniaairline.com/'+(depIata&&arrIata?'?dep='+depIata+'&dest='+arrIata+(d?'&date='+d:''):'');
 
-  // ── Autres compagnies: sera complété par l'utilisateur ──
-  // Pour l'instant on renvoie la page d'accueil de la compagnie
+  if(k.includes('turkish'))
+    return 'https://www.turkishairlines.com/fr-fr/flights/booking/?from='+depIata+'&to='+arrIata+(d?'&searchDate='+dy+dm+dj:'');
+
+  if(k.includes('air france'))
+    return 'https://wwws.airfrance.fr/?pax=1&cabinClass=EC&origin='+depIata+'&destination='+arrIata+(d?'&outwardDate='+dy+'-'+dm+'-'+dj:'');
+
+  if(k.includes('asky'))
+    return 'https://www.flyasky.com/tg/fr/?dep='+depIata+'&arr='+arrIata+(d?'&date='+d:'');
+
+  if(k.includes('royal air maroc')||k.includes('ram'))
+    return 'https://www.royalairmaroc.com/int-fr/reserver?dep='+depIata+'&arr='+arrIata+(d?'&date='+dy+dm+dj:'');
+
+  if(k.includes('alg'))
+    return 'https://airalgerie.dz/?origin='+depIata+'&destination='+arrIata+(d?'&date='+d:'');
+
+  if(k.includes('sénégal')||k.includes('senegal'))
+    return 'https://flights.flyairsenegal.com/fr/?dep='+depIata+'&arr='+arrIata+(d?'&date='+d:'');
+
+  if(k.includes('tunisair'))
+    return 'https://www.tunisair.com/fr/reservation?origin='+depIata+'&destination='+arrIata+(d?'&date='+d:'');
+
+  if(k.includes('binter'))
+    return 'https://www.bintercanarias.com/fr/reservar?origen='+depIata+'&destino='+arrIata+(d?'&fecha='+dj+dm+dy:'');
+
+  // Fallback: page d'accueil
   const info=getAirlineUrl(company);
   return info?info.url:null;
 }
@@ -932,6 +967,17 @@ window._clearSearch=function(){
   document.getElementById('sfCompany').value='';
   document.getElementById('sfDep').value='';
   document.getElementById('sfArr').value='';
+  window._runSearch();
+};
+
+// Inverser DEP et ARR dans les filtres
+window._swapSearch=function(){
+  const depEl=document.getElementById('sfDep');
+  const arrEl=document.getElementById('sfArr');
+  if(!depEl||!arrEl)return;
+  const tmp=depEl.value;
+  depEl.value=arrEl.value;
+  arrEl.value=tmp;
   window._runSearch();
 };
 
