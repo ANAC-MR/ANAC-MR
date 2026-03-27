@@ -429,13 +429,30 @@ function clearRoute(){
 
 function addArc(c1,c2,color,dashed){
   const arc=[];
-  for(let t=0;t<=30;t++){const r=t/30;arc.push([c1[0]+(c2[0]-c1[0])*r+Math.sin(Math.PI*r)*3,c1[1]+(c2[1]-c1[1])*r]);}
-  const l=L.polyline(arc,{color,weight:2.5,opacity:.9,dashArray:dashed?'7 5':null});
+  const curveH=Math.min(Math.abs(c2[0]-c1[0])*0.4+Math.abs(c2[1]-c1[1])*0.15, 6);
+  for(let t=0;t<=50;t++){
+    const r=t/50;
+    arc.push([c1[0]+(c2[0]-c1[0])*r + Math.sin(Math.PI*r)*curveH,
+              c1[1]+(c2[1]-c1[1])*r]);
+  }
+  // Ligne principale
+  const l=L.polyline(arc,{color,weight:2.5,opacity:.85,dashArray:dashed?'8 6':null,lineCap:'round'});
   l.addTo(map); actLines.push(l);
+  // Flèche au milieu de l'arc
+  const mid=arc[Math.floor(arc.length/2)];
+  const before=arc[Math.floor(arc.length/2)-2];
+  const angle=Math.atan2(mid[0]-before[0], mid[1]-before[1])*180/Math.PI;
+  const arrowIcon=L.divIcon({className:'',iconSize:[20,20],iconAnchor:[10,10],
+    html:`<div style="width:0;height:0;transform:rotate(${angle}deg);filter:drop-shadow(0 0 3px ${color});">
+      <svg width="20" height="20" viewBox="0 0 20 20">
+        <polygon points="10,2 18,18 10,13 2,18" fill="${color}" opacity="0.95"/>
+      </svg></div>`});
+  const am=L.marker(mid,{icon:arrowIcon,interactive:false});
+  am.addTo(map); actMarks.push(am);
 }
 function addDestMark(coord,color){
-  const di=L.divIcon({className:'',iconSize:[11,11],iconAnchor:[5.5,5.5],
-    html:`<div style="width:11px;height:11px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 6px ${color}88;"></div>`});
+  const di=L.divIcon({className:'',iconSize:[14,14],iconAnchor:[7,7],
+    html:`<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 0 10px ${color}99;"></div>`});
   const m=L.marker(coord,{icon:di}); m.addTo(map); actMarks.push(m);
 }
 
@@ -667,15 +684,17 @@ window._renderCal=function(type){
 
 window._calPin=function(schedId,ds){
   const key=schedId+'_'+ds;
-  if(pinnedCalId===key){pinnedCalId=null;clearRoute();hideAirlineLink();}
-  else{
+  // Dans les calendriers MA/INT, on ne trace pas de trajet sur la carte
+  // (la carte est réservée à l'onglet Aujourd'hui)
+  if(pinnedCalId===key){
+    pinnedCalId=null;
+    hideAirlineLink();
+  } else {
     pinnedCalId=key;
     const s=allSchedules.find(x=>x.id===schedId);
-    if(s){showRoute(s);showAirlineLink(s);}
+    if(s) showAirlineLink(s); // juste le lien, pas le trajet
   }
   window._renderCal('ma');window._renderCal('int');
-  if(document.getElementById('tab-search').classList.contains('active'))
-    window._runSearch();
 };
 
 // Clic sur une carte dans le calendrier de RECHERCHE → ouvre site compagnie
@@ -686,9 +705,6 @@ window._calSearch=function(schedId,ds){
   if(!pr)return;
   const url=buildSearchUrl(s.company,pr,ds);
   if(url)window.open(url,'_blank','noopener');
-  // Aussi montrer le trajet sur la carte
-  showRoute(s);
-  showAirlineLink(s);
 };
 
 window._changeWeek=function(type,delta){
@@ -776,7 +792,10 @@ window._switchTab=function(tab){
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   document.querySelector('[data-tab="'+tab+'"]').classList.add('active');
+  // Effacer le trajet et le lien quand on quitte l'onglet Aujourd'hui
+  clearRoute();
   hideAirlineLink();
+  pinnedTodayId=null;
   if(tab==='cal-ma')window._renderCal('ma');
   else if(tab==='cal-int')window._renderCal('int');
   else if(tab==='today')renderToday();
