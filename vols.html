@@ -139,6 +139,9 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 .cal-fl{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:5px;
   padding:4px 6px;margin-bottom:3px;cursor:pointer;transition:all .12s;}
 .cal-fl:hover,.cal-fl.pin{background:rgba(212,175,55,.1);border-color:rgba(212,175,55,.3);}
+.cal-fl.search-card{cursor:pointer;}
+.cal-fl.search-card:hover{background:rgba(96,165,250,.12);border-color:rgba(96,165,250,.35);}
+.cal-fl.search-card:hover .cf-n::after{content:' ↗';font-size:9px;color:var(--blue);}
 .cf-n{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text);}
 .cf-r{font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cf-t{font-family:var(--mono);font-size:9px;color:var(--gold);}
@@ -229,7 +232,7 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 <!-- Tabs -->
 <div class="tabs-nav">
   <div class="tabs-row">
-    <button class="tab-btn" data-tab="today" onclick="switchTab('today')">📅 Aujourd'hui</button>
+    <button class="tab-btn active" data-tab="today" onclick="switchTab('today')">📅 Aujourd'hui</button>
     <button class="tab-btn ma" data-tab="cal-ma" onclick="switchTab('cal-ma')">🇲🇷 Mauritania Airlines</button>
     <button class="tab-btn" data-tab="cal-int" onclick="switchTab('cal-int')">🌍 Compagnies internationales</button>
     <button class="tab-btn" active" data-tab="search" onclick="switchTab('search')">🔍 Recherche</button>
@@ -238,7 +241,7 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 
 <!-- Tab: Aujourd'hui -->
 <div class="tab-content">
-<div id="tab-today" class="tab-pane">
+<div id="tab-today" class="tab-pane active">
   <div class="today-section">
     <div>
       <div class="map-box">
@@ -311,7 +314,7 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 
 
 <!-- Tab: Recherche -->
-<div id="tab-search" class="tab-pane active">
+<div id="tab-search" class="tab-pane">
   <div class="search-filters">
     <div class="filter-group">
       <div class="filter-label">Compagnie</div>
@@ -622,9 +625,11 @@ window._renderCal=function(type){
       const dep=getAP(pr?pr.dep:''),arr=getAP(pr?pr.arr:'');
       const key=s.id+'_'+ds;
       const ma=isMA(s);
-      return `<div class="cal-fl ${ma?'ma':''} ${pinnedCalId===key?'pin':''}"
-        onclick="window._calPin('${s.id}','${ds}')"
-        title="${esc(s.vol||'')} · ${esc(dep.city)}→${esc(arr.city)}">
+      const clickFn=type==='sr'?`window._calSearch('${s.id}','${ds}')`:`window._calPin('${s.id}','${ds}')`;
+    const isSearch=type==='sr';
+    return `<div class="cal-fl ${ma?'ma':''} ${!isSearch&&pinnedCalId===key?'pin':''} ${isSearch?'search-card':''}"
+        onclick="${clickFn}"
+        title="${esc(s.vol||'')} · ${esc(dep.city)}→${esc(arr.city)}${isSearch?' · Cliquez pour réserver':''}">
         <div class="cf-n">${esc(s.vol||'—')}</div>
         <div class="cf-r">${esc(dep.city)}→${esc(arr.city)}</div>
         ${pr?`<div class="cf-t">${pr.hdep}→${pr.harr}</div>`:''}
@@ -651,9 +656,21 @@ window._calPin=function(schedId,ds){
     if(s){showRoute(s);showAirlineLink(s);}
   }
   window._renderCal('ma');window._renderCal('int');
-  // Re-render search calendar si actif
   if(document.getElementById('tab-search').classList.contains('active'))
     window._runSearch();
+};
+
+// Clic sur une carte dans le calendrier de RECHERCHE → ouvre site compagnie
+window._calSearch=function(schedId,ds){
+  const s=allSchedules.find(x=>x.id===schedId);
+  if(!s)return;
+  const pr=parseRouting(s.routing);
+  if(!pr)return;
+  const url=buildSearchUrl(s.company,pr,ds);
+  if(url)window.open(url,'_blank','noopener');
+  // Aussi montrer le trajet sur la carte
+  showRoute(s);
+  showAirlineLink(s);
 };
 
 window._changeWeek=function(type,delta){
@@ -803,6 +820,45 @@ function getAirlineUrl(company){
   return AIRLINE_URLS[k]||null;
 }
 
+// Construire l'URL de recherche sur le site de la compagnie
+// avec les dates et villes pré-remplies si possible
+function buildSearchUrl(company, pr, targetDate){
+  const info=getAirlineUrl(company);
+  if(!info)return null;
+  const dep=getAP(pr.dep),arr=getAP(pr.arr);
+  const depIata=dep.iata||pr.dep, arrIata=arr.iata||pr.arr;
+  const k=(company||'').toLowerCase().trim();
+  // Date au format YYYY-MM-DD
+  const d=targetDate||'';
+  const dd=d.replace(/-/g,''); // YYYYMMDD
+  const dy=d.slice(0,4), dm=d.slice(5,7), dj=d.slice(8,10);
+
+  // URLs de recherche spécifiques par compagnie
+  if(k.includes('mauritania')){
+    return info.url+'/booking/flight?from='+depIata+'&to='+arrIata+(d?'&date='+d:'');
+  }
+  if(k.includes('tunisair')){
+    return 'https://www.tunisair.com/site/templates/tunisair/booking/booking.aspx?lang=FR&origin='+depIata+'&destination='+arrIata+(d?'&departureDate='+dj+'/'+dm+'/'+dy:'');
+  }
+  if(k.includes('turkish')){
+    return 'https://www.turkishairlines.com/fr-fr/flights/?from='+depIata+'&to='+arrIata+(d?'&depart='+dy+'-'+dm+'-'+dj:'');
+  }
+  if(k.includes('royal air maroc')||k.includes('ram')){
+    return 'https://www.royalairmaroc.com/fr/reservation?dep='+depIata+'&arr='+arrIata+(d?'&date='+dy+dm+dj:'');
+  }
+  if(k.includes('air france')){
+    return 'https://wwws.airfrance.fr/cgi-bin/AF/FR/fr/local/process/search/searchProcess.do?origin='+depIata+'&destination='+arrIata+(d?'&travelDates='+dj+dm+dy:'');
+  }
+  if(k.includes('air s') || k.includes('air sen')){
+    return info.url+'/reservation?from='+depIata+'&to='+arrIata;
+  }
+  if(k.includes('air alg')){
+    return 'https://www.airalgerie.dz/reservation/?depart='+depIata+'&arrivee='+arrIata;
+  }
+  // Fallback: page d'accueil de la compagnie
+  return info.url;
+}
+
 // Afficher/masquer le lien compagnie sur la carte
 function showAirlineLink(s){
   const info=getAirlineUrl(s.company||'');
@@ -870,10 +926,10 @@ window._runSearch=function(){
     list=list.filter(s=>{
       const pr=parseRouting(s.routing);
       if(!pr)return false;
-      // Chercher dans toute la chaîne DEP → [STOP] → ARR
-      const legs=[pr.dep,pr.stop,pr.arr].filter(Boolean);
-      const matchDep=!dep||legs.includes(dep);
-      const matchArr=!arr||legs.includes(arr);
+      // DEP = aéroport de départ RÉEL du vol
+      // ARR = aéroport d'arrivée RÉEL du vol (destination finale)
+      const matchDep=!dep||(pr.dep===dep);
+      const matchArr=!arr||(pr.arr===arr);
       return matchDep&&matchArr;
     });
   }
@@ -923,8 +979,8 @@ async function init(){
     renderToday();
     // Afficher tous les aéroports actifs sur la carte principale
     _showAirportsOnMap();
-    // Ouvrir l'onglet Recherche par défaut
-    setTimeout(()=>{ window._switchTab(window._pendingTab||'search'); window._pendingTab=null; }, 0);
+    // Ouvrir l'onglet Aujourd'hui par défaut
+    setTimeout(()=>{ window._switchTab(window._pendingTab||'today'); window._pendingTab=null; }, 0);
   }catch(e){
     document.getElementById('todayBody').innerHTML=`<div style="padding:20px;color:#fc8181;">Erreur: ${esc(e.message)}</div>`;
   }
