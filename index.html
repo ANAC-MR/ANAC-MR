@@ -587,171 +587,138 @@
         <!-- ═══ TAB 2 : RAPPORTS ═══ -->
         <div class="tab-content" id="tab-rapports">
 
-            <div class="charts-header">
-                <div>
-                    <h2>📊 Diagrammes & Rapports</h2>
-                    <p id="chartsSubtitle">Analyse automatique des données de vol</p>
-                </div>
-                <button class="btn-pdf" onclick="exportPDF()">📄 Exporter en PDF</button>
-                <button class="btn-pdf" onclick="window.open('inject_test_flights.html','_blank','width=900,height=700')"
-                  style="background:linear-gradient(135deg,#7c3aed,#5b21b6);margin-left:8px;"
-                  title="Ouvrir l'outil de test local (aucune écriture Firebase)">
-                  🧪 Vols Test
-                </button>
-            </div>
+<!-- HEADER -->
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
+  <div>
+    <h2 style="font-size:20px;font-weight:800;color:#e2e8f0;margin:0;">📊 Diagrammes</h2>
+    <p id="chartsSubtitle" style="font-size:12px;color:#5A7A9A;margin:3px 0 0;">Analyse automatique des données de vol</p>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <select id="chartYearFilter" onchange="refreshCharts()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+      <option value="ALL">Toutes les années</option>
+    </select>
+    <select id="chartMonthFilter" onchange="refreshCharts()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+      <option value="ALL">Tous les mois</option>
+      <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
+      <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
+      <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
+      <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
+    </select>
+    <select id="chartCompanyFilter" onchange="refreshCharts()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;min-width:160px;">
+      <option value="ALL">Toutes les compagnies</option>
+    </select>
+    <button onclick="resetChartFilters()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
+  </div>
+</div>
 
-            <div class="charts-filter-bar">
-                <label>Année :</label>
-                <select id="chartYearFilter">
-                    <option value="ALL">Toutes les années</option>
-                </select>
-                <label style="margin-left:12px;">Mois :</label>
-                <select id="chartMonthFilter">
-                    <option value="ALL">Tous les mois</option>
-                    <option value="0">Janvier</option><option value="1">Février</option>
-                    <option value="2">Mars</option><option value="3">Avril</option>
-                    <option value="4">Mai</option><option value="5">Juin</option>
-                    <option value="6">Juillet</option><option value="7">Août</option>
-                    <option value="8">Septembre</option><option value="9">Octobre</option>
-                    <option value="10">Novembre</option><option value="11">Décembre</option>
-                </select>
-                <label style="margin-left:12px;">Compagnie :</label>
-                <select id="chartCompanyFilter">
-                    <option value="ALL">Toutes les compagnies</option>
-                </select>
-                <button onclick="refreshCharts()" style="
-                    margin-left:16px; padding:8px 22px;
-                    background:linear-gradient(135deg,#2B5A8E,#4a90d9);
-                    color:#fff; border:none; border-radius:8px;
-                    font-family:inherit; font-size:13px; font-weight:700;
-                    cursor:pointer; box-shadow:0 3px 10px rgba(43,90,142,0.3);
-                    transition:opacity 0.2s,transform 0.15s;
-                " onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-                    🔍 Générer
-                </button>
-                <button onclick="resetChartFilters()" style="
-                    margin-left:6px; padding:8px 16px;
-                    background:transparent; color:#718096;
-                    border:1px solid #cbd5e0; border-radius:8px;
-                    font-family:inherit; font-size:13px;
-                    cursor:pointer; transition:all 0.2s;
-                " onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='transparent'">
-                    ↺ Réinitialiser
-                </button>
-            </div>
+<!-- KPIs -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+  <div style="background:linear-gradient(135deg,rgba(74,158,255,.2),rgba(74,158,255,.06));border:1px solid rgba(74,158,255,.3);border-radius:14px;padding:16px 18px;">
+    <div style="font-size:30px;font-weight:800;color:#60a5fa;font-family:'JetBrains Mono',monospace;" id="kpi-vols">–</div>
+    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Total vols</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-top:2px;" id="kpi-vols-sub"></div>
+  </div>
+  <div style="background:linear-gradient(135deg,rgba(45,212,160,.2),rgba(45,212,160,.06));border:1px solid rgba(45,212,160,.3);border-radius:14px;padding:16px 18px;">
+    <div style="font-size:30px;font-weight:800;color:#34d399;font-family:'JetBrains Mono',monospace;" id="kpi-pax">–</div>
+    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Total passagers</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-top:2px;" id="kpi-pax-sub"></div>
+  </div>
+  <div style="background:linear-gradient(135deg,rgba(212,175,55,.2),rgba(212,175,55,.06));border:1px solid rgba(212,175,55,.3);border-radius:14px;padding:16px 18px;">
+    <div style="font-size:30px;font-weight:800;color:#D4AF37;font-family:'JetBrains Mono',monospace;" id="kpi-comp">–</div>
+    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Compagnies actives</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-top:2px;" id="kpi-comp-sub"></div>
+  </div>
+  <div style="background:linear-gradient(135deg,rgba(248,113,113,.2),rgba(248,113,113,.06));border:1px solid rgba(248,113,113,.3);border-radius:14px;padding:16px 18px;">
+    <div style="font-size:30px;font-weight:800;color:#f87171;font-family:'JetBrains Mono',monospace;" id="kpi-dest">–</div>
+    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Destinations</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-top:2px;" id="kpi-dest-sub"></div>
+  </div>
+</div>
 
-            <!-- KPIs -->
-            <div class="kpi-row">
-                <div class="kpi-card">
-                    <div class="kpi-value" id="kpi-vols">–</div>
-                    <div class="kpi-label">Total vols</div>
-                    <div class="kpi-sub"  id="kpi-vols-sub"></div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-value" id="kpi-pax">–</div>
-                    <div class="kpi-label">Total passagers</div>
-                    <div class="kpi-sub"  id="kpi-pax-sub"></div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-value" id="kpi-comp">–</div>
-                    <div class="kpi-label">Compagnies actives</div>
-                    <div class="kpi-sub"  id="kpi-comp-sub"></div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-value" id="kpi-dest">–</div>
-                    <div class="kpi-label">Destinations</div>
-                    <div class="kpi-sub"  id="kpi-dest-sub"></div>
-                </div>
-            </div>
+<!-- GRILLE CHARTS 2 colonnes -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
 
-            <!-- Charts -->
-            <div class="charts-grid">
+  <!-- Vols/mois -->
+  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">✈️ Vols par mois</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Vols enregistrés</div>
+    <div style="position:relative;height:210px;"><canvas id="chartVolsMois"></canvas></div>
+  </div>
 
-                <div class="chart-card full">
-                    <h3>✈️ Vols par mois</h3>
-                    <div class="chart-subtitle">Nombre de vols enregistrés chaque mois</div>
-                    <div class="chart-wrap"><canvas id="chartVolsMois"></canvas></div>
-                </div>
+  <!-- PAX/mois séparé DEP/ARR -->
+  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">👥 Passagers par mois</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Départs NKC vs Arrivées NKC</div>
+    <div style="position:relative;height:210px;"><canvas id="chartPaxMois"></canvas></div>
+  </div>
 
-                <div class="chart-card full">
-                    <h3>👥 Passagers par mois</h3>
-                    <div class="chart-subtitle">Total passagers (PAX + Bébés) par mois</div>
-                    <div class="chart-wrap"><canvas id="chartPaxMois"></canvas></div>
-                </div>
+  <!-- Top compagnies -->
+  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">🏆 Top compagnies</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Classement par nombre de vols</div>
+    <div style="position:relative;height:210px;"><canvas id="chartTopComp"></canvas></div>
+  </div>
 
+  <!-- PAX/compagnie -->
+  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">🎫 Passagers par compagnie</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Total transportés</div>
+    <div style="position:relative;height:210px;"><canvas id="chartPaxComp"></canvas></div>
+  </div>
 
+  <!-- Destinations cliquables pleine largeur -->
+  <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">🗺️ Destinations les plus fréquentées</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:14px;">Depuis / vers Nouakchott — cliquez sur une ville pour voir les détails</div>
+    <div id="destCards" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;"></div>
+    <div id="destDetail" style="display:none;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;margin-top:6px;"></div>
+  </div>
 
-                <div class="chart-card">
-                    <h3>🏆 Top compagnies</h3>
-                    <div class="chart-subtitle">Classement par nombre de vols</div>
-                    <div class="chart-wrap"><canvas id="chartTopComp"></canvas></div>
-                </div>
+  <!-- Comparaison 2 compagnies pleine largeur -->
+  <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">⚖️ Comparaison de deux compagnies</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+      <select id="cmpA" onchange="runComparison()" style="background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);border-radius:8px;padding:7px 12px;color:#60a5fa;font-size:13px;font-family:inherit;min-width:160px;">
+        <option value="">— Compagnie A —</option>
+      </select>
+      <div style="font-size:14px;font-weight:800;color:#D4AF37;padding:0 4px;">VS</div>
+      <select id="cmpB" onchange="runComparison()" style="background:rgba(45,212,160,.1);border:1px solid rgba(45,212,160,.3);border-radius:8px;padding:7px 12px;color:#34d399;font-size:13px;font-family:inherit;min-width:160px;">
+        <option value="">— Compagnie B —</option>
+      </select>
+      <select id="cmpYear" onchange="runComparison()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+        <option value="ALL">Toutes années</option>
+      </select>
+      <select id="cmpMonth" onchange="runComparison()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+        <option value="ALL">Tous mois</option>
+        <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
+        <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
+        <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
+        <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
+      </select>
+    </div>
+    <div id="cmpResult" style="color:#5A7A9A;font-size:13px;text-align:center;padding:16px 0;">
+      Sélectionnez deux compagnies pour comparer
+    </div>
+  </div>
 
-                <div class="chart-card full">
-                    <h3>📈 Comparaison mois en mois</h3>
-                    <div class="chart-subtitle">Évolution des vols sur l'année — comparaison avec l'année précédente</div>
-                    <div class="chart-wrap tall"><canvas id="chartComparaison"></canvas></div>
-                </div>
+  <!-- Compagnies sur même trajet pleine largeur -->
+  <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">🛤️ Compagnies sur le même trajet</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <select id="routeFilter" onchange="runRouteComparison()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;font-family:inherit;min-width:220px;">
+        <option value="">— Choisir une destination —</option>
+      </select>
+      <select id="routeYear" onchange="runRouteComparison()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+        <option value="ALL">Toutes années</option>
+      </select>
+    </div>
+    <div id="routeCmpResult" style="color:#5A7A9A;font-size:13px;text-align:center;padding:16px 0;">
+      Sélectionnez une destination pour voir l'analyse
+    </div>
+  </div>
 
-                <div class="chart-card full">
-                    <h3>🗺️ Destinations les plus fréquentées</h3>
-                    <div class="chart-subtitle">Routes actives et nombre de passages par destination</div>
-                    <div class="chart-wrap"><canvas id="chartDestinations"></canvas></div>
-                    <div class="route-list" id="routeList"></div>
-                </div>
-
-            </div>
-        <!-- ═══ COMPARAISON 2 COMPAGNIES ═══ -->
-        <div class="compare-section" id="compareSection">
-            <h3>⚖️ Comparaison de deux compagnies</h3>
-            <div class="compare-controls">
-                <label>Compagnie A :</label>
-                <select id="cmpA" class="sel-a" onchange="runComparison()">
-                    <option value="">— Choisir —</option>
-                </select>
-                <div class="vs-badge">VS</div>
-                <label>Compagnie B :</label>
-                <select id="cmpB" class="sel-b" onchange="runComparison()">
-                    <option value="">— Choisir —</option>
-                </select>
-                <label style="margin-left:12px;">Période :</label>
-                <select id="cmpYear" onchange="runComparison()">
-                    <option value="ALL">Toutes années</option>
-                </select>
-                <select id="cmpMonth" onchange="runComparison()">
-                    <option value="ALL">Tous mois</option>
-                    <option value="0">Janvier</option><option value="1">Février</option>
-                    <option value="2">Mars</option><option value="3">Avril</option>
-                    <option value="4">Mai</option><option value="5">Juin</option>
-                    <option value="6">Juillet</option><option value="7">Août</option>
-                    <option value="8">Septembre</option><option value="9">Octobre</option>
-                    <option value="10">Novembre</option><option value="11">Décembre</option>
-                </select>
-            </div>
-            <div id="cmpResult" style="color:#a0aec0; font-size:13px; text-align:center; padding:20px 0;">
-                Sélectionnez deux compagnies pour comparer
-            </div>
-        </div>
-
-        <!-- ═══ COMPARAISON SUR MÊME TRAJET ═══ -->
-        <div class="compare-section" id="routeSection">
-            <h3>🛤️ Compagnies sur le même trajet</h3>
-            <div class="compare-controls">
-                <label>Trajet :</label>
-                <select id="routeFilter" class="sel-route" onchange="runRouteComparison()">
-                    <option value="">— Choisir un trajet —</option>
-                </select>
-                <label style="margin-left:12px;">Période :</label>
-                <select id="routeYear" onchange="runRouteComparison()">
-                    <option value="ALL">Toutes années</option>
-                </select>
-            </div>
-            <div id="routeCmpResult" style="color:#a0aec0; font-size:13px; text-align:center; padding:20px 0;">
-                Sélectionnez un trajet pour voir les compagnies
-            </div>
-        </div>
-
-        </div><!-- end tab-rapports -->
+</div>
+</div><!-- end tab-rapports -->
     
     <!-- ═══ TAB FACTURATION ═══ -->
     
@@ -1058,107 +1025,111 @@ function switchTab(tab) {
 // ══════════════════════════════════════════
 // CHARTS
 // ══════════════════════════════════════════
-const MONTHS_FR = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
-const MONTHS_LONG = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-const PALETTE = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#00B67A','#E84141','#54A0FF','#F7B731','#26de81','#fd9644'];
-let charts = {};
+const MONTHS_FR=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+const MONTHS_LONG=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const PALETTE=['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#00B67A','#E84141','#54A0FF','#F7B731','#26de81','#fd9644'];
+let charts={}, cmpCharts={};
 
-const CITY_NAMES = {
+const CITY_NAMES={
   'GQNO':'Nouakchott','NKC':'Nouakchott',
   'GQPP':'Nouadhibou','NDB':'Nouadhibou',
-  'GQPZ':'Zouerate',  'OUZ':'Zouerate',
-  'GQNI':'Nema',      'EMN':'Nema',
-  'GQPF':'Kiffa',     'KFA':'Kiffa',
-  'LFPG':'Paris',     'CDG':'Paris',
-  'LTFM':'Istanbul',  'IST':'Istanbul',
-  'DAAG':'Alger',     'ALG':'Alger',
-  'DTTA':'Tunis',     'TUN':'Tunis',
+  'GQPZ':'Zouerate','OUZ':'Zouerate',
+  'GQNI':'Nema','EMN':'Nema',
+  'GQPF':'Kiffa','KFA':'Kiffa',
+  'LFPG':'Paris','CDG':'Paris',
+  'LTFM':'Istanbul','IST':'Istanbul',
+  'DAAG':'Alger','ALG':'Alger',
+  'DTTA':'Tunis','TUN':'Tunis',
   'GMMN':'Casablanca','CMN':'Casablanca',
-  'GOBD':'Dakar',     'DSS':'Dakar',
+  'GOBD':'Dakar','DSS':'Dakar',
   'GCLP':'Las Palmas','LPA':'Las Palmas',
-  'GBYD':'Banjul',    'BJL':'Banjul',
-  'GUCY':'Conakry',   'CKY':'Conakry',
-  'DIAP':'Abidjan',   'ABJ':'Abidjan',
-  'DNMM':'Lagos',     'LOS':'Lagos',
-  'GABS':'Bamako',    'BKO':'Bamako',
-  'OEMA':'Madinah',   'MED':'Madinah',
-  'DBBP':'Lomé',      'LFW':'Lomé',
+  'GBYD':'Banjul','BJL':'Banjul',
+  'GUCY':'Conakry','CKY':'Conakry',
+  'DIAP':'Abidjan','ABJ':'Abidjan',
+  'DNMM':'Lagos','LOS':'Lagos',
+  'GABS':'Bamako','BKO':'Bamako',
+  'OEMA':'Madinah','MED':'Madinah',
+  'DBBP':'Lomé','LFW':'Lomé',
 };
-function cityName(code) { return CITY_NAMES[code] || code; }
+function cityName(code){return CITY_NAMES[code]||code;}
+function isNKC(code){return code==='GQNO'||code==='NKC';}
 
-function getFlights() { return window.appFlights || []; }
+function getFlights(){return window.appFlights||[];}
 
-function filterFlights(flights) {
-    const y = document.getElementById('chartYearFilter').value;
-    const m = document.getElementById('chartMonthFilter').value;
-    const co = document.getElementById('chartCompanyFilter').value;
-    return flights.filter(f => {
-        const d = f.date ? new Date(f.date) : null;
-        if (y !== 'ALL' && (!d || d.getFullYear() !== +y)) return false;
-        if (m !== 'ALL' && (!d || d.getMonth() !== +m)) return false;
-        if (co !== 'ALL' && f.company !== co) return false;
+function filterFlights(flights){
+    const y=document.getElementById('chartYearFilter').value;
+    const m=document.getElementById('chartMonthFilter').value;
+    const co=document.getElementById('chartCompanyFilter').value;
+    return flights.filter(f=>{
+        const d=f.date?new Date(f.date):null;
+        if(y!=='ALL'&&(!d||d.getFullYear()!==+y))return false;
+        if(m!=='ALL'&&(!d||d.getMonth()!==+m))return false;
+        if(co!=='ALL'&&f.company!==co)return false;
         return true;
     });
 }
 
-function populateYearFilter(flights) {
-    const sel = document.getElementById('chartYearFilter');
-    const cur = sel.value;
-    const years = [...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
-    sel.innerHTML = '<option value="ALL">Toutes les années</option>';
-    years.forEach(y => { const o=document.createElement('option'); o.value=y; o.textContent=y; if(String(y)===cur)o.selected=true; sel.appendChild(o); });
+function populateYearFilter(flights){
+    const sel=document.getElementById('chartYearFilter');
+    const cur=sel.value;
+    const years=[...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
+    sel.innerHTML='<option value="ALL">Toutes les années</option>';
+    years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;if(String(y)===cur)o.selected=true;sel.appendChild(o);});
 }
 
-function populateCompanyFilter(flights) {
-    const sel = document.getElementById('chartCompanyFilter');
-    const cur = sel.value;
-    const cos = [...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
-    sel.innerHTML = '<option value="ALL">Toutes les compagnies</option>';
-    cos.forEach(co => { const o=document.createElement('option'); o.value=co; o.textContent=co; if(co===cur)o.selected=true; sel.appendChild(o); });
+function populateCompanyFilter(flights){
+    const sel=document.getElementById('chartCompanyFilter');
+    const cur=sel.value;
+    const cos=[...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
+    sel.innerHTML='<option value="ALL">Toutes les compagnies</option>';
+    cos.forEach(co=>{const o=document.createElement('option');o.value=co;o.textContent=co;if(co===cur)o.selected=true;sel.appendChild(o);});
 }
 
-function kill(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
-function monthly(flights, field) {
-    const d = Array(12).fill(0);
-    flights.forEach(f => { if(f.date) d[new Date(f.date).getMonth()] += field ? (+f[field]||0) : 1; });
+function kill(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+function killCmp(id){if(cmpCharts[id]){cmpCharts[id].destroy();delete cmpCharts[id];}}
+
+function monthly(flights,field){
+    const d=Array(12).fill(0);
+    flights.forEach(f=>{if(f.date)d[new Date(f.date).getMonth()]+=field?(+f[field]||0):1;});
     return d;
 }
 
-function darkOpts(extra) {
+function darkOpts(extra){
     return Object.assign({
-        responsive:true, maintainAspectRatio:false,
+        responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}},
         scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5A7A9A',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:11}},beginAtZero:true}}
-    }, extra||{});
+    },extra||{});
 }
 
-function resetChartFilters() {
+function resetChartFilters(){
     document.getElementById('chartYearFilter').value='ALL';
     document.getElementById('chartMonthFilter').value='ALL';
     document.getElementById('chartCompanyFilter').value='ALL';
     refreshCharts();
 }
 
-function refreshCharts() {
-    const all = getFlights();
-    if (!all.length) { document.getElementById('chartsSubtitle').textContent='Aucune donnée disponible'; return; }
-    populateYearFilter(all); populateCompanyFilter(all);
-    const flt = filterFlights(all);
-    if (!flt.length) { document.getElementById('chartsSubtitle').textContent='Aucun vol pour ce filtre'; return; }
+function refreshCharts(){
+    const all=getFlights();
+    if(!all.length){document.getElementById('chartsSubtitle').textContent='Aucune donnée disponible';return;}
+    populateYearFilter(all);populateCompanyFilter(all);
+    populateCmpSelects(all);populateRouteSelect(all);
+    const flt=filterFlights(all);
+    if(!flt.length){document.getElementById('chartsSubtitle').textContent='Aucun vol pour ce filtre';return;}
 
-    const pax = flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
-    const comp = new Set(flt.map(f=>f.company).filter(Boolean));
-    const dest = new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(d=>d&&d!=='GQNO'&&d!=='NKC'));
-    const babies = flt.reduce((s,f)=>s+(+f.babies||0),0);
+    const pax=flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
+    const comp=new Set(flt.map(f=>f.company).filter(Boolean));
+    const dest=new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(d=>d&&!isNKC(d)));
+    const babies=flt.reduce((s,f)=>s+(+f.babies||0),0);
 
-    document.getElementById('kpi-vols').textContent    = flt.length.toLocaleString('fr-FR');
-    document.getElementById('kpi-pax').textContent     = pax.toLocaleString('fr-FR');
-    document.getElementById('kpi-comp').textContent    = comp.size;
-    document.getElementById('kpi-dest').textContent    = dest.size;
-    document.getElementById('kpi-vols-sub').textContent= 'vols enregistrés';
-    document.getElementById('kpi-pax-sub').textContent = `dont ${babies} bébés`;
-    document.getElementById('kpi-comp-sub').textContent= [...comp].slice(0,2).join(', ')+(comp.size>2?'…':'');
-    document.getElementById('kpi-dest-sub').textContent= 'destinations actives';
+    document.getElementById('kpi-vols').textContent=flt.length.toLocaleString('fr-FR');
+    document.getElementById('kpi-pax').textContent=pax.toLocaleString('fr-FR');
+    document.getElementById('kpi-comp').textContent=comp.size;
+    document.getElementById('kpi-dest').textContent=dest.size;
+    document.getElementById('kpi-vols-sub').textContent='vols enregistrés';
+    document.getElementById('kpi-pax-sub').textContent=`dont ${babies} bébés`;
+    document.getElementById('kpi-comp-sub').textContent=[...comp].slice(0,2).join(', ')+(comp.size>2?'…':'');
+    document.getElementById('kpi-dest-sub').textContent='destinations actives';
 
     const y=document.getElementById('chartYearFilter').value;
     const m=document.getElementById('chartMonthFilter').value;
@@ -1166,29 +1137,40 @@ function refreshCharts() {
     document.getElementById('chartsSubtitle').textContent=`${flt.length.toLocaleString('fr-FR')} vol(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
 
     // Vols/mois
-    kill('v'); const volData=monthly(flt);
+    kill('v');const volData=monthly(flt);
     charts['v']=new Chart(document.getElementById('chartVolsMois'),{
-        type:'bar', data:{labels:MONTHS_FR, datasets:[{label:'Vols',data:volData,
+        type:'bar',data:{labels:MONTHS_FR,datasets:[{label:'Vols',data:volData,
             backgroundColor:volData.map(v=>v===Math.max(...volData)?'rgba(74,158,255,.9)':'rgba(74,158,255,.45)'),
             borderColor:'#4A9EFF',borderWidth:2,borderRadius:7,borderSkipped:false}]},
         options:darkOpts()
     });
 
-    // PAX/mois
-    kill('p'); const paxData=monthly(flt,'passengers').map((v,i)=>v+(monthly(flt,'babies')[i]||0));
+    // PAX/mois — séparer DEP (from=NKC) et ARR (to=NKC)
+    kill('p');
+    const paxDep=Array(12).fill(0), paxArr=Array(12).fill(0);
+    flt.forEach(f=>{
+        if(!f.date)return;
+        const mo=new Date(f.date).getMonth();
+        const paxF=(+f.passengers||0)+(+f.babies||0);
+        if(isNKC(f.from))paxDep[mo]+=paxF; // départ NKC
+        else if(isNKC(f.to))paxArr[mo]+=paxF; // arrivée NKC
+    });
     charts['p']=new Chart(document.getElementById('chartPaxMois'),{
-        type:'line', data:{labels:MONTHS_FR, datasets:[{label:'Passagers',data:paxData,
-            borderColor:'#2DD4A0',backgroundColor:'rgba(45,212,160,.12)',borderWidth:3,fill:true,tension:0.45,
-            pointRadius:5,pointBackgroundColor:'#2DD4A0',pointBorderColor:'#0F1B2D',pointBorderWidth:2}]},
-        options:darkOpts()
+        type:'bar',
+        data:{labels:MONTHS_FR,datasets:[
+            {label:'Départs NKC',data:paxDep,backgroundColor:'rgba(74,158,255,.7)',borderColor:'#4A9EFF',borderWidth:2,borderRadius:5},
+            {label:'Arrivées NKC',data:paxArr,backgroundColor:'rgba(45,212,160,.7)',borderColor:'#2DD4A0',borderWidth:2,borderRadius:5}
+        ]},
+        options:darkOpts({plugins:{legend:{display:true,position:'top',labels:{color:'#94a3b8',font:{size:11},padding:12,usePointStyle:true}},
+            tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}})
     });
 
     // Top compagnies
-    kill('c'); const cc={};
+    kill('c');const cc={};
     flt.forEach(f=>{if(f.company)cc[f.company]=(cc[f.company]||0)+1;});
     const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
     charts['c']=new Chart(document.getElementById('chartTopComp'),{
-        type:'bar', data:{labels:sc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+        type:'bar',data:{labels:sc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
             datasets:[{label:'Vols',data:sc.map(([,v])=>v),
                 backgroundColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),
                 borderColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderRadius:5}]},
@@ -1196,63 +1178,49 @@ function refreshCharts() {
     });
 
     // PAX/compagnie
-    kill('pc'); const pc={};
-    flt.forEach(f=>{if(f.company){pc[f.company]=(pc[f.company]||0)+(+f.passengers||0)+(+f.babies||0);}});
+    kill('pc');const pc={};
+    flt.forEach(f=>{if(f.company)pc[f.company]=(pc[f.company]||0)+(+f.passengers||0)+(+f.babies||0);});
     const spc=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,8);
     charts['pc']=new Chart(document.getElementById('chartPaxComp'),{
-        type:'bar', data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+        type:'bar',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
             datasets:[{label:'PAX',data:spc.map(([,v])=>v),
                 backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),
                 borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderRadius:5}]},
         options:darkOpts({indexAxis:'y'})
     });
 
-    // Évolution annuelle
-    kill('k'); const allYears=[...new Set(all.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort();
-    const yrs=y!=='ALL'?[+y-1,+y]:allYears.slice(-2);
-    const yrColors=['#D4AF37','#4A9EFF'];
-    const dsets=yrs.map((yr,i)=>{
-        const yf=all.filter(f=>f.date&&new Date(f.date).getFullYear()===+yr);
-        return{label:String(yr),data:monthly(yf),borderColor:yrColors[i],backgroundColor:yrColors[i]+'18',
-               borderWidth:2.5,fill:false,tension:0.4,pointRadius:4,
-               pointBackgroundColor:yrColors[i],pointBorderColor:'#0F1B2D',pointBorderWidth:2};
-    });
-    charts['k']=new Chart(document.getElementById('chartComparaison'),{
-        type:'line', data:{labels:MONTHS_FR, datasets:dsets},
-        options:darkOpts({plugins:{legend:{display:true,position:'top',labels:{color:'#94a3b8',font:{size:12},padding:16,usePointStyle:true}},
-            tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}})
-    });
-
     renderDestCards(flt);
-    populateRouteSelect(all);
 }
 
-function renderDestCards(flt) {
+function renderDestCards(flt){
     const dc={};
     flt.forEach(f=>{
-        [f.from,f.to].filter(Boolean).forEach(code=>{
-            if(code==='GQNO'||code==='NKC')return;
-            const city=cityName(code);
-            if(!dc[city])dc[city]={codes:new Set(),vols:0,pax:0,companies:{}};
-            dc[city].codes.add(code); dc[city].vols++;
-            dc[city].pax+=(+f.passengers||0)+(+f.babies||0);
-            const co=f.company||'?';
-            if(!dc[city].companies[co])dc[city].companies[co]={vols:0,pax:0};
-            dc[city].companies[co].vols++;
-            dc[city].companies[co].pax+=(+f.passengers||0)+(+f.babies||0);
-        });
+        // On prend la ville qui N'EST PAS NKC
+        const dest=isNKC(f.from)?f.to:isNKC(f.to)?f.from:null;
+        if(!dest)return;
+        const city=cityName(dest);
+        if(!dc[city])dc[city]={vols:0,pax:0,companies:{}};
+        dc[city].vols++;
+        dc[city].pax+=(+f.passengers||0)+(+f.babies||0);
+        const co=f.company||'?';
+        if(!dc[city].companies[co])dc[city].companies[co]={vols:0,pax:0};
+        dc[city].companies[co].vols++;
+        dc[city].companies[co].pax+=(+f.passengers||0)+(+f.babies||0);
     });
     const sorted=Object.entries(dc).sort((a,b)=>b[1].vols-a[1].vols).slice(0,16);
-    const maxV=sorted[0]?.[1].vols||1;
-    const container=document.getElementById('destCards');
-    container.innerHTML=sorted.map(([city,info],i)=>{
+    if(!sorted.length){
+        document.getElementById('destCards').innerHTML='<div style="color:#5A7A9A;font-size:13px;padding:20px;">Aucune destination dans les données</div>';
+        return;
+    }
+    const maxV=sorted[0][1].vols;
+    document.getElementById('destCards').innerHTML=sorted.map(([city,info],i)=>{
         const pct=Math.round(info.vols/maxV*100);
         const color=PALETTE[i%PALETTE.length];
         return `<div onclick="showDestDetail('${city.replace(/'/g,"\\'")}',this)"
             style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;
             padding:12px 16px;cursor:pointer;transition:all .15s;min-width:130px;flex:1;max-width:185px;" class="dest-card"
-            onmouseover="this.style.borderColor='${color}55';this.style.background='rgba(255,255,255,.07)'"
-            onmouseout="if(!this.classList.contains('active')){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';}">
+            onmouseover="this.style.borderColor='${color}66';this.style.background='rgba(255,255,255,.07)'"
+            onmouseout="if(!this.classList.contains('dc-active')){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';}">
             <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">${city}</div>
             <div style="font-size:11px;color:#5A7A9A;margin-bottom:7px;">${info.vols} vols · ${info.pax.toLocaleString('fr-FR')} pax</div>
             <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;">
@@ -1265,27 +1233,27 @@ function renderDestCards(flt) {
 }
 
 window.showDestDetail=function(city,cardEl){
-    document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';});
+    document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('dc-active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';});
     const info=window._destData?.[city];
     if(!info)return;
-    cardEl.classList.add('active'); cardEl.style.borderColor='#4A9EFF55'; cardEl.style.background='rgba(74,158,255,.08)';
+    cardEl.classList.add('dc-active');cardEl.style.borderColor='#4A9EFF55';cardEl.style.background='rgba(74,158,255,.08)';
     const sorted=Object.entries(info.companies).sort((a,b)=>b[1].vols-a[1].vols);
-    const maxV=sorted[0]?.[1].vols||1; const total=sorted.reduce((s,[,v])=>s+v.vols,0);
+    const maxV=sorted[0]?.[1].vols||1,total=sorted.reduce((s,[,v])=>s+v.vols,0);
     const detail=document.getElementById('destDetail');
     detail.style.display='';
-    detail.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <div><span style="font-size:16px;font-weight:800;color:#e2e8f0;">${city}</span>
-        <span style="font-size:12px;color:#5A7A9A;margin-left:10px;">${total} vols · ${info.pax.toLocaleString('fr-FR')} passagers</span></div>
-        <button onclick="document.getElementById('destDetail').style.display='none';document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';})"
+    detail.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div><span style="font-size:15px;font-weight:800;color:#e2e8f0;">${city}</span>
+        <span style="font-size:12px;color:#5A7A9A;margin-left:10px;">${total} vols · ${info.pax.toLocaleString('fr-FR')} pax</span></div>
+        <button onclick="document.getElementById('destDetail').style.display='none';document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('dc-active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';})"
             style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">✕</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;">
     ${sorted.map(([co,s],i)=>{
-        const color=PALETTE[i%PALETTE.length]; const share=Math.round(s.vols/total*100); const pct=Math.round(s.vols/maxV*100);
+        const color=PALETTE[i%PALETTE.length],share=Math.round(s.vols/total*100),pct=Math.round(s.vols/maxV*100);
         return `<div style="background:rgba(255,255,255,.03);border-radius:9px;padding:10px 14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                 <span style="font-size:13px;font-weight:600;color:#e2e8f0;">${co}</span>
-                <div style="display:flex;gap:10px;align-items:center;">
+                <div style="display:flex;gap:10px;">
                     <span style="font-size:13px;font-weight:700;color:${color};">${s.vols} vol${s.vols>1?'s':''}</span>
                     <span style="font-size:11px;color:#5A7A9A;">${s.pax.toLocaleString('fr-FR')} pax</span>
                     <span style="font-size:11px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:4px;color:#94a3b8;">${share}%</span>
@@ -1295,78 +1263,170 @@ window.showDestDetail=function(city,cardEl){
                 <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${color},${color}66);border-radius:3px;"></div>
             </div>
         </div>`;
-    }).join('')}
-    </div>`;
-    setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+    }).join('')}</div>`;
+    setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),80);
 };
 
-function populateRouteSelect(flights) {
-    const routes={};
-    flights.forEach(f=>{
-        if(f.from&&f.to){
-            const key=`${f.from}|||${f.to}`;
-            if(!routes[key])routes[key]={label:`${cityName(f.from)} → ${cityName(f.to)}`,count:0};
-            routes[key].count++;
-        }
-    });
-    const sel=document.getElementById('routeFilter'); const cur=sel.value;
-    sel.innerHTML='<option value="">— Choisir un trajet —</option>';
-    Object.entries(routes).sort((a,b)=>b[1].count-a[1].count).forEach(([key,{label,count}])=>{
-        const o=document.createElement('option'); o.value=key; o.textContent=`${label} (${count})`;
-        if(key===cur)o.selected=true; sel.appendChild(o);
+// ── Sélecteurs comparaison 2 compagnies ──
+function populateCmpSelects(flights){
+    const cos=[...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
+    ['cmpA','cmpB'].forEach(id=>{
+        const sel=document.getElementById(id);if(!sel)return;
+        const cur=sel.value;
+        sel.innerHTML=`<option value="">— ${id==='cmpA'?'Compagnie A':'Compagnie B'} —</option>`;
+        cos.forEach(co=>{const o=document.createElement('option');o.value=co;o.textContent=co;if(co===cur)o.selected=true;sel.appendChild(o);});
     });
     const years=[...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
-    const ySel=document.getElementById('routeYear'); const curY=ySel.value;
+    const ySel=document.getElementById('cmpYear');if(!ySel)return;
+    const curY=ySel.value;
     ySel.innerHTML='<option value="ALL">Toutes années</option>';
     years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;if(String(y)===curY)o.selected=true;ySel.appendChild(o);});
 }
 
-function runRouteComparison() {
-    const routeKey=document.getElementById('routeFilter').value;
-    const year=document.getElementById('routeYear').value;
-    const res=document.getElementById('routeCmpResult');
-    if(!routeKey){res.innerHTML='<span style="color:#5A7A9A;">Sélectionnez un trajet pour voir l\'analyse</span>';return;}
-    const[from,to]=routeKey.split('|||');
-    const all=getFlights();
-    const flt=all.filter(f=>{
-        if(f.from!==from||f.to!==to)return false;
+function runComparison(){
+    const coA=document.getElementById('cmpA').value;
+    const coB=document.getElementById('cmpB').value;
+    const year=document.getElementById('cmpYear').value;
+    const month=document.getElementById('cmpMonth').value;
+    const res=document.getElementById('cmpResult');
+    if(!coA||!coB){res.innerHTML='<span style="color:#5A7A9A;">Sélectionnez deux compagnies pour comparer</span>';return;}
+    if(coA===coB){res.innerHTML='<span style="color:#5A7A9A;">Sélectionnez deux compagnies différentes</span>';return;}
+    const all=getFlights().filter(f=>{
         if(year!=='ALL'&&f.date&&new Date(f.date).getFullYear()!==+year)return false;
+        if(month!=='ALL'&&f.date&&new Date(f.date).getMonth()!==+month)return false;
         return true;
     });
+    const fA=all.filter(f=>f.company===coA), fB=all.filter(f=>f.company===coB);
+    const paxA=fA.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
+    const paxB=fB.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
+    const mA=monthly(fA), mB=monthly(fB);
+
+    const now=new Date();
+    const prevM=now.getMonth()===0?11:now.getMonth()-1;
+    const prevMName=MONTHS_LONG[prevM];
+    let narrative='';
+    if(fA.length>fB.length){
+        const diff=fA.length-fB.length,pct=fB.length?Math.round(diff/fB.length*100):100;
+        narrative=`<strong>${coA}</strong> domine avec <strong>${fA.length}</strong> vols contre <strong>${fB.length}</strong> pour <strong>${coB}</strong> — avantage de <strong>+${diff}</strong> vols (+${pct}%).`;
+    } else if(fB.length>fA.length){
+        const diff=fB.length-fA.length,pct=fA.length?Math.round(diff/fA.length*100):100;
+        narrative=`<strong>${coB}</strong> domine avec <strong>${fB.length}</strong> vols contre <strong>${fA.length}</strong> pour <strong>${coA}</strong> — avantage de <strong>+${diff}</strong> vols (+${pct}%).`;
+    } else {
+        narrative=`<strong>${coA}</strong> et <strong>${coB}</strong> sont à égalité avec <strong>${fA.length}</strong> vols chacune.`;
+    }
+    if(mA[prevM]>0||mB[prevM]>0){
+        if(mA[prevM]>mB[prevM]) narrative+=` En ${prevMName}, <strong>${coA}</strong> a surpassé <strong>${coB}</strong> : <strong>${mA[prevM]}</strong> vs <strong>${mB[prevM]}</strong> vols.`;
+        else if(mB[prevM]>mA[prevM]) narrative+=` En ${prevMName}, <strong>${coB}</strong> avait l'avantage : <strong>${mB[prevM]}</strong> vs <strong>${mA[prevM]}</strong> vols.`;
+        else if(mA[prevM]>0) narrative+=` En ${prevMName}, égalité parfaite avec <strong>${mA[prevM]}</strong> vol${mA[prevM]>1?'s':''} chacune.`;
+    }
+
+    // Barres comparaison
+    killCmp('cmpBar');
+    const cmpCanvas=document.getElementById('cmpBarChart');
+    if(!cmpCanvas){
+        res.innerHTML=`<div style="background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">💡 ${narrative}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        ${[[coA,fA,paxA,'#4A9EFF'],[coB,fB,paxB,'#2DD4A0']].map(([co,fl,px,color])=>`
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px 16px;">
+                <div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:8px;">${co}</div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:22px;font-weight:800;color:${color};">${fl.length}</span>
+                    <span style="font-size:11px;color:#5A7A9A;align-self:flex-end;">vols</span>
+                </div>
+                <div style="font-size:12px;color:#5A7A9A;">${px.toLocaleString('fr-FR')} passagers</div>
+                <div style="margin-top:8px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;width:${Math.round(fl.length/Math.max(fA.length,fB.length,1)*100)}%;background:${color};border-radius:3px;"></div>
+                </div>
+            </div>`).join('')}
+        </div>
+        <div style="margin-top:16px;position:relative;height:200px;"><canvas id="cmpBarChart"></canvas></div>`;
+    }
+
+    // Re-créer le canvas
+    setTimeout(()=>{
+        const cv=document.getElementById('cmpBarChart');if(!cv)return;
+        killCmp('cmpBar');
+        cmpCharts['cmpBar']=new Chart(cv,{
+            type:'bar',
+            data:{labels:MONTHS_FR,datasets:[
+                {label:coA,data:mA,backgroundColor:'rgba(74,158,255,.65)',borderColor:'#4A9EFF',borderWidth:2,borderRadius:5},
+                {label:coB,data:mB,backgroundColor:'rgba(45,212,160,.65)',borderColor:'#2DD4A0',borderWidth:2,borderRadius:5}
+            ]},
+            options:darkOpts({plugins:{legend:{display:true,position:'top',labels:{color:'#94a3b8',font:{size:11},padding:12,usePointStyle:true}},
+                tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}})
+        });
+    },50);
+}
+
+// ── Trajet unique : lister les destinations depuis NKC ──
+function populateRouteSelect(flights){
+    // Destinations depuis NKC (vols où NKC est départ ou arrivée)
+    const dests={};
+    flights.forEach(f=>{
+        const dest=isNKC(f.from)?f.to:isNKC(f.to)?f.from:null;
+        if(!dest)return;
+        const city=cityName(dest);
+        if(!dests[city])dests[city]={key:dest,count:0};
+        dests[city].count++;
+    });
+    const sel=document.getElementById('routeFilter');const cur=sel.value;
+    sel.innerHTML='<option value="">— Choisir une destination —</option>';
+    Object.entries(dests).sort((a,b)=>b[1].count-a[1].count).forEach(([city,{key,count}])=>{
+        const o=document.createElement('option');
+        o.value=key; o.textContent=`${city} (${count} vols)`;
+        if(key===cur)o.selected=true;sel.appendChild(o);
+    });
+    const years=[...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
+    const ySel=document.getElementById('routeYear');const curY=ySel.value;
+    ySel.innerHTML='<option value="ALL">Toutes années</option>';
+    years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;if(String(y)===curY)o.selected=true;ySel.appendChild(o);});
+}
+
+function runRouteComparison(){
+    const destCode=document.getElementById('routeFilter').value;
+    const year=document.getElementById('routeYear').value;
+    const res=document.getElementById('routeCmpResult');
+    if(!destCode){res.innerHTML='<span style="color:#5A7A9A;">Sélectionnez une destination</span>';return;}
+    const destCity=cityName(destCode);
+    // Tous les vols NKC <-> destCode
+    const all=getFlights();
+    const flt=all.filter(f=>{
+        if(year!=='ALL'&&f.date&&new Date(f.date).getFullYear()!==+year)return false;
+        const isRoute=(isNKC(f.from)&&f.to===destCode)||(isNKC(f.to)&&f.from===destCode);
+        return isRoute;
+    });
     if(!flt.length){res.innerHTML='<span style="color:#5A7A9A;">Aucun vol sur ce trajet</span>';return;}
-    const depCity=cityName(from),arrCity=cityName(to);
     const byComp={};
     flt.forEach(f=>{
         const co=f.company||'?';
         if(!byComp[co])byComp[co]={vols:0,pax:0,byMonth:Array(12).fill(0)};
-        byComp[co].vols++; byComp[co].pax+=(+f.passengers||0)+(+f.babies||0);
+        byComp[co].vols++;byComp[co].pax+=(+f.passengers||0)+(+f.babies||0);
         if(f.date)byComp[co].byMonth[new Date(f.date).getMonth()]++;
     });
     const sorted=Object.entries(byComp).sort((a,b)=>b[1].vols-a[1].vols);
     const maxVols=sorted[0][1].vols;
-    const now=new Date(); const prevMonth=now.getMonth()===0?11:now.getMonth()-1;
-    const prevMonthName=MONTHS_LONG[prevMonth];
+    const now=new Date();const prevM=now.getMonth()===0?11:now.getMonth()-1;const prevMName=MONTHS_LONG[prevM];
     let narrative='';
     if(sorted.length===1){
         const[co,s]=sorted[0];
-        narrative=`<strong>${co}</strong> opère seule ce trajet avec <strong>${s.vols} vol${s.vols>1?'s':''}</strong> et <strong>${s.pax.toLocaleString('fr-FR')} passagers</strong>.`;
+        narrative=`<strong>${co}</strong> opère seule ce trajet : <strong>${s.vols} vol${s.vols>1?'s':''}</strong> et <strong>${s.pax.toLocaleString('fr-FR')} pax</strong>.`;
     } else {
         const[co1,s1]=sorted[0],[co2,s2]=sorted[1];
-        const diff=s1.vols-s2.vols; const pct=s2.vols?Math.round((s1.vols-s2.vols)/s2.vols*100):100;
-        const v1prev=s1.byMonth[prevMonth],v2prev=s2.byMonth[prevMonth];
-        narrative=`Sur <strong>${depCity} → ${arrCity}</strong>, <strong>${co1}</strong> domine avec <strong>${s1.vols} vol${s1.vols>1?'s':''}</strong> contre <strong>${s2.vols}</strong> pour <strong>${co2}</strong> — écart de <strong>${diff>0?'+'+diff:diff}</strong> (${pct>0?'+':''}${pct}%).`;
-        if(v1prev>0||v2prev>0){
-            if(v1prev>v2prev) narrative+=` En ${prevMonthName}, <strong>${co1}</strong> a surpassé <strong>${co2}</strong> : <strong>${v1prev}</strong> vs <strong>${v2prev}</strong> vols.`;
-            else if(v2prev>v1prev) narrative+=` Mais en ${prevMonthName}, <strong>${co2}</strong> avait pris l'avantage : <strong>${v2prev}</strong> vs <strong>${v1prev}</strong> vols.`;
-            else if(v1prev>0) narrative+=` En ${prevMonthName}, égalité parfaite : <strong>${v1prev}</strong> vol${v1prev>1?'s':''} chacune.`;
+        const diff=s1.vols-s2.vols,pct=s2.vols?Math.round(diff/s2.vols*100):100;
+        const v1p=s1.byMonth[prevM],v2p=s2.byMonth[prevM];
+        narrative=`Sur le trajet <strong>NKC ↔ ${destCity}</strong>, <strong>${co1}</strong> domine : <strong>${s1.vols} vols</strong> contre <strong>${s2.vols}</strong> pour <strong>${co2}</strong> (${diff>0?'+':''}${diff} vols, ${pct>0?'+':''}${pct}%).`;
+        if(v1p>0||v2p>0){
+            if(v1p>v2p) narrative+=` En ${prevMName}, <strong>${co1}</strong> a surpassé <strong>${co2}</strong> : <strong>${v1p}</strong> vs <strong>${v2p}</strong>.`;
+            else if(v2p>v1p) narrative+=` Mais en ${prevMName}, <strong>${co2}</strong> menait : <strong>${v2p}</strong> vs <strong>${v1p}</strong>.`;
+            else if(v1p>0) narrative+=` En ${prevMName}, égalité : <strong>${v1p}</strong> vol${v1p>1?'s':''} chacune.`;
         }
-        if(sorted.length>2) narrative+=` Aussi sur ce trajet : ${sorted.slice(2).map(([co,s])=>`<strong>${co}</strong> (${s.vols})`).join(', ')}.`;
+        if(sorted.length>2) narrative+=` ${sorted.slice(2).map(([co,s])=>`<strong>${co}</strong> (${s.vols})`).join(', ')} aussi sur ce trajet.`;
     }
-    res.innerHTML=`<div style="background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:13px;color:#94a3b8;line-height:1.8;">💡 ${narrative}</div>
+    res.innerHTML=`<div style="background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#94a3b8;line-height:1.8;">💡 ${narrative}</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
     ${sorted.map(([co,s],i)=>{
-        const color=PALETTE[i%PALETTE.length]; const share=Math.round(s.vols/flt.length*100);
-        const pct=Math.round(s.vols/maxVols*100); const peakM=s.byMonth.indexOf(Math.max(...s.byMonth));
+        const color=PALETTE[i%PALETTE.length],share=Math.round(s.vols/flt.length*100),pct=Math.round(s.vols/maxVols*100);
+        const peakM=s.byMonth.indexOf(Math.max(...s.byMonth));
         const peak=s.byMonth[peakM]>0?`Pic: ${MONTHS_LONG[peakM]} (${s.byMonth[peakM]})` : '';
         return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px 16px;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
@@ -1384,8 +1444,10 @@ function runRouteComparison() {
 window.refreshChartsFromApp=function(flightsData){
     window.appFlights=flightsData;
     if(document.getElementById('tab-rapports')?.classList.contains('active'))refreshCharts();
-    populateRouteSelect(flightsData);
+    else{populateCmpSelects(flightsData);populateRouteSelect(flightsData);}
 };
+
+
 
 function populateCmpSelects(flights) {
     const companies = [...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
