@@ -3481,11 +3481,12 @@ function renderProgrammeByCompany() {
             const saisi   = g.vols.filter(v=>_isSaisi(v)).length;
             const total   = g.vols.length;
             const restant = total - saisi;
-            const dot     = restant===0 ? '#34d399' : '#fc8181';
+            const pctC    = total ? saisi/total : 0;
+            const dot     = pctC===0 ? '#fc8181' : pctC===1 ? '#34d399' : '#fbbf24';
             return `<button data-gi="${gi}" onclick="_selectProgCompanyIdx(this.dataset.gi)"
                 style="${_progSelectedCompany===g.company?btnAct:btnInact}">
                 <span style="width:8px;height:8px;border-radius:50%;background:${dot};display:inline-block;flex-shrink:0;"></span>
-                ${esc(g.company)} <span style="opacity:.6;font-weight:400;">(${restant}/${total})</span>
+                ${esc(g.company)} <span style="opacity:.6;font-weight:400;">(${saisi}/${total})</span>
             </button>`;
         }).join('');
 
@@ -3519,7 +3520,8 @@ function renderProgrammeByCompany() {
                 moisKeys.map(mm => {
                     const info   = moisDispo[mm];
                     const active = _progSelectedMonth === mm;
-                    const dot    = (info.total-info.saisi)===0 ? '#34d399' : '#fbbf24';
+                    const pct_m  = info.total ? info.saisi/info.total : 0;
+                    const dot    = pct_m===0 ? '#fc8181' : pct_m===1 ? '#34d399' : '#fbbf24';
                     const bg     = active ? 'background:rgba(99,102,241,0.2);border-color:#818cf8;color:#818cf8;' : 'background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);color:#64748b;';
                     return `<button data-mm="${mm}" onclick="_selectProgMonth(${mm})"
                         style="${bg}border:1px solid;border-radius:16px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
