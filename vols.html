@@ -332,6 +332,7 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
         <option value="">Tout départ</option>
       </select>
     </div>
+    <button class="swap-btn" onclick="_swapSearch()" title="Inverser départ et arrivée" style="align-self:flex-end;margin-bottom:1px;font-size:16px;padding:8px 10px;">⇄</button>
     <div class="filter-group">
       <div class="filter-label">Arrivée</div>
       <select class="filter-select" id="sfArr" onchange="runSearch()">
@@ -643,7 +644,6 @@ window._renderCal=function(type){
             <div class="cf-n" style="font-size:10px;">${esc(s.company||'—')}</div>
             <div style="font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:1px;">${esc(s.vol||'')}</div>
           </div>
-          <button class="swap-btn" onclick="event.stopPropagation();window._swapSearch()" title="Inverser départ/arrivée">⇄</button>
         </div>
         <div class="cf-r" style="display:block;">${esc(dep.city)}→${esc(arr.city)}</div>
         ${pr?`<div class="cf-t" style="display:block;">${pr.hdep}→${pr.harr}</div>`:''}
