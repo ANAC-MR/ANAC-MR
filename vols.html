@@ -158,6 +158,31 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 /* ── MAP AEROPORTS ── */
 #mapAirports{height:480px;width:100%;border-radius:14px;overflow:hidden;border:1px solid var(--border);}
 .ap-map-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.search-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end;}
+.filter-group{display:flex;flex-direction:column;gap:4px;}
+.filter-label{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;}
+.filter-select{background:var(--card);border:1px solid var(--border);border-radius:9px;
+  padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;
+  min-width:180px;cursor:pointer;transition:border-color .2s;}
+.filter-select:focus{border-color:rgba(212,175,55,.35);}
+.filter-select option{background:var(--card);}
+.btn-clear-search{background:transparent;border:1px solid var(--border);border-radius:9px;
+  padding:9px 14px;color:var(--dim);font-size:12px;font-family:var(--font);cursor:pointer;
+  transition:all .15s;align-self:flex-end;}
+.btn-clear-search:hover{color:var(--text);border-color:rgba(255,255,255,.15);}
+.search-result-info{font-size:12px;color:var(--dim);margin-bottom:10px;}
+.search-result-info strong{color:var(--text);}
+/* Lien compagnie sur carte */
+.airline-link-banner{position:absolute;bottom:10px;right:10px;z-index:500;
+  background:rgba(212,175,55,.15);backdrop-filter:blur(8px);
+  border:1px solid rgba(212,175,55,.35);border-radius:10px;
+  padding:10px 16px;display:none;cursor:pointer;transition:background .15s;
+  text-decoration:none;}
+.airline-link-banner:hover{background:rgba(212,175,55,.25);}
+.alb-label{font-size:10px;color:var(--dim);margin-bottom:2px;}
+.alb-name{font-size:13px;font-weight:700;color:var(--gold);}
+.alb-url{font-size:10px;color:var(--dim);margin-top:1px;}
+
 /* Loader */
 .loader-r{display:flex;align-items:center;justify-content:center;gap:8px;padding:40px;color:var(--dim);font-size:13px;}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(212,175,55,.15);border-top-color:var(--gold);animation:sp .7s linear infinite;}
@@ -204,20 +229,26 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 <!-- Tabs -->
 <div class="tabs-nav">
   <div class="tabs-row">
-    <button class="tab-btn active" data-tab="today" onclick="switchTab('today')">📅 Aujourd'hui</button>
+    <button class="tab-btn" data-tab="today" onclick="switchTab('today')">📅 Aujourd'hui</button>
     <button class="tab-btn ma" data-tab="cal-ma" onclick="switchTab('cal-ma')">🇲🇷 Mauritania Airlines</button>
     <button class="tab-btn" data-tab="cal-int" onclick="switchTab('cal-int')">🌍 Compagnies internationales</button>
+    <button class="tab-btn" active" data-tab="search" onclick="switchTab('search')">🔍 Recherche</button>
   </div>
 </div>
 
 <!-- Tab: Aujourd'hui -->
 <div class="tab-content">
-<div id="tab-today" class="tab-pane active">
+<div id="tab-today" class="tab-pane">
   <div class="today-section">
     <div>
       <div class="map-box">
         <div id="map"></div>
         <div class="map-hint">Cliquez un vol pour voir le trajet</div>
+    <a class="airline-link-banner" id="airlineLinkBanner" href="#" target="_blank" rel="noopener">
+      <div class="alb-label">Voir sur le site officiel ↗</div>
+      <div class="alb-name" id="albName">—</div>
+      <div class="alb-url" id="albUrl">—</div>
+    </a>
         <div class="map-info" id="mapInfo">
           <div class="mi-vol" id="miVol">—</div>
           <div class="mi-co" id="miCo">—</div>
@@ -278,8 +309,61 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
   <div class="cal-grid" id="calBodyINT"></div>
 </div>
 
+
+<!-- Tab: Recherche -->
+<div id="tab-search" class="tab-pane active">
+  <div class="search-filters">
+    <div class="filter-group">
+      <div class="filter-label">Compagnie</div>
+      <select class="filter-select" id="sfCompany" onchange="runSearch()">
+        <option value="">Toutes les compagnies</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Départ</div>
+      <select class="filter-select" id="sfDep" onchange="runSearch()">
+        <option value="">Tout départ</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Arrivée</div>
+      <select class="filter-select" id="sfArr" onchange="runSearch()">
+        <option value="">Toute arrivée</option>
+      </select>
+    </div>
+    <button class="btn-clear-search" onclick="clearSearch()">✕ Effacer</button>
+  </div>
+  <div class="search-result-info" id="searchResultInfo"></div>
+
+  <!-- Calendrier semaine unifié (MA + Int) -->
+  <div class="cal-nav">
+    <button class="btn-wk" onclick="changeWeek('sr',-1)">← Préc.</button>
+    <div style="flex:1;text-align:center;">
+      <div class="week-label" id="wlSR"></div>
+      <div class="week-sub" id="wsSR"></div>
+    </div>
+    <button class="btn-wk btn-today" onclick="resetWeek('sr')">Aujourd'hui</button>
+    <button class="btn-wk" onclick="changeWeek('sr',1)">Suiv. →</button>
+  </div>
+  <div class="cal-grid" id="calHeadSR"></div>
+  <div class="cal-grid" id="calBodySR">
+    <div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--dim);">
+      Utilisez les filtres pour rechercher des vols
+    </div>
+  </div>
+</div>
+
 </div><!-- end tab-content -->
 
+<script>
+// Stubs pour les onclick HTML — délèguent au module quand prêt
+function switchTab(t){window._switchTab?window._switchTab(t):(window._pendingTab=t);}
+function renderCal(t){window._renderCal&&window._renderCal(t);}
+function changeWeek(t,d){window._changeWeek&&window._changeWeek(t,d);}
+function resetWeek(t){window._resetWeek&&window._resetWeek(t);}
+function runSearch(){window._runSearch&&window._runSearch();}
+function clearSearch(){window._clearSearch&&window._clearSearch();}
+</script>
 <script type="module">
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, getDocs, doc, getDoc }
@@ -484,7 +568,7 @@ function isMA(s){return (s.company||'').toLowerCase().includes('mauritania');}
 
 // ── STATE ──
 let allSchedules=[];
-const weekOffsets={ma:0,int:0};
+const weekOffsets={ma:0,int:0,sr:0};
 let pinnedCalId=null;
 
 // ── CALENDRIER ──
@@ -496,16 +580,17 @@ function getWeekDates(offset){
   return Array.from({length:7},(_,i)=>{const d=new Date(lun);d.setDate(lun.getDate()+i);return d.toISOString().split('T')[0];});
 }
 
-window.renderCal=function(type){
+window._renderCal=function(type){
   const offset=weekOffsets[type];
   const dates=getWeekDates(offset);
   const today=todayStr();
-  const qId=type==='ma'?'sVolMA':'sVolINT';
-  const q=(document.getElementById(qId).value||'').trim().toUpperCase();
-  const headId=type==='ma'?'calHeadMA':'calHeadINT';
-  const bodyId=type==='ma'?'calBodyMA':'calBodyINT';
-  const wlId=type==='ma'?'wlMA':'wlINT';
-  const wsId=type==='ma'?'wsMA':'wsINT';
+  // 'sr' = calendrier de recherche unifié
+  const qId=type==='ma'?'sVolMA':type==='int'?'sVolINT':null;
+  const q=qId?(document.getElementById(qId).value||'').trim().toUpperCase():'';
+  const headId=type==='ma'?'calHeadMA':type==='int'?'calHeadINT':'calHeadSR';
+  const bodyId=type==='ma'?'calBodyMA':type==='int'?'calBodyINT':'calBodySR';
+  const wlId=type==='ma'?'wlMA':type==='int'?'wlINT':'wlSR';
+  const wsId=type==='ma'?'wsMA':type==='int'?'wsINT':'wsSR';
 
   const d0=new Date(dates[0]+'T12:00:00Z'),d6=new Date(dates[6]+'T12:00:00Z');
   document.getElementById(wlId).textContent=
@@ -514,7 +599,8 @@ window.renderCal=function(type){
     offset===0?'Semaine en cours':offset>0?'+'+offset+' sem.':offset+' sem.';
 
   // Filtrer par type compagnie
-  let base=allSchedules.filter(s=>type==='ma'?isMA(s):!isMA(s));
+  // Pour 'sr', utiliser _searchFiltered
+  let base=type==='sr'?_searchFiltered:allSchedules.filter(s=>type==='ma'?isMA(s):!isMA(s));
 
   document.getElementById(headId).innerHTML=dates.map((ds,i)=>`
     <div class="cal-head ${ds===today?'today':''}">${JOURS_S[i]}</div>`).join('');
@@ -558,17 +644,28 @@ window.renderCal=function(type){
 
 window._calPin=function(schedId,ds){
   const key=schedId+'_'+ds;
-  if(pinnedCalId===key){pinnedCalId=null;clearRoute();}
+  if(pinnedCalId===key){pinnedCalId=null;clearRoute();hideAirlineLink();}
   else{
     pinnedCalId=key;
     const s=allSchedules.find(x=>x.id===schedId);
-    if(s)showRoute(s);
+    if(s){showRoute(s);showAirlineLink(s);}
   }
-  window.renderCal('ma');window.renderCal('int');
+  window._renderCal('ma');window._renderCal('int');
+  // Re-render search calendar si actif
+  if(document.getElementById('tab-search').classList.contains('active'))
+    window._runSearch();
 };
 
-window.changeWeek=function(type,delta){weekOffsets[type]+=delta;window.renderCal(type);};
-window.resetWeek=function(type){weekOffsets[type]=0;window.renderCal(type);};
+window._changeWeek=function(type,delta){
+  weekOffsets[type]+=delta;
+  if(type==='sr')window._runSearch();
+  else window._renderCal(type);
+};
+window._resetWeek=function(type){
+  weekOffsets[type]=0;
+  if(type==='sr')window._runSearch();
+  else window._renderCal(type);
+};
 
 // ── AUJOURD'HUI ──
 function renderToday(){
@@ -629,20 +726,26 @@ function renderToday(){
 }
 
 window._todayClick=function(id,i){
-  if(pinnedTodayId===id){pinnedTodayId=null;clearRoute();}
-  else{pinnedTodayId=id;const s=window._todayFlights[i];if(s)showRoute(s);}
+  if(pinnedTodayId===id){pinnedTodayId=null;clearRoute();hideAirlineLink();}
+  else{
+    pinnedTodayId=id;
+    const s=window._todayFlights[i];
+    if(s){showRoute(s);showAirlineLink(s);}
+  }
   renderToday();
 };
 
 // ── TABS ──
-window.switchTab=function(tab){
+window._switchTab=function(tab){
   document.querySelectorAll('.tab-pane').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   document.querySelector('[data-tab="'+tab+'"]').classList.add('active');
-  if(tab==='cal-ma')window.renderCal('ma');
-  else if(tab==='cal-int')window.renderCal('int');
+  hideAirlineLink();
+  if(tab==='cal-ma')window._renderCal('ma');
+  else if(tab==='cal-int')window._renderCal('int');
   else if(tab==='today')renderToday();
+  else if(tab==='search'){_fillSearchFilters();window._runSearch();}
 };
 
 // ── MARQUEURS AÉROPORTS SUR MAP PRINCIPALE ──
@@ -679,6 +782,115 @@ function _showAirportsOnMap(){
   });
 }
 
+// ── URLS SITES OFFICIELS DES COMPAGNIES ──
+const AIRLINE_URLS={
+  'mauritania airlines':   {url:'https://www.mauritaniaairlines.mr', short:'mauritaniaairlines.mr'},
+  'mauritania airlines international': {url:'https://www.mauritaniaairlines.mr', short:'mauritaniaairlines.mr'},
+  'air sénégal':    {url:'https://www.air-senegal.com',      short:'air-senegal.com'},
+  'air senegal':    {url:'https://www.air-senegal.com',      short:'air-senegal.com'},
+  'turkish airlines':{url:'https://www.turkishairlines.com', short:'turkishairlines.com'},
+  'air algérie':    {url:'https://www.airalgerie.dz',        short:'airalgerie.dz'},
+  'air algerie':    {url:'https://www.airalgerie.dz',        short:'airalgerie.dz'},
+  'tunisair':       {url:'https://www.tunisair.com',         short:'tunisair.com'},
+  'royal air maroc':{url:'https://www.royalairmaroc.com',    short:'royalairmaroc.com'},
+  'air france':     {url:'https://www.airfrance.fr',         short:'airfrance.fr'},
+  'asky':           {url:'https://www.flyasky.com',          short:'flyasky.com'},
+  'binter':         {url:'https://www.bintercanarias.com',   short:'bintercanarias.com'},
+  'transair':       {url:'https://www.transair.sn',          short:'transair.sn'},
+};
+function getAirlineUrl(company){
+  const k=(company||'').toLowerCase().trim();
+  return AIRLINE_URLS[k]||null;
+}
+
+// Afficher/masquer le lien compagnie sur la carte
+function showAirlineLink(s){
+  const info=getAirlineUrl(s.company||'');
+  const banner=document.getElementById('airlineLinkBanner');
+  if(info&&banner){
+    banner.href=info.url;
+    document.getElementById('albName').textContent=s.company||'';
+    document.getElementById('albUrl').textContent=info.short;
+    banner.style.display='';
+  }
+}
+function hideAirlineLink(){
+  const b=document.getElementById('airlineLinkBanner');
+  if(b)b.style.display='none';
+}
+
+// ── RECHERCHE ──
+let weekOffsets_sr=0;
+let _searchFiltered=[];
+
+function _fillSearchFilters(){
+  const cos=[...new Set(allSchedules.map(s=>s.company).filter(Boolean))].sort();
+  const depSel=document.getElementById('sfDep');
+  const arrSel=document.getElementById('sfArr');
+  const coSel=document.getElementById('sfCompany');
+  if(!coSel||!depSel||!arrSel)return;
+
+  coSel.innerHTML='<option value="">Toutes les compagnies</option>'+
+    cos.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+  // Construire liste des villes depuis les routings
+  const depSet=new Set(), arrSet=new Set();
+  allSchedules.forEach(s=>{
+    const pr=parseRouting(s.routing);
+    if(!pr)return;
+    const da=getAP(pr.dep), aa=getAP(pr.arr);
+    depSet.add(JSON.stringify({icao:pr.dep,city:da.city,iata:da.iata}));
+    arrSet.add(JSON.stringify({icao:pr.arr,city:aa.city,iata:aa.iata}));
+  });
+  const makeOpts=set=>'<option value="">—</option>'+
+    [...set].map(j=>JSON.parse(j)).sort((a,b)=>a.city.localeCompare(b.city))
+    .map(a=>`<option value="${esc(a.icao)}">${esc(a.city)} (${esc(a.iata)})</option>`).join('');
+  depSel.innerHTML='<option value="">Tout départ</option>'+makeOpts(depSet);
+  arrSel.innerHTML='<option value="">Toute arrivée</option>'+makeOpts(arrSet);
+}
+
+window._runSearch=function(){
+  const co=(document.getElementById('sfCompany').value||'').trim();
+  const dep=(document.getElementById('sfDep').value||'').trim();
+  const arr=(document.getElementById('sfArr').value||'').trim();
+
+  // Si aucun filtre, montrer un message
+  if(!co&&!dep&&!arr){
+    _searchFiltered=[];
+    document.getElementById('searchResultInfo').textContent='';
+    document.getElementById('calBodySR').innerHTML=
+      '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--dim);">Utilisez les filtres pour rechercher des vols</div>';
+    document.getElementById('calHeadSR').innerHTML='';
+    return;
+  }
+
+  let list=[...allSchedules];
+  if(co)list=list.filter(s=>(s.company||'')=== co);
+  if(dep||arr){
+    list=list.filter(s=>{
+      const pr=parseRouting(s.routing);
+      if(!pr)return false;
+      // Chercher dans toute la chaîne DEP → [STOP] → ARR
+      const legs=[pr.dep,pr.stop,pr.arr].filter(Boolean);
+      const matchDep=!dep||legs.includes(dep);
+      const matchArr=!arr||legs.includes(arr);
+      return matchDep&&matchArr;
+    });
+  }
+
+  _searchFiltered=list;
+  const info=document.getElementById('searchResultInfo');
+  if(info)info.innerHTML=`<strong>${list.length}</strong> vol${list.length!==1?'s':''} correspondant${list.length!==1?'s':''}`;
+  renderCal('sr');
+};
+
+window._clearSearch=function(){
+  document.getElementById('sfCompany').value='';
+  document.getElementById('sfDep').value='';
+  document.getElementById('sfArr').value='';
+  window._runSearch();
+};
+
 // ── INIT ──
 async function init(){
   try{
@@ -711,6 +923,8 @@ async function init(){
     renderToday();
     // Afficher tous les aéroports actifs sur la carte principale
     _showAirportsOnMap();
+    // Ouvrir l'onglet Recherche par défaut
+    setTimeout(()=>{ window._switchTab(window._pendingTab||'search'); window._pendingTab=null; }, 0);
   }catch(e){
     document.getElementById('todayBody').innerHTML=`<div style="padding:20px;color:#fc8181;">Erreur: ${esc(e.message)}</div>`;
   }
