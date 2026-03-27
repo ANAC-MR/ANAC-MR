@@ -801,8 +801,8 @@ function _showAirportsOnMap(){
 
 // ── URLS SITES OFFICIELS DES COMPAGNIES ──
 const AIRLINE_URLS={
-  'mauritania airlines':   {url:'https://www.mauritaniaairlines.mr', short:'mauritaniaairlines.mr'},
-  'mauritania airlines international': {url:'https://www.mauritaniaairlines.mr', short:'mauritaniaairlines.mr'},
+  'mauritania airlines':   {url:'https://booking.mauritaniaairline.com', short:'booking.mauritaniaairline.com'},
+  'mauritania airlines international': {url:'https://booking.mauritaniaairline.com', short:'booking.mauritaniaairline.com'},
   'air sénégal':    {url:'https://www.air-senegal.com',      short:'air-senegal.com'},
   'air senegal':    {url:'https://www.air-senegal.com',      short:'air-senegal.com'},
   'turkish airlines':{url:'https://www.turkishairlines.com', short:'turkishairlines.com'},
@@ -823,40 +823,28 @@ function getAirlineUrl(company){
 // Construire l'URL de recherche sur le site de la compagnie
 // avec les dates et villes pré-remplies si possible
 function buildSearchUrl(company, pr, targetDate){
-  const info=getAirlineUrl(company);
-  if(!info)return null;
-  const dep=getAP(pr.dep),arr=getAP(pr.arr);
+  const dep=getAP(pr.dep), arr=getAP(pr.arr);
   const depIata=dep.iata||pr.dep, arrIata=arr.iata||pr.arr;
   const k=(company||'').toLowerCase().trim();
-  // Date au format YYYY-MM-DD
   const d=targetDate||'';
-  const dd=d.replace(/-/g,''); // YYYYMMDD
   const dy=d.slice(0,4), dm=d.slice(5,7), dj=d.slice(8,10);
 
-  // URLs de recherche spécifiques par compagnie
+  // ── Mauritania Airlines ──
+  // Format moteur MAI Booking: ?dep=NKC&dest=CDG&date=YYYY-MM-DD
   if(k.includes('mauritania')){
-    return info.url+'/booking/flight?from='+depIata+'&to='+arrIata+(d?'&date='+d:'');
+    let url='https://booking.mauritaniaairline.com/';
+    if(depIata&&arrIata){
+      // Essayer le format query string du moteur MAI
+      url+='?dep='+depIata+'&dest='+arrIata;
+      if(d) url+='&date='+d;
+    }
+    return url;
   }
-  if(k.includes('tunisair')){
-    return 'https://www.tunisair.com/site/templates/tunisair/booking/booking.aspx?lang=FR&origin='+depIata+'&destination='+arrIata+(d?'&departureDate='+dj+'/'+dm+'/'+dy:'');
-  }
-  if(k.includes('turkish')){
-    return 'https://www.turkishairlines.com/fr-fr/flights/?from='+depIata+'&to='+arrIata+(d?'&depart='+dy+'-'+dm+'-'+dj:'');
-  }
-  if(k.includes('royal air maroc')||k.includes('ram')){
-    return 'https://www.royalairmaroc.com/fr/reservation?dep='+depIata+'&arr='+arrIata+(d?'&date='+dy+dm+dj:'');
-  }
-  if(k.includes('air france')){
-    return 'https://wwws.airfrance.fr/cgi-bin/AF/FR/fr/local/process/search/searchProcess.do?origin='+depIata+'&destination='+arrIata+(d?'&travelDates='+dj+dm+dy:'');
-  }
-  if(k.includes('air s') || k.includes('air sen')){
-    return info.url+'/reservation?from='+depIata+'&to='+arrIata;
-  }
-  if(k.includes('air alg')){
-    return 'https://www.airalgerie.dz/reservation/?depart='+depIata+'&arrivee='+arrIata;
-  }
-  // Fallback: page d'accueil de la compagnie
-  return info.url;
+
+  // ── Autres compagnies: sera complété par l'utilisateur ──
+  // Pour l'instant on renvoie la page d'accueil de la compagnie
+  const info=getAirlineUrl(company);
+  return info?info.url:null;
 }
 
 // Afficher/masquer le lien compagnie sur la carte
