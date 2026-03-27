@@ -190,6 +190,28 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 .alb-name{font-size:13px;font-weight:700;color:var(--gold);}
 .alb-url{font-size:10px;color:var(--dim);margin-top:1px;}
 
+/* ── Live tracking ── */
+.live-toggle{position:absolute;top:10px;left:50px;z-index:500;
+  display:flex;align-items:center;gap:8px;
+  background:rgba(7,16,31,.88);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;
+  font-size:12px;color:var(--dim);transition:all .15s;user-select:none;}
+.live-toggle:hover{border-color:rgba(255,255,255,.15);color:var(--text);}
+.live-toggle.on{border-color:rgba(45,212,160,.4);color:var(--green);}
+.live-toggle.on .lt-dot{background:var(--green);}
+.lt-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:background .2s;}
+.live-toggle.on .lt-dot{animation:pulse 1.5s ease infinite;}
+.live-count{font-size:10px;color:var(--dim);margin-left:2px;}
+.live-toggle.on .live-count{color:var(--green);}
+/* Tooltip avion */
+.plane-tooltip{background:rgba(7,16,31,.95)!important;border:1px solid rgba(255,255,255,.1)!important;
+  border-radius:8px!important;color:#e2e8f0!important;font-family:'Sora',sans-serif!important;
+  font-size:11px!important;padding:8px 10px!important;min-width:140px;}
+.pt-call{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#D4AF37;}
+.pt-info{font-size:10px;color:#5A7A9A;margin-top:3px;}
+.pt-speed{color:#4A9EFF;}
+.pt-alt{color:#2DD4A0;}
+
 /* Loader */
 .loader-r{display:flex;align-items:center;justify-content:center;gap:8px;padding:40px;color:var(--dim);font-size:13px;}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(212,175,55,.15);border-top-color:var(--gold);animation:sp .7s linear infinite;}
@@ -251,6 +273,11 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
       <div class="map-box">
         <div id="map"></div>
         <div class="map-hint">Cliquez un vol pour voir le trajet</div>
+    <div class="live-toggle" id="liveToggle" onclick="toggleLive()">
+      <div class="lt-dot"></div>
+      <span>Trafic en direct</span>
+      <span class="live-count" id="liveCount"></span>
+    </div>
     <a class="airline-link-banner" id="airlineLinkBanner" href="#" target="_blank" rel="noopener">
       <div class="alb-label">Voir sur le site officiel ↗</div>
       <div class="alb-name" id="albName">—</div>
@@ -372,6 +399,7 @@ function resetWeek(t){window._resetWeek&&window._resetWeek(t);}
 function runSearch(){window._runSearch&&window._runSearch();}
 function clearSearch(){window._clearSearch&&window._clearSearch();}
 function _swapSearch(){window._swapSearch&&window._swapSearch();}
+function toggleLive(){window._toggleLive&&window._toggleLive();}
 </script>
 <script type="module">
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -997,6 +1025,124 @@ window._swapSearch=function(){
   depEl.value=arrEl.value;
   arrEl.value=tmp;
   window._runSearch();
+};
+
+// ══════════════════════════════════════════
+// LIVE TRACKING — OpenSky Network
+// ══════════════════════════════════════════
+let _liveOn=false, _liveTimer=null, _liveMarkers={};
+
+// Zone couverte — élargie pour voir les avions qui approchent NKC
+const BBOX={lamin:10,lomin:-25,lamax:26,lomax:-5};
+
+// Icône avion orientée selon le cap
+function _planeIcon(heading, onGround){
+  const rot=heading||0;
+  const color=onGround?'#94a3b8':'#D4AF37';
+  const shadow=onGround?'':'drop-shadow(0 0 4px rgba(212,175,55,.7))';
+  return L.divIcon({
+    className:'',
+    iconSize:[28,28],
+    iconAnchor:[14,14],
+    html:`<div style="width:28px;height:28px;transform:rotate(${rot}deg);filter:${shadow};">
+      <svg viewBox="0 0 24 24" fill="${color}" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2A1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1l3.5 1v-1.5L13 19v-5.5z"/>
+      </svg></div>`
+  });
+}
+
+async function _fetchLive(){
+  try{
+    const url=`https://opensky-network.org/api/states/all?lamin=${BBOX.lamin}&lomin=${BBOX.lomin}&lamax=${BBOX.lamax}&lomax=${BBOX.lomax}`;
+    const r=await fetch(url,{cache:'no-cache'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    const states=data.states||[];
+
+    // Mettre à jour le compteur
+    const airborne=states.filter(s=>!s[8]&&s[6]&&s[5]);
+    document.getElementById('liveCount').textContent=airborne.length?'('+airborne.length+')':'';
+
+    // Supprimer les marqueurs qui ne sont plus là
+    const newIcaos=new Set(states.map(s=>s[0]));
+    Object.keys(_liveMarkers).forEach(icao=>{
+      if(!newIcaos.has(icao)){map.removeLayer(_liveMarkers[icao].marker);delete _liveMarkers[icao];}
+    });
+
+    // Ajouter/mettre à jour les marqueurs
+    states.forEach(s=>{
+      const[icao24,callsign,,,,lng,lat,,onGround,velocity,heading]=s;
+      if(!lat||!lng)return;
+      const pos=[lat,lng];
+      const call=(callsign||'').trim()||icao24;
+      const alt=s[7]?Math.round(s[7])+'m':'—';
+      const spd=velocity?Math.round(velocity*1.852)+'km/h':'—';
+      const country=s[2]||'';
+
+      // Tooltip HTML
+      const tipHtml=`<div>
+        <div class="pt-call">${esc(call)}</div>
+        <div class="pt-info">ICAO: ${esc(icao24.toUpperCase())}</div>
+        <div class="pt-info">${esc(country)}</div>
+        <div class="pt-info"><span class="pt-alt">Alt: ${alt}</span> &nbsp; <span class="pt-speed">Vitesse: ${spd}</span></div>
+        ${onGround?'<div class="pt-info" style="color:var(--gold);">🛬 Au sol</div>':''}
+      </div>`;
+
+      if(_liveMarkers[icao24]){
+        // Mettre à jour position et icône
+        _liveMarkers[icao24].marker.setLatLng(pos);
+        _liveMarkers[icao24].marker.setIcon(_planeIcon(heading,onGround));
+        _liveMarkers[icao24].marker.setTooltipContent(tipHtml);
+      } else {
+        // Créer nouveau marqueur
+        const m=L.marker(pos,{icon:_planeIcon(heading,onGround),zIndexOffset:500});
+        m.bindTooltip(tipHtml,{
+          className:'plane-tooltip',
+          direction:'top',
+          offset:[0,-10],
+          permanent:false
+        });
+        m.addTo(map);
+        _liveMarkers[icao24]={marker:m};
+      }
+    });
+  }catch(e){
+    console.warn('OpenSky error:',e.message);
+    // Si rate-limit, on réessaie dans 30s
+  }
+}
+
+function _clearLiveMarkers(){
+  Object.values(_liveMarkers).forEach(({marker})=>map.removeLayer(marker));
+  _liveMarkers={};
+  document.getElementById('liveCount').textContent='';
+}
+
+window._toggleLive=function(){
+  _liveOn=!_liveOn;
+  const btn=document.getElementById('liveToggle');
+  btn.classList.toggle('on',_liveOn);
+
+  if(_liveOn){
+    _fetchLive(); // première requête immédiate
+    _liveTimer=setInterval(_fetchLive,15000); // rafraîchir toutes les 15s
+    // OpenSky limite à ~4 requêtes/min sans compte, 1 avec compte gratuit
+  } else {
+    clearInterval(_liveTimer);
+    _clearLiveMarkers();
+  }
+};
+
+// Arrêter le live si on quitte l'onglet Aujourd'hui
+const _origSwitchTab=window._switchTab;
+window._switchTab=function(tab){
+  if(tab!=='today'&&_liveOn){
+    _liveOn=false;
+    clearInterval(_liveTimer);
+    _clearLiveMarkers();
+    document.getElementById('liveToggle').classList.remove('on');
+  }
+  _origSwitchTab(tab);
 };
 
 // ── INIT ──
