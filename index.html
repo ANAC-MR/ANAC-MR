@@ -1059,325 +1059,333 @@ function switchTab(tab) {
 // CHARTS
 // ══════════════════════════════════════════
 const MONTHS_FR = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
-const PALETTE   = ['#2B5A8E','#D4AF37','#006B3F','#C8102E','#FF7F00','#8B00FF','#00B67A','#E63946','#003087','#F77F00','#4a90d9','#e84141'];
+const MONTHS_LONG = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+const PALETTE = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#00B67A','#E84141','#54A0FF','#F7B731','#26de81','#fd9644'];
 let charts = {};
+
+const CITY_NAMES = {
+  'GQNO':'Nouakchott','NKC':'Nouakchott',
+  'GQPP':'Nouadhibou','NDB':'Nouadhibou',
+  'GQPZ':'Zouerate',  'OUZ':'Zouerate',
+  'GQNI':'Nema',      'EMN':'Nema',
+  'GQPF':'Kiffa',     'KFA':'Kiffa',
+  'LFPG':'Paris',     'CDG':'Paris',
+  'LTFM':'Istanbul',  'IST':'Istanbul',
+  'DAAG':'Alger',     'ALG':'Alger',
+  'DTTA':'Tunis',     'TUN':'Tunis',
+  'GMMN':'Casablanca','CMN':'Casablanca',
+  'GOBD':'Dakar',     'DSS':'Dakar',
+  'GCLP':'Las Palmas','LPA':'Las Palmas',
+  'GBYD':'Banjul',    'BJL':'Banjul',
+  'GUCY':'Conakry',   'CKY':'Conakry',
+  'DIAP':'Abidjan',   'ABJ':'Abidjan',
+  'DNMM':'Lagos',     'LOS':'Lagos',
+  'GABS':'Bamako',    'BKO':'Bamako',
+  'OEMA':'Madinah',   'MED':'Madinah',
+  'DBBP':'Lomé',      'LFW':'Lomé',
+};
+function cityName(code) { return CITY_NAMES[code] || code; }
 
 function getFlights() { return window.appFlights || []; }
 
 function filterFlights(flights) {
     const y = document.getElementById('chartYearFilter').value;
     const m = document.getElementById('chartMonthFilter').value;
-    const c = document.getElementById('chartCompanyFilter') ? document.getElementById('chartCompanyFilter').value : 'ALL';
+    const co = document.getElementById('chartCompanyFilter').value;
     return flights.filter(f => {
-        if (!f.date) return false;
-        const d = new Date(f.date);
-        if (y !== 'ALL' && d.getFullYear() !== +y) return false;
-        if (m !== 'ALL' && d.getMonth()    !== +m) return false;
-        if (c !== 'ALL' && f.company !== c) return false;
+        const d = f.date ? new Date(f.date) : null;
+        if (y !== 'ALL' && (!d || d.getFullYear() !== +y)) return false;
+        if (m !== 'ALL' && (!d || d.getMonth() !== +m)) return false;
+        if (co !== 'ALL' && f.company !== co) return false;
         return true;
     });
-}
-
-function populateCompanyFilter(flights) {
-    const sel = document.getElementById('chartCompanyFilter');
-    if (!sel) return;
-    const cur = sel.value;
-    const companies = [...new Set(flights.map(f => f.company).filter(Boolean))].sort();
-    sel.innerHTML = '<option value="ALL">Toutes les compagnies</option>';
-    companies.forEach(c => {
-        const o = document.createElement('option');
-        o.value = c; o.textContent = c;
-        if (c === cur) o.selected = true;
-        sel.appendChild(o);
-    });
-}
-
-function resetChartFilters() {
-    document.getElementById('chartYearFilter').value    = 'ALL';
-    document.getElementById('chartMonthFilter').value   = 'ALL';
-    document.getElementById('chartCompanyFilter').value = 'ALL';
-    refreshCharts();
 }
 
 function populateYearFilter(flights) {
     const sel = document.getElementById('chartYearFilter');
     const cur = sel.value;
-    const years = [...new Set(flights.map(f => f.date ? new Date(f.date).getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
+    const years = [...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
     sel.innerHTML = '<option value="ALL">Toutes les années</option>';
-    years.forEach(y => {
-        const o = document.createElement('option');
-        o.value = y; o.textContent = y;
-        if (String(y) === cur) o.selected = true;
-        sel.appendChild(o);
-    });
+    years.forEach(y => { const o=document.createElement('option'); o.value=y; o.textContent=y; if(String(y)===cur)o.selected=true; sel.appendChild(o); });
+}
+
+function populateCompanyFilter(flights) {
+    const sel = document.getElementById('chartCompanyFilter');
+    const cur = sel.value;
+    const cos = [...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="ALL">Toutes les compagnies</option>';
+    cos.forEach(co => { const o=document.createElement('option'); o.value=co; o.textContent=co; if(co===cur)o.selected=true; sel.appendChild(o); });
 }
 
 function kill(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
-
 function monthly(flights, field) {
     const d = Array(12).fill(0);
-    flights.forEach(f => { if (f.date) d[new Date(f.date).getMonth()] += field ? (+f[field]||0) : 1; });
+    flights.forEach(f => { if(f.date) d[new Date(f.date).getMonth()] += field ? (+f[field]||0) : 1; });
     return d;
+}
+
+function darkOpts(extra) {
+    return Object.assign({
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}},
+        scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5A7A9A',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:11}},beginAtZero:true}}
+    }, extra||{});
+}
+
+function resetChartFilters() {
+    document.getElementById('chartYearFilter').value='ALL';
+    document.getElementById('chartMonthFilter').value='ALL';
+    document.getElementById('chartCompanyFilter').value='ALL';
+    refreshCharts();
 }
 
 function refreshCharts() {
     const all = getFlights();
-    if (!all.length) {
-        document.getElementById('chartsSubtitle').textContent = 'Aucune donnée disponible';
-        return;
-    }
-    populateYearFilter(all);
-    populateCompanyFilter(all);
+    if (!all.length) { document.getElementById('chartsSubtitle').textContent='Aucune donnée disponible'; return; }
+    populateYearFilter(all); populateCompanyFilter(all);
     const flt = filterFlights(all);
+    if (!flt.length) { document.getElementById('chartsSubtitle').textContent='Aucun vol pour ce filtre'; return; }
 
-    // KPIs
-    const pax  = flt.reduce((s,f) => s + (+f.passengers||0) + (+f.babies||0), 0);
+    const pax = flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
     const comp = new Set(flt.map(f=>f.company).filter(Boolean));
-    const dest = new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(Boolean));
+    const dest = new Set([...flt.map(f=>f.from),...flt.map(f=>f.to)].filter(d=>d&&d!=='GQNO'&&d!=='NKC'));
+    const babies = flt.reduce((s,f)=>s+(+f.babies||0),0);
 
+    document.getElementById('kpi-vols').textContent    = flt.length.toLocaleString('fr-FR');
+    document.getElementById('kpi-pax').textContent     = pax.toLocaleString('fr-FR');
+    document.getElementById('kpi-comp').textContent    = comp.size;
+    document.getElementById('kpi-dest').textContent    = dest.size;
+    document.getElementById('kpi-vols-sub').textContent= 'vols enregistrés';
+    document.getElementById('kpi-pax-sub').textContent = `dont ${babies} bébés`;
+    document.getElementById('kpi-comp-sub').textContent= [...comp].slice(0,2).join(', ')+(comp.size>2?'…':'');
+    document.getElementById('kpi-dest-sub').textContent= 'destinations actives';
 
-    document.getElementById('kpi-vols').textContent      = flt.length;
-    document.getElementById('kpi-pax').textContent       = pax.toLocaleString('fr-FR');
-    document.getElementById('kpi-comp').textContent      = comp.size;
-    document.getElementById('kpi-dest').textContent      = dest.size;
-    document.getElementById('kpi-vols-sub').textContent  = '';
-    document.getElementById('kpi-pax-sub').textContent   = `dont ${flt.reduce((s,f)=>s+(+f.babies||0),0)} bébés`;
-    document.getElementById('kpi-comp-sub').textContent  = [...comp].slice(0,2).join(', ') + (comp.size>2?'…':'');
-    document.getElementById('kpi-dest-sub').textContent  = `codes ICAO distincts`;
+    const y=document.getElementById('chartYearFilter').value;
+    const m=document.getElementById('chartMonthFilter').value;
+    const mn=m!=='ALL'?MONTHS_LONG[+m]:'';
+    document.getElementById('chartsSubtitle').textContent=`${flt.length.toLocaleString('fr-FR')} vol(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
 
-    const y = document.getElementById('chartYearFilter').value;
-    const m = document.getElementById('chartMonthFilter').value;
-    const mn = m!=='ALL' ? ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][+m] : '';
-    document.getElementById('chartsSubtitle').textContent = `${flt.length} vol(s) analysé(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
-
-    // Chart 1 — Vols par mois
-    kill('v'); charts['v'] = new Chart(document.getElementById('chartVolsMois'), {
-        type:'bar', data:{ labels:MONTHS_FR, datasets:[{
-            label:'Vols', data:monthly(flt),
-            backgroundColor: PALETTE[0]+'bb', borderColor:PALETTE[0], borderWidth:2, borderRadius:6
-        }]},
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,ticks:{stepSize:1}}} }
+    // Vols/mois
+    kill('v'); const volData=monthly(flt);
+    charts['v']=new Chart(document.getElementById('chartVolsMois'),{
+        type:'bar', data:{labels:MONTHS_FR, datasets:[{label:'Vols',data:volData,
+            backgroundColor:volData.map(v=>v===Math.max(...volData)?'rgba(74,158,255,.9)':'rgba(74,158,255,.45)'),
+            borderColor:'#4A9EFF',borderWidth:2,borderRadius:7,borderSkipped:false}]},
+        options:darkOpts()
     });
 
-    // Chart 2 — PAX par mois
-    kill('p'); const paxData = monthly(flt,'passengers').map((v,i)=>v+monthly(flt,'babies')[i]);
-    charts['p'] = new Chart(document.getElementById('chartPaxMois'), {
-        type:'line', data:{ labels:MONTHS_FR, datasets:[{
-            label:'Passagers', data:paxData,
-            backgroundColor:PALETTE[1]+'33', borderColor:PALETTE[1], borderWidth:3,
-            fill:true, tension:0.4, pointRadius:5, pointBackgroundColor:PALETTE[1]
-        }]},
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    // PAX/mois
+    kill('p'); const paxData=monthly(flt,'passengers').map((v,i)=>v+(monthly(flt,'babies')[i]||0));
+    charts['p']=new Chart(document.getElementById('chartPaxMois'),{
+        type:'line', data:{labels:MONTHS_FR, datasets:[{label:'Passagers',data:paxData,
+            borderColor:'#2DD4A0',backgroundColor:'rgba(45,212,160,.12)',borderWidth:3,fill:true,tension:0.45,
+            pointRadius:5,pointBackgroundColor:'#2DD4A0',pointBorderColor:'#0F1B2D',pointBorderWidth:2}]},
+        options:darkOpts()
     });
 
-
-
-    // Chart 4 — Top compagnies
+    // Top compagnies
     kill('c'); const cc={};
-    flt.forEach(f=>{ if(f.company) cc[f.company]=(cc[f.company]||0)+1; });
-    const sc = Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    charts['c'] = new Chart(document.getElementById('chartTopComp'), {
-        type:'bar',
-        data:{ labels:sc.map(([k])=>k.length>14?k.slice(0,14)+'…':k),
-               datasets:[{ label:'Vols', data:sc.map(([,v])=>v),
-                   backgroundColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]+'bb'),
-                   borderColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]),
-                   borderWidth:2, borderRadius:5 }] },
-        options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true}} }
+    flt.forEach(f=>{if(f.company)cc[f.company]=(cc[f.company]||0)+1;});
+    const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    charts['c']=new Chart(document.getElementById('chartTopComp'),{
+        type:'bar', data:{labels:sc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+            datasets:[{label:'Vols',data:sc.map(([,v])=>v),
+                backgroundColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),
+                borderColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderRadius:5}]},
+        options:darkOpts({indexAxis:'y'})
     });
 
-    // Chart 5 — Comparaison mois en mois
-    kill('k');
-    const allYears = [...new Set(all.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort();
-    const yrs = y!=='ALL' ? [y-1,+y] : allYears.slice(-2);
-    const dsets = yrs.map((yr,i) => {
-        const yf = all.filter(f=>f.date&&new Date(f.date).getFullYear()===+yr);
-        return { label:String(yr), data:monthly(yf), borderColor:PALETTE[i*2],
-                 backgroundColor:PALETTE[i*2]+'22', borderWidth:2.5, fill:false, tension:0.4, pointRadius:4 };
-    });
-    charts['k'] = new Chart(document.getElementById('chartComparaison'), {
-        type:'line', data:{ labels:MONTHS_FR, datasets:dsets },
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}} }
+    // PAX/compagnie
+    kill('pc'); const pc={};
+    flt.forEach(f=>{if(f.company){pc[f.company]=(pc[f.company]||0)+(+f.passengers||0)+(+f.babies||0);}});
+    const spc=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    charts['pc']=new Chart(document.getElementById('chartPaxComp'),{
+        type:'bar', data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+            datasets:[{label:'PAX',data:spc.map(([,v])=>v),
+                backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),
+                borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderRadius:5}]},
+        options:darkOpts({indexAxis:'y'})
     });
 
-    // Chart 6 — Destinations
-    kill('t'); const dc={};
-    flt.forEach(f=>{ if(f.from) dc[f.from]=(dc[f.from]||0)+1; if(f.to) dc[f.to]=(dc[f.to]||0)+1; });
-    const sd = Object.entries(dc).sort((a,b)=>b[1]-a[1]).slice(0,12);
-    charts['t'] = new Chart(document.getElementById('chartDestinations'), {
-        type:'bar',
-        data:{ labels:sd.map(([k])=>k),
-               datasets:[{ label:'Passages', data:sd.map(([,v])=>v),
-                   backgroundColor:sd.map((_,i)=>PALETTE[i%PALETTE.length]+'bb'),
-                   borderColor:sd.map((_,i)=>PALETTE[i%PALETTE.length]),
-                   borderWidth:2, borderRadius:5 }] },
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    // Évolution annuelle
+    kill('k'); const allYears=[...new Set(all.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort();
+    const yrs=y!=='ALL'?[+y-1,+y]:allYears.slice(-2);
+    const yrColors=['#D4AF37','#4A9EFF'];
+    const dsets=yrs.map((yr,i)=>{
+        const yf=all.filter(f=>f.date&&new Date(f.date).getFullYear()===+yr);
+        return{label:String(yr),data:monthly(yf),borderColor:yrColors[i],backgroundColor:yrColors[i]+'18',
+               borderWidth:2.5,fill:false,tension:0.4,pointRadius:4,
+               pointBackgroundColor:yrColors[i],pointBorderColor:'#0F1B2D',pointBorderWidth:2};
+    });
+    charts['k']=new Chart(document.getElementById('chartComparaison'),{
+        type:'line', data:{labels:MONTHS_FR, datasets:dsets},
+        options:darkOpts({plugins:{legend:{display:true,position:'top',labels:{color:'#94a3b8',font:{size:12},padding:16,usePointStyle:true}},
+            tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}})
     });
 
-    // Route tags
-    const routes={};
-    flt.forEach(f=>{ if(f.from&&f.to){ const k=`${f.from} → ${f.to}`; routes[k]=(routes[k]||0)+1; } });
-    document.getElementById('routeList').innerHTML =
-        Object.entries(routes).sort((a,b)=>b[1]-a[1]).slice(0,16)
-        .map(([r,n])=>`<span class="route-tag">${r} <span class="route-count">${n}</span></span>`).join('');
+    renderDestCards(flt);
+    populateRouteSelect(all);
 }
 
-// ══════════════════════════════════════════
-// PDF EXPORT
-// ══════════════════════════════════════════
-async function exportPDF() {
-    const btn = document.querySelector('.btn-pdf');
-    btn.textContent = '⏳ Génération...'; btn.disabled = true;
-    try {
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-        const W=210, H=297, M=12;
-
-        // Header
-        pdf.setFillColor(43,90,142);
-        pdf.rect(0,0,W,28,'F');
-        pdf.setTextColor(255,255,255);
-        pdf.setFontSize(16); pdf.setFont('helvetica','bold');
-        pdf.text('ANAC Mauritanie – Rapport des Vols', M, 12);
-        pdf.setFontSize(9); pdf.setFont('helvetica','normal');
-        const y  = document.getElementById('chartYearFilter').value;
-        const m  = document.getElementById('chartMonthFilter').value;
-        const mn = m!=='ALL'?['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][+m]:'Tous les mois';
-        pdf.text(`Période : ${y!=='ALL'?y:'Toutes années'} – ${mn}   |   Généré le ${new Date().toLocaleDateString('fr-FR')}`, M, 22);
-
-        // KPIs
-        pdf.setTextColor(44,62,80); pdf.setFontSize(11); pdf.setFont('helvetica','bold');
-        pdf.text('INDICATEURS CLÉS', M, 37);
-        const kpis = [
-            { v: document.getElementById('kpi-vols').textContent, l:'Total vols',         c:[43,90,142] },
-            { v: document.getElementById('kpi-pax').textContent,  l:'Total passagers',    c:[0,182,122] },
-            { v: document.getElementById('kpi-comp').textContent, l:'Compagnies actives', c:[212,175,55] },
-            { v: document.getElementById('kpi-dest').textContent, l:'Destinations',       c:[200,16,46] },
-        ];
-        kpis.forEach((k,i) => {
-            const x = M + i*46;
-            pdf.setFillColor(...k.c); pdf.roundedRect(x,41,43,20,3,3,'F');
-            pdf.setTextColor(255,255,255);
-            pdf.setFontSize(15); pdf.setFont('helvetica','bold');
-            pdf.text(k.v, x+21.5, 52, {align:'center'});
-            pdf.setFontSize(7); pdf.setFont('helvetica','normal');
-            pdf.text(k.l, x+21.5, 58, {align:'center'});
+function renderDestCards(flt) {
+    const dc={};
+    flt.forEach(f=>{
+        [f.from,f.to].filter(Boolean).forEach(code=>{
+            if(code==='GQNO'||code==='NKC')return;
+            const city=cityName(code);
+            if(!dc[city])dc[city]={codes:new Set(),vols:0,pax:0,companies:{}};
+            dc[city].codes.add(code); dc[city].vols++;
+            dc[city].pax+=(+f.passengers||0)+(+f.babies||0);
+            const co=f.company||'?';
+            if(!dc[city].companies[co])dc[city].companies[co]={vols:0,pax:0};
+            dc[city].companies[co].vols++;
+            dc[city].companies[co].pax+=(+f.passengers||0)+(+f.babies||0);
         });
-
-        // Charts
-        const chartList = [
-            {id:'chartVolsMois',    title:'Vols par mois',                full:true},
-            {id:'chartPaxMois',     title:'Passagers par mois',           full:true},
-
-            {id:'chartTopComp',     title:'Top compagnies',               full:false},
-            {id:'chartComparaison', title:'Comparaison mois en mois',     full:true},
-            {id:'chartDestinations',title:'Destinations fréquentées',     full:true},
-        ];
-        let yPos=66, left=true;
-        for (const ch of chartList) {
-            const canvas = document.getElementById(ch.id);
-            if (!canvas) continue;
-            const img = canvas.toDataURL('image/png');
-            const w = ch.full ? W-M*2 : (W-M*2-5)/2;
-            const h = 55;
-            const x = ch.full ? M : (left ? M : M+w+5);
-            if (yPos+h+14 > H-10) {
-                pdf.addPage();
-                pdf.setFillColor(43,90,142); pdf.rect(0,0,W,12,'F');
-                pdf.setTextColor(255,255,255); pdf.setFontSize(8);
-                pdf.text('ANAC Mauritanie – Rapport des Vols (suite)', M, 9);
-                yPos=18; left=true;
-            }
-            pdf.setTextColor(44,62,80); pdf.setFontSize(8); pdf.setFont('helvetica','bold');
-            pdf.text(ch.title.toUpperCase(), x, yPos);
-            pdf.addImage(img,'PNG', x, yPos+3, w, h);
-            if (ch.full) { yPos+=h+13; left=true; }
-            else { if(!left) yPos+=h+13; left=!left; }
-        }
-
-        // Page numbers
-        const n = pdf.internal.getNumberOfPages();
-        for (let i=1;i<=n;i++) {
-            pdf.setPage(i);
-            pdf.setFontSize(7); pdf.setTextColor(160,160,160);
-            pdf.text(`Page ${i}/${n} – ANAC Mauritanie`, W/2, H-5, {align:'center'});
-        }
-
-        const fname = `ANAC-Rapport-${y!=='ALL'?y:'Complet'}-${new Date().toLocaleDateString('fr-FR').replace(/\//g,'-')}.pdf`;
-        pdf.save(fname);
-    } catch(e) {
-        console.error(e);
-        alert('Erreur PDF: ' + e.message);
-    } finally {
-        btn.innerHTML = '📄 Exporter en PDF'; btn.disabled = false;
-    }
+    });
+    const sorted=Object.entries(dc).sort((a,b)=>b[1].vols-a[1].vols).slice(0,16);
+    const maxV=sorted[0]?.[1].vols||1;
+    const container=document.getElementById('destCards');
+    container.innerHTML=sorted.map(([city,info],i)=>{
+        const pct=Math.round(info.vols/maxV*100);
+        const color=PALETTE[i%PALETTE.length];
+        return `<div onclick="showDestDetail('${city.replace(/'/g,"\\'")}',this)"
+            style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;
+            padding:12px 16px;cursor:pointer;transition:all .15s;min-width:130px;flex:1;max-width:185px;" class="dest-card"
+            onmouseover="this.style.borderColor='${color}55';this.style.background='rgba(255,255,255,.07)'"
+            onmouseout="if(!this.classList.contains('active')){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';}">
+            <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">${city}</div>
+            <div style="font-size:11px;color:#5A7A9A;margin-bottom:7px;">${info.vols} vols · ${info.pax.toLocaleString('fr-FR')} pax</div>
+            <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;"></div>
+            </div>
+        </div>`;
+    }).join('');
+    window._destData=dc;
+    document.getElementById('destDetail').style.display='none';
 }
 
-// FCT_MOIS — utilisé dans la facturation
-const FCT_MOIS = {1:'Janvier',2:'Février',3:'Mars',4:'Avril',5:'Mai',6:'Juin',7:'Juillet',8:'Août',9:'Septembre',10:'Octobre',11:'Novembre',12:'Décembre'};
+window.showDestDetail=function(city,cardEl){
+    document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';});
+    const info=window._destData?.[city];
+    if(!info)return;
+    cardEl.classList.add('active'); cardEl.style.borderColor='#4A9EFF55'; cardEl.style.background='rgba(74,158,255,.08)';
+    const sorted=Object.entries(info.companies).sort((a,b)=>b[1].vols-a[1].vols);
+    const maxV=sorted[0]?.[1].vols||1; const total=sorted.reduce((s,[,v])=>s+v.vols,0);
+    const detail=document.getElementById('destDetail');
+    detail.style.display='';
+    detail.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div><span style="font-size:16px;font-weight:800;color:#e2e8f0;">${city}</span>
+        <span style="font-size:12px;color:#5A7A9A;margin-left:10px;">${total} vols · ${info.pax.toLocaleString('fr-FR')} passagers</span></div>
+        <button onclick="document.getElementById('destDetail').style.display='none';document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';})"
+            style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+    ${sorted.map(([co,s],i)=>{
+        const color=PALETTE[i%PALETTE.length]; const share=Math.round(s.vols/total*100); const pct=Math.round(s.vols/maxV*100);
+        return `<div style="background:rgba(255,255,255,.03);border-radius:9px;padding:10px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-size:13px;font-weight:600;color:#e2e8f0;">${co}</span>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <span style="font-size:13px;font-weight:700;color:${color};">${s.vols} vol${s.vols>1?'s':''}</span>
+                    <span style="font-size:11px;color:#5A7A9A;">${s.pax.toLocaleString('fr-FR')} pax</span>
+                    <span style="font-size:11px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:4px;color:#94a3b8;">${share}%</span>
+                </div>
+            </div>
+            <div style="height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${color},${color}66);border-radius:3px;"></div>
+            </div>
+        </div>`;
+    }).join('')}
+    </div>`;
+    setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+};
 
-function toggleStopoverField() {
-    const cb  = document.getElementById('hasStopover');
-    const grp = document.getElementById('stopoverGroup');
-    const show = cb && cb.checked;
-    if (grp) {
-        grp.style.display = show ? '' : 'none';
-        if (!show) {
-            const sp = document.getElementById('fStopoverPax');
-            const sb = document.getElementById('fStopoverBabies');
-            if (sp) sp.value = 0;
-            if (sb) sb.value = 0;
+function populateRouteSelect(flights) {
+    const routes={};
+    flights.forEach(f=>{
+        if(f.from&&f.to){
+            const key=`${f.from}|||${f.to}`;
+            if(!routes[key])routes[key]={label:`${cityName(f.from)} → ${cityName(f.to)}`,count:0};
+            routes[key].count++;
         }
-        updateTotals();
-    }
+    });
+    const sel=document.getElementById('routeFilter'); const cur=sel.value;
+    sel.innerHTML='<option value="">— Choisir un trajet —</option>';
+    Object.entries(routes).sort((a,b)=>b[1].count-a[1].count).forEach(([key,{label,count}])=>{
+        const o=document.createElement('option'); o.value=key; o.textContent=`${label} (${count})`;
+        if(key===cur)o.selected=true; sel.appendChild(o);
+    });
+    const years=[...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
+    const ySel=document.getElementById('routeYear'); const curY=ySel.value;
+    ySel.innerHTML='<option value="ALL">Toutes années</option>';
+    years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;if(String(y)===curY)o.selected=true;ySel.appendChild(o);});
 }
 
-// Compteur +/−
-window.stepCount = function(fieldId, delta) {
-    const el = document.getElementById(fieldId);
-    if (!el) return;
-    el.value = Math.max(0, (parseInt(el.value) || 0) + delta);
-    updateTotals();
-};
+function runRouteComparison() {
+    const routeKey=document.getElementById('routeFilter').value;
+    const year=document.getElementById('routeYear').value;
+    const res=document.getElementById('routeCmpResult');
+    if(!routeKey){res.innerHTML='<span style="color:#5A7A9A;">Sélectionnez un trajet pour voir l\'analyse</span>';return;}
+    const[from,to]=routeKey.split('|||');
+    const all=getFlights();
+    const flt=all.filter(f=>{
+        if(f.from!==from||f.to!==to)return false;
+        if(year!=='ALL'&&f.date&&new Date(f.date).getFullYear()!==+year)return false;
+        return true;
+    });
+    if(!flt.length){res.innerHTML='<span style="color:#5A7A9A;">Aucun vol sur ce trajet</span>';return;}
+    const depCity=cityName(from),arrCity=cityName(to);
+    const byComp={};
+    flt.forEach(f=>{
+        const co=f.company||'?';
+        if(!byComp[co])byComp[co]={vols:0,pax:0,byMonth:Array(12).fill(0)};
+        byComp[co].vols++; byComp[co].pax+=(+f.passengers||0)+(+f.babies||0);
+        if(f.date)byComp[co].byMonth[new Date(f.date).getMonth()]++;
+    });
+    const sorted=Object.entries(byComp).sort((a,b)=>b[1].vols-a[1].vols);
+    const maxVols=sorted[0][1].vols;
+    const now=new Date(); const prevMonth=now.getMonth()===0?11:now.getMonth()-1;
+    const prevMonthName=MONTHS_LONG[prevMonth];
+    let narrative='';
+    if(sorted.length===1){
+        const[co,s]=sorted[0];
+        narrative=`<strong>${co}</strong> opère seule ce trajet avec <strong>${s.vols} vol${s.vols>1?'s':''}</strong> et <strong>${s.pax.toLocaleString('fr-FR')} passagers</strong>.`;
+    } else {
+        const[co1,s1]=sorted[0],[co2,s2]=sorted[1];
+        const diff=s1.vols-s2.vols; const pct=s2.vols?Math.round((s1.vols-s2.vols)/s2.vols*100):100;
+        const v1prev=s1.byMonth[prevMonth],v2prev=s2.byMonth[prevMonth];
+        narrative=`Sur <strong>${depCity} → ${arrCity}</strong>, <strong>${co1}</strong> domine avec <strong>${s1.vols} vol${s1.vols>1?'s':''}</strong> contre <strong>${s2.vols}</strong> pour <strong>${co2}</strong> — écart de <strong>${diff>0?'+'+diff:diff}</strong> (${pct>0?'+':''}${pct}%).`;
+        if(v1prev>0||v2prev>0){
+            if(v1prev>v2prev) narrative+=` En ${prevMonthName}, <strong>${co1}</strong> a surpassé <strong>${co2}</strong> : <strong>${v1prev}</strong> vs <strong>${v2prev}</strong> vols.`;
+            else if(v2prev>v1prev) narrative+=` Mais en ${prevMonthName}, <strong>${co2}</strong> avait pris l'avantage : <strong>${v2prev}</strong> vs <strong>${v1prev}</strong> vols.`;
+            else if(v1prev>0) narrative+=` En ${prevMonthName}, égalité parfaite : <strong>${v1prev}</strong> vol${v1prev>1?'s':''} chacune.`;
+        }
+        if(sorted.length>2) narrative+=` Aussi sur ce trajet : ${sorted.slice(2).map(([co,s])=>`<strong>${co}</strong> (${s.vols})`).join(', ')}.`;
+    }
+    res.innerHTML=`<div style="background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:14px 18px;margin-bottom:18px;font-size:13px;color:#94a3b8;line-height:1.8;">💡 ${narrative}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+    ${sorted.map(([co,s],i)=>{
+        const color=PALETTE[i%PALETTE.length]; const share=Math.round(s.vols/flt.length*100);
+        const pct=Math.round(s.vols/maxVols*100); const peakM=s.byMonth.indexOf(Math.max(...s.byMonth));
+        const peak=s.byMonth[peakM]>0?`Pic: ${MONTHS_LONG[peakM]} (${s.byMonth[peakM]})` : '';
+        return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px 16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div style="width:28px;height:28px;border-radius:7px;background:${color}22;border:1px solid ${color}44;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${color};">${i+1}</div>
+                <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#e2e8f0;">${co}</div><div style="font-size:11px;color:#5A7A9A;">${peak}</div></div>
+                <div style="text-align:right;"><div style="font-size:16px;font-weight:800;color:${color};">${s.vols} vols</div><div style="font-size:11px;color:#5A7A9A;">${s.pax.toLocaleString('fr-FR')} pax · ${share}%</div></div>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${color},${color}66);border-radius:3px;"></div>
+            </div>
+        </div>`;
+    }).join('')}</div>`;
+}
 
-// Total live
-window.updateTotals = function() {
-    const pax    = parseInt(document.getElementById('fPassengers')?.value)    || 0;
-    const babies = parseInt(document.getElementById('fBabies')?.value)         || 0;
-    const cb     = document.getElementById('hasStopover');
-    const hasS   = cb && cb.checked;
-    const sPax   = hasS ? (parseInt(document.getElementById('fStopoverPax')?.value)    || 0) : 0;
-    const sBab   = hasS ? (parseInt(document.getElementById('fStopoverBabies')?.value) || 0) : 0;
-    const tP = pax + sPax, tB = babies + sBab;
-    const tp = document.getElementById('liveTotalPax');
-    const tb = document.getElementById('liveTotalBabies');
-    const ta = document.getElementById('liveTotalAll');
-    if (tp) tp.textContent = tP;
-    if (tb) tb.textContent = tB;
-    if (ta) ta.textContent = tP + tB;
-};
-
-// closeModal global
-window.closeModal = function() {
-    const m = document.getElementById('flightModal');
-    if (m) m.classList.remove('active');
-    document.body.style.overflow = '';
-    if (window._appCloseModal) window._appCloseModal();
-};
-
-// Called from app.js when flights are loaded/updated
-window.refreshChartsFromApp = function(flightsData) {
-    window.appFlights = flightsData;
-    if (document.getElementById('tab-rapports').classList.contains('active')) refreshCharts();
-    populateCmpSelects(flightsData);
+window.refreshChartsFromApp=function(flightsData){
+    window.appFlights=flightsData;
+    if(document.getElementById('tab-rapports')?.classList.contains('active'))refreshCharts();
     populateRouteSelect(flightsData);
 };
-
-// ══════════════════════════════════════════
-// COMPARISON ENGINE
-// ══════════════════════════════════════════
-let cmpCharts = {};
-function killCmp(id) { if(cmpCharts[id]){cmpCharts[id].destroy();delete cmpCharts[id];} }
 
 function populateCmpSelects(flights) {
     const companies = [...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
