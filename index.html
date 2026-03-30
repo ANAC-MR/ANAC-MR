@@ -605,20 +605,20 @@
     <p id="chartsSubtitle" style="font-size:12px;color:#5A7A9A;margin:3px 0 0;">Analyse automatique des données de vol</p>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <select id="chartYearFilter" onchange="refreshCharts()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+    <select id="chartYearFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
       <option value="ALL">Toutes les années</option>
     </select>
-    <select id="chartMonthFilter" onchange="refreshCharts()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+    <select id="chartMonthFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
       <option value="ALL">Tous les mois</option>
       <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
       <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
       <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
       <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
     </select>
-    <select id="chartCompanyFilter" onchange="refreshCharts()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;min-width:160px;">
+    <select id="chartCompanyFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;min-width:160px;">
       <option value="ALL">Toutes les compagnies</option>
     </select>
-    <button onclick="resetChartFilters()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
+    <button onclick="resetChartFilters()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
     <button onclick="exportExcel()" id="btnExportExcel"
       style="background:linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1));
              border:1px solid rgba(0,182,122,.5);color:#34d399;border-radius:8px;
@@ -705,10 +705,10 @@
       <select id="cmpB" onchange="runComparison()" style="background:rgba(45,212,160,.1);border:1px solid rgba(45,212,160,.3);border-radius:8px;padding:7px 12px;color:#34d399;font-size:13px;font-family:inherit;min-width:160px;">
         <option value="">— Compagnie B —</option>
       </select>
-      <select id="cmpYear" onchange="runComparison()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+      <select id="cmpYear" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
         <option value="ALL">Toutes années</option>
       </select>
-      <select id="cmpMonth" onchange="runComparison()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+      <select id="cmpMonth" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
         <option value="ALL">Tous mois</option>
         <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
         <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
@@ -728,7 +728,7 @@
       <select id="routeFilter" onchange="runRouteComparison()" style="background:rgba(212,175,55,.12);border:2px solid rgba(212,175,55,.5);border-radius:8px;padding:7px 12px;color:#D4AF37;font-size:13px;font-family:inherit;min-width:220px;font-weight:600;">
         <option value="">— Choisir une destination —</option>
       </select>
-      <select id="routeYear" onchange="runRouteComparison()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+      <select id="routeYear" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
         <option value="ALL">Toutes années</option>
       </select>
     </div>
@@ -1137,54 +1137,53 @@ function darkOpts(extra){
     },extra||{});
 }
 
+// ── Colonnes disponibles pour l'export ──
+const EXPORT_COLS=[
+    {key:'date',         label:'Date',              tdIdx:1,  def:true},
+    {key:'company',      label:'Compagnie',          tdIdx:2,  def:true},
+    {key:'registration', label:'Immatriculation',    tdIdx:3,  def:false},
+    {key:'flightNum',    label:'N° de vol',          tdIdx:4,  def:true},
+    {key:'from',         label:'Ville Départ',       tdIdx:5,  def:true},
+    {key:'to',           label:'Ville Arrivée',      tdIdx:6,  def:true},
+    {key:'type',         label:'Type (DEP/ARR)',     tdIdx:7,  def:false},
+    {key:'pax',          label:'Passagers',          tdIdx:8,  def:true},
+    {key:'babies',       label:'Bébés',              tdIdx:9,  def:true},
+];
+
 function exportSuiviExcel(){
-    // Lire les données filtrées depuis la table visible
-    const rows=[];
     const tbody=document.getElementById('flightTableBody');
-    if(!tbody){alert('Aucune donnée disponible.');return;}
+    if(!tbody||!tbody.querySelectorAll('tr').length){alert('Aucun vol à exporter.');return;}
+    // Ouvrir le modal de sélection des colonnes
+    document.getElementById('exportModal').style.display='flex';
+}
+
+window.doExport=function(){
+    const tbody=document.getElementById('flightTableBody');
     const trs=tbody.querySelectorAll('tr');
-    if(!trs.length){alert('Aucun vol à exporter.');return;}
+    // Colonnes cochées
+    const selected=EXPORT_COLS.filter(col=>document.getElementById('excol_'+col.key)?.checked);
+    if(!selected.length){alert('Cochez au moins une colonne.');return;}
 
-    // Colonnes — SANS N° autorisation (colonne 0)
-    const HEADERS=['Date','Compagnie','Immatriculation','N° Vol','Départ','Arrivée','Type','PAX','Bébés'];
-
+    const rows=[];
     trs.forEach(tr=>{
         const cells=[...tr.querySelectorAll('td')];
         if(!cells.length)return;
-        // La table a: 0=auth, 1=date, 2=compagnie, 3=immat, 4=vol, 5=de, 6=vers, 7=type, 8=pax, 9=bébés, 10=action
-        // On prend tout SAUF 0 (auth) et 10 (action)
-        const row=[
-            (cells[1]?.textContent||'').trim(),  // date
-            (cells[2]?.textContent||'').trim(),  // compagnie
-            (cells[3]?.textContent||'').trim(),  // immat
-            (cells[4]?.textContent||'').trim(),  // vol
-            (cells[5]?.textContent||'').trim(),  // de
-            (cells[6]?.textContent||'').trim(),  // vers
-            (cells[7]?.textContent||'').trim(),  // type
-            (cells[8]?.textContent||'').trim(),  // pax
-            (cells[9]?.textContent||'').trim(),  // bébés
-        ];
-        rows.push(row);
+        rows.push(selected.map(col=>(cells[col.tdIdx]?.textContent||'').trim()));
     });
 
     if(!rows.length){alert('Aucun vol à exporter.');return;}
 
     const wb=XLSX.utils.book_new();
-    const wsData=[HEADERS,...rows];
-    const ws=XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols']=[{wch:12},{wch:22},{wch:14},{wch:10},{wch:14},{wch:14},{wch:8},{wch:8},{wch:8}];
-
-    // Nom avec filtres actifs
-    const y=document.getElementById('monthSelect')?.value||'ALL';
+    const ws=XLSX.utils.aoa_to_sheet([selected.map(c=>c.label),...rows]);
+    ws['!cols']=selected.map(()=>({wch:16}));
     const co=document.getElementById('companySelect')?.value||'ALL';
     const parts=['ANAC-Vols'];
-    if(co!=='ALL')parts.push(co.replace(/\s+/g,'_').slice(0,20));
-    parts.push(`(${rows.length}vols)`);
-    const fname=parts.join('-')+'.xlsx';
-
+    if(co!=='ALL')parts.push(co.replace(/\s+/g,'_').slice(0,15));
+    parts.push('('+rows.length+'vols)');
     XLSX.utils.book_append_sheet(wb,ws,'Vols');
-    XLSX.writeFile(wb,fname);
-}
+    XLSX.writeFile(wb,parts.join('-')+'.xlsx');
+    document.getElementById('exportModal').style.display='none';
+};
 
 function exportExcel(){
     const all=getFlights();
@@ -2246,6 +2245,65 @@ window._hasPerm = function(perm) {
   return true;
 };
 
+</script>
+
+<!-- ── Modal Export Excel ── -->
+<div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#0F1B2D;border:1px solid rgba(255,255,255,.12);border-radius:18px;
+    padding:28px 32px;max-width:480px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <div style="font-size:17px;font-weight:800;color:#e2e8f0;">⬇ Exporter en Excel</div>
+        <div style="font-size:12px;color:#5A7A9A;margin-top:3px;">Choisissez les colonnes à inclure</div>
+      </div>
+      <button onclick="document.getElementById('exportModal').style.display='none'"
+        style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+        color:#94a3b8;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;">✕</button>
+    </div>
+    <!-- Cases à cocher -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;" id="exportColList"></div>
+    <!-- Boutons -->
+    <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:16px;
+      border-top:1px solid rgba(255,255,255,.07);">
+      <button onclick="document.getElementById('exportModal').style.display='none'"
+        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+        color:#94a3b8;border-radius:8px;padding:9px 20px;font-size:13px;cursor:pointer;font-family:inherit;">
+        Annuler
+      </button>
+      <button onclick="doExport()"
+        style="background:linear-gradient(135deg,#34d399,#059669);border:none;
+        color:#fff;border-radius:8px;padding:9px 24px;font-size:13px;font-weight:700;
+        cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(52,211,153,.3);">
+        ⬇ Télécharger
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Initialiser les cases à cocher du modal
+(function(){
+  const COLS=typeof EXPORT_COLS!=='undefined'?EXPORT_COLS:[];
+  const btn=document.getElementById('exportModal');
+  // Observer quand le modal s'ouvre
+  const orig=exportSuiviExcel;
+  document.getElementById('exportModal').addEventListener('shown',function(){});
+  // Remplir la liste au premier clic
+  const list=document.getElementById('exportColList');
+  if(list&&COLS.length){
+    list.innerHTML=COLS.map(col=>`
+      <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;
+        background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+        border-radius:9px;cursor:pointer;transition:background .12s;user-select:none;"
+        onmouseover="this.style.background='rgba(52,211,153,.08)'"
+        onmouseout="this.style.background='rgba(255,255,255,.04)'">
+        <input type="checkbox" id="excol_${col.key}" ${col.def?'checked':''} 
+          style="width:16px;height:16px;accent-color:#34d399;cursor:pointer;flex-shrink:0;">
+        <span style="font-size:13px;color:#e2e8f0;font-weight:500;">${col.label}</span>
+      </label>`).join('');
+  }
+})();
 </script>
 </body>
 </html>
