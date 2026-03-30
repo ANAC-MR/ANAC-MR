@@ -462,20 +462,8 @@ function addArc(c1,c2,color,dashed){
     arc.push([c1[0]+(c2[0]-c1[0])*r + Math.sin(Math.PI*r)*curveH,
               c1[1]+(c2[1]-c1[1])*r]);
   }
-  // Ligne principale
   const l=L.polyline(arc,{color,weight:2.5,opacity:.85,dashArray:dashed?'8 6':null,lineCap:'round'});
   l.addTo(map); actLines.push(l);
-  // Flèche au milieu de l'arc
-  const mid=arc[Math.floor(arc.length/2)];
-  const before=arc[Math.floor(arc.length/2)-2];
-  const angle=Math.atan2(mid[0]-before[0], mid[1]-before[1])*180/Math.PI;
-  const arrowIcon=L.divIcon({className:'',iconSize:[20,20],iconAnchor:[10,10],
-    html:`<div style="width:0;height:0;transform:rotate(${angle}deg);filter:drop-shadow(0 0 3px ${color});">
-      <svg width="20" height="20" viewBox="0 0 20 20">
-        <polygon points="10,2 18,18 10,13 2,18" fill="${color}" opacity="0.95"/>
-      </svg></div>`});
-  const am=L.marker(mid,{icon:arrowIcon,interactive:false});
-  am.addTo(map); actMarks.push(am);
 }
 function addDestMark(coord,color){
   const di=L.divIcon({className:'',iconSize:[14,14],iconAnchor:[7,7],
