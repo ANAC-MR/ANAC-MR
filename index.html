@@ -558,6 +558,16 @@
                 <div class="actions">
                     <button class="btn-success" id="addFlightBtn">➕ Ajouter un vol</button>
                     <button class="btn-warning" id="undoBtn" style="display:none;">↩️ Annuler suppression</button>
+                    <button id="btnExportSuivi" onclick="exportSuiviExcel()"
+                        style="background:linear-gradient(135deg,rgba(45,212,160,.25),rgba(45,212,160,.1));
+                               border:1px solid rgba(45,212,160,.5);color:#34d399;border-radius:8px;
+                               padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;
+                               font-family:inherit;display:inline-flex;align-items:center;gap:6px;
+                               transition:all .15s;"
+                        onmouseover="this.style.background='rgba(45,212,160,.3)'"
+                        onmouseout="this.style.background='linear-gradient(135deg,rgba(45,212,160,.25),rgba(45,212,160,.1))'">
+                        ⬇ Exporter Excel
+                    </button>
                 </div>
             </section>
 
@@ -1125,6 +1135,55 @@ function darkOpts(extra){
         plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}},
         scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5A7A9A',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:11}},beginAtZero:true}}
     },extra||{});
+}
+
+function exportSuiviExcel(){
+    // Lire les données filtrées depuis la table visible
+    const rows=[];
+    const tbody=document.getElementById('flightTableBody');
+    if(!tbody){alert('Aucune donnée disponible.');return;}
+    const trs=tbody.querySelectorAll('tr');
+    if(!trs.length){alert('Aucun vol à exporter.');return;}
+
+    // Colonnes — SANS N° autorisation (colonne 0)
+    const HEADERS=['Date','Compagnie','Immatriculation','N° Vol','Départ','Arrivée','Type','PAX','Bébés'];
+
+    trs.forEach(tr=>{
+        const cells=[...tr.querySelectorAll('td')];
+        if(!cells.length)return;
+        // La table a: 0=auth, 1=date, 2=compagnie, 3=immat, 4=vol, 5=de, 6=vers, 7=type, 8=pax, 9=bébés, 10=action
+        // On prend tout SAUF 0 (auth) et 10 (action)
+        const row=[
+            (cells[1]?.textContent||'').trim(),  // date
+            (cells[2]?.textContent||'').trim(),  // compagnie
+            (cells[3]?.textContent||'').trim(),  // immat
+            (cells[4]?.textContent||'').trim(),  // vol
+            (cells[5]?.textContent||'').trim(),  // de
+            (cells[6]?.textContent||'').trim(),  // vers
+            (cells[7]?.textContent||'').trim(),  // type
+            (cells[8]?.textContent||'').trim(),  // pax
+            (cells[9]?.textContent||'').trim(),  // bébés
+        ];
+        rows.push(row);
+    });
+
+    if(!rows.length){alert('Aucun vol à exporter.');return;}
+
+    const wb=XLSX.utils.book_new();
+    const wsData=[HEADERS,...rows];
+    const ws=XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols']=[{wch:12},{wch:22},{wch:14},{wch:10},{wch:14},{wch:14},{wch:8},{wch:8},{wch:8}];
+
+    // Nom avec filtres actifs
+    const y=document.getElementById('monthSelect')?.value||'ALL';
+    const co=document.getElementById('companySelect')?.value||'ALL';
+    const parts=['ANAC-Vols'];
+    if(co!=='ALL')parts.push(co.replace(/\s+/g,'_').slice(0,20));
+    parts.push(`(${rows.length}vols)`);
+    const fname=parts.join('-')+'.xlsx';
+
+    XLSX.utils.book_append_sheet(wb,ws,'Vols');
+    XLSX.writeFile(wb,fname);
 }
 
 function exportExcel(){
