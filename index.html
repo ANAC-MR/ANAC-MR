@@ -7,6 +7,7 @@
     <title>ANAC Mauritanie – Suivi des Vols</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         .header-content { position: relative; }
@@ -608,6 +609,15 @@
       <option value="ALL">Toutes les compagnies</option>
     </select>
     <button onclick="resetChartFilters()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
+    <button onclick="exportExcel()" id="btnExportExcel"
+      style="background:linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1));
+             border:1px solid rgba(0,182,122,.5);color:#34d399;border-radius:8px;
+             padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;
+             font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .15s;"
+      onmouseover="this.style.background='rgba(0,182,122,.3)'"
+      onmouseout="this.style.background='linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1))'">
+      <span>⬇</span> Exporter Excel
+    </button>
   </div>
 </div>
 
@@ -1115,6 +1125,68 @@ function darkOpts(extra){
         plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}},
         scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5A7A9A',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:11}},beginAtZero:true}}
     },extra||{});
+}
+
+function exportExcel(){
+    const all=getFlights();
+    const flt=filterFlights(all);
+    if(!flt.length){alert('Aucune donnée à exporter pour ce filtre.');return;}
+
+    // Colonnes exportées — SANS numéro d'autorisation
+    const COLS=[
+        {key:'date',         label:'Date'},
+        {key:'company',      label:'Compagnie'},
+        {key:'flightNumber', label:'N° Vol'},
+        {key:'from',         label:'Départ (code)'},
+        {key:'_fromCity',    label:'Ville Départ'},
+        {key:'to',           label:'Arrivée (code)'},
+        {key:'_toCity',      label:'Ville Arrivée'},
+        {key:'type',         label:'Type (DEP/ARR)'},
+        {key:'passengers',   label:'Passagers'},
+        {key:'babies',       label:'Bébés'},
+        {key:'_totalPax',    label:'Total PAX'},
+        {key:'registration', label:'Immatriculation'},
+    ];
+
+    // Construire les lignes
+    const rows=flt.map(f=>({
+        date:       f.date||'',
+        company:    f.company||'',
+        flightNumber:f.flightNumber||f.vol||'',
+        'from':     f.from||'',
+        _fromCity:  cityName(f.from||''),
+        'to':       f.to||'',
+        _toCity:    cityName(f.to||''),
+        type:       f.type||'',
+        passengers: +f.passengers||0,
+        babies:     +f.babies||0,
+        _totalPax:  (+f.passengers||0)+(+f.babies||0),
+        registration:f.registration||'',
+    }));
+
+    // Créer le workbook
+    const wb=XLSX.utils.book_new();
+    const wsData=[COLS.map(c=>c.label), ...rows.map(r=>COLS.map(c=>r[c.key]??''))];
+    const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+    // Largeurs colonnes
+    ws['!cols']=[{wch:12},{wch:22},{wch:10},{wch:8},{wch:16},{wch:8},{wch:16},{wch:8},{wch:12},{wch:8},{wch:10},{wch:14}];
+
+    XLSX.utils.book_append_sheet(wb,ws,'Vols');
+
+    // Nom de fichier avec filtre appliqué
+    const y=document.getElementById('chartYearFilter').value;
+    const m=document.getElementById('chartMonthFilter').value;
+    const co=document.getElementById('chartCompanyFilter').value;
+    const mn=m!=='ALL'?['Jan','Fev','Mar','Avr','Mai','Jun','Jul','Aou','Sep','Oct','Nov','Dec'][+m]:'';
+    const parts=['ANAC-Vols'];
+    if(y!=='ALL')parts.push(y);
+    if(mn)parts.push(mn);
+    if(co!=='ALL')parts.push(co.replace(/\s+/g,'_').slice(0,20));
+    parts.push(`(${flt.length}vols)`);
+    const fname=parts.join('-')+'.xlsx';
+
+    XLSX.writeFile(wb,fname);
 }
 
 function resetChartFilters(){
