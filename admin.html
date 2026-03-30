@@ -5015,19 +5015,19 @@ function _fillAirportSelects(selDepVal, selArrVal, selStopVal) {
 window._toggleStopover = function() {
     const hasStop = document.getElementById('schedFHasStop').checked;
     document.getElementById('schedFStopDiv').style.display = hasStop ? '' : 'none';
-    _buildRouting();
+    window._buildRouting();
 };
 
-function _autoTimeColon(el) {
+window._autoTimeColon = function(el) {
     let v = el.value.replace(/[^0-9]/g, ''); // garder seulement les chiffres
     if (v.length >= 3) {
         v = v.slice(0, 2) + ':' + v.slice(2, 4); // insérer ':' après les 2 premiers chiffres
     }
     el.value = v;
-    _buildRouting();
+    window._buildRouting();
 }
 
-function _buildRouting() {
+window._buildRouting = function _buildRouting() {
     const dep    = document.getElementById('schedFDep').value;
     const arr    = document.getElementById('schedFArr').value;
     const hdep   = (document.getElementById('schedFHDep').value||'').replace(':','');
@@ -5102,7 +5102,7 @@ function _setEditRouting(routing) {
         document.getElementById('schedFHasStop').checked = false;
         document.getElementById('schedFStopDiv').style.display = 'none';
     }
-    _buildRouting();
+    window._buildRouting();
 }
 
 window._schedInit = async function() {
@@ -5341,7 +5341,7 @@ window._schedDaysFromText = function(val) {
 window._schedSave = async function() {
     const vol     = document.getElementById('schedFVol').value.trim().toUpperCase();
     const company = document.getElementById('schedFCompany').value.trim();
-    const routing = _buildRouting();
+    const routing = window._buildRouting();
     const dateFrom= document.getElementById('schedFDateFrom').value.trim();
     const dateTo  = document.getElementById('schedFDateTo').value.trim();
     const notes   = document.getElementById('schedFNotes').value.trim();
