@@ -498,7 +498,8 @@ function showRoute(s){
     map.fitBounds(L.latLngBounds(allCoords).pad(.3),{animate:true,duration:.4});
   } else {
     addArc(a1.c,a2.c,'#D4AF37',false);
-    addDestMark(pr.dep==='GQNO'?a2.c:a1.c,'#60a5fa');
+    const isNKCcode=c=>['GQNO','GQNN','NKC'].includes(c);
+    addDestMark(isNKCcode(pr.dep)?a2.c:a1.c,'#60a5fa');
     map.fitBounds(L.latLngBounds([a1.c,a2.c]).pad(.3),{animate:true,duration:.4});
   }
 
@@ -549,8 +550,8 @@ function _initMapAirports_UNUSED(){
     const pr=parseRouting(s.routing);
     if(!pr)return;
     [pr.dep,pr.arr,pr.stop].filter(Boolean).forEach(icao=>{
-      if(icao!=='GQNO'&&!destSet[icao])destSet[icao]=[];
-      if(icao!=='GQNO')destSet[icao].push(s.company||'');
+      if(!['GQNO','GQNN','NKC'].includes(icao)&&!destSet[icao])destSet[icao]=[];
+      if(!['GQNO','GQNN','NKC'].includes(icao))destSet[icao].push(s.company||'');
     });
   });
 
@@ -828,7 +829,7 @@ function _showAirportsOnMap(){
     const pr=parseRouting(s.routing);
     if(!pr)return;
     [pr.dep,pr.arr,pr.stop].filter(Boolean).forEach(icao=>{
-      if(icao==='GQNO')return;
+      if(['GQNO','GQNN','NKC'].includes(icao))return; // Exclure NKC (hub)
       if(!destSet[icao])destSet[icao]={companies:new Set(),isStop:false};
       destSet[icao].companies.add(s.company||'');
       if(icao===pr.stop)destSet[icao].isStop=true;
@@ -1162,7 +1163,8 @@ async function init(){
     allSchedules=snap.docs.map(d=>({id:d.id,...d.data()}));
     const comp=new Set(allSchedules.map(s=>s.company).filter(Boolean)).size;
     const dests=new Set();
-    allSchedules.forEach(s=>{const pr=parseRouting(s.routing);if(pr){if(pr.dep!=='GQNO')dests.add(pr.dep);if(pr.arr!=='GQNO')dests.add(pr.arr);}});
+    const _isNKC=c=>['GQNO','GQNN','NKC'].includes(c);
+    allSchedules.forEach(s=>{const pr=parseRouting(s.routing);if(pr){if(!_isNKC(pr.dep))dests.add(pr.dep);if(!_isNKC(pr.arr))dests.add(pr.arr);}});
     document.getElementById('stVols').textContent=allSchedules.length;
     document.getElementById('stDest').textContent=dests.size;
     document.getElementById('stComp').textContent=comp;
