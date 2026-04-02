@@ -697,7 +697,7 @@
   <!-- Comparaison 2 compagnies pleine largeur -->
   <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">⚖️ Comparaison de deux compagnies</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
       <select id="cmpA" onchange="runComparison()" style="background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);border-radius:8px;padding:7px 12px;color:#60a5fa;font-size:13px;font-family:inherit;min-width:160px;">
         <option value="">— Compagnie A —</option>
       </select>
@@ -716,6 +716,13 @@
         <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
       </select>
     </div>
+    <!-- Période personnalisée -->
+    <div id="cmpPeriodRow" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;">
+      <span style="font-size:11px;color:#5A7A9A;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">📅 Période personnalisée</span>
+      <label style="font-size:12px;color:#94a3b8;">Du <input type="date" id="cmpDateDeb" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
+      <label style="font-size:12px;color:#94a3b8;">Au <input type="date" id="cmpDateFin" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
+      <button onclick="document.getElementById('cmpDateDeb').value='';document.getElementById('cmpDateFin').value='';runComparison();" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;">✕ Effacer</button>
+    </div>
     <div id="cmpResult" style="color:#5A7A9A;font-size:13px;text-align:center;padding:16px 0;">
       Sélectionnez deux compagnies pour comparer
     </div>
@@ -724,13 +731,20 @@
   <!-- Compagnies sur même trajet pleine largeur -->
   <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">🛤️ Compagnies sur le même trajet</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
       <select id="routeFilter" onchange="runRouteComparison()" style="background:rgba(212,175,55,.12);border:2px solid rgba(212,175,55,.5);border-radius:8px;padding:7px 12px;color:#D4AF37;font-size:13px;font-family:inherit;min-width:220px;font-weight:600;">
         <option value="">— Choisir une destination —</option>
       </select>
       <select id="routeYear" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
         <option value="ALL">Toutes années</option>
       </select>
+    </div>
+    <!-- Période personnalisée route -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;">
+      <span style="font-size:11px;color:#5A7A9A;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">📅 Période personnalisée</span>
+      <label style="font-size:12px;color:#94a3b8;">Du <input type="date" id="routeDateDeb" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
+      <label style="font-size:12px;color:#94a3b8;">Au <input type="date" id="routeDateFin" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
+      <button onclick="document.getElementById('routeDateDeb').value='';document.getElementById('routeDateFin').value='';runRouteComparison();" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;">✕ Effacer</button>
     </div>
     <div id="routeCmpResult" style="color:#5A7A9A;font-size:13px;text-align:center;padding:16px 0;">
       Sélectionnez une destination pour voir l'analyse
@@ -1051,7 +1065,7 @@ const PALETTE=['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#00B
 let charts={}, cmpCharts={};
 
 const CITY_NAMES={
-  'GQNO':'Nouakchott','NKC':'Nouakchott',
+  'GQNO':'Nouakchott','GQNN':'Nouakchott','NKC':'Nouakchott',
   'GQPP':'Nouadhibou','NDB':'Nouadhibou',
   'GQPZ':'Zouerate','OUZ':'Zouerate',
   'GQNI':'Nema','EMN':'Nema',
@@ -1074,7 +1088,8 @@ const CITY_NAMES={
 function cityName(code){return CITY_NAMES[code]||code;}
 function isNKC(code){
     if(!code)return false;
-    const NKC_CODES=['GQNO','NKC'];
+    // GQNO = ancien code OACI, GQNN = nouveau code OACI (Oumtounsy), NKC = IATA
+    const NKC_CODES=['GQNO','GQNN','NKC','NOUAKCHOTT'];
     return NKC_CODES.includes(code.toUpperCase().trim());
 }
 // Obtenir la ville non-NKC d'un vol (peu importe le sens)
@@ -1156,6 +1171,12 @@ function exportSuiviExcel(){
     // Ouvrir le modal de sélection des colonnes
     document.getElementById('exportModal').style.display='flex';
 }
+window.exportSuiviExcel=exportSuiviExcel;
+
+// ── Stubs pour fonctions définies dans app.js (module) ──
+// Elles sont remplacées par app.js au chargement
+if(typeof window.closeModal==='undefined') window.closeModal=function(){};
+if(typeof window.stepCount==='undefined')  window.stepCount=function(){};
 
 window.doExport=function(){
     const tbody=document.getElementById('flightTableBody');
@@ -1665,6 +1686,8 @@ function runComparison() {
     const b    = document.getElementById('cmpB').value;
     const year = document.getElementById('cmpYear').value;
     const month= document.getElementById('cmpMonth').value;
+    const dateDeb = (document.getElementById('cmpDateDeb')||{}).value||'';
+    const dateFin = (document.getElementById('cmpDateFin')||{}).value||'';
     const res  = document.getElementById('cmpResult');
 
     if (!a || !b) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Sélectionnez deux compagnies pour comparer</span>'; return; }
@@ -1674,8 +1697,15 @@ function runComparison() {
     const filter = f => {
         if (!f.date) return false;
         const d = new Date(f.date);
-        if (year  !== 'ALL' && d.getFullYear() !== +year)  return false;
-        if (month !== 'ALL' && d.getMonth()    !== +month) return false;
+        const ds = f.date.slice(0,10);
+        // Période personnalisée prioritaire
+        if (dateDeb && ds < dateDeb) return false;
+        if (dateFin && ds > dateFin) return false;
+        // Sinon filtre année/mois
+        if (!dateDeb && !dateFin) {
+            if (year  !== 'ALL' && d.getFullYear() !== +year)  return false;
+            if (month !== 'ALL' && d.getMonth()    !== +month) return false;
+        }
         return true;
     };
     const fA = all.filter(f => f.company === a && filter(f));
@@ -1766,69 +1796,129 @@ function runComparison() {
 }
 
 function runRouteComparison() {
-    const route  = document.getElementById('routeFilter').value;
-    const year   = document.getElementById('routeYear').value;
-    const res    = document.getElementById('routeCmpResult');
+    var route   = document.getElementById('routeFilter').value;
+    var year    = document.getElementById('routeYear').value;
+    var dateDeb = (document.getElementById('routeDateDeb')||{}).value||'';
+    var dateFin = (document.getElementById('routeDateFin')||{}).value||'';
+    var res     = document.getElementById('routeCmpResult');
 
     if (!route) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Sélectionnez un trajet pour voir les compagnies</span>'; return; }
 
-    const [from, to] = route.split(' → ');
-    const all = getFlights().filter(f => {
-        if (f.from !== from || f.to !== to) return false;
-        if (year !== 'ALL' && f.date && new Date(f.date).getFullYear() !== +year) return false;
-        return true;
+    var destCodes = route.split('|');
+    var destCity  = cityName(destCodes[0]);
+
+    var all = getFlights().filter(function(f) {
+        if (!f.date) return false;
+        var ds = f.date.slice(0,10);
+        if (dateDeb && ds < dateDeb) return false;
+        if (dateFin && ds > dateFin) return false;
+        if (!dateDeb && !dateFin && year !== 'ALL' && new Date(f.date).getFullYear() !== +year) return false;
+        var dc = getDestCity(f);
+        return dc && destCodes.includes(dc);
     });
 
     if (!all.length) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Aucun vol sur ce trajet pour la période sélectionnée</span>'; return; }
 
-    const byComp = {};
-    all.forEach(f => {
+    var byComp = {};
+    all.forEach(function(f) {
         if (!f.company) return;
-        if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0 };
+        if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0, byMonth:Array(12).fill(0) };
         byComp[f.company].vols++;
-        byComp[f.company].pax  += (+f.passengers||0) + (+f.babies||0);
+        byComp[f.company].pax += (+f.passengers||0) + (+f.babies||0);
+        byComp[f.company].byMonth[new Date(f.date).getMonth()]++;
     });
 
-    const sorted = Object.entries(byComp).sort((a,b)=>b[1].vols-a[1].vols);
-    const maxVols = sorted[0][1].vols;
+    var sorted  = Object.entries(byComp).sort(function(a,b){return b[1].vols-a[1].vols;});
+    var colors  = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE'];
+    var periodeLabel = (dateDeb||dateFin) ? ((dateDeb||'…')+' → '+(dateFin||'…')) : (year==='ALL'?'Toutes périodes':year);
 
-    res.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-            <span style="font-size:15px;font-weight:700;color:#2d3748;">${from}</span>
-            <span style="font-size:20px;">✈️</span>
-            <span style="font-size:15px;font-weight:700;color:#2d3748;">${to}</span>
-            <span style="font-size:12px;color:#718096;margin-left:8px;">${all.length} vol(s) au total</span>
-        </div>
-        <table class="route-compare-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Compagnie</th>
-                    <th>Vols</th>
-                    <th>Part</th>
-                    <th>PAX</th>
+    // ── Build KPI cards HTML (no nested backticks) ──
+    var kpiHtml = '';
+    sorted.forEach(function([co,s], i) {
+        var color = colors[i % colors.length];
+        var share = Math.round(s.vols / all.length * 100);
+        var peakM = s.byMonth.indexOf(Math.max.apply(null, s.byMonth));
+        var peakHtml = s.byMonth[peakM] > 0
+            ? '<div style="font-size:10px;color:'+color+';margin-top:5px;">📈 Pic: '+MONTHS_FR[peakM]+' ('+s.byMonth[peakM]+' vols)</div>'
+            : '';
+        kpiHtml += '<div style="flex:1;min-width:160px;background:rgba(255,255,255,.03);border:1px solid '+color+'33;border-radius:12px;padding:13px 16px;position:relative;overflow:hidden;">'
+            + '<div style="position:absolute;top:0;left:0;height:3px;width:'+share+'%;background:'+color+';border-radius:0 0 3px 0;"></div>'
+            + '<div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:6px;">'+co+'</div>'
+            + '<div style="font-size:22px;font-weight:800;color:'+color+';">'+s.vols+' <span style="font-size:11px;color:#5A7A9A;font-weight:400;">vols</span></div>'
+            + '<div style="font-size:11px;color:#5A7A9A;margin-top:2px;">'+s.pax.toLocaleString('fr-FR')+' pax · '+share+'% du trafic</div>'
+            + peakHtml
+            + '</div>';
+    });
 
-                </tr>
-            </thead>
-            <tbody>
-                ${sorted.map(([comp, s], i) => `
-                    <tr>
-                        <td><span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:11px;font-weight:800;background:${i===0?'#2B5A8E':i===1?'#4a90d9':i===2?'rgba(43,90,142,0.15)':'#f0f4f8'};color:${i===0?'#fff':i===1?'#fff':i===2?'#2B5A8E':'#718096'};">${i+1}</span></td>
-                        <td style="font-weight:600;">${comp}</td>
-                        <td>
-                            <div class="bar-cell">
-                                <div class="mini-bar" style="width:${Math.round(s.vols/maxVols*120)}px;background:${PALETTE[i%PALETTE.length]};"></div>
-                                <span style="font-weight:700;">${s.vols}</span>
-                            </div>
-                        </td>
-                        <td style="font-weight:600;color:#2B5A8E;">${Math.round(s.vols/all.length*100)}%</td>
-                        <td>${s.pax.toLocaleString('fr-FR')}</td>
+    res.innerHTML =
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
+        + '<span style="font-size:15px;font-weight:700;color:#e2e8f0;">NKC ↔ '+destCity+'</span>'
+        + '<span style="font-size:12px;color:#5A7A9A;background:rgba(255,255,255,.05);padding:3px 9px;border-radius:6px;">'+all.length+' vols · '+periodeLabel+'</span>'
+        + '</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">' + kpiHtml + '</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+        + '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
+        + '<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">📊 Vols par mois</div>'
+        + '<div style="position:relative;height:200px;"><canvas id="routeChartVols"></canvas></div>'
+        + '</div>'
+        + '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
+        + '<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">👥 Passagers par mois</div>'
+        + '<div style="position:relative;height:200px;"><canvas id="routeChartPax"></canvas></div>'
+        + '</div>'
+        + '</div>';
 
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
+    setTimeout(function() {
+        var cvV = document.getElementById('routeChartVols');
+        var cvP = document.getElementById('routeChartPax');
+        if (!cvV || !cvP) return;
+        killCmp('rV'); killCmp('rP');
+
+        var legendOpts  = {display:true,position:'top',labels:{color:'#94a3b8',font:{size:10},padding:10,usePointStyle:true}};
+        var tooltipOpts = {backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8};
+        var scalesOpts  = {
+            x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5A7A9A',font:{size:10}}},
+            y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:10}},beginAtZero:true}
+        };
+
+        var datasetsVols = sorted.map(function([co,s], i) {
+            return {
+                label: co.length>18 ? co.slice(0,18)+'…' : co,
+                data: s.byMonth,
+                backgroundColor: colors[i%colors.length]+'99',
+                borderColor: colors[i%colors.length],
+                borderWidth: 2,
+                borderRadius: 4
+            };
+        });
+
+        var datasetsPax = sorted.map(function([co,s], i) {
+            var paxData = Array(12).fill(0);
+            all.filter(function(f){return f.company===co;}).forEach(function(f){
+                if(f.date) paxData[new Date(f.date).getMonth()] += (+f.passengers||0)+(+f.babies||0);
+            });
+            return {
+                label: co.length>18 ? co.slice(0,18)+'…' : co,
+                data: paxData,
+                borderColor: colors[i%colors.length],
+                backgroundColor: colors[i%colors.length]+'20',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3
+            };
+        });
+
+        cmpCharts['rV'] = new Chart(cvV, {
+            type:'bar',
+            data:{labels:MONTHS_FR, datasets:datasetsVols},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
+        });
+        cmpCharts['rP'] = new Chart(cvP, {
+            type:'line',
+            data:{labels:MONTHS_FR, datasets:datasetsPax},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
+        });
+    }, 60);
 }
 
 function fctInit() {
