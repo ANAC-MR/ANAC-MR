@@ -1451,81 +1451,6 @@ function populateCmpSelects(flights){
     years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;if(String(y)===curY)o.selected=true;ySel.appendChild(o);});
 }
 
-function runComparison(){
-    const coA=document.getElementById('cmpA').value;
-    const coB=document.getElementById('cmpB').value;
-    const year=document.getElementById('cmpYear').value;
-    const month=document.getElementById('cmpMonth').value;
-    const res=document.getElementById('cmpResult');
-    if(!coA||!coB){res.innerHTML='<span style="color:#5A7A9A;">Sélectionnez deux compagnies pour comparer</span>';return;}
-    if(coA===coB){res.innerHTML='<span style="color:#5A7A9A;">Sélectionnez deux compagnies différentes</span>';return;}
-    const all=getFlights().filter(f=>{
-        if(year!=='ALL'&&f.date&&new Date(f.date).getFullYear()!==+year)return false;
-        if(month!=='ALL'&&f.date&&new Date(f.date).getMonth()!==+month)return false;
-        return true;
-    });
-    const fA=all.filter(f=>f.company===coA), fB=all.filter(f=>f.company===coB);
-    const paxA=fA.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
-    const paxB=fB.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
-    const mA=monthly(fA), mB=monthly(fB);
-
-    const now=new Date();
-    const prevM=now.getMonth()===0?11:now.getMonth()-1;
-    const prevMName=MONTHS_LONG[prevM];
-    let narrative='';
-    if(fA.length>fB.length){
-        const diff=fA.length-fB.length,pct=fB.length?Math.round(diff/fB.length*100):100;
-        narrative=`<strong>${coA}</strong> domine avec <strong>${fA.length}</strong> vols contre <strong>${fB.length}</strong> pour <strong>${coB}</strong> — avantage de <strong>+${diff}</strong> vols (+${pct}%).`;
-    } else if(fB.length>fA.length){
-        const diff=fB.length-fA.length,pct=fA.length?Math.round(diff/fA.length*100):100;
-        narrative=`<strong>${coB}</strong> domine avec <strong>${fB.length}</strong> vols contre <strong>${fA.length}</strong> pour <strong>${coA}</strong> — avantage de <strong>+${diff}</strong> vols (+${pct}%).`;
-    } else {
-        narrative=`<strong>${coA}</strong> et <strong>${coB}</strong> sont à égalité avec <strong>${fA.length}</strong> vols chacune.`;
-    }
-    if(mA[prevM]>0||mB[prevM]>0){
-        if(mA[prevM]>mB[prevM]) narrative+=` En ${prevMName}, <strong>${coA}</strong> a surpassé <strong>${coB}</strong> : <strong>${mA[prevM]}</strong> vs <strong>${mB[prevM]}</strong> vols.`;
-        else if(mB[prevM]>mA[prevM]) narrative+=` En ${prevMName}, <strong>${coB}</strong> avait l'avantage : <strong>${mB[prevM]}</strong> vs <strong>${mA[prevM]}</strong> vols.`;
-        else if(mA[prevM]>0) narrative+=` En ${prevMName}, égalité parfaite avec <strong>${mA[prevM]}</strong> vol${mA[prevM]>1?'s':''} chacune.`;
-    }
-
-    // Barres comparaison
-    killCmp('cmpBar');
-    const cmpCanvas=document.getElementById('cmpBarChart');
-    if(!cmpCanvas){
-        res.innerHTML=`<div style="background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:16px;">💡 ${narrative}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        ${[[coA,fA,paxA,'#4A9EFF'],[coB,fB,paxB,'#2DD4A0']].map(([co,fl,px,color])=>`
-            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px 16px;">
-                <div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:8px;">${co}</div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                    <span style="font-size:22px;font-weight:800;color:${color};">${fl.length}</span>
-                    <span style="font-size:11px;color:#5A7A9A;align-self:flex-end;">vols</span>
-                </div>
-                <div style="font-size:12px;color:#5A7A9A;">${px.toLocaleString('fr-FR')} passagers</div>
-                <div style="margin-top:8px;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;">
-                    <div style="height:100%;width:${Math.round(fl.length/Math.max(fA.length,fB.length,1)*100)}%;background:${color};border-radius:3px;"></div>
-                </div>
-            </div>`).join('')}
-        </div>
-        <div style="margin-top:16px;position:relative;height:200px;"><canvas id="cmpBarChart"></canvas></div>`;
-    }
-
-    // Re-créer le canvas
-    setTimeout(()=>{
-        const cv=document.getElementById('cmpBarChart');if(!cv)return;
-        killCmp('cmpBar');
-        cmpCharts['cmpBar']=new Chart(cv,{
-            type:'bar',
-            data:{labels:MONTHS_FR,datasets:[
-                {label:coA,data:mA,backgroundColor:'rgba(74,158,255,.65)',borderColor:'#4A9EFF',borderWidth:2,borderRadius:5},
-                {label:coB,data:mB,backgroundColor:'rgba(45,212,160,.65)',borderColor:'#2DD4A0',borderWidth:2,borderRadius:5}
-            ]},
-            options:darkOpts({plugins:{legend:{display:true,position:'top',labels:{color:'#94a3b8',font:{size:11},padding:12,usePointStyle:true}},
-                tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}})
-        });
-    },50);
-}
-
 // ── Trajet unique : lister les destinations depuis NKC ──
 function populateRouteSelect(flights) {
     // Grouper par ville de destination (sans NKC), sans afficher le nombre de vols
@@ -1560,6 +1485,13 @@ function populateRouteSelect(flights) {
         routeYearSel.appendChild(o);
     });
 }
+
+window.refreshChartsFromApp = function(flightsData) {
+    window.appFlights = flightsData;
+    if (document.getElementById('tab-rapports')?.classList.contains('active')) refreshCharts();
+    else { populateCmpSelects(flightsData); populateRouteSelect(flightsData); }
+};
+
 
 function runComparison() {
     const a    = document.getElementById('cmpA').value;
