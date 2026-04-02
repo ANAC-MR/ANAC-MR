@@ -1090,9 +1090,40 @@ const CITY_NAMES={
   'DNMM':'Lagos','LOS':'Lagos',
   'GABS':'Bamako','BKO':'Bamako',
   'OEMA':'Madinah','MED':'Madinah',
-  'DBBP':'Lomé','LFW':'Lomé',
+  'DXXX':'Lomé','LFW':'Lomé',
+  'DBBP':'Lomé',  // ancien code incorrect, conservé pour compatibilité
+  // Autres destinations Afrique de l'Ouest
+  'DIYO':'Yamoussoukro','ASK':'Yamoussoukro',
+  'GVNP':'Praia','RAI':'Praia',
+  'GOGG':'Ziguinchor','ZIG':'Ziguinchor',
+  'FOGR':'Libreville','LBV':'Libreville',
+  'FKKD':'Douala','DLA':'Douala',
+  'HAAB':'Addis-Abeba','ADD':'Addis-Abeba',
+  'HECA':'Le Caire','CAI':'Le Caire',
+  'ORBI':'Bagdad','BGW':'Bagdad',
+  'OMDB':'Dubaï','DXB':'Dubaï',
+  'OTHH':'Doha','DOH':'Doha',
+  'OJAI':'Amman','AMM':'Amman',
+  'LLBG':'Tel Aviv','TLV':'Tel Aviv',
+  'LFBO':'Toulouse','TLS':'Toulouse',
+  'EHAM':'Amsterdam','AMS':'Amsterdam',
+  'EDDF':'Francfort','FRA':'Francfort',
+  'LEMD':'Madrid','MAD':'Madrid',
+  'LIRF':'Rome','FCO':'Rome',
+  'EGLL':'Londres','LHR':'Londres',
+  'UUEE':'Moscou','SVO':'Moscou',
+  'VABB':'Mumbai','BOM':'Mumbai',
+  'ZBAA':'Pékin','PEK':'Pékin',
 };
-function cityName(code){return CITY_NAMES[code]||code;}
+function cityName(code){
+  if(!code)return '';
+  // Recherche exacte d'abord
+  if(CITY_NAMES[code])return CITY_NAMES[code];
+  // Recherche insensible à la casse
+  const upper=code.toUpperCase().trim();
+  if(CITY_NAMES[upper])return CITY_NAMES[upper];
+  return code;
+}
 function isNKC(code){
     if(!code)return false;
     // GQNO = ancien code OACI, GQNN = nouveau code OACI (Oumtounsy), NKC = IATA
