@@ -1527,151 +1527,28 @@ function runComparison(){
 }
 
 // ── Trajet unique : lister les destinations depuis NKC ──
-function populateRouteSelect(flights){
-    // Grouper par NOM DE VILLE canonique
-    // Utilise getDestCity pour trouver la ville non-NKC peu importe le sens
-    const dests={};
-    flights.forEach(f=>{
-        const destCode=getDestCity(f);
-        if(!destCode)return;
-        const city=cityName(destCode); // nom canonique (Paris, Alger, etc.)
-        if(!dests[city])dests[city]={codes:new Set(),count:0};
+function populateRouteSelect(flights) {
+    // Grouper par ville de destination (sans NKC), sans afficher le nombre de vols
+    const dests = {};
+    flights.forEach(f => {
+        const destCode = getDestCity(f);
+        if (!destCode) return;
+        const city = cityName(destCode);
+        if (!dests[city]) dests[city] = { codes: new Set(), count: 0 };
         dests[city].codes.add(destCode);
         dests[city].count++;
     });
-    const sel=document.getElementById('routeFilter');
-    const cur=sel.value;
-    const curCodes=cur?cur.split('|'):[];
-    sel.innerHTML='<option value="">— Choisir une destination —</option>';
-    // Trier par nombre de vols décroissant, afficher seulement le nom de ville
-    Object.entries(dests).sort((a,b)=>b[1].count-a[1].count).forEach(([city,{codes,count}])=>{
-        const o=document.createElement('option');
-        o.value=[...codes].join('|');
-        o.textContent=`${city} (${count} vols)`;
-        if(curCodes.some(k=>[...codes].includes(k)))o.selected=true;
-        sel.appendChild(o);
-    });
-    const years=[...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
-    const ySel=document.getElementById('routeYear');const curY=ySel.value;
-    ySel.innerHTML='<option value="ALL">Toutes années</option>';
-    years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;if(String(y)===curY)o.selected=true;ySel.appendChild(o);});
-}
-
-function runRouteComparison(){
-    const destCode=document.getElementById('routeFilter').value;
-    const year=document.getElementById('routeYear').value;
-    const res=document.getElementById('routeCmpResult');
-    if(!destCode){res.innerHTML='<span style="color:#5A7A9A;">Sélectionnez une destination</span>';return;}
-    const destCity=cityName(destCode.split('|')[0]);
-    // Tous les vols NKC <-> destCode
-    const all=getFlights();
-    // Gérer plusieurs codes pour la même ville (ex: ALG|DAAG|DXXX)
-    const destCodes=destCode.split('|');
-    const flt=all.filter(f=>{
-        if(year!=='ALL'&&f.date&&new Date(f.date).getFullYear()!==+year)return false;
-        // Match si la ville non-NKC du vol correspond à un des codes
-        const dc=getDestCity(f);
-        return dc&&destCodes.includes(dc);
-    });
-    if(!flt.length){res.innerHTML='<span style="color:#5A7A9A;">Aucun vol sur ce trajet</span>';return;}
-    const byComp={};
-    flt.forEach(f=>{
-        const co=f.company||'?';
-        if(!byComp[co])byComp[co]={vols:0,pax:0,byMonth:Array(12).fill(0)};
-        byComp[co].vols++;byComp[co].pax+=(+f.passengers||0)+(+f.babies||0);
-        if(f.date)byComp[co].byMonth[new Date(f.date).getMonth()]++;
-    });
-    const sorted=Object.entries(byComp).sort((a,b)=>b[1].vols-a[1].vols);
-    const maxVols=sorted[0][1].vols;
-    const now=new Date();const prevM=now.getMonth()===0?11:now.getMonth()-1;const prevMName=MONTHS_LONG[prevM];
-    let narrative='';
-    if(sorted.length===1){
-        const[co,s]=sorted[0];
-        narrative=`<strong>${co}</strong> opère seule ce trajet : <strong>${s.vols} vol${s.vols>1?'s':''}</strong> et <strong>${s.pax.toLocaleString('fr-FR')} pax</strong>.`;
-    } else {
-        const[co1,s1]=sorted[0],[co2,s2]=sorted[1];
-        const diff=s1.vols-s2.vols,pct=s2.vols?Math.round(diff/s2.vols*100):100;
-        const v1p=s1.byMonth[prevM],v2p=s2.byMonth[prevM];
-        narrative=`Sur le trajet <strong>NKC ↔ ${destCity}</strong>, <strong>${co1}</strong> domine : <strong>${s1.vols} vols</strong> contre <strong>${s2.vols}</strong> pour <strong>${co2}</strong> (${diff>0?'+':''}${diff} vols, ${pct>0?'+':''}${pct}%).`;
-        if(v1p>0||v2p>0){
-            if(v1p>v2p) narrative+=` En ${prevMName}, <strong>${co1}</strong> a surpassé <strong>${co2}</strong> : <strong>${v1p}</strong> vs <strong>${v2p}</strong>.`;
-            else if(v2p>v1p) narrative+=` Mais en ${prevMName}, <strong>${co2}</strong> menait : <strong>${v2p}</strong> vs <strong>${v1p}</strong>.`;
-            else if(v1p>0) narrative+=` En ${prevMName}, égalité : <strong>${v1p}</strong> vol${v1p>1?'s':''} chacune.`;
-        }
-        if(sorted.length>2) narrative+=` ${sorted.slice(2).map(([co,s])=>`<strong>${co}</strong> (${s.vols})`).join(', ')} aussi sur ce trajet.`;
-    }
-    res.innerHTML=`<div style="background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#94a3b8;line-height:1.8;">💡 ${narrative}</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-    ${sorted.map(([co,s],i)=>{
-        const color=PALETTE[i%PALETTE.length],share=Math.round(s.vols/flt.length*100),pct=Math.round(s.vols/maxVols*100);
-        const peakM=s.byMonth.indexOf(Math.max(...s.byMonth));
-        const peak=s.byMonth[peakM]>0?`Pic: ${MONTHS_LONG[peakM]} (${s.byMonth[peakM]})` : '';
-        return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px 16px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                <div style="width:28px;height:28px;border-radius:7px;background:${color}22;border:1px solid ${color}44;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${color};">${i+1}</div>
-                <div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#e2e8f0;">${co}</div><div style="font-size:11px;color:#5A7A9A;">${peak}</div></div>
-                <div style="text-align:right;"><div style="font-size:16px;font-weight:800;color:${color};">${s.vols} vols</div><div style="font-size:11px;color:#5A7A9A;">${s.pax.toLocaleString('fr-FR')} pax · ${share}%</div></div>
-            </div>
-            <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;">
-                <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${color},${color}66);border-radius:3px;"></div>
-            </div>
-        </div>`;
-    }).join('')}</div>`;
-}
-
-window.refreshChartsFromApp=function(flightsData){
-    window.appFlights=flightsData;
-    if(document.getElementById('tab-rapports')?.classList.contains('active'))refreshCharts();
-    else{populateCmpSelects(flightsData);populateRouteSelect(flightsData);}
-};
-
-
-
-function populateCmpSelects(flights) {
-    const companies = [...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
-    const years = [...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
-
-    ['cmpA','cmpB'].forEach(id => {
-        const sel = document.getElementById(id);
-        const cur = sel.value;
-        sel.innerHTML = '<option value="">— Choisir —</option>';
-        companies.forEach(c => {
-            const o = document.createElement('option');
-            o.value = c; o.textContent = c;
-            if (c === cur) o.selected = true;
-            sel.appendChild(o);
-        });
-    });
-
-    const yearSel = document.getElementById('cmpYear');
-    const curY = yearSel.value;
-    yearSel.innerHTML = '<option value="ALL">Toutes années</option>';
-    years.forEach(y => {
-        const o = document.createElement('option');
-        o.value = y; o.textContent = y;
-        if (String(y) === curY) o.selected = true;
-        yearSel.appendChild(o);
-    });
-}
-
-function populateRouteSelect(flights) {
-    const routes = {};
-    flights.forEach(f => {
-        if (f.from && f.to) {
-            const k = `${f.from} → ${f.to}`;
-            routes[k] = (routes[k]||0) + 1;
-        }
-    });
     const routeSel = document.getElementById('routeFilter');
     const cur = routeSel.value;
-    routeSel.innerHTML = '<option value="">— Choisir un trajet —</option>';
-    Object.entries(routes).sort((a,b)=>b[1]-a[1]).forEach(([r, n]) => {
+    const curCodes = cur ? cur.split('|') : [];
+    routeSel.innerHTML = '<option value="">— Choisir une destination —</option>';
+    Object.entries(dests).sort((a,b) => b[1].count - a[1].count).forEach(([city, {codes}]) => {
         const o = document.createElement('option');
-        o.value = r; o.textContent = `${r}  (${n} vol${n>1?'s':''})`;
-        if (r === cur) o.selected = true;
+        o.value = [...codes].join('|');
+        o.textContent = city;  // pas de nombre de vols ici
+        if (curCodes.some(k => [...codes].includes(k))) o.selected = true;
         routeSel.appendChild(o);
     });
-
     const routeYearSel = document.getElementById('routeYear');
     const curRY = routeYearSel.value;
     const years = [...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
@@ -1806,7 +1683,10 @@ function runRouteComparison() {
     var dateFin = (document.getElementById('routeDateFin')||{}).value||'';
     var res     = document.getElementById('routeCmpResult');
 
-    if (!route) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Sélectionnez un trajet pour voir les compagnies</span>'; return; }
+    if (!route) {
+        res.innerHTML = '<span style="color:#5A7A9A;">Sélectionnez une destination</span>';
+        return;
+    }
 
     var destCodes = route.split('|');
     var destCity  = cityName(destCodes[0]);
@@ -1815,10 +1695,8 @@ function runRouteComparison() {
         if (!f.date) return false;
         var ds = f.date.slice(0,10);
         var d  = new Date(f.date);
-        // Période personnalisée prioritaire
         if (dateDeb && ds < dateDeb) return false;
         if (dateFin && ds > dateFin) return false;
-        // Sinon filtres année + mois
         if (!dateDeb && !dateFin) {
             if (year  !== 'ALL' && d.getFullYear() !== +year)  return false;
             if (month !== 'ALL' && d.getMonth()    !== +month) return false;
@@ -1827,8 +1705,16 @@ function runRouteComparison() {
         return dc && destCodes.includes(dc);
     });
 
-    if (!all.length) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Aucun vol sur ce trajet pour la période sélectionnée</span>'; return; }
+    if (!all.length) {
+        res.innerHTML = '<span style="color:#5A7A9A;">Aucun vol sur ce trajet pour la période sélectionnée</span>';
+        return;
+    }
 
+    // Déterminer si la période couvre plusieurs mois
+    var months = new Set(all.map(function(f){ return new Date(f.date).getMonth(); }));
+    var isMultiMonth = months.size > 1;
+
+    // Construire les stats par compagnie
     var byComp = {};
     all.forEach(function(f) {
         if (!f.company) return;
@@ -1838,49 +1724,61 @@ function runRouteComparison() {
         byComp[f.company].byMonth[new Date(f.date).getMonth()]++;
     });
 
-    var sorted  = Object.entries(byComp).sort(function(a,b){return b[1].vols-a[1].vols;});
-    var colors  = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE'];
+    var sorted = Object.entries(byComp).sort(function(a,b){ return b[1].vols - a[1].vols; });
+    var colors = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE'];
+
+    // Période label
     var monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
     var periodeLabel = (dateDeb||dateFin)
         ? ((dateDeb||'…')+' → '+(dateFin||'…'))
         : (year==='ALL' && month==='ALL' ? 'Toutes périodes'
             : (year!=='ALL' && month!=='ALL' ? monthNames[+month]+' '+year
-                : (month!=='ALL' ? monthNames[+month]+' (toutes années)' : year)));
+                : (month!=='ALL' ? monthNames[+month] : year)));
 
-    // ── Build KPI cards HTML (no nested backticks) ──
+    // ── Cartes KPI ──
     var kpiHtml = '';
-    sorted.forEach(function([co,s], i) {
+    sorted.forEach(function(entry, i) {
+        var co = entry[0], s = entry[1];
         var color = colors[i % colors.length];
         var share = Math.round(s.vols / all.length * 100);
         var peakM = s.byMonth.indexOf(Math.max.apply(null, s.byMonth));
-        var peakHtml = s.byMonth[peakM] > 0
+        var peakHtml = (isMultiMonth && s.byMonth[peakM] > 0)
             ? '<div style="font-size:10px;color:'+color+';margin-top:5px;">📈 Pic: '+MONTHS_FR[peakM]+' ('+s.byMonth[peakM]+' vols)</div>'
             : '';
-        kpiHtml += '<div style="flex:1;min-width:160px;background:rgba(255,255,255,.03);border:1px solid '+color+'33;border-radius:12px;padding:13px 16px;position:relative;overflow:hidden;">'
-            + '<div style="position:absolute;top:0;left:0;height:3px;width:'+share+'%;background:'+color+';border-radius:0 0 3px 0;"></div>'
-            + '<div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:6px;">'+co+'</div>'
-            + '<div style="font-size:22px;font-weight:800;color:'+color+';">'+s.vols+' <span style="font-size:11px;color:#5A7A9A;font-weight:400;">vols</span></div>'
-            + '<div style="font-size:11px;color:#5A7A9A;margin-top:2px;">'+s.pax.toLocaleString('fr-FR')+' pax · '+share+'% du trafic</div>'
-            + peakHtml
-            + '</div>';
+        kpiHtml += '<div style="flex:1;min-width:150px;background:rgba(255,255,255,.03);border:1px solid '+color+'33;'
+            +'border-radius:12px;padding:13px 16px;position:relative;overflow:hidden;">'
+            +'<div style="position:absolute;top:0;left:0;height:3px;width:'+share+'%;background:'+color+';border-radius:0 0 3px 0;"></div>'
+            +'<div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:5px;">'+co+'</div>'
+            +'<div style="font-size:21px;font-weight:800;color:'+color+';">'+s.vols
+            +'<span style="font-size:11px;color:#5A7A9A;font-weight:400;"> vols</span></div>'
+            +'<div style="font-size:11px;color:#5A7A9A;margin-top:2px;">'+s.pax.toLocaleString('fr-FR')+' pax · '+share+'%</div>'
+            +peakHtml+'</div>';
     });
+
+    // ── Chart HTML : barres (multi-mois) ou camembert (1 mois) ──
+    var chartHtml = isMultiMonth
+        ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
+            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">📊 Vols par mois</div>'
+            +'<div style="position:relative;height:200px;"><canvas id="routeChartVols"></canvas></div></div>'
+            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">👥 Passagers par mois</div>'
+            +'<div style="position:relative;height:200px;"><canvas id="routeChartPax"></canvas></div></div></div>'
+        : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
+            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🥧 Part des vols</div>'
+            +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartVols"></canvas></div></div>'
+            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🥧 Part des passagers</div>'
+            +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartPax"></canvas></div></div></div>';
 
     res.innerHTML =
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
-        + '<span style="font-size:15px;font-weight:700;color:#e2e8f0;">NKC ↔ '+destCity+'</span>'
-        + '<span style="font-size:12px;color:#5A7A9A;background:rgba(255,255,255,.05);padding:3px 9px;border-radius:6px;">'+all.length+' vols · '+periodeLabel+'</span>'
-        + '</div>'
-        + '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">' + kpiHtml + '</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
-        + '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-        + '<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">📊 Vols par mois</div>'
-        + '<div style="position:relative;height:200px;"><canvas id="routeChartVols"></canvas></div>'
-        + '</div>'
-        + '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-        + '<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">👥 Passagers par mois</div>'
-        + '<div style="position:relative;height:200px;"><canvas id="routeChartPax"></canvas></div>'
-        + '</div>'
-        + '</div>';
+        +'<span style="font-size:15px;font-weight:700;color:#e2e8f0;">NKC ↔ '+destCity+'</span>'
+        +'<span style="font-size:12px;color:#5A7A9A;background:rgba(255,255,255,.05);padding:3px 9px;border-radius:6px;">'+all.length+' vol'+(all.length>1?'s':'')+' · '+periodeLabel+'</span>'
+        +'</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:10px;">'+kpiHtml+'</div>'
+        +chartHtml;
 
     setTimeout(function() {
         var cvV = document.getElementById('routeChartVols');
@@ -1888,51 +1786,68 @@ function runRouteComparison() {
         if (!cvV || !cvP) return;
         killCmp('rV'); killCmp('rP');
 
-        var legendOpts  = {display:true,position:'top',labels:{color:'#94a3b8',font:{size:10},padding:10,usePointStyle:true}};
+        var legendOpts  = {display:true, position:'top', labels:{color:'#94a3b8',font:{size:10},padding:10,usePointStyle:true}};
         var tooltipOpts = {backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8};
         var scalesOpts  = {
             x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5A7A9A',font:{size:10}}},
             y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:10}},beginAtZero:true}
         };
 
-        var datasetsVols = sorted.map(function([co,s], i) {
-            return {
-                label: co.length>18 ? co.slice(0,18)+'…' : co,
-                data: s.byMonth,
-                backgroundColor: colors[i%colors.length]+'99',
-                borderColor: colors[i%colors.length],
-                borderWidth: 2,
-                borderRadius: 4
-            };
-        });
-
-        var datasetsPax = sorted.map(function([co,s], i) {
-            var paxData = Array(12).fill(0);
-            all.filter(function(f){return f.company===co;}).forEach(function(f){
-                if(f.date) paxData[new Date(f.date).getMonth()] += (+f.passengers||0)+(+f.babies||0);
+        if (isMultiMonth) {
+            // Barres mensuelles
+            var datasetsVols = sorted.map(function(entry, i) {
+                return {
+                    label: entry[0].length>18 ? entry[0].slice(0,18)+'…' : entry[0],
+                    data:  entry[1].byMonth,
+                    backgroundColor: colors[i%colors.length]+'99',
+                    borderColor: colors[i%colors.length],
+                    borderWidth: 2, borderRadius: 4
+                };
             });
-            return {
-                label: co.length>18 ? co.slice(0,18)+'…' : co,
-                data: paxData,
-                borderColor: colors[i%colors.length],
-                backgroundColor: colors[i%colors.length]+'20',
-                borderWidth: 2.5,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 3
+            var datasetsPax = sorted.map(function(entry, i) {
+                var paxData = Array(12).fill(0);
+                all.filter(function(f){return f.company===entry[0];}).forEach(function(f){
+                    if(f.date) paxData[new Date(f.date).getMonth()] += (+f.passengers||0)+(+f.babies||0);
+                });
+                return {
+                    label: entry[0].length>18 ? entry[0].slice(0,18)+'…' : entry[0],
+                    data: paxData,
+                    borderColor: colors[i%colors.length],
+                    backgroundColor: colors[i%colors.length]+'20',
+                    borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 3
+                };
+            });
+            cmpCharts['rV'] = new Chart(cvV, {
+                type:'bar', data:{labels:MONTHS_FR, datasets:datasetsVols},
+                options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
+            });
+            cmpCharts['rP'] = new Chart(cvP, {
+                type:'line', data:{labels:MONTHS_FR, datasets:datasetsPax},
+                options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
+            });
+        } else {
+            // Camembert pour 1 mois
+            var labels  = sorted.map(function(e){return e[0];});
+            var volsData = sorted.map(function(e){return e[1].vols;});
+            var paxData  = sorted.map(function(e){return e[1].pax;});
+            var bgColors = sorted.map(function(_,i){return colors[i%colors.length]+'CC';});
+            var bdColors = sorted.map(function(_,i){return colors[i%colors.length];});
+            var doughnutOpts = {
+                responsive:true, maintainAspectRatio:false,
+                plugins:{legend:{display:true,position:'bottom',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},tooltip:tooltipOpts},
+                cutout:'60%'
             };
-        });
-
-        cmpCharts['rV'] = new Chart(cvV, {
-            type:'bar',
-            data:{labels:MONTHS_FR, datasets:datasetsVols},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
-        });
-        cmpCharts['rP'] = new Chart(cvP, {
-            type:'line',
-            data:{labels:MONTHS_FR, datasets:datasetsPax},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
-        });
+            cmpCharts['rV'] = new Chart(cvV, {
+                type:'doughnut',
+                data:{labels:labels, datasets:[{data:volsData, backgroundColor:bgColors, borderColor:bdColors, borderWidth:2}]},
+                options:doughnutOpts
+            });
+            cmpCharts['rP'] = new Chart(cvP, {
+                type:'doughnut',
+                data:{labels:labels, datasets:[{data:paxData, backgroundColor:bgColors, borderColor:bdColors, borderWidth:2}]},
+                options:doughnutOpts
+            });
+        }
     }, 60);
 }
 
