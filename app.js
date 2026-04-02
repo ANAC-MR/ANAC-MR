@@ -1561,6 +1561,17 @@ window.toggleStopoverField = function() {
 
 window.updateRouteByType = updateRouteByType;
 
+// Exposer closeModal pour les onclick HTML (hors module)
+window.closeModal = closeModal;
+
+// stepCount : incrémenter/décrémenter un champ numérique
+window.stepCount = function(fieldId, delta) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    const val = parseInt(el.value) || 0;
+    el.value = Math.max(0, val + delta);
+};
+
 // Sélection type DEP/ARR via boutons visuels
 window.selectType = function(type) {
     const hiddenInput = document.getElementById('fType');
