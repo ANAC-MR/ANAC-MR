@@ -1,2294 +1,1737 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANAC Mauritanie – Suivi des Vols</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <style>
-        .header-content { position: relative; }
-        .admin-link {
-            position: absolute; top: 10px; right: 10px;
-            font-size: 20px; opacity: 0.4; text-decoration: none;
-        }
-        .admin-link:hover { opacity: 0.8; }
-
-        /* ── TABS ── */
-        .main-tabs {
-            display: flex; gap: 4px;
-            border-bottom: 2px solid rgba(43,90,142,0.2);
-            margin-bottom: 24px;
-        }
-        .main-tab {
-            padding: 10px 28px; border: none; background: transparent;
-            font-family: inherit; font-size: 14px; font-weight: 600;
-            color: #718096; cursor: pointer;
-            border-bottom: 3px solid transparent; margin-bottom: -2px;
-            border-radius: 6px 6px 0 0; transition: all 0.2s;
-        }
-        .main-tab:hover { color: #2B5A8E; background: rgba(43,90,142,0.04); }
-        .main-tab.active { color: #2B5A8E; border-bottom-color: #2B5A8E; background: rgba(43,90,142,0.07); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* ── CHARTS ── */
-        .charts-header {
-            display: flex; align-items: flex-start;
-            justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
-        }
-        .charts-header h2 { font-size: 20px; font-weight: 700; color: #2d3748; margin: 0; }
-        .charts-header p  { font-size: 13px; color: #718096; margin: 4px 0 0; }
-
-        .btn-pdf {
-            background: linear-gradient(135deg, #C8102E, #e53e3e);
-            color: #fff; border: none; border-radius: 8px;
-            padding: 10px 22px; font-family: inherit; font-size: 13px; font-weight: 700;
-            cursor: pointer; box-shadow: 0 4px 12px rgba(200,16,46,0.3);
-            transition: opacity 0.2s, transform 0.15s;
-        }
-        .btn-pdf:hover { opacity: 0.85; transform: translateY(-1px); }
-        .btn-pdf:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-        .charts-filter-bar {
-            display: flex; gap: 16px; align-items: center;
-            background: rgba(43,90,142,0.05); border: 1px solid rgba(43,90,142,0.15);
-            border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; flex-wrap: wrap;
-        }
-        .charts-filter-bar label { font-size: 12px; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: 0.4px; }
-        .charts-filter-bar select {
-            padding: 6px 12px; border-radius: 7px; border: 1px solid rgba(43,90,142,0.2);
-            background: #fff; font-family: inherit; font-size: 13px; color: #2d3748; cursor: pointer;
-        }
-
-        /* KPI */
-        .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
-        .kpi-card {
-            background: #fff; border-radius: 12px; padding: 18px 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid;
-        }
-        .kpi-card:nth-child(1) { border-color: #2B5A8E; }
-        .kpi-card:nth-child(2) { border-color: #00b67a; }
-        .kpi-card:nth-child(3) { border-color: #D4AF37; }
-        .kpi-card:nth-child(4) { border-color: #C8102E; }
-        .kpi-value { font-size: 30px; font-weight: 800; color: #2d3748; }
-        .kpi-label { font-size: 12px; color: #718096; font-weight: 500; margin-top: 2px; }
-        .kpi-sub   { font-size: 11px; color: #a0aec0; margin-top: 3px; }
-
-        /* Charts grid */
-        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .chart-card {
-            background: #fff; border-radius: 14px; padding: 22px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.07); border: 1px solid rgba(43,90,142,0.1);
-        }
-        .chart-card.full { grid-column: 1 / -1; }
-        .chart-card h3 {
-            font-size: 13px; font-weight: 700; color: #2d3748; margin: 0 0 3px;
-            text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .chart-subtitle { font-size: 12px; color: #718096; margin-bottom: 14px; }
-        .chart-wrap { position: relative; height: 260px; }
-        .chart-wrap.tall { height: 320px; }
-
-        /* Route tags */
-        .route-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
-        .route-tag {
-            background: rgba(43,90,142,0.08); border: 1px solid rgba(43,90,142,0.18);
-            color: #2B5A8E; font-size: 12px; font-weight: 600;
-            padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;
-        }
-        .route-count {
-            background: #2B5A8E; color: #fff; border-radius: 10px;
-            padding: 1px 7px; font-size: 10px;
-        }
-
-        /* ── COMPARISON ── */
-        .compare-section {
-            background: #fff; border-radius: 14px; padding: 24px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-            border: 1px solid rgba(43,90,142,0.1);
-            margin-bottom: 20px;
-        }
-        .compare-section h3 {
-            font-size: 14px; font-weight: 700; color: #2d3748;
-            text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px;
-        }
-        .compare-controls {
-            display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;
-        }
-        .compare-controls label { font-size: 12px; font-weight: 700; color: #4a5568; text-transform: uppercase; }
-        .compare-controls select {
-            padding: 7px 12px; border-radius: 8px; border: 2px solid;
-            font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
-            background: #fff;
-        }
-        .compare-controls select.sel-a { border-color: #2B5A8E; color: #2B5A8E; }
-        .compare-controls select.sel-b { border-color: #C8102E; color: #C8102E; }
-        .compare-controls select.sel-route { border-color: #006B3F; color: #006B3F; }
-        .vs-badge {
-            background: #f7fafc; border: 2px solid #e2e8f0;
-            border-radius: 50%; width: 36px; height: 36px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 12px; font-weight: 800; color: #718096;
-            flex-shrink: 0;
-        }
-        .compare-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-        .compare-kpi {
-            border-radius: 10px; padding: 14px 16px; text-align: center;
-        }
-        .compare-kpi.a { background: rgba(43,90,142,0.08); border: 2px solid rgba(43,90,142,0.2); }
-        .compare-kpi.b { background: rgba(200,16,46,0.07); border: 2px solid rgba(200,16,46,0.2); }
-        .compare-kpi.neutral { background: rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
-        .compare-kpi .ck-val { font-size: 26px; font-weight: 800; }
-        .compare-kpi.a .ck-val { color: #2B5A8E; }
-        .compare-kpi.b .ck-val { color: #C8102E; }
-        .compare-kpi .ck-label { font-size: 11px; color: #718096; margin-top: 3px; }
-        .compare-kpi .ck-name  { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
-        .compare-kpi.a .ck-name { color: #2B5A8E; }
-        .compare-kpi.b .ck-name { color: #C8102E; }
-        .winner-badge {
-            display: inline-block; font-size: 10px; font-weight: 700;
-            padding: 2px 8px; border-radius: 10px;
-            background: #D4AF37; color: #fff; margin-top: 4px;
-        }
-        .compare-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .compare-chart-wrap { position: relative; height: 220px; }
-
-        .route-compare-table {
-            width: 100%; border-collapse: collapse; margin-top: 12px;
-        }
-        .route-compare-table th {
-            background: rgba(43,90,142,0.07); padding: 9px 14px;
-            font-size: 12px; font-weight: 700; color: #4a5568;
-            text-align: left; border-bottom: 2px solid rgba(43,90,142,0.15);
-        }
-        .route-compare-table td {
-            padding: 9px 14px; font-size: 13px; border-bottom: 1px solid #f0f4f8;
-        }
-        .route-compare-table tr:hover td { background: rgba(43,90,142,0.03); }
-        .bar-cell { display: flex; align-items: center; gap: 8px; }
-        .mini-bar {
-            height: 8px; border-radius: 4px; background: #2B5A8E;
-            min-width: 4px; transition: width 0.3s;
-        }
-
-        @media (max-width: 768px) {
-            .charts-grid { grid-template-columns: 1fr; }
-            .chart-card.full { grid-column: 1; }
-            .kpi-row { grid-template-columns: 1fr 1fr; }
-            .compare-grid { grid-template-columns: 1fr; }
-            .compare-chart-row { grid-template-columns: 1fr; }
-        }
-
-/* AUTH WALL FACTURATION */
-#factWall{display:none;padding:60px 20px;text-align:center;background:#f0f4f8;}
-#factWall .fbox{margin:0 auto;max-width:340px;padding:36px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);}
-#factWall h3{color:#1a365d;font-size:16px;font-weight:800;margin:0 0 4px;}
-#factWall p{color:#718096;font-size:12px;margin:0 0 20px;}
-#factWall .af{margin-bottom:14px;text-align:left;}
-#factWall .af label{display:block;font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;margin-bottom:5px;}
-#factWall .af input{width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#1a202c;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;}
-#factWall .af input:focus{border-color:#2B5A8E;}
-#factWall .abtn{width:100%;padding:12px;border:none;border-radius:8px;background:#2B5A8E;color:#fff;font-size:14px;font-weight:800;cursor:pointer;}
-#factWall .aerr{color:#e53e3e;font-size:12px;margin-top:8px;min-height:16px;}
-
-
-/* ═══════════════════════════════════════════════════
-   FLIGHT MODAL — Design horizontal moderne
-   ═══════════════════════════════════════════════════ */
-.fm-wide {
-    max-width: 780px !important;
-    width: 95vw !important;
-    padding: 0 !important;
-    border-radius: 16px !important;
-    overflow: hidden;
-    max-height: 94vh !important;
-    display: flex !important;
-    flex-direction: column !important;
-}
-/* Form body scrollable, header/footer fixes */
-.fm-form {
-    overflow-y: auto !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-}
-
-/* Header */
-.fm-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 26px;
-    background: linear-gradient(135deg, #1a365d 0%, #2B5A8E 100%);
-    color: #fff;
-}
-.fm-header-left { display: flex; align-items: center; gap: 14px; }
-.fm-header-icon {
-    width: 42px; height: 42px;
-    background: rgba(255,255,255,0.15); border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
-}
-.fm-title { font-size: 17px; font-weight: 800; margin: 0; color: #fff; }
-.fm-subtitle { font-size: 11px; color: rgba(255,255,255,0.6); margin: 2px 0 0; }
-.fm-close-btn {
-    width: 34px; height: 34px;
-    background: rgba(255,255,255,0.12); border: none; border-radius: 8px;
-    color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.2s;
-}
-.fm-close-btn:hover { background: rgba(255,255,255,0.25); transform: none; box-shadow: none; }
-
-/* Form body */
-.fm-form { padding: 20px 26px; }
-
-/* Section label */
-.fm-section-label {
-    font-size: 11px; font-weight: 800; color: #2B5A8E;
-    text-transform: uppercase; letter-spacing: 0.8px;
-    margin: 16px 0 10px;
-    padding-bottom: 6px;
-    border-bottom: 2px solid rgba(43,90,142,0.1);
-}
-.fm-section-label:first-of-type { margin-top: 0; }
-
-/* Grids */
-.fm-grid {
-    display: grid; gap: 12px; margin-bottom: 10px;
-}
-.fm-grid-4 { grid-template-columns: repeat(4, 1fr); }
-.fm-grid-1 { grid-template-columns: 1fr; }
-.fm-route-grid {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 10px; align-items: end;
-    margin-bottom: 10px;
-}
-.fm-route-arrow {
-    font-size: 22px; color: #2B5A8E; font-weight: 800;
-    padding-bottom: 8px; text-align: center;
-}
-
-/* Fields */
-.fm-field label {
-    display: block; font-size: 11px; font-weight: 700;
-    color: #4a5568; text-transform: uppercase; letter-spacing: 0.4px;
-    margin-bottom: 5px;
-}
-.fm-field input, .fm-field select {
-    width: 100%; padding: 8px 11px;
-    border: 1.5px solid #e2e8f0; border-radius: 8px;
-    font-size: 13px; font-family: inherit; color: #2d3748;
-    background: #fff; transition: border-color 0.2s, box-shadow 0.2s;
-}
-.fm-field input:focus, .fm-field select:focus {
-    outline: none; border-color: #2B5A8E;
-    box-shadow: 0 0 0 3px rgba(43,90,142,0.1);
-}
-.fm-field-col2 { grid-column: span 2; }
-
-/* Type buttons */
-.fm-type-row { display: flex; gap: 8px; margin-bottom: 12px; }
-.fm-type-btn {
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    gap: 7px; padding: 9px 16px;
-    border: 2px solid #e2e8f0; border-radius: 9px;
-    background: #f7fafc; color: #718096;
-    font-size: 13px; font-weight: 700; font-family: inherit;
-    cursor: pointer; transition: all 0.2s;
-}
-.fm-type-btn:hover { border-color: #2B5A8E; color: #2B5A8E; background: rgba(43,90,142,0.04); transform: none; box-shadow: none; }
-.fm-type-btn.active {
-    border-color: #2B5A8E; background: #2B5A8E; color: #fff;
-    box-shadow: 0 4px 12px rgba(43,90,142,0.25);
-}
-
-/* Counters */
-.fm-counter {
-    display: flex; align-items: center;
-    border: 1.5px solid #e2e8f0; border-radius: 8px;
-    overflow: hidden; background: #fff;
-}
-.fm-counter input[type=number] {
-    flex: 1; border: none; text-align: center;
-    font-size: 15px; font-weight: 700; padding: 7px 2px;
-    -moz-appearance: textfield;
-}
-.fm-counter input[type=number]::-webkit-inner-spin-button,
-.fm-counter input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-.fm-counter input:focus { outline: none; box-shadow: none; border: none; }
-.fm-cnt {
-    width: 34px; min-height: 36px;
-    background: #f7fafc; color: #2B5A8E;
-    border: none; font-size: 18px; font-weight: 700;
-    cursor: pointer; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    padding: 0; transition: background 0.15s;
-}
-.fm-cnt:hover { background: #2B5A8E; color: #fff; transform: none; box-shadow: none; }
-
-/* Total boxes */
-.fm-total-box {
-    background: rgba(43,90,142,0.06); border: 1px solid rgba(43,90,142,0.15);
-    border-radius: 9px; padding: 10px 14px;
-    display: flex; flex-direction: column; justify-content: center; gap: 6px;
-}
-.fm-total-line { display: flex; justify-content: space-between; align-items: center; }
-.fm-total-lbl { font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; }
-.fm-total-val { font-size: 16px; font-weight: 800; color: #2B5A8E; }
-.fm-grand-box {
-    background: linear-gradient(135deg, #1a365d, #2B5A8E);
-    border-radius: 9px; padding: 10px 14px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-}
-.fm-grand-lbl { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.65); text-transform: uppercase; letter-spacing: 0.5px; }
-.fm-grand-val { font-size: 28px; font-weight: 800; color: #D4AF37; line-height: 1; }
-
-/* Escale */
-.fm-stopover-toggle { margin: 8px 0; }
-.fm-chk-label {
-    display: inline-flex; align-items: center; gap: 10px;
-    cursor: pointer; font-size: 13px; font-weight: 600; color: #2d3748;
-    user-select: none;
-}
-.fm-chk-label input[type=checkbox] { display: none; }
-.fm-chk-box {
-    width: 20px; height: 20px;
-    border: 2px solid #e2e8f0; border-radius: 6px; background: #fff;
-    display: inline-flex; align-items: center; justify-content: center;
-    transition: all 0.2s; flex-shrink: 0;
-}
-.fm-chk-label input:checked + .fm-chk-box {
-    background: #2B5A8E; border-color: #2B5A8E;
-}
-.fm-chk-label input:checked + .fm-chk-box::after {
-    content: "✓"; color: #fff; font-size: 12px; font-weight: 800;
-}
-.fm-stopover-panel {
-    background: rgba(43,90,142,0.04);
-    border: 1.5px dashed rgba(43,90,142,0.25);
-    border-radius: 10px; padding: 14px 16px; margin: 8px 0;
-    animation: fmSlide 0.2s ease;
-}
-@keyframes fmSlide { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
-.fm-stopover-title {
-    font-size: 11px; font-weight: 800; color: #2B5A8E;
-    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
-}
-
-/* Footer */
-.fm-footer {
-    display: flex; justify-content: flex-end; gap: 10px;
-    padding: 14px 26px;
-    border-top: 1px solid #e8edf3;
-    background: #f7fafc;
-    margin: 12px -26px -20px;
-}
-.fm-btn-cancel {
-    padding: 10px 22px; background: #fff; color: #718096;
-    border: 1.5px solid #e2e8f0; border-radius: 8px;
-    font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer;
-    transition: all 0.2s;
-}
-.fm-btn-cancel:hover { background: #f7fafc; color: #2d3748; transform: none; box-shadow: none; }
-.fm-btn-save {
-    padding: 10px 28px;
-    background: linear-gradient(135deg, #2B5A8E, #1a365d);
-    color: #fff; border: none; border-radius: 8px;
-    font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer;
-    box-shadow: 0 4px 14px rgba(43,90,142,0.3); transition: all 0.2s;
-}
-.fm-btn-save:hover { opacity: 0.88; transform: translateY(-1px); }
-
-/* Responsive */
-@media (max-width: 680px) {
-    .fm-grid-4 { grid-template-columns: 1fr 1fr; }
-    .fm-route-grid { grid-template-columns: 1fr; }
-    .fm-route-arrow { display: none; }
-    .fm-field-col2 { grid-column: span 1; }
-}
-
-
-/* ═══════════════════════════════════════════════════════
-   FACTURATION — Design moderne
-   ═══════════════════════════════════════════════════════ */
-.fact-hero {
-    display:flex; align-items:center; gap:16px;
-    padding:20px 24px; margin-bottom:20px;
-    background:linear-gradient(135deg,#1a365d,#2B5A8E);
-    border-radius:14px; color:#fff;
-}
-.fact-hero-icon { font-size:28px; width:52px; height:52px; flex-shrink:0; background:rgba(255,255,255,0.15); border-radius:12px; display:flex; align-items:center; justify-content:center; }
-.fact-hero-title { font-size:19px; font-weight:800; margin:0 0 3px; }
-.fact-hero-sub   { font-size:12px; color:rgba(255,255,255,0.65); margin:0; }
-.fact-panel { background:#fff; border:1px solid #e8edf3; border-radius:12px; margin-bottom:14px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
-.fact-panel-hdr { display:flex; align-items:center; gap:10px; padding:13px 20px; background:linear-gradient(to right,#f7fafc,#fff); border-bottom:1px solid #e8edf3; }
-.fact-panel-hdr-icon { font-size:15px; }
-.fact-panel-hdr-title { flex:1; font-size:11px; font-weight:800; color:#1a365d; text-transform:uppercase; letter-spacing:0.7px; }
-.fact-panel-hdr-actions { display:flex; gap:7px; }
-.fact-sel-btn { padding:5px 12px; border-radius:6px; border:1px solid #e2e8f0; background:#fff; color:#2B5A8E; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; transition:all 0.2s; }
-.fact-sel-btn:hover { background:#2B5A8E; color:#fff; border-color:#2B5A8E; transform:none; box-shadow:none; }
-.fact-params-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:13px; padding:16px 20px; }
-.fact-param label { display:block; font-size:11px; font-weight:700; color:#718096; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:5px; }
-.fact-param input, .fact-param select { width:100%; padding:8px 11px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; font-family:inherit; color:#2d3748; background:#fff; transition:border-color 0.2s,box-shadow 0.2s; box-sizing:border-box; }
-.fact-param input:focus, .fact-param select:focus { outline:none; border-color:#2B5A8E; box-shadow:0 0 0 3px rgba(43,90,142,0.1); }
-/* Chips colonnes */
-.fact-chips-row { display:flex; flex-wrap:wrap; gap:10px; padding:14px 20px; }
-.fact-chip { cursor:pointer; }
-.fact-chip input[type=checkbox] { display:none; }
-.fact-chip-inner { display:inline-flex; align-items:center; gap:8px; padding:9px 16px; border:2px solid #e2e8f0; border-radius:30px; background:#f7fafc; color:#718096; font-size:13px; font-weight:600; transition:all 0.2s; user-select:none; }
-.fact-chip-check { display:none; font-weight:800; }
-.fact-chip input:checked + .fact-chip-inner { border-color:#2B5A8E; background:#2B5A8E; color:#fff; box-shadow:0 4px 12px rgba(43,90,142,0.25); }
-.fact-chip input:checked + .fact-chip-inner .fact-chip-check { display:inline; }
-.fact-chip-inner:hover { border-color:#2B5A8E; color:#2B5A8E; background:rgba(43,90,142,0.05); }
-.fact-chip input:checked + .fact-chip-inner:hover { background:#2B5A8E; color:#fff; }
-/* Cards compagnies */
-.fact-airlines-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:9px; padding:14px 20px; }
-.fact-airline-card { cursor:pointer; }
-.fact-airline-card input[type=checkbox] { display:none; }
-.fact-airline-card-inner { display:flex; align-items:center; gap:9px; padding:11px 13px; border:2px solid #e2e8f0; border-radius:10px; background:#f7fafc; color:#4a5568; font-size:12px; font-weight:600; transition:all 0.2s; user-select:none; position:relative; }
-.fact-airline-dot { width:8px; height:8px; border-radius:50%; background:#cbd5e0; flex-shrink:0; transition:background 0.2s; }
-.fact-airline-name { flex:1; line-height:1.3; }
-.fact-airline-tick { position:absolute; top:7px; right:7px; width:17px; height:17px; border-radius:50%; background:#2B5A8E; color:#fff; font-size:9px; font-weight:800; display:none; align-items:center; justify-content:center; }
-.fact-airline-card input:checked + .fact-airline-card-inner { border-color:#2B5A8E; background:rgba(43,90,142,0.06); color:#1a365d; }
-.fact-airline-card input:checked + .fact-airline-card-inner .fact-airline-dot { background:#2B5A8E; }
-.fact-airline-card input:checked + .fact-airline-card-inner .fact-airline-tick { display:flex; }
-.fact-airline-card-inner:hover { border-color:#2B5A8E; }
-/* Actions */
-.fact-actions-bar { display:flex; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
-.fact-btn-primary { display:inline-flex; align-items:center; gap:8px; padding:11px 22px; background:linear-gradient(135deg,#2B5A8E,#1a365d); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 4px 14px rgba(43,90,142,0.3); transition:all 0.2s; }
-.fact-btn-primary:hover { opacity:0.88; transform:translateY(-1px); }
-.fact-btn-success { display:inline-flex; align-items:center; gap:8px; padding:11px 22px; background:linear-gradient(135deg,#006B3F,#005030); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 4px 14px rgba(0,107,63,0.3); transition:all 0.2s; }
-.fact-btn-success:hover { opacity:0.88; transform:translateY(-1px); }
-/* Preview */
-.fact-preview-panel { background:#fff; border:1px solid #e8edf3; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
-.fact-preview-panel-hdr { display:flex; align-items:center; gap:8px; padding:12px 20px; background:linear-gradient(to right,#f7fafc,#fff); border-bottom:1px solid #e8edf3; font-size:11px; font-weight:800; color:#1a365d; text-transform:uppercase; letter-spacing:0.7px; }
-#fctPreview { padding:20px; min-height:80px; }
-.fact-empty-state { text-align:center; padding:36px 20px; color:#a0aec0; }
-.fact-empty-state-icon { font-size:36px; margin-bottom:10px; opacity:0.45; }
-.fact-empty-state p { font-size:13px; line-height:1.6; }
-.fact-empty-state strong { color:#2B5A8E; }
-/* Masquer anciens styles */
-.fact-config     { display:none !important; }
-.fact-col-bar    { display:none !important; }
-.fact-airlines-grid { display:none !important; }
-.fact-actions    { display:none !important; }
-.fact-preview-box { display:none !important; }
-
-    </style>
-</head>
-<body>
-<div class="container">
-    <header>
-        <div class="header-content">
-            <img src="assets/ANAC-logo.png" alt="ANAC Logo" class="logo">
-            <h1>ANAC Mauritanie – Suivi des Vols</h1>
-            <div style="position:absolute;top:10px;right:10px;display:flex;gap:8px;align-items:center;">
-                <a href="vols.html" style="font-size:12px;font-weight:700;color:#34d399;text-decoration:none;background:rgba(52,211,153,0.1);padding:5px 12px;border-radius:6px;border:1px solid rgba(52,211,153,0.25);">🛫 Vols</a>
-                <a href="ldm.html" style="font-size:12px;font-weight:700;color:#D4AF37;text-decoration:none;background:rgba(212,175,55,0.12);padding:5px 12px;border-radius:6px;border:1px solid rgba(212,175,55,0.35);">📨 LDM/MVT</a>
-                <a href="admin.html" class="admin-link" title="Administration" style="font-size:20px;opacity:0.4;text-decoration:none;position:static;">⚙️</a>
-            </div>
-        </div>
-    </header>
-
-    <main>
-        <!-- TABS -->
-        <div class="main-tabs">
-            <button class="main-tab active" onclick="switchTab('suivi')">📋 Suivi des Vols</button>
-            <button class="main-tab" onclick="switchTab('rapports')">📊 Diagrammes & Rapports</button>
-            <button class="main-tab" onclick="switchTab('facturation')">🧾 Ordre d'émission de facture</button>
-        </div>
-
-        <!-- ═══ TAB 1 : SUIVI ═══ -->
-        <div class="tab-content active" id="tab-suivi">
-            <section class="filters-section">
-                <div class="filters">
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="monthSelect">Mois</label>
-                            <select id="monthSelect"><option value="ALL">Tous les mois</option></select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="companySelect">Compagnie</label>
-                            <select id="companySelect"><option value="ALL">Toutes les compagnies</option></select>
-                        </div>
-                    </div>
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="fromSelect">Départ de</label>
-                            <select id="fromSelect"><option value="ALL">Tous les aéroports</option></select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="toSelect">Arrivée à</label>
-                            <select id="toSelect"><option value="ALL">Tous les aéroports</option></select>
-                        </div>
-                    </div>
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="searchFrom">Date début</label>
-                            <input type="date" id="searchFrom">
-                        </div>
-                        <div class="filter-group">
-                            <label for="searchTo">Date fin</label>
-                            <input type="date" id="searchTo">
-                        </div>
-                        <div class="filter-group">
-                            <label for="searchImm">Immatriculation</label>
-                            <input type="text" id="searchImm" placeholder="Rechercher..." autocomplete="off">
-                        </div>
-                        <div class="filter-group">
-                            <label for="searchVol">N° Vol</label>
-                            <input type="text" id="searchVol" placeholder="Rechercher..." autocomplete="off">
-                        </div>
-                    </div>
-                    <div class="filter-row">
-                        <div class="button-group">
-                            <button class="btn-primary btn-active" data-type="ALL">Tout</button>
-                            <button class="btn-primary" data-type="DEP">Départ</button>
-                            <button class="btn-primary" data-type="ARR">Arrivée</button>
-                            <button class="btn-secondary" id="resetFilters">Réinitialiser</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="actions-section">
-                <div class="actions">
-                    <button class="btn-success" id="addFlightBtn">➕ Ajouter un vol</button>
-                    <button class="btn-warning" id="undoBtn" style="display:none;">↩️ Annuler suppression</button>
-                    <button id="btnExportSuivi" onclick="exportSuiviExcel()"
-                        style="background:linear-gradient(135deg,rgba(45,212,160,.25),rgba(45,212,160,.1));
-                               border:1px solid rgba(45,212,160,.5);color:#34d399;border-radius:8px;
-                               padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;
-                               font-family:inherit;display:inline-flex;align-items:center;gap:6px;
-                               transition:all .15s;"
-                        onmouseover="this.style.background='rgba(45,212,160,.3)'"
-                        onmouseout="this.style.background='linear-gradient(135deg,rgba(45,212,160,.25),rgba(45,212,160,.1))'">
-                        ⬇ Exporter Excel
-                    </button>
-                </div>
-            </section>
-
-            <section class="table-section">
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>N° d'autorisation</th><th>Date</th><th>Compagnie</th>
-                                <th>Immatriculation</th><th>N° Vol</th><th>De</th><th>Vers</th>
-                                <th>Type</th><th>PAX</th><th>Bébés</th><th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="flightTableBody"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="8">TOTAL</td>
-                                <td id="totalPassengers">0</td>
-                                <td id="totalBabies">0</td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </section>
-        </div>
-
-        <!-- ═══ TAB 2 : RAPPORTS ═══ -->
-        <div class="tab-content" id="tab-rapports">
-
-<!-- HEADER -->
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
-  <div>
-    <h2 style="font-size:20px;font-weight:800;color:#e2e8f0;margin:0;">📊 Diagrammes</h2>
-    <p id="chartsSubtitle" style="font-size:12px;color:#5A7A9A;margin:3px 0 0;">Analyse automatique des données de vol</p>
-  </div>
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <select id="chartYearFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
-      <option value="ALL">Toutes les années</option>
-    </select>
-    <select id="chartMonthFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
-      <option value="ALL">Tous les mois</option>
-      <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
-      <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
-      <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
-      <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
-    </select>
-    <select id="chartCompanyFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;min-width:160px;">
-      <option value="ALL">Toutes les compagnies</option>
-    </select>
-    <button onclick="resetChartFilters()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
-    <button onclick="exportExcel()" id="btnExportExcel"
-      style="background:linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1));
-             border:1px solid rgba(0,182,122,.5);color:#34d399;border-radius:8px;
-             padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;
-             font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .15s;"
-      onmouseover="this.style.background='rgba(0,182,122,.3)'"
-      onmouseout="this.style.background='linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1))'">
-      <span>⬇</span> Exporter Excel
-    </button>
-  </div>
-</div>
-
-<!-- KPIs -->
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
-  <div style="background:linear-gradient(135deg,rgba(74,158,255,.2),rgba(74,158,255,.06));border:1px solid rgba(74,158,255,.3);border-radius:14px;padding:16px 18px;">
-    <div style="font-size:30px;font-weight:800;color:#60a5fa;font-family:'JetBrains Mono',monospace;" id="kpi-vols">–</div>
-    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Total vols</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-top:2px;" id="kpi-vols-sub"></div>
-  </div>
-  <div style="background:linear-gradient(135deg,rgba(45,212,160,.2),rgba(45,212,160,.06));border:1px solid rgba(45,212,160,.3);border-radius:14px;padding:16px 18px;">
-    <div style="font-size:30px;font-weight:800;color:#34d399;font-family:'JetBrains Mono',monospace;" id="kpi-pax">–</div>
-    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Total passagers</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-top:2px;" id="kpi-pax-sub"></div>
-  </div>
-  <div style="background:linear-gradient(135deg,rgba(212,175,55,.2),rgba(212,175,55,.06));border:1px solid rgba(212,175,55,.3);border-radius:14px;padding:16px 18px;">
-    <div style="font-size:30px;font-weight:800;color:#D4AF37;font-family:'JetBrains Mono',monospace;" id="kpi-comp">–</div>
-    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Compagnies actives</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-top:2px;" id="kpi-comp-sub"></div>
-  </div>
-  <div style="background:linear-gradient(135deg,rgba(248,113,113,.2),rgba(248,113,113,.06));border:1px solid rgba(248,113,113,.3);border-radius:14px;padding:16px 18px;">
-    <div style="font-size:30px;font-weight:800;color:#f87171;font-family:'JetBrains Mono',monospace;" id="kpi-dest">–</div>
-    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Destinations</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-top:2px;" id="kpi-dest-sub"></div>
-  </div>
-</div>
-
-<!-- GRILLE CHARTS 2 colonnes -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-
-  <!-- Vols/mois -->
-  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">✈️ Vols par mois</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Vols enregistrés</div>
-    <div style="position:relative;height:210px;"><canvas id="chartVolsMois"></canvas></div>
-  </div>
-
-  <!-- PAX/mois séparé DEP/ARR -->
-  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">👥 Passagers par mois</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Départs NKC vs Arrivées NKC</div>
-    <div style="position:relative;height:210px;"><canvas id="chartPaxMois"></canvas></div>
-  </div>
-
-  <!-- Top compagnies -->
-  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">🏆 Top compagnies</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Classement par nombre de vols</div>
-    <div style="position:relative;height:210px;"><canvas id="chartTopComp"></canvas></div>
-  </div>
-
-  <!-- PAX/compagnie -->
-  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">🎫 Passagers par compagnie</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Total transportés</div>
-    <div style="position:relative;height:210px;"><canvas id="chartPaxComp"></canvas></div>
-  </div>
-
-  <!-- Destinations cliquables pleine largeur -->
-  <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">🗺️ Destinations les plus fréquentées</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:14px;">Depuis / vers Nouakchott — cliquez sur une ville pour voir les détails</div>
-    <div id="destCards" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;"></div>
-    <div id="destDetail" style="display:none;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;margin-top:6px;"></div>
-  </div>
-
-  <!-- Comparaison 2 compagnies pleine largeur -->
-  <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">⚖️ Comparaison de deux compagnies</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
-      <select id="cmpA" onchange="runComparison()" style="background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);border-radius:8px;padding:7px 12px;color:#60a5fa;font-size:13px;font-family:inherit;min-width:160px;">
-        <option value="">— Compagnie A —</option>
-      </select>
-      <div style="font-size:14px;font-weight:800;color:#D4AF37;padding:0 4px;">VS</div>
-      <select id="cmpB" onchange="runComparison()" style="background:rgba(45,212,160,.1);border:1px solid rgba(45,212,160,.3);border-radius:8px;padding:7px 12px;color:#34d399;font-size:13px;font-family:inherit;min-width:160px;">
-        <option value="">— Compagnie B —</option>
-      </select>
-      <select id="cmpYear" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
-        <option value="ALL">Toutes années</option>
-      </select>
-      <select id="cmpMonth" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
-        <option value="ALL">Tous mois</option>
-        <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
-        <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
-        <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
-        <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
-      </select>
-    </div>
-    <!-- Période personnalisée -->
-    <div id="cmpPeriodRow" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;">
-      <span style="font-size:11px;color:#5A7A9A;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">📅 Période personnalisée</span>
-      <label style="font-size:12px;color:#94a3b8;">Du <input type="date" id="cmpDateDeb" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
-      <label style="font-size:12px;color:#94a3b8;">Au <input type="date" id="cmpDateFin" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
-      <button onclick="document.getElementById('cmpDateDeb').value='';document.getElementById('cmpDateFin').value='';runComparison();" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;">✕ Effacer</button>
-    </div>
-    <div id="cmpResult" style="color:#5A7A9A;font-size:13px;text-align:center;padding:16px 0;">
-      Sélectionnez deux compagnies pour comparer
-    </div>
-  </div>
-
-  <!-- Compagnies sur même trajet pleine largeur -->
-  <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">🛤️ Compagnies sur le même trajet</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
-      <select id="routeFilter" onchange="runRouteComparison()" style="background:rgba(212,175,55,.12);border:2px solid rgba(212,175,55,.5);border-radius:8px;padding:7px 12px;color:#D4AF37;font-size:13px;font-family:inherit;min-width:220px;font-weight:600;">
-        <option value="">— Choisir une destination —</option>
-      </select>
-      <select id="routeYear" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
-        <option value="ALL">Toutes années</option>
-      </select>
-      <select id="routeMonth" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
-        <option value="ALL">Tous les mois</option>
-        <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
-        <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
-        <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
-        <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
-      </select>
-    </div>
-    <!-- Période personnalisée route -->
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;">
-      <span style="font-size:11px;color:#5A7A9A;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">📅 Période personnalisée</span>
-      <label style="font-size:12px;color:#94a3b8;">Du <input type="date" id="routeDateDeb" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
-      <label style="font-size:12px;color:#94a3b8;">Au <input type="date" id="routeDateFin" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
-      <button onclick="document.getElementById('routeDateDeb').value='';document.getElementById('routeDateFin').value='';runRouteComparison();" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;">✕ Effacer</button>
-    </div>
-    <div id="routeCmpResult" style="color:#5A7A9A;font-size:13px;text-align:center;padding:16px 0;">
-      Sélectionnez une destination pour voir l'analyse
-    </div>
-  </div>
-
-</div>
-</div><!-- end tab-rapports -->
-    
-    <!-- ═══ TAB FACTURATION ═══ -->
-    
-<div id="factWall">
-  <div class="fbox">
-    <div style="font-size:30px;margin-bottom:8px;">🧾</div>
-    <h3>Ordre d'émission de facture</h3>
-    <p>Connexion requise pour accéder à cet onglet</p>
-    <div class="af"><label>Identifiant</label>
-      <input type="text" id="factU" autocomplete="new-password" spellcheck="false"></div>
-    <div class="af"><label>Mot de passe</label>
-      <input type="password" id="factP" autocomplete="new-password"
-        onkeydown="if(event.key==='Enter')_doFactLogin()"></div>
-    <button class="abtn" id="factBtn" onclick="_doFactLogin()">Connexion</button>
-    <div class="aerr" id="factErr"></div>
-  </div>
-</div>
-
-    <div id="factContent" style="display:none;">
-        <div class="tab-content" id="tab-facturation">
-        <div class="fact-section">
-
-            <div class="fact-hero">
-                <div class="fact-hero-icon">📄</div>
-                <div>
-                    <h2 class="fact-hero-title">Ordre d'Émission de Facture</h2>
-                    <p class="fact-hero-sub">Générez le document officiel ANAC Mauritanie</p>
-                </div>
-            </div>
-
-            <div class="fact-panel">
-                <div class="fact-panel-hdr">
-                    <span class="fact-panel-hdr-icon">⚙️</span>
-                    <span class="fact-panel-hdr-title">Paramètres du document</span>
-                </div>
-                <div class="fact-params-grid">
-                    <div class="fact-param">
-                        <label>Période</label>
-                        <select id="fctPeriode">
-                            <option value="mois">Par mois</option>
-                            <option value="libre">Période libre</option>
-                        </select>
-                    </div>
-                    <div class="fact-param" id="fctMoisWrap">
-                        <label>Mois</label>
-                        <select id="fctMois">
-                            <option value="1">Janvier</option><option value="2">Février</option>
-                            <option value="3">Mars</option><option value="4">Avril</option>
-                            <option value="5">Mai</option><option value="6">Juin</option>
-                            <option value="7">Juillet</option><option value="8">Août</option>
-                            <option value="9">Septembre</option><option value="10">Octobre</option>
-                            <option value="11">Novembre</option><option value="12">Décembre</option>
-                        </select>
-                    </div>
-                    <div class="fact-param">
-                        <label>Année</label>
-                        <select id="fctAnnee"></select>
-                    </div>
-                    <div class="fact-param" id="fctDebWrap" style="display:none;">
-                        <label>Date début</label>
-                        <input type="date" id="fctDeb">
-                    </div>
-                    <div class="fact-param" id="fctFinWrap" style="display:none;">
-                        <label>Date fin</label>
-                        <input type="date" id="fctFin">
-                    </div>
-                    <div class="fact-param">
-                        <label>N° document</label>
-                        <input type="text" id="fctNumero" value="0008/DTA/SEES/2026">
-                    </div>
-                    <div class="fact-param">
-                        <label>Date du document</label>
-                        <input type="date" id="fctDate">
-                    </div>
-                </div>
-            </div>
-
-            <div class="fact-panel">
-                <div class="fact-panel-hdr">
-                    <span class="fact-panel-hdr-icon">📊</span>
-                    <span class="fact-panel-hdr-title">Colonnes à inclure</span>
-                </div>
-                <div class="fact-chips-row">
-                    <label class="fact-chip">
-                        <input type="checkbox" class="fact-chip-cb" data-col="pax_dep" checked>
-                        <span class="fact-chip-inner"><span>🛫</span><span>PAX Départs</span><span class="fact-chip-check">✓</span></span>
-                    </label>
-                    <label class="fact-chip">
-                        <input type="checkbox" class="fact-chip-cb" data-col="pax_arr" checked>
-                        <span class="fact-chip-inner"><span>🛬</span><span>PAX Arrivées</span><span class="fact-chip-check">✓</span></span>
-                    </label>
-                    <label class="fact-chip">
-                        <input type="checkbox" class="fact-chip-cb" data-col="vols">
-                        <span class="fact-chip-inner"><span>✈️</span><span>Nombre de vols</span><span class="fact-chip-check">✓</span></span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="fact-panel">
-                <div class="fact-panel-hdr">
-                    <span class="fact-panel-hdr-icon">🏢</span>
-                    <span class="fact-panel-hdr-title">Compagnies</span>
-                    <div class="fact-panel-hdr-actions">
-                        <button class="fact-sel-btn" onclick="fctSelectAll(true)">Tout sélectionner</button>
-                        <button class="fact-sel-btn" onclick="fctSelectAll(false)">Tout désélectionner</button>
-                    </div>
-                </div>
-                <div class="fact-airlines-cards" id="fctAirlines"></div>
-            </div>
-
-            <div class="fact-actions-bar">
-                <button class="fact-btn-primary" onclick="fctGenApercu()">
-                    <span>👁</span> Générer l'aperçu
-                </button>
-                <button class="fact-btn-success" id="btnFctDocx" onclick="fctTelecharger()" style="display:none;">
-                    <span>⬇️</span> Télécharger .docx
-                </button>
-            </div>
-
-            <div class="fact-preview-panel">
-                <div class="fact-preview-panel-hdr"><span>🔍</span> Aperçu du document</div>
-                <div id="fctPreview">
-                    <div class="fact-empty-state">
-                        <div class="fact-empty-state-icon">📋</div>
-                        <p>Configurez les paramètres puis cliquez sur<br><strong>« Générer l'aperçu »</strong></p>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-        </div><!-- end tab-facturation -->
-    </main>
-
-</div>
-
-<!-- MODAL VOL — design horizontal centré -->
-<div class="modal" id="flightModal">
-<div class="modal-content fm-wide">
-
-  <!-- HEADER -->
-  <div class="fm-header">
-    <div class="fm-header-left">
-      <span class="fm-header-icon">✈</span>
-      <div>
-        <h2 class="fm-title" id="fpTitle">Ajouter un vol</h2>
-        <p class="fm-subtitle">Remplissez les informations ci-dessous</p>
-      </div>
-    </div>
-    <button type="button" class="fm-close-btn" id="cancelBtn" onclick="closeModal()">✕</button>
-  </div>
-
-  <form id="flightForm" class="fm-form">
-
-    <!-- LIGNE 1 : Identification -->
-    <div class="fm-section-label">🪪 Identification</div>
-    <div class="fm-grid fm-grid-4">
-      <div class="fm-field">
-        <label>N° autorisation</label>
-        <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
-        <small class="field-hint">Format : SNA26-XXXX</small>
-      </div>
-      <div class="fm-field">
-        <label>Date du vol</label>
-        <input type="date" id="fDate" required>
-      </div>
-      <div class="fm-field">
-        <label>Immatriculation</label>
-        <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
-      </div>
-      <div class="fm-field">
-        <label>N° Vol</label>
-        <input type="text" id="fVol" placeholder="Ex: L6-123" required>
-      </div>
-    </div>
-
-    <div class="fm-grid fm-grid-1" style="margin-top:0;">
-      <div class="fm-field">
-        <label>Compagnie aérienne</label>
-        <select id="fCompany" required></select>
-      </div>
-    </div>
-
-    <!-- LIGNE 2 : Itinéraire -->
-    <div class="fm-section-label">🗺️ Itinéraire</div>
-
-    <!-- Boutons Type -->
-    <div class="fm-type-row">
-      <button type="button" class="fm-type-btn active" id="btnDEP" onclick="selectType('DEP')">
-        <span>🛫</span><span>Départ</span>
-      </button>
-      <button type="button" class="fm-type-btn" id="btnARR" onclick="selectType('ARR')">
-        <span>🛬</span><span>Arrivée</span>
-      </button>
-    </div>
-    <input type="hidden" id="fType" value="DEP">
-
-    <div class="fm-grid fm-route-grid">
-      <div class="fm-field">
-        <label>Départ de</label>
-        <select id="fFrom" required></select>
-      </div>
-      <div class="fm-route-arrow">→</div>
-      <div class="fm-field">
-        <label>Arrivée à</label>
-        <select id="fTo" required></select>
-      </div>
-    </div>
-
-    <!-- LIGNE 3 : Passagers -->
-    <div class="fm-section-label">👥 Passagers</div>
-    <div class="fm-grid fm-grid-4">
-      <div class="fm-field">
-        <label>PAX (vol)</label>
-        <div class="fm-counter">
-          <button type="button" class="fm-cnt" onclick="stepCount('fPassengers',-1)">−</button>
-          <input type="number" id="fPassengers" min="0" value="0" required oninput="updateTotals()">
-          <button type="button" class="fm-cnt" onclick="stepCount('fPassengers',1)">+</button>
-        </div>
-      </div>
-      <div class="fm-field">
-        <label>Bébés (vol)</label>
-        <div class="fm-counter">
-          <button type="button" class="fm-cnt" onclick="stepCount('fBabies',-1)">−</button>
-          <input type="number" id="fBabies" min="0" value="0" required oninput="updateTotals()">
-          <button type="button" class="fm-cnt" onclick="stepCount('fBabies',1)">+</button>
-        </div>
-      </div>
-
-      <!-- Total live -->
-      <div class="fm-total-box">
-        <div class="fm-total-line"><span class="fm-total-lbl">Total PAX</span><span class="fm-total-val" id="liveTotalPax">0</span></div>
-        <div class="fm-total-line"><span class="fm-total-lbl">Total Bébés</span><span class="fm-total-val" id="liveTotalBabies">0</span></div>
-      </div>
-      <div class="fm-grand-box">
-        <span class="fm-grand-lbl">Grand Total</span>
-        <span class="fm-grand-val" id="liveTotalAll">0</span>
-      </div>
-    </div>
-
-    <!-- Escale -->
-    <div class="fm-stopover-toggle">
-      <label class="fm-chk-label">
-        <input type="checkbox" id="hasStopover" onchange="toggleStopoverField()">
-        <span class="fm-chk-box"></span>
-        <span>Ce vol comporte une escale</span>
-      </label>
-    </div>
-
-    <div class="fm-stopover-panel" id="stopoverGroup" style="display:none;">
-      <div class="fm-stopover-title">✈ Escale</div>
-      <div class="fm-grid fm-grid-4">
-        <div class="fm-field fm-field-col2">
-          <label>Aéroport d'escale</label>
-          <select id="fStopover"><option value="">— Choisir —</option></select>
-        </div>
-        <div class="fm-field">
-          <label>PAX Escale</label>
-          <div class="fm-counter">
-            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverPax',-1)">−</button>
-            <input type="number" id="fStopoverPax" min="0" value="0" oninput="updateTotals()">
-            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverPax',1)">+</button>
-          </div>
-        </div>
-        <div class="fm-field">
-          <label>Bébés Escale</label>
-          <div class="fm-counter">
-            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',-1)">−</button>
-            <input type="number" id="fStopoverBabies" min="0" value="0" oninput="updateTotals()">
-            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',1)">+</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- FOOTER -->
-    <div class="fm-footer">
-      <button type="button" class="fm-btn-cancel" onclick="closeModal()">Annuler</button>
-      <button type="submit" class="fm-btn-save">💾 Enregistrer le vol</button>
-    </div>
-
-  </form>
-</div>
-</div>
-
-<div id="notificationContainer"></div>
-
-<script type="module" src="firebase.js"></script>
-<script type="module" src="app.js"></script>
-
-<script>
-// ══════════════════════════════════════════
-// TABS
-// ══════════════════════════════════════════
-function switchTab(tab) {
-    document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.getElementById('tab-' + tab).classList.add('active');
-    document.querySelectorAll('.main-tab').forEach(t => {
-        if (t.getAttribute('onclick') === `switchTab('${tab}')`) t.classList.add('active');
-    });
-    if (tab === 'rapports') setTimeout(refreshCharts, 150);
-}
-
-// ══════════════════════════════════════════
-// CHARTS
-// ══════════════════════════════════════════
-const MONTHS_FR=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-const MONTHS_LONG=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const PALETTE=['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#00B67A','#E84141','#54A0FF','#F7B731','#26de81','#fd9644'];
-let charts={}, cmpCharts={};
-
-const CITY_NAMES={
-  'GQNO':'Nouakchott','GQNN':'Nouakchott','NKC':'Nouakchott',
-  'GQPP':'Nouadhibou','NDB':'Nouadhibou',
-  'GQPZ':'Zouerate','OUZ':'Zouerate',
-  'GQNI':'Nema','EMN':'Nema',
-  'GQPF':'Kiffa','KFA':'Kiffa',
-  'LFPG':'Paris','CDG':'Paris',
-  'LTFM':'Istanbul','IST':'Istanbul',
-  'DAAG':'Alger','ALG':'Alger',
-  'DTTA':'Tunis','TUN':'Tunis',
-  'GMMN':'Casablanca','CMN':'Casablanca',
-  'GOBD':'Dakar','DSS':'Dakar',
-  'GCLP':'Las Palmas','LPA':'Las Palmas',
-  'GBYD':'Banjul','BJL':'Banjul',
-  'GUCY':'Conakry','CKY':'Conakry',
-  'DIAP':'Abidjan','ABJ':'Abidjan',
-  'DNMM':'Lagos','LOS':'Lagos',
-  'GABS':'Bamako','BKO':'Bamako',
-  'OEMA':'Madinah','MED':'Madinah',
-  'DXXX':'Lomé','LFW':'Lomé',
-  'DBBP':'Lomé',  // ancien code incorrect, conservé pour compatibilité
-  // Autres destinations Afrique de l'Ouest
-  'DIYO':'Yamoussoukro','ASK':'Yamoussoukro',
-  'GVNP':'Praia','RAI':'Praia',
-  'GOGG':'Ziguinchor','ZIG':'Ziguinchor',
-  'FOGR':'Libreville','LBV':'Libreville',
-  'FKKD':'Douala','DLA':'Douala',
-  'HAAB':'Addis-Abeba','ADD':'Addis-Abeba',
-  'HECA':'Le Caire','CAI':'Le Caire',
-  'ORBI':'Bagdad','BGW':'Bagdad',
-  'OMDB':'Dubaï','DXB':'Dubaï',
-  'OTHH':'Doha','DOH':'Doha',
-  'OJAI':'Amman','AMM':'Amman',
-  'LLBG':'Tel Aviv','TLV':'Tel Aviv',
-  'LFBO':'Toulouse','TLS':'Toulouse',
-  'EHAM':'Amsterdam','AMS':'Amsterdam',
-  'EDDF':'Francfort','FRA':'Francfort',
-  'LEMD':'Madrid','MAD':'Madrid',
-  'LIRF':'Rome','FCO':'Rome',
-  'EGLL':'Londres','LHR':'Londres',
-  'UUEE':'Moscou','SVO':'Moscou',
-  'VABB':'Mumbai','BOM':'Mumbai',
-  'ZBAA':'Pékin','PEK':'Pékin',
-};
-function cityName(code){
-  if(!code)return '';
-  // Recherche exacte d'abord
-  if(CITY_NAMES[code])return CITY_NAMES[code];
-  // Recherche insensible à la casse
-  const upper=code.toUpperCase().trim();
-  if(CITY_NAMES[upper])return CITY_NAMES[upper];
-  return code;
-}
-function isNKC(code){
-    if(!code)return false;
-    // GQNO = ancien code OACI, GQNN = nouveau code OACI (Oumtounsy), NKC = IATA
-    const NKC_CODES=['GQNO','GQNN','NKC','NOUAKCHOTT'];
-    return NKC_CODES.includes(code.toUpperCase().trim());
-}
-// Obtenir la ville non-NKC d'un vol (peu importe le sens)
-function getDestCity(f){
-    const from=(f.from||'').trim();
-    const to=(f.to||'').trim();
-    if(!from&&!to)return null;
-    // Si l'un des deux est NKC, retourner l'autre
-    if(isNKC(from))return to||null;
-    if(isNKC(to))return from||null;
-    // Ni l'un ni l'autre n'est NKC → on prend "to" par défaut
-    return to||from||null;
-}
-
-function getFlights(){return window.appFlights||[];}
-
-function filterFlights(flights){
-    const y=document.getElementById('chartYearFilter').value;
-    const m=document.getElementById('chartMonthFilter').value;
-    const co=document.getElementById('chartCompanyFilter').value;
-    return flights.filter(f=>{
-        const d=f.date?new Date(f.date):null;
-        if(y!=='ALL'&&(!d||d.getFullYear()!==+y))return false;
-        if(m!=='ALL'&&(!d||d.getMonth()!==+m))return false;
-        if(co!=='ALL'&&f.company!==co)return false;
-        return true;
-    });
-}
-
-function populateYearFilter(flights){
-    const sel=document.getElementById('chartYearFilter');
-    const cur=sel.value;
-    const years=[...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
-    sel.innerHTML='<option value="ALL">Toutes les années</option>';
-    years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;if(String(y)===cur)o.selected=true;sel.appendChild(o);});
-}
-
-function populateCompanyFilter(flights){
-    const sel=document.getElementById('chartCompanyFilter');
-    const cur=sel.value;
-    const cos=[...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
-    sel.innerHTML='<option value="ALL">Toutes les compagnies</option>';
-    cos.forEach(co=>{const o=document.createElement('option');o.value=co;o.textContent=co;if(co===cur)o.selected=true;sel.appendChild(o);});
-}
-
-function kill(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-function killCmp(id){if(cmpCharts[id]){cmpCharts[id].destroy();delete cmpCharts[id];}}
-
-function monthly(flights,field){
-    const d=Array(12).fill(0);
-    flights.forEach(f=>{if(f.date)d[new Date(f.date).getMonth()]+=field?(+f[field]||0):1;});
-    return d;
-}
-
-function darkOpts(extra){
-    return Object.assign({
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}},
-        scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5A7A9A',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:11}},beginAtZero:true}}
-    },extra||{});
-}
-
-// ── Colonnes disponibles pour l'export ──
-const EXPORT_COLS=[
-    {key:'date',         label:'Date',              tdIdx:1,  def:true},
-    {key:'company',      label:'Compagnie',          tdIdx:2,  def:true},
-    {key:'registration', label:'Immatriculation',    tdIdx:3,  def:false},
-    {key:'flightNum',    label:'N° de vol',          tdIdx:4,  def:true},
-    {key:'from',         label:'Ville Départ',       tdIdx:5,  def:true},
-    {key:'to',           label:'Ville Arrivée',      tdIdx:6,  def:true},
-    {key:'type',         label:'Type (DEP/ARR)',     tdIdx:7,  def:false},
-    {key:'pax',          label:'Passagers',          tdIdx:8,  def:true},
-    {key:'babies',       label:'Bébés',              tdIdx:9,  def:true},
+// ============================================
+// CONFIGURATION & CONSTANTS
+// ============================================
+const MONTHS = [
+    "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
 ];
 
-function exportSuiviExcel(){
-    const tbody=document.getElementById('flightTableBody');
-    if(!tbody||!tbody.querySelectorAll('tr').length){alert('Aucun vol à exporter.');return;}
-    // Ouvrir le modal de sélection des colonnes
-    document.getElementById('exportModal').style.display='flex';
+// ── Normalisation numéro de vol — utilisée partout ──────────────
+// Retire tirets, espaces et points → "L6-301", "L6 301", "L6.301" → "L6301"
+function normFN(s) {
+    return (s || '').toString().toUpperCase().replace(/[-\s.]/g, '');
 }
-window.exportSuiviExcel=exportSuiviExcel;
 
+const AIRLINES = [
+    "Mauritania Airlines",
+    "Air Sénégal", 
+    "Turkish Airlines",
+    "Binter",
+    "Air Algérie",
+    "ASKY",
+    "Royal Air Maroc",
+    "Tunisair",
+    "Air France"
+];
 
-window.doExport=function(){
-    const tbody=document.getElementById('flightTableBody');
-    const trs=tbody.querySelectorAll('tr');
-    // Colonnes cochées
-    const selected=EXPORT_COLS.filter(col=>document.getElementById('excol_'+col.key)?.checked);
-    if(!selected.length){alert('Cochez au moins une colonne.');return;}
-
-    const rows=[];
-    trs.forEach(tr=>{
-        const cells=[...tr.querySelectorAll('td')];
-        if(!cells.length)return;
-        rows.push(selected.map(col=>(cells[col.tdIdx]?.textContent||'').trim()));
-    });
-
-    if(!rows.length){alert('Aucun vol à exporter.');return;}
-
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet([selected.map(c=>c.label),...rows]);
-    ws['!cols']=selected.map(()=>({wch:16}));
-    const co=document.getElementById('companySelect')?.value||'ALL';
-    const parts=['ANAC-Vols'];
-    if(co!=='ALL')parts.push(co.replace(/\s+/g,'_').slice(0,15));
-    parts.push('('+rows.length+'vols)');
-    XLSX.utils.book_append_sheet(wb,ws,'Vols');
-    XLSX.writeFile(wb,parts.join('-')+'.xlsx');
-    document.getElementById('exportModal').style.display='none';
+const AIRLINE_PREFIXES = {
+    "Mauritania Airlines": "L6",
+    "Air Sénégal": "HC",
+    "Turkish Airlines": "TK",
+    "Binter": "NT",
+    "Air Algérie": "AH",
+    "ASKY": "KP",
+    "Royal Air Maroc": "AT",
+    "Tunisair": "TU",
+    "Air France": "AF"
 };
 
-function exportExcel(){
-    const all=getFlights();
-    const flt=filterFlights(all);
-    if(!flt.length){alert('Aucune donnée à exporter pour ce filtre.');return;}
+// ===============================
+// AÉROPORT D'ORIGINE PAR COMPAGNIE
+// (Quand DEP: De=NKC, À=home; Quand ARR: De=home, À=NKC)
+// ===============================
+// Aéroport domicile par compagnie (ICAO)
+// NKC = GQNO est toujours la BASE
+const COMPANY_HOME_AIRPORT = {
+    "Mauritania Airlines": "",      // Multi-destinations (voir COMPANY_DESTINATIONS)
+    "Air Sénégal":         "GOBD",  // Dakar
+    "Turkish Airlines":    "LTFM",  // Istanbul
+    "Binter":              "GCLP",  // Las Palmas
+    "Air Algérie":         "DAAG",  // Alger
+    "ASKY":                "DXXX",  // Lomé (code ICAO correct: DXXX)
+    "Royal Air Maroc":     "GMMN",  // Casablanca
+    "Tunisair":            "DTTA",  // Tunis
+    "Air France":          "LFPG"   // Paris CDG
+};
 
-    // Colonnes exportées — SANS numéro d'autorisation
-    const COLS=[
-        {key:'date',         label:'Date'},
-        {key:'company',      label:'Compagnie'},
-        {key:'flightNumber', label:'N° Vol'},
-        {key:'from',         label:'Départ (code)'},
-        {key:'_fromCity',    label:'Ville Départ'},
-        {key:'to',           label:'Arrivée (code)'},
-        {key:'_toCity',      label:'Ville Arrivée'},
-        {key:'type',         label:'Type (DEP/ARR)'},
-        {key:'passengers',   label:'Passagers'},
-        {key:'babies',       label:'Bébés'},
-        {key:'_totalPax',    label:'Total PAX'},
-        {key:'registration', label:'Immatriculation'},
+// Destinations par compagnie — lu depuis Firebase (adminConfig)
+// Ne plus hardcoder ici — tout est géré dans le panneau admin
+const COMPANY_DESTINATIONS = {}; // gardé pour compatibilité, remplacé par adminConfig
+
+// ===============================
+// LISTE DES DESTINATIONS (ICAO)
+// ===============================
+const DESTINATIONS = [
+    // ── Mauritanie ──
+    { name: "Nouakchott Oumtounsy",    code: "GQNO" },
+    { name: "Nouadhibou",              code: "GQPP" },
+    { name: "Néma",                    code: "GQNI" },
+    { name: "Kiffa",                   code: "GQPF" },
+    { name: "Zoueratt",                code: "GQPZ" },
+    // ── Afrique du Nord ──
+    { name: "Alger Houari Boumediene", code: "DAAG" },
+    { name: "Tunis Carthage",          code: "DTTA" },
+    { name: "Casablanca Mohammed V",   code: "GMMN" },
+    // ── Afrique de l'Ouest ──
+    { name: "Dakar Blaise Diagne",     code: "GOBD" },
+    { name: "Bamako Modibo Keita",     code: "GABS" },
+    { name: "Conakry Gbessia",         code: "GUCY" },
+    { name: "Abidjan Houphouet",       code: "DIAP" },
+    { name: "Lomé Tokoin Airport",     code: "DXXX" },
+    // ── Europe & Canaries ──
+    { name: "Las Palmas Gran Canaria", code: "GCLP" },
+    { name: "Paris Charles de Gaulle", code: "LFPG" },
+    // ── Moyen-Orient ──
+    { name: "Istanbul Airport",        code: "LTFM" },
+    { name: "Madinah Mohammad Abdulaziz", code: "OEMA" },
+];
+
+// ============================================
+// AUTHENTICATION
+// ============================================
+const ADMIN_PASSWORD = "ANACdady";
+let isAuthenticated = false;
+
+// ============================================
+// APPLICATION STATE
+// ============================================
+let flights = [];
+let currentTypeFilter = "ALL";
+let lastDeletedFlight = null;
+let undoTimeout = null;
+let isInitialized = false;
+let editingFlightId = null;
+let adminConfig = null; // loaded from Firebase admin config
+let activeActionsMenu = null;
+
+// ============================================
+// DOM ELEMENT REFERENCES
+// ============================================
+const elements = {
+    // Table
+    flightTableBody: document.getElementById('flightTableBody'),
+    totalPassengers: document.getElementById('totalPassengers'),
+    totalBabies: document.getElementById('totalBabies'),
+    
+    // Filters
+    monthSelect: document.getElementById('monthSelect'),
+    companySelect: document.getElementById('companySelect'),
+    fromSelect: document.getElementById('fromSelect'),
+    toSelect: document.getElementById('toSelect'),
+    searchFrom: document.getElementById('searchFrom'),
+    searchTo: document.getElementById('searchTo'),
+    searchImm: document.getElementById('searchImm'),
+    searchVol: document.getElementById('searchVol'),
+    resetFilters: document.getElementById('resetFilters'),
+    
+    // Type filter buttons
+    typeButtons: document.querySelectorAll('[data-type]'),
+    
+    // Actions
+    addFlightBtn: document.getElementById('addFlightBtn'),
+    undoBtn: document.getElementById('undoBtn'),
+    
+    // Modal
+    flightModal: document.getElementById('flightModal'),
+    flightForm: document.getElementById('flightForm'),
+    cancelBtn: document.getElementById('cancelBtn'),
+    
+    // Form inputs
+    fAuthNumber: document.getElementById('fAuthNumber'),
+    fDate: document.getElementById('fDate'),
+    fCompany: document.getElementById('fCompany'),
+    fImm: document.getElementById('fImm'),
+    fVol: document.getElementById('fVol'),
+    fType: document.getElementById('fType'),
+    fFrom: document.getElementById('fFrom'),
+    fTo: document.getElementById('fTo'),
+    fStopover: document.getElementById('fStopover'),
+    fStopoverPax: document.getElementById('fStopoverPax'),
+    fStopoverBabies: document.getElementById('fStopoverBabies'),
+    hasStopover: document.getElementById('hasStopover'),
+    fPassengers: document.getElementById('fPassengers'),
+    fBabies: document.getElementById('fBabies'),
+    
+    // Notifications
+    notificationContainer: document.getElementById('notificationContainer')
+};
+
+// ============================================
+// INITIALIZATION
+// ============================================
+async function initializeApp() {
+    if (isInitialized) return;
+    try {
+        await loadAdminConfig();
+        populateSelects();
+        attachEventListeners();
+        setupRealtimeListener();
+        // Appliquer les restrictions UI selon permissions
+        setTimeout(applyPermissionsUI, 300);
+        isInitialized = true;
+        showNotification('Application initialisée avec succès', 'success');
+    } catch (error) {
+        console.error('Error initializing app:', error);
+        showNotification('Erreur lors de l\'initialisation', 'error');
+    }
+}
+
+function applyPermissionsUI() {
+    if (!window._hasPerm) return; // pas de session secondaire = admin = tout OK
+    // Masquer bouton Ajouter un vol
+    if (!window._hasPerm('add_flight')) {
+        document.querySelectorAll('[onclick*="showModal"], [onclick*="openFlightModal"], #addFlightBtn, .add-flight-btn').forEach(el => el.style.display='none');
+    }
+    // Masquer lien LDM/MVT
+    if (!window._hasPerm('ldm')) {
+        const ldmLink = document.querySelector('a[href="ldm.html"]');
+        if (ldmLink) ldmLink.style.display = 'none';
+    }
+    // Masquer onglet Facturation
+    if (!window._hasPerm('facturation')) {
+        document.querySelectorAll('[onclick*=\'facturation\']').forEach(el => el.style.display='none');
+    }
+    // Masquer boutons edit/delete dans le tableau
+    if (!window._hasPerm('edit_flight') && !window._hasPerm('delete_flight')) {
+        document.querySelectorAll('.action-btn, .edit-btn, .delete-btn').forEach(el => el.style.display='none');
+    }
+}
+
+
+async function loadAdminConfig() {
+    try {
+        const { initializeApp: fbInit, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const fbConfig = {
+            apiKey: "AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
+            authDomain: "anacmr-67835.firebaseapp.com",
+            projectId: "anacmr-67835",
+            storageBucket: "anacmr-67835.firebasestorage.app",
+            messagingSenderId: "906668222910",
+            appId: "1:906668222910:web:19d92b627f155bd2dbb1ef"
+        };
+        const apps = getApps();
+        const fbApp = apps.find(a => a.name === 'admin-reader') || fbInit(fbConfig, 'admin-reader');
+        const db = getFirestore(fbApp);
+        const [airlinesSnap, airportsSnap] = await Promise.all([
+            getDoc(doc(db, 'flights', 'cfg-airlines')),
+            getDoc(doc(db, 'flights', 'cfg-airports'))
+        ]);
+        adminConfig = {};
+        if (airlinesSnap.exists() && airlinesSnap.data().list) {
+            adminConfig.airlines = airlinesSnap.data().list;
+            console.log('Admin airlines loaded:', adminConfig.airlines.length);
+        }
+        if (airportsSnap.exists() && airportsSnap.data().list) {
+            adminConfig.airports = airportsSnap.data().list;
+            console.log('Admin airports loaded:', adminConfig.airports.length);
+        }
+    } catch(e) {
+        console.warn('Admin config not loaded:', e.message);
+        adminConfig = null;
+    }
+}
+
+function populateSelects() {
+    // Populate month select
+    MONTHS.forEach((month, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = month;
+        elements.monthSelect.appendChild(option);
+    });
+    
+    // Use admin config airlines if available, else fallback to AIRLINES constant
+    const airlinesList = (adminConfig && adminConfig.airlines && adminConfig.airlines.length)
+        ? adminConfig.airlines.map(a => a.name)
+        : AIRLINES;
+    
+    airlinesList.forEach(airline => {
+        const filterOption = document.createElement('option');
+        filterOption.value = airline;
+        filterOption.textContent = airline;
+        elements.companySelect.appendChild(filterOption);
+        
+        const formOption = document.createElement('option');
+        formOption.value = airline;
+        formOption.textContent = airline;
+        elements.fCompany.appendChild(formOption);
+    });
+    
+    // Use admin config airports if available, else fallback to DESTINATIONS constant
+    const destinationsList = (adminConfig && adminConfig.airports && adminConfig.airports.length)
+        ? adminConfig.airports.map(a => ({ code: a.icao, iata: a.iata, name: a.city || a.name }))
+        : DESTINATIONS;
+    
+    destinationsList.forEach(dest => {
+        const label = dest.iata ? `${dest.iata} (${dest.code}) – ${dest.name}` : `${dest.code} – ${dest.name}`;
+        [elements.fromSelect, elements.toSelect, elements.fFrom, elements.fTo, elements.fStopover].forEach(sel => {
+            const opt = document.createElement('option');
+            opt.value = dest.code;
+            opt.textContent = label;
+            sel.appendChild(opt);
+        });
+    });
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+function attachEventListeners() {
+    // Filter changes
+    const filterElements = [
+        elements.monthSelect, elements.companySelect, elements.fromSelect, elements.toSelect,
+        elements.searchFrom, elements.searchTo
     ];
-
-    // Construire les lignes
-    const rows=flt.map(f=>({
-        date:       f.date||'',
-        company:    f.company||'',
-        flightNumber:f.flightNumber||f.vol||'',
-        'from':     f.from||'',
-        _fromCity:  cityName(f.from||''),
-        'to':       f.to||'',
-        _toCity:    cityName(f.to||''),
-        type:       f.type||'',
-        passengers: +f.passengers||0,
-        babies:     +f.babies||0,
-        _totalPax:  (+f.passengers||0)+(+f.babies||0),
-        registration:f.registration||'',
-    }));
-
-    // Créer le workbook
-    const wb=XLSX.utils.book_new();
-    const wsData=[COLS.map(c=>c.label), ...rows.map(r=>COLS.map(c=>r[c.key]??''))];
-    const ws=XLSX.utils.aoa_to_sheet(wsData);
-
-    // Largeurs colonnes
-    ws['!cols']=[{wch:12},{wch:22},{wch:10},{wch:8},{wch:16},{wch:8},{wch:16},{wch:8},{wch:12},{wch:8},{wch:10},{wch:14}];
-
-    XLSX.utils.book_append_sheet(wb,ws,'Vols');
-
-    // Nom de fichier avec filtre appliqué
-    const y=document.getElementById('chartYearFilter').value;
-    const m=document.getElementById('chartMonthFilter').value;
-    const co=document.getElementById('chartCompanyFilter').value;
-    const mn=m!=='ALL'?['Jan','Fev','Mar','Avr','Mai','Jun','Jul','Aou','Sep','Oct','Nov','Dec'][+m]:'';
-    const parts=['ANAC-Vols'];
-    if(y!=='ALL')parts.push(y);
-    if(mn)parts.push(mn);
-    if(co!=='ALL')parts.push(co.replace(/\s+/g,'_').slice(0,20));
-    parts.push(`(${flt.length}vols)`);
-    const fname=parts.join('-')+'.xlsx';
-
-    XLSX.writeFile(wb,fname);
+    
+    filterElements.forEach(element => {
+        element.addEventListener('change', handleFilterChange);
+    });
+    
+    // Input filters (real-time)
+    elements.searchImm.addEventListener('input', handleFilterChange);
+    elements.searchVol.addEventListener('input', handleFilterChange);
+    
+    // Type filter buttons
+    elements.typeButtons.forEach(button => {
+        button.addEventListener('click', () => handleTypeFilter(button));
+    });
+    
+    // Reset filters
+    elements.resetFilters.addEventListener('click', resetFilters);
+    
+    // Actions
+    elements.addFlightBtn.addEventListener('click', openModal);
+    elements.undoBtn.addEventListener('click', undoDelete);
+    
+    // Modal
+    elements.cancelBtn.addEventListener('click', closeModal);
+    elements.flightModal.addEventListener('click', handleModalBackdropClick);
+    elements.flightForm.addEventListener('submit', handleFormSubmit);
+    
+    // Form interactions
+    elements.fCompany.addEventListener('change', () => {
+        const addMode = !editingFlightId;
+        // Supprimer l'ancien select pour forcer la recréation avec la nouvelle compagnie
+        const oldSel = document.getElementById('fVolSelect');
+        if (oldSel) oldSel.remove();
+        if (elements.fVol) elements.fVol.value = '';
+        if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
+        updateFlightNumberPrefix(addMode);
+    });
+    // Auto-fill N° autorisation quand date change
+    if (elements.fDate) {
+        elements.fDate.addEventListener('change', () => {
+            // Vider l'auth pour permettre le recalcul selon la nouvelle date
+            if (elements.fAuthNumber) {
+                elements.fAuthNumber.value = '';
+                elements.fAuthNumber.style.borderColor = '';
+            }
+            setTimeout(autoFillAuth, 100);
+        });
+    }
+    if (elements.fType) {
+        elements.fType.addEventListener('change', updateRouteByType);
+    }
+    elements.fAuthNumber.addEventListener('input', handleAuthNumberInput);
+    
+    // Uppercase transformation for all text inputs
+    const textInputs = [
+        elements.fAuthNumber,
+        elements.fImm,
+        elements.fVol,
+        elements.searchImm,
+        elements.searchVol
+    ];
+    
+    textInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            input.value = input.value.toUpperCase();
+        });
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    
+    // Close actions menus when clicking outside
+    document.addEventListener('click', (event) => {
+        if (activeActionsMenu && !event.target.closest('.actions-wrapper')) {
+            closeAllActionsMenus();
+        }
+    });
 }
 
-function resetChartFilters(){
-    document.getElementById('chartYearFilter').value='ALL';
-    document.getElementById('chartMonthFilter').value='ALL';
-    document.getElementById('chartCompanyFilter').value='ALL';
-    refreshCharts();
+function handleKeyboardShortcuts(event) {
+    // Escape to close modal
+    if (event.key === 'Escape' && elements.flightModal.classList.contains('active')) {
+        closeModal();
+    }
+    
+    // Ctrl/Cmd + N to add new flight
+    if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
+        event.preventDefault();
+        openModal();
+    }
 }
 
-function refreshCharts(){
-    const all=getFlights();
-    if(!all.length){document.getElementById('chartsSubtitle').textContent='Aucune donnée disponible';return;}
-    populateYearFilter(all);populateCompanyFilter(all);
-    populateCmpSelects(all);populateRouteSelect(all);
-    const flt=filterFlights(all);
-    if(!flt.length){document.getElementById('chartsSubtitle').textContent='Aucun vol pour ce filtre';return;}
+// ============================================
+// MODAL FUNCTIONS
+// ============================================
+function openModal(flightId = null) {
+    requireAuthentication(() => {
+        elements.flightModal.classList.add('active');
+        
+        // Validate flightId - ensure it's a string, not an event object
+        const validFlightId = (flightId && typeof flightId === 'string') ? flightId : null;
+        
+        if (validFlightId) {
+            // Edit mode
+            editingFlightId = validFlightId;
+            const flight = flights.find(f => f.id === validFlightId);
+            
+            if (flight) {
+                // Update modal title
+                const modalTitle = elements.flightModal.querySelector('h2');
+                modalTitle.textContent = 'Modifier un vol';
+                
+                // Pre-fill form with flight data
+                elements.fAuthNumber.value = flight.authorizationNumber || '';
+                elements.fDate.value = flight.date;
+                elements.fCompany.value = flight.company;
+                elements.fImm.value = flight.registration;
+                elements.fVol.value = flight.flightNumber;
+                if (window.selectType) window.selectType(flight.type || 'DEP'); else { const fi=document.getElementById('fType'); if(fi) fi.value=flight.type; }
+                if (flight.from) elements.fFrom.value = flight.from;
+                if (flight.to) elements.fTo.value = flight.to;
+                elements.fPassengers.value = flight.passengers;
+                elements.fBabies.value = flight.babies;
+                const hasStop = !!(flight.stopover);
+                if (elements.hasStopover) elements.hasStopover.checked = hasStop;
+                if (elements.fStopover) elements.fStopover.value = flight.stopover || '';
+                if (elements.fStopoverPax) elements.fStopoverPax.value = flight.stopoverPax || 0;
+                if (elements.fStopoverBabies) elements.fStopoverBabies.value = flight.stopoverBabies || 0;
+                const sg1 = document.getElementById('stopoverGroup');
+                if (sg1) sg1.style.display = hasStop ? '' : 'none';
+                
+                elements.fAuthNumber.focus();
+            }
+        } else {
+            // Add mode — vider tous les champs
+            editingFlightId = null;
+            resetForm();
 
-    const pax=flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
-    const comp=new Set(flt.map(f=>f.company).filter(Boolean));
-    const dest=new Set(flt.map(f=>cityName(getDestCity(f)||'')).filter(d=>d&&d!=='Nouakchott'&&d!==''&&d!=='undefined'));
-    const babies=flt.reduce((s,f)=>s+(+f.babies||0),0);
+            // Update modal title
+            const modalTitle = elements.flightModal.querySelector('h2');
+            modalTitle.textContent = 'Ajouter un vol';
 
-    document.getElementById('kpi-vols').textContent=flt.length.toLocaleString('fr-FR');
-    document.getElementById('kpi-pax').textContent=pax.toLocaleString('fr-FR');
-    document.getElementById('kpi-comp').textContent=comp.size;
-    document.getElementById('kpi-dest').textContent=dest.size;
-    document.getElementById('kpi-vols-sub').textContent='vols enregistrés';
-    document.getElementById('kpi-pax-sub').textContent=`dont ${babies} bébés`;
-    document.getElementById('kpi-comp-sub').textContent=[...comp].slice(0,2).join(', ')+(comp.size>2?'…':'');
-    document.getElementById('kpi-dest-sub').textContent='destinations actives';
+            // Vider explicitement chaque champ
+            if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
+            if (elements.fDate)       elements.fDate.value = '';
+            if (elements.fVol)        elements.fVol.value = '';
+            if (elements.fImm)        elements.fImm.value = '';
+            if (elements.fPassengers) elements.fPassengers.value = '0';
+            if (elements.fBabies)     elements.fBabies.value = '0';
+            if (elements.hasStopover) elements.hasStopover.checked = false;
+            if (elements.fStopover)   elements.fStopover.value = '';
+            if (elements.fStopoverPax)    elements.fStopoverPax.value = 0;
+            if (elements.fStopoverBabies) elements.fStopoverBabies.value = 0;
 
-    const y=document.getElementById('chartYearFilter').value;
-    const m=document.getElementById('chartMonthFilter').value;
-    const mn=m!=='ALL'?MONTHS_LONG[+m]:'';
-    document.getElementById('chartsSubtitle').textContent=`${flt.length.toLocaleString('fr-FR')} vol(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
+            // Vider le select dynamique fVolSelect si présent
+            const existSel = document.getElementById('fVolSelect');
+            if (existSel) { existSel.value = ''; }
 
-    // Vols/mois
-    kill('v');const volData=monthly(flt);
-    charts['v']=new Chart(document.getElementById('chartVolsMois'),{
-        type:'bar',data:{labels:MONTHS_FR,datasets:[{label:'Vols',data:volData,
-            backgroundColor:volData.map(v=>v===Math.max(...volData)?'rgba(74,158,255,.9)':'rgba(74,158,255,.45)'),
-            borderColor:'#4A9EFF',borderWidth:2,borderRadius:7,borderSkipped:false}]},
-        options:darkOpts()
+            const sg0 = document.getElementById('stopoverGroup');
+            if (sg0) sg0.style.display = 'none';
+
+            // Compagnie par défaut
+            elements.fCompany.value = AIRLINES[0];
+
+            elements.fDate.focus();
+            setTimeout(() => {
+                if (window.selectType) window.selectType('DEP');
+                updateFlightNumberPrefix(true); // true = isAddMode → champs vides
+            }, 60);
+        }
     });
-
-    // PAX/mois — séparer DEP (from=NKC) et ARR (to=NKC)
-    kill('p');
-    const paxDep=Array(12).fill(0), paxArr=Array(12).fill(0);
-    flt.forEach(f=>{
-        if(!f.date)return;
-        const mo=new Date(f.date).getMonth();
-        const paxF=(+f.passengers||0)+(+f.babies||0);
-        if(isNKC(f.from))paxDep[mo]+=paxF; // départ NKC
-        else if(isNKC(f.to))paxArr[mo]+=paxF; // arrivée NKC
-    });
-    charts['p']=new Chart(document.getElementById('chartPaxMois'),{
-        type:'bar',
-        data:{labels:MONTHS_FR,datasets:[
-            {label:'Départs NKC',data:paxDep,backgroundColor:'rgba(74,158,255,.7)',borderColor:'#4A9EFF',borderWidth:2,borderRadius:5},
-            {label:'Arrivées NKC',data:paxArr,backgroundColor:'rgba(45,212,160,.7)',borderColor:'#2DD4A0',borderWidth:2,borderRadius:5}
-        ]},
-        options:darkOpts({plugins:{legend:{display:true,position:'top',labels:{color:'#94a3b8',font:{size:11},padding:12,usePointStyle:true}},
-            tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}})
-    });
-
-    // Top compagnies
-    kill('c');const cc={};
-    flt.forEach(f=>{if(f.company)cc[f.company]=(cc[f.company]||0)+1;});
-    const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    charts['c']=new Chart(document.getElementById('chartTopComp'),{
-        type:'bar',data:{labels:sc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
-            datasets:[{label:'Vols',data:sc.map(([,v])=>v),
-                backgroundColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),
-                borderColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderRadius:5}]},
-        options:darkOpts({indexAxis:'y'})
-    });
-
-    // PAX/compagnie
-    kill('pc');const pc={};
-    flt.forEach(f=>{if(f.company)pc[f.company]=(pc[f.company]||0)+(+f.passengers||0)+(+f.babies||0);});
-    const spc=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    charts['pc']=new Chart(document.getElementById('chartPaxComp'),{
-        type:'bar',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
-            datasets:[{label:'PAX',data:spc.map(([,v])=>v),
-                backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),
-                borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderRadius:5}]},
-        options:darkOpts({indexAxis:'y'})
-    });
-
-    renderDestCards(flt);
 }
 
-function renderDestCards(flt){
-    const dc={};
-    flt.forEach(f=>{
-        const dest=getDestCity(f);
-        if(!dest)return;
-        const city=cityName(dest);
-        if(!dc[city])dc[city]={vols:0,pax:0,companies:{}};
-        dc[city].vols++;
-        dc[city].pax+=(+f.passengers||0)+(+f.babies||0);
-        const co=f.company||'?';
-        if(!dc[city].companies[co])dc[city].companies[co]={vols:0,pax:0};
-        dc[city].companies[co].vols++;
-        dc[city].companies[co].pax+=(+f.passengers||0)+(+f.babies||0);
-    });
-    const sorted=Object.entries(dc).sort((a,b)=>b[1].vols-a[1].vols).slice(0,16);
-    if(!sorted.length){
-        document.getElementById('destCards').innerHTML='<div style="color:#5A7A9A;font-size:13px;padding:20px;">Aucune destination dans les données</div>';
+function openEditModal(flightId) {
+    openModal(flightId);
+}
+
+function closeModal() {
+    elements.flightModal.classList.remove('active');
+    editingFlightId = null;
+    resetForm();
+    
+    // Reset modal title
+    const modalTitle = elements.flightModal.querySelector('h2');
+    modalTitle.textContent = 'Ajouter un vol';
+}
+
+function handleModalBackdropClick(event) {
+    if (event.target === elements.flightModal) {
+        closeModal();
+    }
+}
+
+function resetForm() {
+    elements.flightForm.reset();
+    clearValidationErrors();
+}
+
+// ============================================
+// FORM HANDLING
+// ============================================
+function handleFormSubmit(event) {
+    event.preventDefault();
+    // Vérifier permission
+    const perm = editingFlightId ? 'edit_flight' : 'add_flight';
+    if (window._hasPerm && !window._hasPerm(perm)) {
+        showNotification('Accès refusé — permission insuffisante pour ' + (editingFlightId ? 'modifier' : 'ajouter') + ' un vol', 'error');
         return;
     }
-    const maxV=sorted[0][1].vols;
-    document.getElementById('destCards').innerHTML=sorted.map(([city,info],i)=>{
-        const pct=Math.round(info.vols/maxV*100);
-        const color=PALETTE[i%PALETTE.length];
-        return `<div onclick="showDestDetail('${city.replace(/'/g,"\\'")}',this)"
-            style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;
-            padding:12px 16px;cursor:pointer;transition:all .15s;min-width:130px;flex:1;max-width:185px;" class="dest-card"
-            onmouseover="this.style.borderColor='${color}66';this.style.background='rgba(255,255,255,.07)'"
-            onmouseout="if(!this.classList.contains('dc-active')){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';}">
-            <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">${city}</div>
-            <div style="font-size:11px;color:#5A7A9A;margin-bottom:7px;">${info.vols} vols · ${info.pax.toLocaleString('fr-FR')} pax</div>
-            <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;">
-              <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;"></div>
-            </div>
-        </div>`;
-    }).join('');
-    window._destData=dc;
-    document.getElementById('destDetail').style.display='none';
+    if (validateForm()) {
+        const flightData = getFormData();
+        if (editingFlightId) {
+            updateFlight(editingFlightId, flightData);
+        } else {
+            addFlight(flightData);
+        }
+    }
 }
 
-window.showDestDetail=function(city,cardEl){
-    document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('dc-active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';});
-    const info=window._destData?.[city];
-    if(!info)return;
-    cardEl.classList.add('dc-active');cardEl.style.borderColor='#4A9EFF55';cardEl.style.background='rgba(74,158,255,.08)';
-    const sorted=Object.entries(info.companies).sort((a,b)=>b[1].vols-a[1].vols);
-    const maxV=sorted[0]?.[1].vols||1,total=sorted.reduce((s,[,v])=>s+v.vols,0);
-    const detail=document.getElementById('destDetail');
-    detail.style.display='';
-    detail.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div><span style="font-size:15px;font-weight:800;color:#e2e8f0;">${city}</span>
-        <span style="font-size:12px;color:#5A7A9A;margin-left:10px;">${total} vols · ${info.pax.toLocaleString('fr-FR')} pax</span></div>
-        <button onclick="document.getElementById('destDetail').style.display='none';document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('dc-active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';})"
-            style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">✕</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-    ${sorted.map(([co,s],i)=>{
-        const color=PALETTE[i%PALETTE.length],share=Math.round(s.vols/total*100),pct=Math.round(s.vols/maxV*100);
-        return `<div style="background:rgba(255,255,255,.03);border-radius:9px;padding:10px 14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-size:13px;font-weight:600;color:#e2e8f0;">${co}</span>
-                <div style="display:flex;gap:10px;">
-                    <span style="font-size:13px;font-weight:700;color:${color};">${s.vols} vol${s.vols>1?'s':''}</span>
-                    <span style="font-size:11px;color:#5A7A9A;">${s.pax.toLocaleString('fr-FR')} pax</span>
-                    <span style="font-size:11px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:4px;color:#94a3b8;">${share}%</span>
+function validateForm() {
+    clearValidationErrors();
+    let isValid = true;
+    
+    const required = [
+        { field: elements.fAuthNumber, message: 'Le numéro d\'autorisation est requis' },
+        { field: elements.fDate, message: 'La date est requise' },
+        { field: elements.fCompany, message: 'La compagnie est requise' },
+        { field: elements.fImm, message: 'L\'immatriculation est requise' },
+        { field: elements.fVol, message: 'Le numéro de vol est requis' },
+        { field: elements.fFrom, message: 'L\'aéroport de départ est requis' },
+        { field: elements.fTo, message: 'L\'aéroport d\'arrivée est requis' }
+    ];
+    
+    required.forEach(({ field, message }) => {
+        if (!field.value.trim()) {
+            showFieldError(field, message);
+            isValid = false;
+        }
+    });
+    
+    // Validate authorization number format
+    if (elements.fAuthNumber.value.trim() && !validateAuthNumber(elements.fAuthNumber.value.trim())) {
+        showFieldError(elements.fAuthNumber, 'Format invalide. Utilisez: SNA25-XXXX ou SNA26-XXXX (ex: SNA26-0001)');
+        isValid = false;
+    }
+    
+    // Validate authorization number uniqueness
+    const authNumber = elements.fAuthNumber.value.trim();
+    if (authNumber && !isAuthNumberUnique(authNumber, editingFlightId)) {
+        showFieldError(elements.fAuthNumber, 'Ce numéro d\'autorisation existe déjà');
+        isValid = false;
+    }
+
+    // Validate flight number + date uniqueness (éviter doublon de vol)
+    const fNum = normFN(elements.fVol && elements.fVol.value ? elements.fVol.value : '');
+    const fDate = elements.fDate ? elements.fDate.value.trim() : '';
+    if (fNum && fDate && !editingFlightId) {
+        const dupVol = flights.find(f =>
+            normFN(f.flightNumber) === fNum && f.date === fDate
+        );
+        if (dupVol) {
+            showFieldError(elements.fVol, 'Ce vol existe déjà pour cette date (doublon)');
+            isValid = false;
+        }
+    }
+    
+    return isValid;
+}
+
+function showFieldError(field, message) {
+    field.classList.add('error');
+    
+    let errorElement = field.parentNode.querySelector('.field-error');
+    if (!errorElement) {
+        errorElement = document.createElement('div');
+        errorElement.className = 'field-error';
+        field.parentNode.appendChild(errorElement);
+    }
+    
+    errorElement.textContent = message;
+}
+
+function clearValidationErrors() {
+    document.querySelectorAll('.field-error').forEach(error => error.remove());
+    document.querySelectorAll('.error').forEach(field => field.classList.remove('error'));
+}
+
+function getFormData() {
+    const hasStop     = !!(elements.hasStopover && elements.hasStopover.checked);
+    const stopPax     = hasStop ? (parseInt(elements.fStopoverPax   && elements.fStopoverPax.value)   || 0) : 0;
+    const stopBabies  = hasStop ? (parseInt(elements.fStopoverBabies && elements.fStopoverBabies.value) || 0) : 0;
+    const volPax      = parseInt(elements.fPassengers.value) || 0;
+    const volBabies   = parseInt(elements.fBabies.value)     || 0;
+
+    return {
+        authorizationNumber: elements.fAuthNumber.value.trim().toUpperCase(),
+        date:     elements.fDate.value,
+        company:  elements.fCompany.value,
+        registration: (document.getElementById('fImmSelect') && document.getElementById('fImmSelect').value
+            ? document.getElementById('fImmSelect').value
+            : elements.fImm.value.trim().toUpperCase()),
+        flightNumber: normFN(document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value
+            ? document.getElementById('fVolSelect').value
+            : elements.fVol.value.trim()),
+        type:     elements.fType.value,
+        from:     elements.fFrom.value,
+        to:       elements.fTo.value,
+        // Escale
+        hasStopover:    hasStop,
+        stopover:       hasStop && elements.fStopover ? elements.fStopover.value : '',
+        stopoverPax:    stopPax,
+        stopoverBabies: stopBabies,
+        // PAX TOTAL = vol + escale
+        passengers: volPax + stopPax,
+        babies:     volBabies + stopBabies,
+        timestamp:  Date.now()
+    };
+}
+
+// updateVolField — lit depuis Firebase collection flight_numbers
+async function updateVolField(company, forceEmpty = false) {
+    const fVol   = elements.fVol;
+    const parent = fVol.parentNode;
+    const existingSelect = parent.querySelector('#fVolSelect');
+
+    // Si le select existe déjà pour la même compagnie et qu'on n'est pas en forceEmpty
+    // ne pas le recréer — ça effacerait la sélection en cours
+    if (existingSelect && !forceEmpty && existingSelect.dataset.company === company) {
+        return;
+    }
+    if (existingSelect) existingSelect.remove();
+    if (!company || !window.db) { fVol.style.display = ''; return; }
+
+    try {
+        const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const q    = query(collection(window.db, 'flight_numbers'), where('company','==', company));
+        const snap = await getDocs(q);
+        const volList = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+        // Vérifier si verrouillé dans adminConfig
+        const airlineData = adminConfig && adminConfig.airlines
+            ? adminConfig.airlines.find(a => a.name === company)
+            : null;
+        const isLocked = airlineData && airlineData.volLocked;
+
+        if (isLocked && volList.length > 0) {
+            fVol.style.display = 'none';
+            const sel = document.createElement('select');
+            sel.id = 'fVolSelect';
+            sel.dataset.company = company;
+            sel.required = true;
+            sel.className = fVol.className;
+            sel.style.display = '';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = '— Choisir un numéro de vol —';
+            sel.appendChild(defaultOpt);
+            volList.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.number;
+                opt.textContent = v.number + (v.stopover ? ' (via ' + v.stopover + ')' : '');
+                // Ne pré-sélectionner que si on est en mode édition (editingFlightId défini)
+                if (editingFlightId && fVol.value === v.number) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            parent.insertBefore(sel, fVol.nextSibling);
+            sel.addEventListener('change', () => {
+                fVol.value = sel.value;
+                // Vider auth pour recalcul
+                if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
+                autoFillFromFlightNumber(sel.value);
+                setTimeout(autoFillAuth, 200);
+            });
+            // Restaurer valeur seulement en mode édition ET si pas forceEmpty
+            if (!forceEmpty && editingFlightId && fVol.value) sel.value = fVol.value;
+            else sel.value = '';
+        } else {
+            fVol.style.display = '';
+        }
+    } catch(e) {
+        console.warn('updateVolField Firebase:', e.message);
+        fVol.style.display = '';
+    }
+}
+
+// ── Auto-remplissage depuis flight_numbers + programme_vols ──
+
+// Appelé dès que vol, date ou compagnie change
+async function autoFillAuth() {
+    const flightNum = (elements.fVol && elements.fVol.value.trim()) ||
+                      (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value.trim()) || '';
+    const date = elements.fDate ? elements.fDate.value.trim() : '';
+    if (!flightNum) return;
+    if (!window.db) return;
+
+    const fn = normFN(flightNum);
+
+    // Si pas de date encore saisie, ne rien faire — attendre les 2 champs
+    if (!date) return;
+
+    try {
+        const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+        let rec = null;
+
+        // Stratégie 1 : flightNorm + date exacte
+        const q1 = query(collection(window.db, 'programme_vols'),
+                         where('flightNorm', '==', fn),
+                         where('date', '==', date));
+        const s1 = await getDocs(q1);
+        if (!s1.empty) rec = s1.docs[0].data();
+
+        // Stratégie 2 : anciens docs sans flightNorm — scan par flight brut normalisé + date
+        if (!rec) {
+            const snap = await getDocs(collection(window.db, 'programme_vols'));
+            const all  = snap.docs.map(d => d.data());
+            // Chercher uniquement ceux dont la date correspond ET le vol correspond
+            rec = all.find(d => normFN(d.flight||'') === fn && d.date === date) || null;
+        }
+
+        // Remplir seulement si trouvé avec vol+date — sinon laisser vide
+        if (rec && rec.auth && elements.fAuthNumber) {
+            elements.fAuthNumber.value = rec.auth.toUpperCase();
+            elements.fAuthNumber.style.borderColor = '#34d399';
+            setTimeout(() => { if (elements.fAuthNumber) elements.fAuthNumber.style.borderColor = ''; }, 2000);
+        }
+        // Si pas trouvé → le champ reste blanc (déjà vidé avant l'appel)
+    } catch(e) { console.warn('autoFillAuth:', e.message); }
+}
+
+async function autoFillFromFlightNumber(flightNum) {
+    if (!flightNum || flightNum.length < 3) return;
+    if (!window.db) return;
+    try {
+        const { getDocs, collection, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const fnNorm = normFN(flightNum);
+        // Chercher les 2 formes (avec/sans tirets) pour compatibilité
+        const [snapNorm, snapRaw] = await Promise.all([
+            getDocs(query(collection(window.db, 'flight_numbers'), where('number','==', fnNorm))),
+            getDocs(query(collection(window.db, 'flight_numbers'), where('number','==', flightNum.toUpperCase().trim())))
+        ]);
+        const snap = !snapNorm.empty ? snapNorm : snapRaw;
+        if (!snap.empty) {
+            const rec = snap.docs[0].data();
+            // Remplir compagnie
+            if (rec.company && elements.fCompany) {
+                elements.fCompany.value = rec.company;
+                // Ne pas reconstruire le select si on est en train de saisir (mode ADD)
+                if (!editingFlightId) updateImmField(rec.company);
+                else updateFlightNumberPrefix();
+            }
+            // Remplir type
+            if (rec.type) {
+                if (window.selectType) window.selectType(rec.type);
+                else {
+                    const typeEl = document.getElementById('fType');
+                    if (typeEl) { typeEl.value = rec.type; updateRouteByType(); }
+                }
+            }
+            // Convertir IATA → ICAO si nécessaire (flight_numbers stocke IATA)
+            function _iataToIcao(code) {
+                if (!code) return '';
+                if (!adminConfig || !adminConfig.airports) return code;
+                const ap = adminConfig.airports.find(a => a.iata === code);
+                return ap ? ap.icao : code;
+            }
+            // Remplir De / Vers
+            const fromCode = _iataToIcao(rec.from);
+            const toCode   = _iataToIcao(rec.to);
+            if (fromCode && elements.fFrom) elements.fFrom.value = fromCode;
+            if (toCode   && elements.fTo)   elements.fTo.value   = toCode;
+            // Remplir Escale si définie
+            if (rec.stopover) {
+                const hasStopEl = document.getElementById('hasStopover');
+                const stopGroup = document.getElementById('stopoverGroup');
+                if (hasStopEl) hasStopEl.checked = true;
+                const stopCode = _iataToIcao(rec.stopover);
+                if (elements.fStopover) elements.fStopover.value = stopCode;
+                if (stopGroup) stopGroup.style.display = '';
+            }
+        }
+        // Toujours tenter l'auto-fill du numéro d'autorisation
+        await autoFillAuth();
+    } catch(e) { console.warn('autoFill flight_numbers:', e.message); }
+}
+
+function updateFlightNumberPrefix(isAddMode = false) {
+    const company = elements.fCompany.value;
+    
+    // Mettre le préfixe seulement si on est en édition ou si le champ est déjà pré-rempli avec un préfixe
+    if (!isAddMode) {
+        const prefix = AIRLINE_PREFIXES[company] ||
+            (adminConfig && adminConfig.airlines
+                ? (adminConfig.airlines.find(a => a.name === company) || {}).prefix
+                : null);
+        const currentValue = elements.fVol.value.trim();
+        if (prefix && (!currentValue || currentValue.match(/^[A-Z0-9]+-$/))) {
+            elements.fVol.value = prefix + '-';
+        }
+    }
+    
+    // Auto-fill From/To based on company + type
+    updateRouteByType();
+    
+    // Update immatriculation field based on admin config
+    updateImmField(company);
+    // Update vol number field based on admin config — forceEmpty en mode ADD
+    updateVolField(company, isAddMode);
+}
+
+// Listener sur le champ fVol (input texte) pour auto-fill depuis flight_numbers ET programme_vols
+(function() {
+    const fv = document.getElementById('fVol');
+    if (fv) {
+        let _autoFillTimer;
+        fv.addEventListener('input', () => {
+            clearTimeout(_autoFillTimer);
+            // Vider auth immédiatement
+            if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
+            _autoFillTimer = setTimeout(async () => {
+                await autoFillFromFlightNumber(fv.value.trim());
+                await autoFillAuth();
+            }, 600);
+        });
+    }
+})();
+
+// Auto-fill From/To + filtrer le select À selon compagnie + type
+// NKC (GQNO) est toujours la BASE
+function updateRouteByType() {
+    const company  = elements.fCompany ? elements.fCompany.value : '';
+    const type     = elements.fType    ? elements.fType.value    : 'DEP';
+    const NKC_ICAO = 'GQNO';
+
+    // Lire hub et destinations depuis adminConfig Firebase
+    let homeCode = COMPANY_HOME_AIRPORT[company] || ''; // fallback hardcodé
+    let multiDests = COMPANY_DESTINATIONS[company] || null; // fallback hardcodé
+    if (adminConfig && adminConfig.airlines) {
+        const al = adminConfig.airlines.find(a => a.name === company);
+        if (al) {
+            if (al.hub) homeCode = al.hub; // hub depuis Firebase
+            if (al.destinations && al.destinations.length > 0) multiDests = al.destinations;
+        }
+    }
+
+    // Rebuild the fTo select options filtered for this company
+    const rebuildToSelect = (allowedCodes) => {
+        if (!elements.fTo) return;
+        const currentVal = elements.fTo.value;
+        // Clear and repopulate
+        elements.fTo.innerHTML = '';
+        const allDests = (adminConfig && adminConfig.airports && adminConfig.airports.length)
+            ? adminConfig.airports.map(a => ({ code: a.icao, name: a.name }))
+            : DESTINATIONS;
+        allDests.forEach(dest => {
+            if (allowedCodes && !allowedCodes.includes(dest.code)) return;
+            const opt = document.createElement('option');
+            opt.value = dest.code;
+            opt.textContent = dest.code + ' – ' + dest.name;
+            elements.fTo.appendChild(opt);
+        });
+        // Restore selection if still valid, else pick first
+        if (currentVal && [...elements.fTo.options].some(o => o.value === currentVal)) {
+            elements.fTo.value = currentVal;
+        } else if (elements.fTo.options.length > 0) {
+            elements.fTo.value = elements.fTo.options[0].value;
+        }
+    };
+
+    // Rebuild the fFrom select options filtered for this company
+    const rebuildFromSelect = (allowedCodes) => {
+        if (!elements.fFrom) return;
+        const currentVal = elements.fFrom.value;
+        elements.fFrom.innerHTML = '';
+        const allDests = (adminConfig && adminConfig.airports && adminConfig.airports.length)
+            ? adminConfig.airports.map(a => ({ code: a.icao, name: a.name }))
+            : DESTINATIONS;
+        allDests.forEach(dest => {
+            if (allowedCodes && !allowedCodes.includes(dest.code)) return;
+            const opt = document.createElement('option');
+            opt.value = dest.code;
+            opt.textContent = dest.code + ' – ' + dest.name;
+            elements.fFrom.appendChild(opt);
+        });
+        if (currentVal && [...elements.fFrom.options].some(o => o.value === currentVal)) {
+            elements.fFrom.value = currentVal;
+        } else if (elements.fFrom.options.length > 0) {
+            elements.fFrom.value = elements.fFrom.options[0].value;
+        }
+    };
+
+    if (type === 'DEP') {
+        // De = NKC (fixe), À = destinations de la compagnie
+        if (elements.fFrom) {
+            // fFrom = toutes destinations (NKC sera sélectionné)
+            rebuildFromSelect(null);
+            elements.fFrom.value = NKC_ICAO;
+        }
+        if (multiDests) {
+            // Mauritania Airlines: À = ses destinations uniquement
+            rebuildToSelect(multiDests);
+        } else {
+            rebuildToSelect(null);
+            if (elements.fTo && homeCode) elements.fTo.value = homeCode;
+        }
+    } else if (type === 'ARR') {
+        // À = NKC (fixe), De = aéroport d'origine de la compagnie
+        if (elements.fTo) {
+            rebuildToSelect(null);
+            elements.fTo.value = NKC_ICAO;
+        }
+        if (multiDests) {
+            // Mauritania Airlines: De = ses destinations uniquement
+            rebuildFromSelect(multiDests);
+        } else {
+            rebuildFromSelect(null);
+            if (elements.fFrom && homeCode) elements.fFrom.value = homeCode;
+        }
+    }
+}
+
+function updateImmField(company) {
+    if (!adminConfig || !adminConfig.airlines) return;
+    
+    const airlineData = adminConfig.airlines.find(a => a.name === company);
+    if (!airlineData) return;
+    
+    const fImm = elements.fImm;
+    const parent = fImm.parentNode;
+    
+    // Remove existing select if any
+    const existingSelect = parent.querySelector('#fImmSelect');
+    if (existingSelect) existingSelect.remove();
+    
+    const immatList = airlineData.immatriculations || [];
+    const isLocked  = airlineData.immLocked;
+    
+    if (isLocked && immatList.length > 0) {
+        // Replace text input with select
+        fImm.style.display = 'none';
+        
+        const sel = document.createElement('select');
+        sel.id = 'fImmSelect';
+        sel.required = true;
+        sel.className = fImm.className;
+        sel.style.cssText = fImm.style.cssText;
+        sel.style.display = '';
+        
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = '— Choisir une immatriculation —';
+        sel.appendChild(defaultOpt);
+        
+        immatList.forEach(imm => {
+            const opt = document.createElement('option');
+            opt.value = imm;
+            opt.textContent = imm;
+            if (fImm.value === imm) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        
+        parent.insertBefore(sel, fImm.nextSibling);
+        
+        // Sync select value back to hidden input on change
+        sel.addEventListener('change', () => { fImm.value = sel.value; });
+        if (fImm.value) sel.value = fImm.value;
+        
+    } else {
+        // Show text input (free mode)
+        fImm.style.display = '';
+        const hint = parent.querySelector('.imm-hint');
+        if (hint) hint.remove();
+        
+        // Add prefix hint if available
+        if (airlineData.immPrefix) {
+            let hintEl = parent.querySelector('.imm-hint');
+            if (!hintEl) {
+                hintEl = document.createElement('small');
+                hintEl.className = 'field-hint imm-hint';
+                parent.appendChild(hintEl);
+            }
+            hintEl.textContent = `Préfixe attendu: ${airlineData.immPrefix} (ex: ${airlineData.immPrefix}CLX)`;
+        }
+    }
+}
+
+function handleAuthNumberInput(event) {
+    let value = event.target.value.toUpperCase();
+    // Garder uniquement majuscules, chiffres et tiret
+    value = value.replace(/[^A-Z0-9-]/g, '');
+    // Auto-insérer tiret après SNA+2chiffres si absent
+    if (/^SNA\d{2}$/.test(value)) {
+        value = value + '-';
+    }
+    event.target.value = value;
+}
+
+function validateAuthNumber(authNumber) {
+    // Format: SNA + 2 chiffres (année) + séparateur + numéro
+    // Accepte: SNA25-0001, SNA26-0042, SNA27-0001 etc.
+    const pattern = /^SNA\d{2}[-/]\d{1,4}$/;
+    return pattern.test(authNumber);
+}
+
+function isAuthNumberUnique(authNumber, excludeFlightId = null) {
+    // Check if authorization number already exists
+    const existingFlight = flights.find(flight => 
+        flight.authorizationNumber === authNumber && flight.id !== excludeFlightId
+    );
+    return !existingFlight;
+}
+
+// ============================================
+// FLIGHT OPERATIONS
+// ============================================
+async function addFlight(flightData) {
+    try {
+        elements.flightForm.classList.add('loading');
+        
+        // Add to Firebase through firebase.js
+        if (window.dbService && window.dbService.addFlight) {
+            await window.dbService.addFlight(flightData);
+        } else {
+            throw new Error('Service de base de données non disponible');
+        }
+        
+        closeModal();
+        showNotification('Vol ajouté avec succès', 'success');
+    } catch (error) {
+        console.error('Error adding flight:', error);
+        showNotification('Erreur lors de l\'ajout du vol', 'error');
+    } finally {
+        elements.flightForm.classList.remove('loading');
+    }
+}
+
+async function updateFlight(flightId, flightData) {
+    console.log('updateFlight called with:');
+    console.log('- flightId:', flightId, 'Type:', typeof flightId);
+    console.log('- flightData:', flightData);
+    
+    try {
+        elements.flightForm.classList.add('loading');
+        
+        // Ensure flightId is a string
+        const validFlightId = String(flightId);
+        console.log('- validFlightId:', validFlightId);
+        
+        // Update in Firebase through firebase.js
+        if (window.dbService && window.dbService.updateFlight) {
+            await window.dbService.updateFlight(validFlightId, flightData);
+        } else {
+            throw new Error('Service de base de données non disponible');
+        }
+        
+        closeModal();
+        showNotification('Vol modifié avec succès', 'success');
+    } catch (error) {
+        console.error('Error updating flight:', error);
+        showNotification('Erreur lors de la modification du vol', 'error');
+    } finally {
+        elements.flightForm.classList.remove('loading');
+    }
+}
+
+async function deleteFlight(flightId) {
+    if (window._hasPerm && !window._hasPerm('delete_flight')) {
+        showNotification('Accès refusé — permission insuffisante pour supprimer un vol', 'error');
+        return false;
+    }
+    console.log('Delete flight called with ID:', flightId);
+    
+    const success = await requireAuthentication(async () => {
+        console.log('Authentication passed, proceeding with delete');
+        try {
+            const flight = flights.find(f => f.id === flightId);
+            if (!flight) {
+                console.log('Flight not found:', flightId);
+                return false;
+            }
+            
+            console.log('Found flight to delete:', flight);
+            
+            // Store for undo
+            lastDeletedFlight = { flight, id: flightId };
+            
+            // Delete from Firebase
+            if (window.dbService && window.dbService.deleteFlight) {
+                console.log('Calling dbService.deleteFlight');
+                try {
+                    const deleteResult = await window.dbService.deleteFlight(flightId);
+                    console.log('Firebase delete result:', deleteResult);
+                    
+                    // Manual UI update as fallback
+                    flights = flights.filter(f => f.id !== flightId);
+                    render();
+                    
+                    showUndoButton();
+                    showNotification('Vol supprimé', 'warning');
+                    return true;
+                } catch (firebaseError) {
+                    console.error('Firebase delete error:', firebaseError);
+                    showNotification('Erreur Firebase: ' + firebaseError.message, 'error');
+                    return false;
+                }
+            } else {
+                console.error('dbService not available');
+                showNotification('Service de base de données non disponible', 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error('Error deleting flight:', error);
+            showNotification('Erreur lors de la suppression du vol', 'error');
+            return false;
+        }
+    });
+    
+    console.log('Delete operation result:', success);
+    return success;
+}
+
+async function undoDelete() {
+    if (!lastDeletedFlight) return;
+    
+    try {
+        // Restore to Firebase
+        if (window.dbService && window.dbService.addFlight) {
+            await window.dbService.addFlight(lastDeletedFlight.flight);
+        }
+        
+        hideUndoButton();
+        lastDeletedFlight = null;
+        showNotification('Suppression annulée', 'success');
+    } catch (error) {
+        console.error('Error undoing delete:', error);
+        showNotification('Erreur lors de l\'annulation de la suppression', 'error');
+    }
+}
+
+function showUndoButton() {
+    elements.undoBtn.style.display = 'inline-block';
+    
+    if (undoTimeout) {
+        clearTimeout(undoTimeout);
+    }
+    
+    undoTimeout = setTimeout(() => {
+        hideUndoButton();
+        lastDeletedFlight = null;
+    }, 10000); // 10 seconds
+}
+
+function hideUndoButton() {
+    elements.undoBtn.style.display = 'none';
+    
+    if (undoTimeout) {
+        clearTimeout(undoTimeout);
+        undoTimeout = null;
+    }
+}
+
+// ============================================
+// FILTER FUNCTIONS
+// ============================================
+function handleFilterChange() {
+    render();
+}
+
+function handleTypeFilter(button) {
+    currentTypeFilter = button.dataset.type;
+    
+    // Update active state
+    elements.typeButtons.forEach(btn => btn.classList.remove('btn-active'));
+    button.classList.add('btn-active');
+    
+    render();
+}
+
+function resetFilters() {
+    elements.monthSelect.value = 'ALL';
+    elements.companySelect.value = 'ALL';
+    elements.fromSelect.value = 'ALL';
+    elements.toSelect.value = 'ALL';
+    elements.searchFrom.value = '';
+    elements.searchTo.value = '';
+    elements.searchImm.value = '';
+    elements.searchVol.value = '';
+    currentTypeFilter = 'ALL';
+    
+    // Reset active button
+    elements.typeButtons.forEach(btn => btn.classList.remove('btn-active'));
+    document.querySelector('[data-type="ALL"]').classList.add('btn-active');
+    
+    render();
+    showNotification('Filtres réinitialisés', 'success');
+}
+
+function filterFlights() {
+    const monthFilter = elements.monthSelect.value;
+    const companyFilter = elements.companySelect.value;
+    const fromFilter = elements.fromSelect.value;
+    const toFilter = elements.toSelect.value;
+    const dateFrom = elements.searchFrom.value;
+    const dateTo = elements.searchTo.value;
+    const immFilter = elements.searchImm.value.toUpperCase().trim();
+    const volFilter = elements.searchVol.value.toUpperCase().trim();
+    
+    return flights.filter(flight => {
+        const flightDate = new Date(flight.date);
+        
+        // Month filter
+        if (monthFilter !== 'ALL' && flightDate.getMonth() !== parseInt(monthFilter)) {
+            return false;
+        }
+        
+        // Company filter
+        if (companyFilter !== 'ALL' && flight.company !== companyFilter) {
+            return false;
+        }
+        
+        // From airport filter
+        if (fromFilter !== 'ALL' && flight.from !== fromFilter) {
+            return false;
+        }
+        
+        // To airport filter
+        if (toFilter !== 'ALL' && flight.to !== toFilter) {
+            return false;
+        }
+        
+        // Date range filter
+        if (dateFrom && flight.date < dateFrom) {
+            return false;
+        }
+        
+        if (dateTo && flight.date > dateTo) {
+            return false;
+        }
+        
+        // Type filter
+        if (currentTypeFilter !== 'ALL' && flight.type !== currentTypeFilter) {
+            return false;
+        }
+        
+        // Registration filter (case-insensitive)
+        if (immFilter && !flight.registration.toUpperCase().includes(immFilter)) {
+            return false;
+        }
+        
+        // Flight number filter (case-insensitive)
+        if (volFilter && !normFN(flight.flightNumber).includes(normFN(volFilter))) {
+            return false;
+        }
+        
+        return true;
+    });
+}
+
+// ============================================
+// RENDER FUNCTIONS
+// ============================================
+function render() {
+    const filteredFlights = filterFlights();
+    
+    // Sort by authorization number ascending (smallest to largest)
+    filteredFlights.sort((a, b) => {
+        const getAuthNum = (auth) => {
+            if (!auth) return 0;
+            const match = auth.match(/(\d+)$/);
+            return match ? parseInt(match[1]) : 0;
+        };
+        return getAuthNum(a.authorizationNumber) - getAuthNum(b.authorizationNumber);
+    });
+    
+    renderTable(filteredFlights);
+    renderTotals(filteredFlights);
+}
+
+function renderTable(filteredFlights) {
+    elements.flightTableBody.innerHTML = '';
+    
+    if (filteredFlights.length === 0) {
+        elements.flightTableBody.innerHTML = `
+            <tr>
+                <td colspan="11" class="empty-state">
+                    <p>Aucun vol trouvé</p>
+                    <small>Ajoutez un vol ou modifiez vos filtres</small>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    filteredFlights.forEach(flight => {
+        const row = createFlightRow(flight);
+        elements.flightTableBody.appendChild(row);
+    });
+}
+
+function createFlightRow(flight) {
+    const row = document.createElement('tr');
+    
+    const formattedDate = formatDateEU(flight.date);
+    const typeText = flight.type === 'DEP' ? 'Départ' : 'Arrivée';
+    const typeClass = flight.type === 'DEP' ? 'type-depart' : 'type-arrivee';
+    const authNumber = flight.authorizationNumber || 'N/A';
+    const fromCode = flight.from || '–';
+    const toCode = flight.to || '–';
+    
+    row.innerHTML = `
+        <td><strong>${escapeHtml(authNumber)}</strong></td>
+        <td>${formattedDate}</td>
+        <td>${escapeHtml(flight.company)}</td>
+        <td><strong>${escapeHtml(flight.registration)}</strong></td>
+        <td>${escapeHtml(flight.flightNumber)}</td>
+        <td><strong>${escapeHtml(fromCode)}</strong></td>
+        <td><strong>${escapeHtml(toCode)}</strong></td>
+        <td><span class="type-badge ${typeClass}">${typeText}</span></td>
+        <td>${flight.passengers}</td>
+        <td>${flight.babies}</td>
+        <td class="actions-cell">
+            <div class="actions-wrapper">
+                <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">
+                    ⋯
+                </button>
+                <div class="actions-menu" id="actions-${flight.id}">
+                    <button onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item">
+                        <span class="action-icon">✏️</span>
+                        <span>Modifier</span>
+                    </button>
+                    <button onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete">
+                        <span class="action-icon">🗑️</span>
+                        <span>Supprimer</span>
+                    </button>
                 </div>
             </div>
-            <div style="height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;">
-                <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,${color},${color}66);border-radius:3px;"></div>
-            </div>
-        </div>`;
-    }).join('')}</div>`;
-    setTimeout(()=>detail.scrollIntoView({behavior:'smooth',block:'nearest'}),80);
-};
-
-// ── Sélecteurs comparaison 2 compagnies ──
-function populateCmpSelects(flights){
-    const cos=[...new Set(flights.map(f=>f.company).filter(Boolean))].sort();
-    ['cmpA','cmpB'].forEach(id=>{
-        const sel=document.getElementById(id);if(!sel)return;
-        const cur=sel.value;
-        sel.innerHTML=`<option value="">— ${id==='cmpA'?'Compagnie A':'Compagnie B'} —</option>`;
-        cos.forEach(co=>{const o=document.createElement('option');o.value=co;o.textContent=co;if(co===cur)o.selected=true;sel.appendChild(o);});
-    });
-    const years=[...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
-    const ySel=document.getElementById('cmpYear');if(!ySel)return;
-    const curY=ySel.value;
-    ySel.innerHTML='<option value="ALL">Toutes années</option>';
-    years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;if(String(y)===curY)o.selected=true;ySel.appendChild(o);});
-}
-
-// ── Trajet unique : lister les destinations depuis NKC ──
-function populateRouteSelect(flights) {
-    // Grouper par ville de destination (sans NKC), sans afficher le nombre de vols
-    const dests = {};
-    flights.forEach(f => {
-        const destCode = getDestCity(f);
-        if (!destCode) return;
-        const city = cityName(destCode);
-        if (!dests[city]) dests[city] = { codes: new Set(), count: 0 };
-        dests[city].codes.add(destCode);
-        dests[city].count++;
-    });
-    const routeSel = document.getElementById('routeFilter');
-    const cur = routeSel.value;
-    const curCodes = cur ? cur.split('|') : [];
-    routeSel.innerHTML = '<option value="">— Choisir une destination —</option>';
-    Object.entries(dests).sort((a,b) => b[1].count - a[1].count).forEach(([city, {codes}]) => {
-        const o = document.createElement('option');
-        o.value = [...codes].join('|');
-        o.textContent = city;  // pas de nombre de vols ici
-        if (curCodes.some(k => [...codes].includes(k))) o.selected = true;
-        routeSel.appendChild(o);
-    });
-    const routeYearSel = document.getElementById('routeYear');
-    const curRY = routeYearSel.value;
-    const years = [...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
-    routeYearSel.innerHTML = '<option value="ALL">Toutes années</option>';
-    years.forEach(y => {
-        const o = document.createElement('option');
-        o.value = y; o.textContent = y;
-        if (String(y) === curRY) o.selected = true;
-        routeYearSel.appendChild(o);
-    });
-}
-
-window.refreshChartsFromApp = function(flightsData) {
-    window.appFlights = flightsData;
-    if (document.getElementById('tab-rapports')?.classList.contains('active')) refreshCharts();
-    else { populateCmpSelects(flightsData); populateRouteSelect(flightsData); }
-};
-
-
-function runComparison() {
-    const a    = document.getElementById('cmpA').value;
-    const b    = document.getElementById('cmpB').value;
-    const year = document.getElementById('cmpYear').value;
-    const month= document.getElementById('cmpMonth').value;
-    const dateDeb = (document.getElementById('cmpDateDeb')||{}).value||'';
-    const dateFin = (document.getElementById('cmpDateFin')||{}).value||'';
-    const res  = document.getElementById('cmpResult');
-
-    if (!a || !b) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Sélectionnez deux compagnies pour comparer</span>'; return; }
-    if (a === b)  { res.innerHTML = '<span style="color:#e53e3e;font-size:13px;">⚠️ Choisissez deux compagnies différentes</span>'; return; }
-
-    const all = getFlights();
-    const filter = f => {
-        if (!f.date) return false;
-        const d = new Date(f.date);
-        const ds = f.date.slice(0,10);
-        // Période personnalisée prioritaire
-        if (dateDeb && ds < dateDeb) return false;
-        if (dateFin && ds > dateFin) return false;
-        // Sinon filtre année/mois
-        if (!dateDeb && !dateFin) {
-            if (year  !== 'ALL' && d.getFullYear() !== +year)  return false;
-            if (month !== 'ALL' && d.getMonth()    !== +month) return false;
-        }
-        return true;
-    };
-    const fA = all.filter(f => f.company === a && filter(f));
-    const fB = all.filter(f => f.company === b && filter(f));
-
-    const stats = (flights) => ({
-        vols: flights.length,
-        pax:  flights.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0),
-        imm:  new Set(flights.map(f=>f.registration).filter(Boolean)).size,
-        monthly: monthly(flights),
-    });
-
-    const sA = stats(fA), sB = stats(fB);
-    const winner = (va, vb) => va > vb ? 'a' : vb > va ? 'b' : '';
-
-    res.innerHTML = `
-        <div class="compare-grid">
-            <div class="compare-kpi a">
-                <div class="ck-name">${a}</div>
-                <div class="ck-val">${sA.vols}</div>
-                <div class="ck-label">Vols totaux</div>
-                ${winner(sA.vols,sB.vols)==='a'?'<span class="winner-badge">LEADER</span>':''}
-            </div>
-            <div class="compare-kpi neutral" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
-                <div style="font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;">Vols</div>
-                <div style="font-size:22px;font-weight:800;color:#4a5568;">${sA.vols} / ${sB.vols}</div>
-                <div style="font-size:11px;color:#a0aec0;">PAX: ${sA.pax.toLocaleString('fr-FR')} / ${sB.pax.toLocaleString('fr-FR')}</div>
-                <div style="font-size:11px;color:#a0aec0;">Immat: ${sA.imm} / ${sB.imm}</div>
-            </div>
-            <div class="compare-kpi b">
-                <div class="ck-name">${b}</div>
-                <div class="ck-val">${sB.vols}</div>
-                <div class="ck-label">Vols totaux</div>
-                ${winner(sA.vols,sB.vols)==='b'?'<span class="winner-badge">LEADER</span>':''}
-            </div>
-
-            <div class="compare-kpi a">
-                <div class="ck-val">${sA.pax.toLocaleString('fr-FR')}</div>
-                <div class="ck-label">Passagers</div>
-                ${winner(sA.pax,sB.pax)==='a'?'<span class="winner-badge">LEADER</span>':''}
-            </div>
-            <div class="compare-kpi neutral" style="display:flex;align-items:center;justify-content:center;">
-                <div style="font-size:12px;font-weight:700;color:#718096;text-transform:uppercase;">Passagers</div>
-            </div>
-            <div class="compare-kpi b">
-                <div class="ck-val">${sB.pax.toLocaleString('fr-FR')}</div>
-                <div class="ck-label">Passagers</div>
-                ${winner(sA.pax,sB.pax)==='b'?'<span class="winner-badge">LEADER</span>':''}
-            </div>
-
-
-        </div>
-
-        <div class="compare-chart-row" style="margin-top:16px;">
-            <div>
-                <div style="font-size:12px;font-weight:700;color:#4a5568;text-transform:uppercase;margin-bottom:8px;">Vols par mois</div>
-                <div class="compare-chart-wrap"><canvas id="cmpChartMois"></canvas></div>
-            </div>
-            <div>
-                <div style="font-size:12px;font-weight:700;color:#4a5568;text-transform:uppercase;margin-bottom:8px;">Passagers par mois</div>
-                <div class="compare-chart-wrap"><canvas id="cmpChartPax"></canvas></div>
-            </div>
-        </div>
+        </td>
     `;
-
-    // Draw comparison charts
-    killCmp('m');
-    cmpCharts['m'] = new Chart(document.getElementById('cmpChartMois'), {
-        type:'bar',
-        data:{ labels:MONTHS_FR, datasets:[
-            { label:a.length>16?a.slice(0,16)+'…':a, data:sA.monthly, backgroundColor:'rgba(43,90,142,0.7)', borderColor:'#2B5A8E', borderWidth:2, borderRadius:4 },
-            { label:b.length>16?b.slice(0,16)+'…':b, data:sB.monthly, backgroundColor:'rgba(200,16,46,0.7)', borderColor:'#C8102E', borderWidth:2, borderRadius:4 },
-        ]},
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}} }
-    });
-
-    killCmp('p');
-    const paxA = monthly(fA,'passengers').map((v,i)=>v+monthly(fA,'babies')[i]);
-    const paxB = monthly(fB,'passengers').map((v,i)=>v+monthly(fB,'babies')[i]);
-    cmpCharts['p'] = new Chart(document.getElementById('cmpChartPax'), {
-        type:'line',
-        data:{ labels:MONTHS_FR, datasets:[
-            { label:a.length>16?a.slice(0,16)+'…':a, data:paxA, borderColor:'#2B5A8E', backgroundColor:'rgba(43,90,142,0.1)', borderWidth:2.5, fill:true, tension:0.4, pointRadius:4 },
-            { label:b.length>16?b.slice(0,16)+'…':b, data:paxB, borderColor:'#C8102E', backgroundColor:'rgba(200,16,46,0.08)', borderWidth:2.5, fill:true, tension:0.4, pointRadius:4 },
-        ]},
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}} }
-    });
+    
+    return row;
 }
 
-function runRouteComparison() {
-    var route   = document.getElementById('routeFilter').value;
-    var year    = document.getElementById('routeYear').value;
-    var month   = (document.getElementById('routeMonth')||{}).value||'ALL';
-    var dateDeb = (document.getElementById('routeDateDeb')||{}).value||'';
-    var dateFin = (document.getElementById('routeDateFin')||{}).value||'';
-    var res     = document.getElementById('routeCmpResult');
+function renderTotals(filteredFlights) {
+    const totalPassengers = filteredFlights.reduce((sum, flight) => sum + flight.passengers, 0);
+    const totalBabies = filteredFlights.reduce((sum, flight) => sum + flight.babies, 0);
+    
+    elements.totalPassengers.textContent = totalPassengers.toLocaleString();
+    elements.totalBabies.textContent = totalBabies.toLocaleString();
+}
 
-    if (!route) {
-        res.innerHTML = '<span style="color:#5A7A9A;">Sélectionnez une destination</span>';
-        return;
-    }
+// ============================================
+// REAL-TIME UPDATES
+// ============================================
+function setupRealtimeListener() {
+    // firebase.js gère le listener en temps réel via window.app.updateFlightsData
+    // Rien à faire ici — firebase.js appellera updateFlightsData quand les données arrivent
+}
 
-    var destCodes = route.split('|');
-    var destCity  = cityName(destCodes[0]);
+function updateFlightsData(newFlights) {
+    flights = newFlights;
+    render();
+    if (window.refreshChartsFromApp) window.refreshChartsFromApp(flights);
+}
 
-    var all = getFlights().filter(function(f) {
-        if (!f.date) return false;
-        var ds = f.date.slice(0,10);
-        var d  = new Date(f.date);
-        if (dateDeb && ds < dateDeb) return false;
-        if (dateFin && ds > dateFin) return false;
-        if (!dateDeb && !dateFin) {
-            if (year  !== 'ALL' && d.getFullYear() !== +year)  return false;
-            if (month !== 'ALL' && d.getMonth()    !== +month) return false;
+// ============================================
+// NOTIFICATION SYSTEM
+// ============================================
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    elements.notificationContainer.appendChild(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideOutRight 0.3s ease-out forwards';
+            setTimeout(() => notification.remove(), 300);
         }
-        var dc = getDestCity(f);
-        return dc && destCodes.includes(dc);
-    });
+    }, 3000);
+}
 
-    if (!all.length) {
-        res.innerHTML = '<span style="color:#5A7A9A;">Aucun vol sur ce trajet pour la période sélectionnée</span>';
-        return;
-    }
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
-    // Déterminer si la période couvre plusieurs mois
-    var months = new Set(all.map(function(f){ return new Date(f.date).getMonth(); }));
-    var isMultiMonth = months.size > 1;
-
-    // Construire les stats par compagnie
-    var byComp = {};
-    all.forEach(function(f) {
-        if (!f.company) return;
-        if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0, byMonth:Array(12).fill(0) };
-        byComp[f.company].vols++;
-        byComp[f.company].pax += (+f.passengers||0) + (+f.babies||0);
-        byComp[f.company].byMonth[new Date(f.date).getMonth()]++;
-    });
-
-    var sorted = Object.entries(byComp).sort(function(a,b){ return b[1].vols - a[1].vols; });
-    var colors = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE'];
-
-    // Période label
-    var monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-    var periodeLabel = (dateDeb||dateFin)
-        ? ((dateDeb||'…')+' → '+(dateFin||'…'))
-        : (year==='ALL' && month==='ALL' ? 'Toutes périodes'
-            : (year!=='ALL' && month!=='ALL' ? monthNames[+month]+' '+year
-                : (month!=='ALL' ? monthNames[+month] : year)));
-
-    // ── Cartes KPI ──
-    var kpiHtml = '';
-    sorted.forEach(function(entry, i) {
-        var co = entry[0], s = entry[1];
-        var color = colors[i % colors.length];
-        var share = Math.round(s.vols / all.length * 100);
-        var peakM = s.byMonth.indexOf(Math.max.apply(null, s.byMonth));
-        var peakHtml = (isMultiMonth && s.byMonth[peakM] > 0)
-            ? '<div style="font-size:10px;color:'+color+';margin-top:5px;">📈 Pic: '+MONTHS_FR[peakM]+' ('+s.byMonth[peakM]+' vols)</div>'
-            : '';
-        kpiHtml += '<div style="flex:1;min-width:150px;background:rgba(255,255,255,.03);border:1px solid '+color+'33;'
-            +'border-radius:12px;padding:13px 16px;position:relative;overflow:hidden;">'
-            +'<div style="position:absolute;top:0;left:0;height:3px;width:'+share+'%;background:'+color+';border-radius:0 0 3px 0;"></div>'
-            +'<div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:5px;">'+co+'</div>'
-            +'<div style="font-size:21px;font-weight:800;color:'+color+';">'+s.vols
-            +'<span style="font-size:11px;color:#5A7A9A;font-weight:400;"> vols</span></div>'
-            +'<div style="font-size:11px;color:#5A7A9A;margin-top:2px;">'+s.pax.toLocaleString('fr-FR')+' pax · '+share+'%</div>'
-            +peakHtml+'</div>';
-    });
-
-    // ── Chart HTML : barres (multi-mois) ou camembert (1 mois) ──
-    var chartHtml = isMultiMonth
-        ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
-            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">📊 Vols par mois</div>'
-            +'<div style="position:relative;height:200px;"><canvas id="routeChartVols"></canvas></div></div>'
-            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">👥 Passagers par mois</div>'
-            +'<div style="position:relative;height:200px;"><canvas id="routeChartPax"></canvas></div></div></div>'
-        : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
-            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🥧 Part des vols</div>'
-            +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartVols"></canvas></div></div>'
-            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🥧 Part des passagers</div>'
-            +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartPax"></canvas></div></div></div>';
-
-    res.innerHTML =
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
-        +'<span style="font-size:15px;font-weight:700;color:#e2e8f0;">NKC ↔ '+destCity+'</span>'
-        +'<span style="font-size:12px;color:#5A7A9A;background:rgba(255,255,255,.05);padding:3px 9px;border-radius:6px;">'+all.length+' vol'+(all.length>1?'s':'')+' · '+periodeLabel+'</span>'
-        +'</div>'
-        +'<div style="display:flex;flex-wrap:wrap;gap:10px;">'+kpiHtml+'</div>'
-        +chartHtml;
-
-    setTimeout(function() {
-        var cvV = document.getElementById('routeChartVols');
-        var cvP = document.getElementById('routeChartPax');
-        if (!cvV || !cvP) return;
-        killCmp('rV'); killCmp('rP');
-
-        var legendOpts  = {display:true, position:'top', labels:{color:'#94a3b8',font:{size:10},padding:10,usePointStyle:true}};
-        var tooltipOpts = {backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8};
-        var scalesOpts  = {
-            x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5A7A9A',font:{size:10}}},
-            y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:10}},beginAtZero:true}
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
         };
-
-        if (isMultiMonth) {
-            // Barres mensuelles
-            var datasetsVols = sorted.map(function(entry, i) {
-                return {
-                    label: entry[0].length>18 ? entry[0].slice(0,18)+'…' : entry[0],
-                    data:  entry[1].byMonth,
-                    backgroundColor: colors[i%colors.length]+'99',
-                    borderColor: colors[i%colors.length],
-                    borderWidth: 2, borderRadius: 4
-                };
-            });
-            var datasetsPax = sorted.map(function(entry, i) {
-                var paxData = Array(12).fill(0);
-                all.filter(function(f){return f.company===entry[0];}).forEach(function(f){
-                    if(f.date) paxData[new Date(f.date).getMonth()] += (+f.passengers||0)+(+f.babies||0);
-                });
-                return {
-                    label: entry[0].length>18 ? entry[0].slice(0,18)+'…' : entry[0],
-                    data: paxData,
-                    borderColor: colors[i%colors.length],
-                    backgroundColor: colors[i%colors.length]+'20',
-                    borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 3
-                };
-            });
-            cmpCharts['rV'] = new Chart(cvV, {
-                type:'bar', data:{labels:MONTHS_FR, datasets:datasetsVols},
-                options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
-            });
-            cmpCharts['rP'] = new Chart(cvP, {
-                type:'line', data:{labels:MONTHS_FR, datasets:datasetsPax},
-                options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
-            });
-        } else {
-            // Camembert pour 1 mois
-            var labels  = sorted.map(function(e){return e[0];});
-            var volsData = sorted.map(function(e){return e[1].vols;});
-            var paxData  = sorted.map(function(e){return e[1].pax;});
-            var bgColors = sorted.map(function(_,i){return colors[i%colors.length]+'CC';});
-            var bdColors = sorted.map(function(_,i){return colors[i%colors.length];});
-            var doughnutOpts = {
-                responsive:true, maintainAspectRatio:false,
-                plugins:{legend:{display:true,position:'bottom',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},tooltip:tooltipOpts},
-                cutout:'60%'
-            };
-            cmpCharts['rV'] = new Chart(cvV, {
-                type:'doughnut',
-                data:{labels:labels, datasets:[{data:volsData, backgroundColor:bgColors, borderColor:bdColors, borderWidth:2}]},
-                options:doughnutOpts
-            });
-            cmpCharts['rP'] = new Chart(cvP, {
-                type:'doughnut',
-                data:{labels:labels, datasets:[{data:paxData, backgroundColor:bgColors, borderColor:bdColors, borderWidth:2}]},
-                options:doughnutOpts
-            });
-        }
-    }, 60);
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
-function fctInit() {
-    // Années depuis les données Firebase
-    const all = getFlights();
-    const years = [...new Set(all.map(f => f.date ? new Date(f.date).getFullYear() : null).filter(Boolean))].sort().reverse();
-    const sel = document.getElementById('fctAnnee');
-    sel.innerHTML = (years.length ? years : [new Date().getFullYear()])
-        .map(y => `<option value="${y}">${y}</option>`).join('');
-
-    // Date document = aujourd'hui
-    document.getElementById('fctDate').value = new Date().toISOString().split('T')[0];
-    // Mois courant
-    document.getElementById('fctMois').value = new Date().getMonth() + 1;
-
-    // Période toggle
-    document.getElementById('fctPeriode').addEventListener('change', function() {
-        const libre = this.value === 'libre';
-        document.getElementById('fctMoisWrap').style.display = libre ? 'none' : '';
-        document.getElementById('fctDebWrap').style.display  = libre ? '' : 'none';
-        document.getElementById('fctFinWrap').style.display  = libre ? '' : 'none';
-    });
-
-    fctPopulateAirlines();
+/**
+ * Format date to EU standard (dd/mm/yyyy)
+ * @param {string} dateString - Date in ISO format (yyyy-mm-dd)
+ * @returns {string} Formatted date in dd/mm/yyyy format
+ */
+function formatDateEU(dateString) {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
 }
 
-function fctPopulateAirlines() {
-    const airlines = [...new Set(getFlights().map(f => f.company).filter(Boolean))].sort();
-    const div = document.getElementById('fctAirlines');
-    div.innerHTML = airlines.map(a => `
-        <label class="fact-airline-card">
-            <input type="checkbox" class="fact-airline-card-cb" data-airline="${a}" checked>
-            <span class="fact-airline-card-inner">
-                <span class="fact-airline-dot"></span>
-                <span class="fact-airline-name">${a}</span>
-                <span class="fact-airline-tick">✓</span>
-            </span>
-        </label>`).join('');
-}
-
-window.fctSelectAll = function(val) { document.querySelectorAll('.fact-airline-card-cb').forEach(cb => { cb.checked = val; }); };
-
-// ── Filtrage des vols ────────────────────────────────────────────
-function fctGetFlights() {
-    const all = getFlights();
-    const periode = document.getElementById('fctPeriode').value;
-    const annee = +document.getElementById('fctAnnee').value;
-    if (periode === 'mois') {
-        const mois = +document.getElementById('fctMois').value;
-        return all.filter(f => {
-            if (!f.date) return false;
-            const d = new Date(f.date);
-            return d.getFullYear() === annee && (d.getMonth() + 1) === mois;
-        });
-    } else {
-        const deb = document.getElementById('fctDeb').value;
-        const fin = document.getElementById('fctFin').value;
-        return all.filter(f => f.date && (!deb || f.date >= deb) && (!fin || f.date <= fin));
+/**
+ * Check if user is authenticated for this session
+ * @returns {boolean} True if authenticated
+ */
+function checkAuthentication() {
+    if (isAuthenticated) {
+        return true;
     }
-}
-
-function fctActiveCols()     { return [...document.querySelectorAll('.fact-chip-cb:checked')].map(t => t.dataset.col); }
-function fctActiveAirlines() { return [...document.querySelectorAll('.fact-airline-card-cb:checked')].map(e => e.dataset.airline); }
-
-// ── Construction des données ─────────────────────────────────────
-function fctBuildRows() {
-    const flt      = fctGetFlights();
-    const cols     = fctActiveCols();
-    const airlines = fctActiveAirlines();
-    const rows = [];
-    airlines.forEach(airline => {
-        const af   = flt.filter(f => f.company === airline);
-        const dep  = af.filter(f => f.type === 'DEP');
-        const arr  = af.filter(f => f.type === 'ARR');
-        const paxDep = dep.reduce((s, f) => s + (+f.passengers || 0), 0);
-        const paxArr = arr.reduce((s, f) => s + (+f.passengers || 0), 0);
-        const vols   = af.length;
-        // N'inclure que si au moins une valeur > 0
-        if (paxDep + paxArr + vols === 0) return;
-        rows.push({ name: airline, pax_dep: paxDep, pax_arr: paxArr, vols });
-    });
-    return rows;
-}
-
-const FCT_MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-
-function fctPeriodeLabel() {
-    const p = document.getElementById('fctPeriode').value;
-    const an = document.getElementById('fctAnnee').value;
-    if (p === 'mois') {
-        return 'mois de ' + FCT_MOIS[+document.getElementById('fctMois').value] + ' ' + an;
+    
+    // Check sessionStorage for existing authentication
+    const sessionAuth = sessionStorage.getItem('isAuthenticated');
+    if (sessionAuth === 'true') {
+        isAuthenticated = true;
+        return true;
     }
-    const d = document.getElementById('fctDeb').value;
-    const f = document.getElementById('fctFin').value;
-    const fmt = s => s ? new Date(s).toLocaleDateString('fr-FR') : '…';
-    return 'période du ' + fmt(d) + ' au ' + fmt(f);
+    
+    return false;
 }
 
-// ── Aperçu HTML ──────────────────────────────────────────────────
-window.fctGenApercu = function() {
-    const rows  = fctBuildRows();
-    const cols  = fctActiveCols();
-    const numero  = document.getElementById('fctNumero').value;
-    const dateRaw = document.getElementById('fctDate').value;
-    const dateFmt = dateRaw ? new Date(dateRaw).toLocaleDateString('fr-FR') : '…';
-    const periode = fctPeriodeLabel();
-
-    const COL_LBL = { pax_dep: 'PAX Départs', pax_arr: 'PAX Arrivées', vols: 'Nb Vols' };
-    const totals  = {};
-    cols.forEach(c => totals[c] = rows.reduce((s, r) => s + (r[c] || 0), 0));
-
-    const thCols  = cols.map(c => `<th>${COL_LBL[c]}</th>`).join('');
-    const dataTr  = rows.map(r =>
-        `<tr><td>${r.name}</td>${cols.map(c => `<td>${(r[c]||0).toLocaleString('fr-FR')}</td>`).join('')}</tr>`
-    ).join('');
-    const totTr   = `<tr class="tbl-total"><td>Total</td>${cols.map(c => `<td>${(totals[c]||0).toLocaleString('fr-FR')}</td>`).join('')}</tr>`;
-
-    const html = rows.length === 0
-        ? `<div class="fact-empty-msg">Aucun vol trouvé pour cette sélection</div>`
-        : `<div style="font-family:'Times New Roman',Georgia,serif;max-width:820px;">
-            <div class="doc-header-row">
-                <div class="doc-direction">DIRECTION DU TRANSPORT AERIEN</div>
-                <div class="doc-date">${dateFmt}</div>
+/**
+ * Prompt for password and authenticate
+ * @returns {Promise<boolean>} True if authentication successful
+ */
+async function authenticate() {
+    if (checkAuthentication()) {
+        return true;
+    }
+    
+    return new Promise((resolve) => {
+        // Create modal for password input
+        const modal = document.createElement('div');
+        modal.className = 'modal active auth-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h2>Authentification requise</h2>
+                <p>Veuillez entrer le mot de passe pour continuer:</p>
+                <form id="authForm">
+                    <div class="form-group">
+                        <label for="passwordInput">Mot de passe</label>
+                        <input type="password" id="passwordInput" class="password-input" required autocomplete="current-password">
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="submit" class="btn-success">Valider</button>
+                        <button type="button" class="btn-secondary" id="cancelAuth">Annuler</button>
+                    </div>
+                </form>
             </div>
-            <div class="doc-service">Service des Etudes Economiques et Statistiques</div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        const passwordInput = document.getElementById('passwordInput');
+        const authForm = document.getElementById('authForm');
+        const cancelBtn = document.getElementById('cancelAuth');
+        
+        const cleanup = () => {
+            modal.remove();
+            passwordInput.value = '';
+        };
+        
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            const password = passwordInput.value;
+            
+            if (password === ADMIN_PASSWORD) {
+                isAuthenticated = true;
+                sessionStorage.setItem('isAuthenticated', 'true');
+                cleanup();
+                resolve(true);
+            } else {
+                passwordInput.classList.add('error');
+                showNotification('Mot de passe incorrect', 'error');
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        };
+        
+        const handleCancel = () => {
+            cleanup();
+            resolve(false);
+        };
+        
+        authForm.addEventListener('submit', handleSubmit);
+        cancelBtn.addEventListener('click', handleCancel);
+        
+        // Focus on password input
+        setTimeout(() => passwordInput.focus(), 100);
+        
+        // Close on escape key
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                document.removeEventListener('keydown', handleEscape);
+                handleCancel();
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+    });
+}
 
-            <div class="doc-title">ORDRE D'EMISSION DE FACTURE</div>
-            <div class="doc-numero">N° ${numero}</div>
+/**
+ * Require authentication before executing an action
+ * @param {Function} action - Function to execute if authenticated
+ * @returns {Promise<boolean>} True if action was executed
+ */
+async function requireAuthentication(action) {
+    const auth = await authenticate();
+    if (auth) {
+        await action();
+        return true;
+    } else {
+        showNotification('Action annulée', 'warning');
+        return false;
+    }
+}
 
-            <div class="doc-periode">Passagers internationaux embarqués au ${periode}</div>
+// ============================================
+// ACTIONS MENU FUNCTIONS
+// ============================================
+function toggleActionsMenu(event, flightId) {
+    event.stopPropagation();
+    
+    const menuId = `actions-${flightId}`;
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    
+    const isOpen = menu.classList.contains('active');
+    closeAllActionsMenus();
+    
+    if (!isOpen) {
+        menu.classList.add('active');
+        activeActionsMenu = menu;
+    }
+}
 
-            <table class="doc-mini-tbl">
-                <tr><td class="lbl">DESTINATAIRE</td><td>Direction Financière</td></tr>
-                <tr><td class="lbl">EMETTEUR</td><td>Direction de Transport Aérien / SEES</td></tr>
-            </table>
+function closeAllActionsMenus() {
+    if (activeActionsMenu) {
+        activeActionsMenu.classList.remove('active');
+        activeActionsMenu = null;
+    }
+}
 
-            <table class="doc-data-tbl">
-                <thead><tr><th>Compagnie</th>${thCols}</tr></thead>
-                <tbody>${dataTr}</tbody>
-                <tfoot>${totTr}</tfoot>
-            </table>
+function editFlight(flightId) {
+    closeAllActionsMenus();
+    openEditModal(flightId);
+}
 
-            <div class="doc-signature">DIRECTEUR DU TRANSPORT AERIEN</div>
-        </div>`;
-
-    document.getElementById('fctPreview').innerHTML = html;
-    document.getElementById('btnFctDocx').style.display = rows.length ? 'inline-flex' : 'none';
+// ============================================
+// PUBLIC API
+// ============================================
+window.toggleStopoverField = function() {
+    const cb  = document.getElementById('hasStopover');
+    const grp = document.getElementById('stopoverGroup');
+    if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
 };
 
-// ── Téléchargement DOCX ──────────────────────────────────────────
-window.fctTelecharger = async function() {
-    const rows    = fctBuildRows();
-    const cols    = fctActiveCols();
-    const numero  = document.getElementById('fctNumero').value;
-    const dateRaw = document.getElementById('fctDate').value;
-    const dateFmt = dateRaw ? new Date(dateRaw).toLocaleDateString('fr-FR') : '';
-    const periode = fctPeriodeLabel();
+window.updateRouteByType = updateRouteByType;
 
-    const COL_LBL = { pax_dep: 'PAX Départs', pax_arr: 'PAX Arrivées', vols: 'Nb Vols' };
-    const COL_W   = { pax_dep: 1500, pax_arr: 1500, vols: 1300 };
-    const totals  = {};
-    cols.forEach(c => totals[c] = rows.reduce((s, r) => s + (r[c] || 0), 0));
+// Exposer closeModal pour les onclick HTML (hors module)
+window.closeModal = closeModal;
 
-    // Charger docx depuis CDN ESM
-    const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell,
-            AlignmentType, BorderStyle, WidthType, VerticalAlign, ShadingType, TabStopType }
-        = await import('https://esm.sh/docx@9.5.3');
-
-    // Logo ANAC
-    const logoResp = await fetch('assets/ANAC-logo.png');
-    const logoData = await logoResp.arrayBuffer();
-
-    const contentW = 9638;
-    const colL = 4400, colC = 2400, colR = 2838;
-    const compW = contentW - cols.reduce((s, c) => s + (COL_W[c] || 1400), 0);
-
-    const nB = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
-    const noBd = { top: nB, bottom: nB, left: nB, right: nB };
-    const bdr  = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
-    const allBd = { top: bdr, bottom: bdr, left: bdr, right: bdr };
-
-    const fr = (text, bold = false, sz = 20) => new Paragraph({
-        spacing: { before: 80, after: 80 },
-        children: [new TextRun({ text, font: 'Times New Roman', size: sz, bold })]
-    });
-    const ar = (text) => new Paragraph({
-        alignment: AlignmentType.RIGHT, spacing: { before: 80, after: 80 },
-        children: [new TextRun({ text, font: 'Times New Roman', size: 20, rtl: true })]
-    });
-    const hCell = (text, w) => new TableCell({
-        borders: allBd, width: { size: w, type: WidthType.DXA },
-        shading: { fill: '0d2240', type: ShadingType.CLEAR },
-        margins: { top: 80, bottom: 80, left: 100, right: 100 },
-        children: [new Paragraph({ alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text, font: 'Arial', size: 18, bold: true, color: 'D4AF37' })] })]
-    });
-    const dCell = (text, w, left = false) => new TableCell({
-        borders: allBd, width: { size: w, type: WidthType.DXA },
-        margins: { top: 70, bottom: 70, left: 100, right: 100 },
-        children: [new Paragraph({ alignment: left ? AlignmentType.LEFT : AlignmentType.CENTER,
-            children: [new TextRun({ text, font: 'Arial', size: 18 })] })]
-    });
-    const tCell = (text, w) => new TableCell({
-        borders: allBd, width: { size: w, type: WidthType.DXA },
-        shading: { fill: 'F0F4F8', type: ShadingType.CLEAR },
-        margins: { top: 80, bottom: 80, left: 100, right: 100 },
-        children: [new Paragraph({ alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text, font: 'Arial', size: 18, bold: true })] })]
-    });
-    const mCell = (text, w, bold = false, fill = '') => new TableCell({
-        borders: allBd, width: { size: w, type: WidthType.DXA },
-        shading: fill ? { fill, type: ShadingType.CLEAR } : undefined,
-        margins: { top: 80, bottom: 80, left: 140, right: 140 },
-        children: [new Paragraph({ children: [new TextRun({ text, font: 'Arial', size: 20, bold })] })]
-    });
-
-    const colWidths = [compW, ...cols.map(c => COL_W[c] || 1400)];
-
-    const dataRows = rows.map(r => new TableRow({ children: [
-        dCell(r.name, compW, true),
-        ...cols.map(c => dCell((r[c] || 0).toLocaleString('fr-FR'), COL_W[c] || 1400))
-    ]}));
-
-    const doc = new Document({
-        styles: { default: { document: { run: { font: 'Arial', size: 22 } } } },
-        sections: [{ properties: {
-            page: { size: { width: 11906, height: 16838 }, margin: { top: 720, right: 1134, bottom: 1440, left: 1134 } }
-        }, children: [
-
-            // ── Header 3 colonnes ─────────────────────────────────
-            new Table({ width: { size: contentW, type: WidthType.DXA }, columnWidths: [colL, colC, colR],
-                rows: [new TableRow({ children: [
-                    new TableCell({ borders: noBd, width: { size: colL, type: WidthType.DXA },
-                        verticalAlign: VerticalAlign.CENTER, margins: { top: 80, bottom: 80, left: 0, right: 80 },
-                        children: [
-                            fr('République Islamique de Mauritanie'),
-                            fr("Ministère de l'Equipement et des Transports"),
-                            fr("AGENCE NATIONALE DE L'AVIATION CIVILE", true),
-                        ]
-                    }),
-                    new TableCell({ borders: noBd, width: { size: colC, type: WidthType.DXA },
-                        verticalAlign: VerticalAlign.CENTER, margins: { top: 0, bottom: 0, left: 0, right: 0 },
-                        children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 },
-                            children: [new ImageRun({ data: logoData, type: 'png', transformation: { width: 144, height: 98 } })]
-                        })]
-                    }),
-                    new TableCell({ borders: noBd, width: { size: colR, type: WidthType.DXA },
-                        verticalAlign: VerticalAlign.CENTER, margins: { top: 80, bottom: 80, left: 80, right: 0 },
-                        children: [
-                            ar('الجمهورية الإسلامية الموريتانية'),
-                            ar('وزارة التجهيز والنقل'),
-                            ar('الوكالة الوطنية للطيران المدني'),
-                        ]
-                    }),
-                ]})]
-            }),
-
-            // ── Ligne séparation ──────────────────────────────────
-            new Paragraph({ spacing: { before: 200, after: 160 },
-                border: { bottom: { style: BorderStyle.SINGLE, size: 14, color: '000000', space: 1 } },
-                children: []
-            }),
-
-            // ── DIRECTION + DATE ──────────────────────────────────
-            new Paragraph({
-                spacing: { before: 80, after: 0 },
-                tabStops: [{ type: TabStopType.RIGHT, position: 9638 }],
-                children: [
-                    new TextRun({ text: 'DIRECTION DU TRANSPORT AERIEN', font: 'Arial', size: 22, bold: true, underline: {} }),
-                    new TextRun({ text: '	' }),
-                    new TextRun({ text: dateFmt, font: 'Arial', size: 22 }),
-                ]
-            }),
-            new Paragraph({ spacing: { before: 60, after: 400 },
-                children: [new TextRun({ text: 'Service des Etudes Economiques et Statistiques', font: 'Arial', size: 20 })]
-            }),
-
-            // ── Espaces ───────────────────────────────────────────
-            new Paragraph({ children: [] }), new Paragraph({ children: [] }), new Paragraph({ children: [] }),
-
-            // ── ORDRE D'EMISSION ──────────────────────────────────
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 80 },
-                children: [new TextRun({ text: "ORDRE D\’EMISSION DE FACTURE", font: 'Arial', size: 24, bold: true, underline: {} })]
-            }),
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 400 },
-                children: [new TextRun({ text: 'N\° ' + numero, font: 'Arial', size: 22 })]
-            }),
-
-            new Paragraph({ children: [] }), new Paragraph({ children: [] }),
-
-            // ── Titre passagers ───────────────────────────────────
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 320 },
-                children: [new TextRun({ text: 'Passagers internationaux embarqués au ' + periode, font: 'Arial', size: 22, bold: true })]
-            }),
-
-            // ── Tableau DESTINATAIRE / EMETTEUR (2 lignes × 2 col) ─
-            new Table({ width: { size: contentW, type: WidthType.DXA }, columnWidths: [2400, 7238],
-                rows: [
-                    new TableRow({ children: [
-                        mCell('DESTINATAIRE', 2400, true, 'D6E4F0'),
-                        mCell('Direction Financière', 7238),
-                    ]}),
-                    new TableRow({ children: [
-                        mCell('EMETTEUR', 2400, true, 'D6E4F0'),
-                        mCell('Direction de Transport Aérien / SEES', 7238),
-                    ]}),
-                ]
-            }),
-
-            new Paragraph({ children: [] }), new Paragraph({ children: [] }),
-
-            // ── Tableau des compagnies ────────────────────────────
-            new Table({ width: { size: contentW, type: WidthType.DXA }, columnWidths: colWidths,
-                rows: [
-                    new TableRow({ tableHeader: true, children: [
-                        hCell('Compagnie', compW),
-                        ...cols.map(c => hCell(COL_LBL[c], COL_W[c] || 1400))
-                    ]}),
-                    ...dataRows,
-                    new TableRow({ children: [
-                        tCell('Total', compW),
-                        ...cols.map(c => tCell((totals[c] || 0).toLocaleString('fr-FR'), COL_W[c] || 1400))
-                    ]})
-                ]
-            }),
-
-            new Paragraph({ children: [] }),
-
-            // ── Signature ─────────────────────────────────────────
-            new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { before: 300, after: 0 },
-                children: [new TextRun({ text: 'DIRECTEUR DU TRANSPORT AERIEN', font: 'Arial', size: 22, bold: true })]
-            }),
-
-        ]}]
-    });
-
-    const buf  = await Packer.toBuffer(doc);
-    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    const label = document.getElementById('fctPeriode').value === 'mois'
-        ? FCT_MOIS[+document.getElementById('fctMois').value] + '_' + document.getElementById('fctAnnee').value
-        : 'periode_' + document.getElementById('fctAnnee').value;
-    a.download = 'OEF_ANAC_' + label + '.docx';
-    a.click();
-    URL.revokeObjectURL(url);
+// stepCount : incrémenter/décrémenter un champ numérique
+window.stepCount = function(fieldId, delta) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    const val = parseInt(el.value) || 0;
+    el.value = Math.max(0, val + delta);
 };
 
-// selectType — 2 boutons seulement (DEP/ARR)
+// Sélection type DEP/ARR via boutons visuels
 window.selectType = function(type) {
-    const h = document.getElementById('fType');
-    if (h) h.value = type;
-    ['DEP','ARR'].forEach(t => {
-        const btn = document.getElementById('btn'+t);
-        if (btn) btn.classList.toggle('active', t === type);
-    });
-    if (window.updateRouteByType) window.updateRouteByType();
-};
-
-// ── Hook sur switchTab pour init au 1er clic ─────────────────────
-const _origSwitchTab = window.switchTab;
-window.switchTab = function(tab) {
-    _origSwitchTab(tab);
-    if (tab === 'facturation') {
-        if (!window._fctInited) {
-            window._fctInited = true;
-            setTimeout(fctInit, 80);
+    const hiddenInput = document.getElementById('fType');
+    if (hiddenInput) hiddenInput.value = type;
+    const btnDEP = document.getElementById('btnDEP');
+    const btnARR = document.getElementById('btnARR');
+    if (btnDEP && btnARR) {
+        if (type === 'DEP') {
+            btnDEP.style.cssText += ';background:#2B5A8E!important;color:#fff!important;border-color:#2B5A8E!important;';
+            btnARR.style.cssText += ';background:#f7fafc!important;color:#718096!important;border-color:#e2e8f0!important;';
+        } else {
+            btnARR.style.cssText += ';background:#2B5A8E!important;color:#fff!important;border-color:#2B5A8E!important;';
+            btnDEP.style.cssText += ';background:#f7fafc!important;color:#718096!important;border-color:#e2e8f0!important;';
         }
     }
+    updateRouteByType();
 };
 
-// ══ AUTH FACTURATION ══════════════════════════════════
-const _FS='anac_sess';
-const _FC={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
-let _fdb=null;
-async function _fDB(){if(_fdb)return _fdb;const{initializeApp,getApps}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');const{getFirestore}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const a=getApps().find(x=>x.name==='_fa')||initializeApp(_FC,'_fa');_fdb=getFirestore(a);return _fdb;}
-async function _fChk(u,p){try{const db=await _fDB();const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));const s=await getDocs(q);if(!s.empty){const x=s.docs[0].data();if(x.password!==p)return{ok:false};const perms=x.permissions||[];const hasFact=perms.includes('facturation');if(!hasFact)return{ok:false,noAccess:true};return{ok:true,perms};}const c=await getDoc(doc(db,'flights','cfg-auth'));const su=c.exists()?(c.data().username||'DADY'):'DADY';const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';if(u.toUpperCase()===su.toUpperCase()&&p===sp)return{ok:true,perms:['admin','ldm','facturation','add_flight','edit_flight','delete_flight','import']};return{ok:false};}catch(e){return{ok:false};}}
-async function _fValid(ts){try{const db=await _fDB();const{doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const c=await getDoc(doc(db,'flights','cfg-auth'));if(c.exists()&&(c.data().sessionReset||0)>ts)return false;}catch(e){}return true;}
-function _fSess(){try{return JSON.parse(sessionStorage.getItem(_FS));}catch{return null;}}
-function _showFact(){document.getElementById('factWall').style.display='none';document.getElementById('factContent').style.display='block';if(!window._fctInited){window._fctInited=true;setTimeout(fctInit,80);}}
-window._doFactLogin=async function(){
-  const u=(document.getElementById('factU').value||'').trim();
-  const p=document.getElementById('factP').value||'';
-  const err=document.getElementById('factErr');
-  const btn=document.getElementById('factBtn');
-  err.textContent='';
-  if(!u||!p){err.textContent='Remplissez tous les champs';return;}
-  btn.disabled=true;btn.textContent='...';
-  const res=await _fChk(u,p);
-  btn.disabled=false;btn.textContent='Connexion';
-  if(res.ok){sessionStorage.setItem(_FS,JSON.stringify({u:u.toUpperCase(),ts:Date.now(),perms:res.perms||[]}));_showFact();}
-  else if(res.noAccess){err.textContent='Accès refusé — permission Facturation requise';document.getElementById('factP').value='';}
-  else{err.textContent='Identifiants incorrects';document.getElementById('factP').value='';}
-};
-const _oST=window.switchTab;
-window.switchTab=async function(tab){
-  _oST(tab);
-  if(tab==='facturation'){
-    const s=_fSess();
-    if(s&&await _fValid(s.ts)){_showFact();}
-    else{sessionStorage.removeItem(_FS);document.getElementById('factContent').style.display='none';document.getElementById('factWall').style.display='block';setTimeout(()=>document.getElementById('factU')?.focus(),100);}
-  }
+window.app = {
+    deleteFlight,
+    updateFlightsData,
+    showNotification,
+    toggleActionsMenu,
+    editFlight
 };
 
-// Vérification des permissions sur les actions du site
-// Appelée depuis app.js pour savoir si l'utilisateur peut faire une action
-window._hasPerm = function(perm) {
-  // Vérifier session facturation (utilisateurs secondaires)
-  const fs = _fSess();
-  if (fs && fs.perms) {
-    if (fs.perms.includes('admin')) return true;
-    return fs.perms.includes(perm);
-  }
-  // Pas de session secondaire = compte admin principal = tout autorisé
-  return true;
-};
+// ── BroadcastChannel: écoute les commandes de inject_test_flights.html ──
+// Les vols sont générés ICI dans app.js pour ne pas transférer de données lourdes
+(function() {
+  try {
+    const NKC = 'GQNO';
+    const CO = [
+      { name:'Mauritania Airlines', prefix:'L6', immatPfx:'5T', dests:['DAAG','DTTA','GOBD','GABS','GCLP','GUCY','GMMN','GQPP','GQNI','GQPF','GQPZ','DIAP','DXXX'] },
+      { name:'Air Senegal',         prefix:'HC', immatPfx:'6V', home:'GOBD' },
+      { name:'Turkish Airlines',    prefix:'TK', immatPfx:'TC', home:'LTFM' },
+      { name:'Binter',              prefix:'NT', immatPfx:'EC', home:'GCLP' },
+      { name:'Air Algerie',         prefix:'AH', immatPfx:'7T', home:'DAAG' },
+      { name:'ASKY',                prefix:'KP', immatPfx:'TU', home:'GUCY' },
+      { name:'Royal Air Maroc',     prefix:'AT', immatPfx:'CN', home:'GMMN' },
+      { name:'Tunisair',            prefix:'TU', immatPfx:'TS', home:'DTTA' },
+      { name:'Air France',          prefix:'AF', immatPfx:'FH', home:'LFPG' },
+    ];
+    const PAIRS = [];
+    CO.forEach(co => {
+      if (co.dests) {
+        co.dests.forEach(d => {
+          PAIRS.push({co,type:'DEP',from:NKC,to:d});
+          PAIRS.push({co,type:'ARR',from:d,to:NKC});
+        });
+      } else {
+        PAIRS.push({co,type:'DEP',from:NKC,to:co.home});
+        PAIRS.push({co,type:'ARR',from:co.home,to:NKC});
+      }
+    });
 
-</script>
+    function ri(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+    function pad(n,l){return String(n).padStart(l||2,'0');}
+    function rndDate(){const y=new Date().getFullYear(),m=ri(1,12),d=ri(1,new Date(y,m,0).getDate());return y+'-'+pad(m)+'-'+pad(d);}
+    function rndImmat(p){const L='ABCDEFGHJKLMNPQRSTUVWXYZ',r=()=>L[ri(0,L.length-1)];return p+r()+r()+r();}
+    function rndAuth(){const y=String(new Date().getFullYear()).slice(2);return 'SNA'+y+'-'+pad(ri(1,9999),4);}
+    function uid(){return 'T'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();}
 
-<!-- ── Modal Export Excel ── -->
-<div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
-  backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#0F1B2D;border:1px solid rgba(255,255,255,.12);border-radius:18px;
-    padding:28px 32px;max-width:480px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,.5);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <div>
-        <div style="font-size:17px;font-weight:800;color:#e2e8f0;">⬇ Exporter en Excel</div>
-        <div style="font-size:12px;color:#5A7A9A;margin-top:3px;">Choisissez les colonnes à inclure</div>
-      </div>
-      <button onclick="document.getElementById('exportModal').style.display='none'"
-        style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
-        color:#94a3b8;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;">✕</button>
-    </div>
-    <!-- Cases à cocher -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;" id="exportColList"></div>
-    <!-- Boutons -->
-    <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:16px;
-      border-top:1px solid rgba(255,255,255,.07);">
-      <button onclick="document.getElementById('exportModal').style.display='none'"
-        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
-        color:#94a3b8;border-radius:8px;padding:9px 20px;font-size:13px;cursor:pointer;font-family:inherit;">
-        Annuler
-      </button>
-      <button onclick="doExport()"
-        style="background:linear-gradient(135deg,#34d399,#059669);border:none;
-        color:#fff;border-radius:8px;padding:9px 24px;font-size:13px;font-weight:700;
-        cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(52,211,153,.3);">
-        ⬇ Télécharger
-      </button>
-    </div>
-  </div>
-</div>
+    function makeBatch(n) {
+      const batch=[];
+      for(let i=0;i<n;i++){
+        const p=PAIRS[ri(0,PAIRS.length-1)];
+        batch.push({
+          id:uid(), flightNumber:p.co.prefix+ri(100,999), company:p.co.name,
+          date:rndDate(), type:p.type, from:p.from, to:p.to,
+          registration:rndImmat(p.co.immatPfx), passengers:ri(30,220), babies:ri(0,8),
+          hasStopover:false, stopover:'', stopoverPax:0, stopoverBabies:0,
+          authorizationNumber:rndAuth(), source:'TEST',
+          timestamp:Date.now(), createdAt:new Date().toISOString()
+        });
+      }
+      return batch;
+    }
 
-<script>
-// Initialiser les cases à cocher du modal
-(function(){
-  const COLS=typeof EXPORT_COLS!=='undefined'?EXPORT_COLS:[];
-  const btn=document.getElementById('exportModal');
-  // Observer quand le modal s'ouvre
-  const orig=exportSuiviExcel;
-  document.getElementById('exportModal').addEventListener('shown',function(){});
-  // Remplir la liste au premier clic
-  const list=document.getElementById('exportColList');
-  if(list&&COLS.length){
-    list.innerHTML=COLS.map(col=>`
-      <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;
-        background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
-        border-radius:9px;cursor:pointer;transition:background .12s;user-select:none;"
-        onmouseover="this.style.background='rgba(52,211,153,.08)'"
-        onmouseout="this.style.background='rgba(255,255,255,.04)'">
-        <input type="checkbox" id="excol_${col.key}" ${col.def?'checked':''} 
-          style="width:16px;height:16px;accent-color:#34d399;cursor:pointer;flex-shrink:0;">
-        <span style="font-size:13px;color:#e2e8f0;font-weight:500;">${col.label}</span>
-      </label>`).join('');
-  }
+    const ch = new BroadcastChannel('anac_test_flights');
+    ch.addEventListener('message', (evt) => {
+      const { cmd, n } = evt.data || {};
+      if (cmd === 'ping') {
+        ch.postMessage({ cmd:'pong' });
+      } else if (cmd === 'inject_add') {
+        // Générer n vols côté site et ajouter
+        if (!window._realFlights) window._realFlights = flights.filter(f=>f.source!=='TEST');
+        const batch  = makeBatch(n || 500);
+        const merged = [...flights, ...batch];
+        updateFlightsData(merged);
+        if (window.refreshChartsFromApp) window.refreshChartsFromApp(merged);
+        const testCount = merged.filter(f=>f.source==='TEST').length;
+        const tDep = merged.filter(f=>f.source==='TEST'&&f.type==='DEP').length;
+        const tArr = merged.filter(f=>f.source==='TEST'&&f.type==='ARR').length;
+        ch.postMessage({ cmd:'ack', total:merged.length, test:testCount, dep:tDep, arr:tArr });
+      } else if (cmd === 'remove') {
+        const real = window._realFlights || flights.filter(f=>f.source!=='TEST');
+        window._realFlights = null;
+        updateFlightsData(real);
+        if (window.refreshChartsFromApp) window.refreshChartsFromApp(real);
+        ch.postMessage({ cmd:'ack_remove', total:real.length });
+      }
+    });
+    window._testChannel = ch;
+  } catch(e) { console.warn('BroadcastChannel non supporté:', e); }
 })();
-</script>
-</body>
-</html>
+
+// ============================================
+// INITIALIZATION
+// ============================================
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeApp();
+});
+
+// Quand Firebase est prêt (signal de firebase.js), re-setup si besoin
+window.addEventListener('firebaseReady', () => {
+    // Si dbService est maintenant disponible, mettre à jour les données initiales
+    if (window.dbService) {
+        console.log('Firebase ready — dbService connecté');
+    }
+});
+
+// Add CSS for additional styling
+const additionalStyles = `
+    .field-error {
+        color: #e53e3e;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    
+    .error {
+        border-color: #e53e3e !important;
+        box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1) !important;
+    }
+    
+    .type-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .type-depart {
+        background: #e6fffa;
+        color: #047481;
+    }
+    
+    .type-arrivee {
+        background: #f0fdf4;
+        color: #166534;
+    }
+    
+    @keyframes slideOutRight {
+        to {
+            opacity: 0;
+            transform: translateX(100px);
+        }
+    }
+`;
+
+const styleSheet = document.createElement('style');
+styleSheet.textContent = additionalStyles;
+document.head.appendChild(styleSheet);
