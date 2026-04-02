@@ -738,6 +738,13 @@
       <select id="routeYear" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
         <option value="ALL">Toutes années</option>
       </select>
+      <select id="routeMonth" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+        <option value="ALL">Tous les mois</option>
+        <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
+        <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
+        <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
+        <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
+      </select>
     </div>
     <!-- Période personnalisée route -->
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;">
@@ -1173,10 +1180,6 @@ function exportSuiviExcel(){
 }
 window.exportSuiviExcel=exportSuiviExcel;
 
-// ── Stubs pour fonctions définies dans app.js (module) ──
-// Elles sont remplacées par app.js au chargement
-if(typeof window.closeModal==='undefined') window.closeModal=function(){};
-if(typeof window.stepCount==='undefined')  window.stepCount=function(){};
 
 window.doExport=function(){
     const tbody=document.getElementById('flightTableBody');
@@ -1798,6 +1801,7 @@ function runComparison() {
 function runRouteComparison() {
     var route   = document.getElementById('routeFilter').value;
     var year    = document.getElementById('routeYear').value;
+    var month   = (document.getElementById('routeMonth')||{}).value||'ALL';
     var dateDeb = (document.getElementById('routeDateDeb')||{}).value||'';
     var dateFin = (document.getElementById('routeDateFin')||{}).value||'';
     var res     = document.getElementById('routeCmpResult');
@@ -1810,9 +1814,15 @@ function runRouteComparison() {
     var all = getFlights().filter(function(f) {
         if (!f.date) return false;
         var ds = f.date.slice(0,10);
+        var d  = new Date(f.date);
+        // Période personnalisée prioritaire
         if (dateDeb && ds < dateDeb) return false;
         if (dateFin && ds > dateFin) return false;
-        if (!dateDeb && !dateFin && year !== 'ALL' && new Date(f.date).getFullYear() !== +year) return false;
+        // Sinon filtres année + mois
+        if (!dateDeb && !dateFin) {
+            if (year  !== 'ALL' && d.getFullYear() !== +year)  return false;
+            if (month !== 'ALL' && d.getMonth()    !== +month) return false;
+        }
         var dc = getDestCity(f);
         return dc && destCodes.includes(dc);
     });
@@ -1830,7 +1840,12 @@ function runRouteComparison() {
 
     var sorted  = Object.entries(byComp).sort(function(a,b){return b[1].vols-a[1].vols;});
     var colors  = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE'];
-    var periodeLabel = (dateDeb||dateFin) ? ((dateDeb||'…')+' → '+(dateFin||'…')) : (year==='ALL'?'Toutes périodes':year);
+    var monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    var periodeLabel = (dateDeb||dateFin)
+        ? ((dateDeb||'…')+' → '+(dateFin||'…'))
+        : (year==='ALL' && month==='ALL' ? 'Toutes périodes'
+            : (year!=='ALL' && month!=='ALL' ? monthNames[+month]+' '+year
+                : (month!=='ALL' ? monthNames[+month]+' (toutes années)' : year)));
 
     // ── Build KPI cards HTML (no nested backticks) ──
     var kpiHtml = '';
