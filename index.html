@@ -507,6 +507,10 @@
                 <div class="filters">
                     <div class="filter-row">
                         <div class="filter-group">
+                            <label for="yearSelect">Année</label>
+                            <select id="yearSelect"><option value="ALL">Toutes les années</option></select>
+                        </div>
+                        <div class="filter-group">
                             <label for="monthSelect">Mois</label>
                             <select id="monthSelect"><option value="ALL">Tous les mois</option></select>
                         </div>
@@ -1617,13 +1621,7 @@ function populateRouteSelect(flights) {
 function _autoDetectSaison() {
     const s = _activeSaison();
     if (!s) return;
-    // Appliquer silencieusement la saison courante sur les deux sections
-    const saison = SAISONS[s];
-    const sf = document.getElementById('searchFrom');
-    const st = document.getElementById('searchTo');
-    if (sf && !sf.value) sf.value = saison.deb;
-    if (st && !st.value) st.value = saison.fin;
-    // Highlight boutons
+    // Highlight boutons saison seulement (pas de remplissage auto des dates)
     const btnAccueil = document.getElementById(s==='ete'?'btnSaisonEte':'btnSaisonHiver');
     const btnChart   = document.getElementById(s==='ete'?'btnChartEte':'btnChartHiver');
     if (btnAccueil) btnAccueil.style.outline = '2px solid currentColor';
