@@ -550,6 +550,17 @@
                             <button class="btn-primary" data-type="ARR">Arrivée</button>
                             <button class="btn-secondary" id="resetFilters">Réinitialiser</button>
                         </div>
+                        <div style="display:flex;gap:6px;align-items:center;margin-left:auto;">
+                            <span style="font-size:11px;color:#718096;font-weight:600;white-space:nowrap;">✈ Saison :</span>
+                            <button id="btnSaisonEte" onclick="applySaison('ete')"
+                                style="background:linear-gradient(135deg,#f6ad55,#f6e05e);border:none;color:#744210;
+                                border-radius:7px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;
+                                font-family:inherit;transition:all .15s;white-space:nowrap;">☀️ Été 2026</button>
+                            <button id="btnSaisonHiver" onclick="applySaison('hiver')"
+                                style="background:linear-gradient(135deg,#90cdf4,#63b3ed);border:none;color:#1a365d;
+                                border-radius:7px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;
+                                font-family:inherit;transition:all .15s;white-space:nowrap;">❄️ Hiver 2026</button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -605,7 +616,7 @@
     <p id="chartsSubtitle" style="font-size:12px;color:#5A7A9A;margin:3px 0 0;">Analyse automatique des données de vol</p>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <select id="chartYearFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
+    <select id="chartYearFilter" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
       <option value="ALL">Toutes les années</option>
     </select>
     <select id="chartMonthFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
@@ -618,6 +629,17 @@
     <select id="chartCompanyFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;min-width:160px;">
       <option value="ALL">Toutes les compagnies</option>
     </select>
+
+    <button id="btnChartEte" onclick="applyChartSaison('ete')"
+      style="background:linear-gradient(135deg,rgba(246,173,85,.25),rgba(246,224,94,.15));
+             border:1px solid rgba(246,173,85,.5);color:#d97706;border-radius:8px;
+             padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+             transition:all .15s;white-space:nowrap;">☀️ Été 2026</button>
+    <button id="btnChartHiver" onclick="applyChartSaison('hiver')"
+      style="background:linear-gradient(135deg,rgba(144,205,244,.2),rgba(99,179,237,.15));
+             border:1px solid rgba(99,179,237,.5);color:#2b6cb0;border-radius:8px;
+             padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+             transition:all .15s;white-space:nowrap;">❄️ Hiver 2026</button>
     <button onclick="resetChartFilters()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
     <button onclick="exportExcel()" id="btnExportExcel"
       style="background:linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1));
@@ -1145,24 +1167,44 @@ function getDestCity(f){
 function getFlights(){return window.appFlights||[];}
 
 function filterFlights(flights){
-    const y=document.getElementById('chartYearFilter').value;
-    const m=document.getElementById('chartMonthFilter').value;
-    const co=document.getElementById('chartCompanyFilter').value;
+    const y  = document.getElementById('chartYearFilter').value;
+    const m  = document.getElementById('chartMonthFilter').value;
+    const co = document.getElementById('chartCompanyFilter').value;
+    const deb = (document.getElementById('searchFrom')||{}).value||'';
+    const fin = (document.getElementById('searchTo')||{}).value||'';
     return flights.filter(f=>{
-        const d=f.date?new Date(f.date):null;
-        if(y!=='ALL'&&(!d||d.getFullYear()!==+y))return false;
-        if(m!=='ALL'&&(!d||d.getMonth()!==+m))return false;
-        if(co!=='ALL'&&f.company!==co)return false;
+        if(!f.date) return false;
+        const d  = new Date(f.date);
+        const ds = f.date.slice(0,10);
+        // Filtre période saison (prioritaire)
+        if(deb && ds < deb) return false;
+        if(fin && ds > fin) return false;
+        // Filtres année/mois seulement si pas de période saison
+        if(!deb && !fin){
+            if(y!=='ALL'&&d.getFullYear()!==+y) return false;
+            if(m!=='ALL'&&d.getMonth()!==+m)    return false;
+        }
+        if(co!=='ALL'&&f.company!==co) return false;
         return true;
     });
 }
 
 function populateYearFilter(flights){
     const sel=document.getElementById('chartYearFilter');
-    const cur=sel.value;
+    const curYear=new Date().getFullYear();
+    // Conserver la sélection manuelle, sinon année courante par défaut
+    const alreadySet = sel.dataset.userSet === '1';
+    const cur = alreadySet ? sel.value : String(curYear);
     const years=[...new Set(flights.map(f=>f.date?new Date(f.date).getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
     sel.innerHTML='<option value="ALL">Toutes les années</option>';
-    years.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;if(String(y)===cur)o.selected=true;sel.appendChild(o);});
+    years.forEach(y=>{
+        const o=document.createElement('option');
+        o.value=y;o.textContent=y;
+        if(String(y)===cur)o.selected=true;
+        sel.appendChild(o);
+    });
+    // Marquer que le select écoute les changements utilisateur
+    sel.onchange = function(){ sel.dataset.userSet='1'; refreshCharts(); };
 }
 
 function populateCompanyFilter(flights){
@@ -1302,10 +1344,84 @@ function exportExcel(){
     XLSX.writeFile(wb,fname);
 }
 
+// ── SAISONS IATA ──────────────────────────────────────────────
+// Hiver 2026 : 26 oct 2025 → 29 mars 2026
+// Été 2026   : 30 mars 2026 → 25 oct 2026
+const SAISONS = {
+    hiver: { label:'Hiver 2026', deb:'2025-10-26', fin:'2026-03-29' },
+    ete:   { label:'Été 2026',   deb:'2026-03-30', fin:'2026-10-25' }
+};
+
+function _activeSaison() {
+    const today = new Date().toISOString().slice(0,10);
+    if (today >= SAISONS.ete.deb   && today <= SAISONS.ete.fin)   return 'ete';
+    if (today >= SAISONS.hiver.deb && today <= SAISONS.hiver.fin) return 'hiver';
+    return null;
+}
+
+// ── Page d'accueil : filtre dates ──
+function applySaison(s) {
+    const saison = SAISONS[s];
+    if (!saison) return;
+    // Mettre à jour les dates
+    document.getElementById('searchFrom').value = saison.deb;
+    document.getElementById('searchTo').value   = saison.fin;
+    // Reset autres filtres de type
+    document.querySelectorAll('.btn-primary[data-type]').forEach(b => b.classList.remove('btn-active'));
+    document.querySelector('.btn-primary[data-type="ALL"]')?.classList.add('btn-active');
+    // Highlight bouton actif
+    ['btnSaisonEte','btnSaisonHiver'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.style.outline = '';
+    });
+    const activeBtn = document.getElementById(s === 'ete' ? 'btnSaisonEte' : 'btnSaisonHiver');
+    if (activeBtn) activeBtn.style.outline = '2px solid currentColor';
+    // Déclencher la recherche
+    if (typeof window.app?.updateFlightsData === 'function') {
+        // re-filter via app
+    }
+    // Trigger input events so app.js picks up the change
+    ['searchFrom','searchTo'].forEach(id => {
+        document.getElementById(id)?.dispatchEvent(new Event('change', {bubbles:true}));
+        document.getElementById(id)?.dispatchEvent(new Event('input', {bubbles:true}));
+    });
+}
+window.applySaison = applySaison;
+
+// ── Diagrammes : filtre année/mois via dates ──
+function applyChartSaison(s) {
+    const saison = SAISONS[s];
+    if (!saison) return;
+    // Pour les diagrammes on filtre via searchFrom/searchTo aussi
+    // mais on utilise directement filterFlights qui lit ces champs
+    document.getElementById('searchFrom').value = saison.deb;
+    document.getElementById('searchTo').value   = saison.fin;
+    // Reset year/month selects pour ne pas double-filtrer
+    document.getElementById('chartYearFilter').value  = 'ALL';
+    document.getElementById('chartMonthFilter').value = 'ALL';
+    // Highlight
+    ['btnChartEte','btnChartHiver'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.style.outline = '';
+    });
+    const activeBtn = document.getElementById(s === 'ete' ? 'btnChartEte' : 'btnChartHiver');
+    if (activeBtn) activeBtn.style.outline = '2px solid currentColor';
+    refreshCharts();
+}
+window.applyChartSaison = applyChartSaison;
+
+
 function resetChartFilters(){
-    document.getElementById('chartYearFilter').value='ALL';
+    document.getElementById('chartYearFilter').value=String(new Date().getFullYear());
     document.getElementById('chartMonthFilter').value='ALL';
     document.getElementById('chartCompanyFilter').value='ALL';
+    // Effacer aussi les dates saison
+    const sf=document.getElementById('searchFrom'); if(sf) sf.value='';
+    const st=document.getElementById('searchTo');   if(st) st.value='';
+    // Retirer highlights
+    ['btnChartEte','btnChartHiver','btnSaisonEte','btnSaisonHiver'].forEach(id=>{
+        const b=document.getElementById(id); if(b) b.style.outline='';
+    });
     refreshCharts();
 }
 
@@ -1517,8 +1633,26 @@ function populateRouteSelect(flights) {
     });
 }
 
+// ── Auto-détection saison courante au chargement ──
+function _autoDetectSaison() {
+    const s = _activeSaison();
+    if (!s) return;
+    // Appliquer silencieusement la saison courante sur les deux sections
+    const saison = SAISONS[s];
+    const sf = document.getElementById('searchFrom');
+    const st = document.getElementById('searchTo');
+    if (sf && !sf.value) sf.value = saison.deb;
+    if (st && !st.value) st.value = saison.fin;
+    // Highlight boutons
+    const btnAccueil = document.getElementById(s==='ete'?'btnSaisonEte':'btnSaisonHiver');
+    const btnChart   = document.getElementById(s==='ete'?'btnChartEte':'btnChartHiver');
+    if (btnAccueil) btnAccueil.style.outline = '2px solid currentColor';
+    if (btnChart)   btnChart.style.outline   = '2px solid currentColor';
+}
+
 window.refreshChartsFromApp = function(flightsData) {
     window.appFlights = flightsData;
+    _autoDetectSaison();
     if (document.getElementById('tab-rapports')?.classList.contains('active')) refreshCharts();
     else { populateCmpSelects(flightsData); populateRouteSelect(flightsData); }
 };
