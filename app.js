@@ -114,6 +114,7 @@ const elements = {
     totalBabies: document.getElementById('totalBabies'),
     
     // Filters
+    yearSelect: document.getElementById('yearSelect'),
     monthSelect: document.getElementById('monthSelect'),
     companySelect: document.getElementById('companySelect'),
     fromSelect: document.getElementById('fromSelect'),
@@ -280,7 +281,7 @@ function populateSelects() {
 function attachEventListeners() {
     // Filter changes
     const filterElements = [
-        elements.monthSelect, elements.companySelect, elements.fromSelect, elements.toSelect,
+        elements.yearSelect, elements.monthSelect, elements.companySelect, elements.fromSelect, elements.toSelect,
         elements.searchFrom, elements.searchTo
     ];
     
@@ -1161,6 +1162,7 @@ function handleTypeFilter(button) {
 }
 
 function resetFilters() {
+    if (elements.yearSelect) elements.yearSelect.value = String(new Date().getFullYear());
     elements.monthSelect.value = 'ALL';
     elements.companySelect.value = 'ALL';
     elements.fromSelect.value = 'ALL';
@@ -1189,8 +1191,15 @@ function filterFlights() {
     const immFilter = elements.searchImm.value.toUpperCase().trim();
     const volFilter = elements.searchVol.value.toUpperCase().trim();
     
+    const yearFilter = (elements.yearSelect && elements.yearSelect.value) || 'ALL';
+
     return flights.filter(flight => {
         const flightDate = new Date(flight.date);
+
+        // Year filter
+        if (yearFilter !== 'ALL' && flightDate.getFullYear() !== parseInt(yearFilter)) {
+            return false;
+        }
         
         // Month filter
         if (monthFilter !== 'ALL' && flightDate.getMonth() !== parseInt(monthFilter)) {
@@ -1342,6 +1351,29 @@ function setupRealtimeListener() {
 
 function updateFlightsData(newFlights) {
     flights = newFlights;
+    // Peupler le select année avec les années disponibles
+    if (elements.yearSelect) {
+        const curYear = new Date().getFullYear();
+        const years = [...new Set(flights.map(f => f.date ? new Date(f.date).getFullYear() : null).filter(Boolean))].sort((a,b) => b-a);
+        const curVal = elements.yearSelect.value || String(curYear);
+        elements.yearSelect.innerHTML = '<option value="ALL">Toutes les années</option>';
+        years.forEach(y => {
+            const o = document.createElement('option');
+            o.value = y; o.textContent = y;
+            if (String(y) === curVal) o.selected = true;
+            elements.yearSelect.appendChild(o);
+        });
+        // Par défaut : année courante si elle existe dans les données
+        if (!elements.yearSelect.dataset.userSet) {
+            const opt = [...elements.yearSelect.options].find(o => o.value === String(curYear));
+            if (opt) { opt.selected = true; elements.yearSelect.dataset.userSet = '0'; }
+        }
+        // Marquer la sélection utilisateur
+        elements.yearSelect.onchange = function() {
+            elements.yearSelect.dataset.userSet = '1';
+            handleFilterChange();
+        };
+    }
     render();
     if (window.refreshChartsFromApp) window.refreshChartsFromApp(flights);
 }
