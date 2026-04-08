@@ -1147,8 +1147,85 @@ function hideUndoButton() {
 // ============================================
 // FILTER FUNCTIONS
 // ============================================
-function handleFilterChange() {
+function handleFilterChange(e) {
+    const src = e && e.target ? e.target.id : null;
+
+    // ── Année ou Mois changé → mettre à jour Date début/fin ──
+    if (src === 'yearSelect' || src === 'monthSelect') {
+        syncDatesFromSelects();
+    }
+
+    // ── Date début/fin changée → mettre à jour Année et Mois ──
+    if (src === 'searchFrom' || src === 'searchTo') {
+        syncSelectsFromDates();
+    }
+
     render();
+}
+
+// Met à jour searchFrom/searchTo selon yearSelect + monthSelect
+function syncDatesFromSelects() {
+    const year  = elements.yearSelect  ? elements.yearSelect.value  : 'ALL';
+    const month = elements.monthSelect ? elements.monthSelect.value : 'ALL';
+
+    if (year === 'ALL' && month === 'ALL') {
+        // Aucun filtre → vider les dates
+        elements.searchFrom.value = '';
+        elements.searchTo.value   = '';
+        return;
+    }
+
+    const y = year !== 'ALL' ? parseInt(year) : new Date().getFullYear();
+
+    if (month !== 'ALL') {
+        // Mois précis → premier et dernier jour du mois
+        const m    = parseInt(month);
+        const deb  = new Date(y, m, 1);
+        const fin  = new Date(y, m + 1, 0);
+        elements.searchFrom.value = deb.toISOString().slice(0, 10);
+        elements.searchTo.value   = fin.toISOString().slice(0, 10);
+    } else {
+        // Année seule → 1er jan au 31 déc
+        elements.searchFrom.value = y + '-01-01';
+        elements.searchTo.value   = y + '-12-31';
+    }
+}
+
+// Met à jour yearSelect + monthSelect selon searchFrom/searchTo
+function syncSelectsFromDates() {
+    const from = elements.searchFrom.value;
+    const to   = elements.searchTo.value;
+
+    if (!from && !to) {
+        // Dates vides → reset selects
+        if (elements.yearSelect)  elements.yearSelect.value  = 'ALL';
+        if (elements.monthSelect) elements.monthSelect.value = 'ALL';
+        return;
+    }
+
+    const ref = from || to;
+    const d   = new Date(ref);
+    if (isNaN(d)) return;
+
+    const y = d.getFullYear();
+    const m = d.getMonth();
+
+    // Mettre à jour yearSelect si l'année existe dans les options
+    if (elements.yearSelect) {
+        const opt = [...elements.yearSelect.options].find(o => o.value === String(y));
+        if (opt) elements.yearSelect.value = String(y);
+    }
+
+    // Mettre à jour monthSelect si from et to sont dans le même mois
+    if (elements.monthSelect && from && to) {
+        const dFrom = new Date(from);
+        const dTo   = new Date(to);
+        if (dFrom.getMonth() === dTo.getMonth() && dFrom.getFullYear() === dTo.getFullYear()) {
+            elements.monthSelect.value = String(dFrom.getMonth());
+        } else {
+            elements.monthSelect.value = 'ALL';
+        }
+    }
 }
 
 function handleTypeFilter(button) {
@@ -1162,50 +1239,40 @@ function handleTypeFilter(button) {
 }
 
 function resetFilters() {
-    if (elements.yearSelect) elements.yearSelect.value = String(new Date().getFullYear());
-    elements.monthSelect.value = 'ALL';
+    if (elements.yearSelect)  elements.yearSelect.value  = String(new Date().getFullYear());
+    elements.monthSelect.value   = 'ALL';
     elements.companySelect.value = 'ALL';
-    elements.fromSelect.value = 'ALL';
-    elements.toSelect.value = 'ALL';
-    elements.searchFrom.value = '';
-    elements.searchTo.value = '';
-    elements.searchImm.value = '';
-    elements.searchVol.value = '';
+    elements.fromSelect.value    = 'ALL';
+    elements.toSelect.value      = 'ALL';
+    elements.searchImm.value     = '';
+    elements.searchVol.value     = '';
     currentTypeFilter = 'ALL';
-    
+
+    // Synchroniser les dates avec l'année courante sélectionnée
+    syncDatesFromSelects();
+
     // Reset active button
     elements.typeButtons.forEach(btn => btn.classList.remove('btn-active'));
     document.querySelector('[data-type="ALL"]').classList.add('btn-active');
-    
+
     render();
     showNotification('Filtres réinitialisés', 'success');
 }
 
 function filterFlights() {
-    const monthFilter = elements.monthSelect.value;
     const companyFilter = elements.companySelect.value;
-    const fromFilter = elements.fromSelect.value;
-    const toFilter = elements.toSelect.value;
-    const dateFrom = elements.searchFrom.value;
-    const dateTo = elements.searchTo.value;
-    const immFilter = elements.searchImm.value.toUpperCase().trim();
-    const volFilter = elements.searchVol.value.toUpperCase().trim();
-    
-    const yearFilter = (elements.yearSelect && elements.yearSelect.value) || 'ALL';
+    const fromFilter    = elements.fromSelect.value;
+    const toFilter      = elements.toSelect.value;
+    const dateFrom      = elements.searchFrom.value;
+    const dateTo        = elements.searchTo.value;
+    const immFilter     = elements.searchImm.value.toUpperCase().trim();
+    const volFilter     = elements.searchVol.value.toUpperCase().trim();
 
     return flights.filter(flight => {
-        const flightDate = new Date(flight.date);
+        // ── Filtre date (source unique de vérité — synchro avec année/mois) ──
+        if (dateFrom && flight.date < dateFrom) return false;
+        if (dateTo   && flight.date > dateTo)   return false;
 
-        // Year filter
-        if (yearFilter !== 'ALL' && flightDate.getFullYear() !== parseInt(yearFilter)) {
-            return false;
-        }
-        
-        // Month filter
-        if (monthFilter !== 'ALL' && flightDate.getMonth() !== parseInt(monthFilter)) {
-            return false;
-        }
-        
         // Company filter
         if (companyFilter !== 'ALL' && flight.company !== companyFilter) {
             return false;
@@ -1218,15 +1285,6 @@ function filterFlights() {
         
         // To airport filter
         if (toFilter !== 'ALL' && flight.to !== toFilter) {
-            return false;
-        }
-        
-        // Date range filter
-        if (dateFrom && flight.date < dateFrom) {
-            return false;
-        }
-        
-        if (dateTo && flight.date > dateTo) {
             return false;
         }
         
@@ -1371,8 +1429,10 @@ function updateFlightsData(newFlights) {
         // Marquer la sélection utilisateur
         elements.yearSelect.onchange = function() {
             elements.yearSelect.dataset.userSet = '1';
-            handleFilterChange();
+            handleFilterChange({ target: { id: 'yearSelect' } });
         };
+        // Sync dates on first load
+        syncDatesFromSelects();
     }
     render();
     if (window.refreshChartsFromApp) window.refreshChartsFromApp(flights);
