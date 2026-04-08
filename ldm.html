@@ -473,6 +473,28 @@ async function _checkManualEntry(mi, fn, dt, rg, parsed) {
                 if (!sp2.empty) parsed.authorizationNumber = sp2.docs[0].data().auth||'';
             }
         }
+
+        // ── Déduire from/to depuis vols précédents du même N° de vol ──
+        if (fn && (!parsed.from || !parsed.to)) {
+            try {
+                const qr = query(collection(db,'flights'), where('flightNumber','==',fn));
+                const sr = await getDocs(qr);
+                if (!sr.empty) {
+                    // Prendre le vol le plus récent avec from ET to renseignés
+                    let best = null;
+                    sr.forEach(doc => {
+                        const d = doc.data();
+                        if (d.from && d.to && (!best || d.date > best.date)) best = d;
+                    });
+                    if (best) {
+                        if (!parsed.from) parsed.from = best.from;
+                        if (!parsed.to)   parsed.to   = best.to;
+                        // Mettre à jour aussi le cache mémoire
+                        _routeByFlight[fn] = { from: best.from, to: best.to };
+                    }
+                }
+            } catch(e) { console.warn('route lookup:', e.message); }
+        }
     } catch(e) { console.warn('_checkManualEntry:', e.message); }
 }
 
@@ -856,11 +878,18 @@ async function checkImportedFromFirebase() {
     ].join('|');
     if (fp !== '||') _fbImported.add(fp);
     // Mémoriser authorizationNumber par N° vol (prend le plus récent)
-    const fn = (d.flightNumber||'').toUpperCase();
+    const fn = (d.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
     if (fn && d.authorizationNumber) {
       _authByFlight[fn] = d.authorizationNumber;
     }
+    // ── Mémoriser la route (from/to) par N° vol ──
+    if (fn && d.from && d.to) {
+      if (!_routeByFlight[fn] || (d.date && d.date > (_routeByFlight[fn]._date||''))) {
+        _routeByFlight[fn] = { from: d.from, to: d.to, _date: d.date||'' };
+      }
+    }
   });
+  _routeByFlight._loaded = true;
 
   // Lire programme_vols pour auth par vol+date (priorité sur flights)
   try {
@@ -890,6 +919,15 @@ async function checkImportedFromFirebase() {
         em.parsed.authorizationNumber = _authByFlightDate[key];
       } else if (_authByFlight[fn]) {
         em.parsed.authorizationNumber = _authByFlight[fn];
+      }
+    }
+    // ── Pré-remplir from/to manquants depuis vols précédents ──
+    if (fn && em.parsed) {
+      const knownRoute = _routeByFlight[fn];
+      if (knownRoute) {
+        if (!em.parsed.from) em.parsed.from = knownRoute.from;
+        if (!em.parsed.to)   em.parsed.to   = knownRoute.to;
+        changed = true;
       }
     }
   });
