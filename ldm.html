@@ -654,10 +654,12 @@ async function importManualFlight(mi, force) {
         const app  = apps.find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
         const db   = getFirestore(app);
 
-        const type = to === 'NKC' || to === 'GQNO' ? 'ARR' : 'DEP';
+        const type = toICAO(to) === 'GQNO' || to === 'NKC' || to === 'GQNO' ? 'ARR' : 'DEP';
         await addDoc(collection(db,'flights'), {
             flightNumber: fn, registration: rg,
-            date: dt, from: fr, to,
+            date: dt,
+            from: toICAO(fr),
+            to:   toICAO(to),
             type,
             hasStopover: false, stopover:'', stopoverPax:0, stopoverBabies:0,
             passengers: px, babies: bb,
@@ -740,6 +742,64 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 // ── CONSTANTS ──
 const CLIENT_ID = '416940058923-28bdevk2c3fk2abihu55ia5391j0g5qf.apps.googleusercontent.com';
 const SCOPES    = 'https://www.googleapis.com/auth/gmail.readonly';
+// ══════════════════════════════════════════════════════════
+// IATA → ICAO conversion
+// Le LDM/MVT utilise les codes IATA — on stocke en ICAO dans Firebase
+// ══════════════════════════════════════════════════════════
+const IATA_TO_ICAO = {
+  // Mauritanie
+  'NKC':'GQNO', 'NDB':'GQPP', 'OUZ':'GQPZ', 'EMN':'GQNI', 'KFA':'GQPF',
+  'ATR':'GQPA', 'TMD':'GQNT', 'AEO':'GQNA', 'THI':'GQND', 'MOM':'GQNK',
+  // Afrique du Nord
+  'ALG':'DAAG', 'TUN':'DTTA', 'CMN':'GMMN', 'RAK':'GMMX', 'TNG':'GMTT',
+  'OUD':'GMFO', 'FEZ':'GMFF', 'AGA':'GMAD', 'NDR':'GMMH', 'TFN':'GCXO',
+  'TFS':'GCTS', 'LPA':'GCLP', 'ACE':'GCRR', 'FUE':'GCFV', 'PMI':'LEPA',
+  'CAI':'HECA', 'SSH':'HESH', 'HRG':'HEGN', 'LXR':'HELX', 'ASW':'HESN',
+  'TRP':'HLLT', 'BEN':'HLLB', 'MJI':'HLMI',
+  // Afrique de l'Ouest
+  'DSS':'GOBD', 'DKR':'GOOY', 'BJL':'GBYD', 'OXB':'GGOV', 'CKY':'GUCY',
+  'FNA':'GFLL', 'ABJ':'DIAP', 'ACC':'DGAA', 'LFW':'DXXX', 'BKO':'GABS',
+  'COO':'DBBB', 'LOS':'DNMM', 'ABV':'DNAA', 'KAN':'DNKN', 'PHC':'DNPO',
+  'ENU':'DNEN', 'ILR':'DNIL', 'IBA':'DNIB', 'SKO':'DNSO', 'QRW':'DNSU',
+  'BNI':'DNBE', 'MIU':'DNMA', 'MXJ':'DNMJ', 'YOL':'DNYO', 'ZAR':'DNZA',
+  'DKR':'GOOY', 'ZIG':'GOGG', 'CSK':'GOGS', 'KDA':'GOOK',
+  // Afrique Centrale & Est
+  'LBV':'FOOL', 'DLA':'FKKD', 'NSI':'FKYS', 'BGF':'FEFF', 'BZV':'FCBB',
+  'NBO':'HKJK', 'MBA':'HKMO', 'ADD':'HAAB', 'DIR':'HADR', 'JIM':'HAJM',
+  'DAR':'HTDA', 'JRO':'HTKJ', 'ZNZ':'HTZA', 'EBB':'HUEN', 'KGL':'HRYR',
+  'BJM':'HBBA', 'FIH':'FZAA', 'FBM':'FZQA', 'LFW':'DXXX',
+  // Europe
+  'CDG':'LFPG', 'ORY':'LFPO', 'NCE':'LFMN', 'LYS':'LFLL', 'MRS':'LFML',
+  'TLS':'LFBO', 'BOD':'LFBD', 'NTE':'LFRS', 'LHR':'EGLL', 'LGW':'EGKK',
+  'MAN':'EGCC', 'BHX':'EGBB', 'EDI':'EGPH', 'AMS':'EHAM', 'BRU':'EBBR',
+  'FRA':'EDDF', 'MUC':'EDDM', 'DUS':'EDDL', 'HAM':'EDDH', 'BER':'EDDB',
+  'MAD':'LEMD', 'BCN':'LEBL', 'VLC':'LEVC', 'SVQ':'LEZL', 'AGP':'LEMG',
+  'FCO':'LIRF', 'MXP':'LIMC', 'VCE':'LIPZ', 'NAP':'LIRN', 'LIN':'LIML',
+  'ZRH':'LSZH', 'GVA':'LSGG', 'VIE':'LOWW', 'LIS':'LPPT', 'OPO':'LPPR',
+  'ATH':'LGAV', 'SKG':'LGTS', 'IST':'LTFM', 'SAW':'LTFJ', 'AYT':'LTAI',
+  'ESB':'LTAC', 'ADB':'LTBJ', 'SVO':'UUEE', 'DME':'UUDD', 'LED':'ULLI',
+  // Moyen-Orient
+  'DXB':'OMDB', 'AUH':'OMAA', 'SHJ':'OMSJ', 'DOH':'OTHH', 'BAH':'OBBI',
+  'KWI':'OKBK', 'MCT':'OOMS', 'RUH':'OERK', 'JED':'OEJD', 'MED':'OEMA',
+  'AMM':'OJAI', 'BEY':'OLBA', 'TLV':'LLBG', 'BGW':'ORBI', 'BSR':'ORMM',
+  // Asie & Amériques
+  'BOM':'VABB', 'DEL':'VIDP', 'MAA':'VOMM', 'BLR':'VOBL', 'HYD':'VOHS',
+  'PEK':'ZBAA', 'PVG':'ZSPD', 'HKG':'VHHH', 'SIN':'WSSS', 'KUL':'WMKK',
+  'BKK':'VTBS', 'NRT':'RJAA', 'ICN':'RKSI', 'SYD':'YSSY', 'MEL':'YMML',
+  'JFK':'KJFK', 'EWR':'KEWR', 'LAX':'KLAX', 'ORD':'KORD', 'MIA':'KMIA',
+  'YUL':'CYUL', 'YYZ':'CYYZ', 'GRU':'SBGR', 'EZE':'SAEZ', 'BOG':'SKBO',
+};
+
+// Convertit un code aéroport (IATA ou ICAO) en ICAO
+function toICAO(code) {
+  if (!code) return '';
+  const c = code.trim().toUpperCase();
+  // Déjà en ICAO (4 lettres commençant par une lettre de région)
+  if (c.length === 4 && /^[A-Z]{4}$/.test(c)) return c;
+  // Conversion IATA → ICAO
+  return IATA_TO_ICAO[c] || c;
+}
+
 const FB = {
   apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
   authDomain:"anacmr-67835.firebaseapp.com",
@@ -1026,8 +1086,8 @@ function extractFields(text, dateReceived) {
 
   // Détecter si c'est un MVT ou LDM
   const isMVT = upper.includes('MVT') && !upper.includes('LDM');
-  const BASE  = 'GQNO'; // ICAO Nouakchott — mais on accepte aussi NKC (IATA)
-  const BASE_IATA = 'NKC';
+  const BASE      = 'GQNO'; // ICAO Nouakchott
+  const BASE_IATA = 'NKC';  // IATA Nouakchott (utilisé dans les messages LDM/MVT)
 
   // ─────────────────────────────────────────────────
   // ══ LDM PARSING ══
@@ -1323,10 +1383,12 @@ async function importFlight(i, force) {
     const authEl = document.getElementById('p'+i+'-auth');
     await addDoc(collection(db,'flights'), {
       flightNumber: fn, registration: rg,
-      date: dt, from: fr, to,
+      date: dt,
+      from: toICAO(fr),
+      to:   toICAO(to),
       type: ty,
       hasStopover: !!sw,
-      stopover: sw || '',
+      stopover: toICAO(sw) || '',
       stopoverPax: spx,
       stopoverBabies: sbb,
       passengers: px, babies: bb,
