@@ -1115,14 +1115,28 @@ function extractFields(text, dateReceived) {
 
     if (otherStations.length >= 2) {
       if (allStations.some(s => s===BASE_IATA||s===BASE)) {
-        p.from = otherStations[0]; p.to = otherStations[otherStations.length-1]; p.stopover = BASE_IATA; p.type = 'TRANSIT';
+        p.from = otherStations[0] || getAirlineHub(p.flightNumber || '');
+        p.to   = otherStations[otherStations.length-1];
+        p.stopover = BASE_IATA;
+        p.type = 'TRANSIT';
       } else {
         p.from = BASE_IATA; p.stopover = otherStations[0]; p.to = otherStations[otherStations.length-1]; p.type = 'DEP';
       }
     } else if (allStations.some(s => s===BASE_IATA||s===BASE)) {
-      p.from = otherStations[0] || ''; p.to = BASE_IATA; p.type = 'ARR';
+      // ARR vers NKC — chercher la route dans le cache Firebase, sinon hub compagnie
+      const knownRoute = getKnownRoute(p.flightNumber || '');
+      const hub        = getAirlineHub(p.flightNumber || '');
+      // Si route connue: utiliser le from du vol précédent (même N° de vol)
+      // Priorité: route connue > otherStations > hub compagnie
+      p.from = otherStations[0] || (knownRoute ? knownRoute.from : '') || hub || '';
+      p.to   = BASE_IATA;
+      p.type = 'ARR';
     } else {
-      p.from = BASE_IATA; p.to = otherStations[0] || ''; p.type = 'DEP';
+      // DEP depuis NKC — chercher la destination dans le cache Firebase
+      const knownRoute = getKnownRoute(p.flightNumber || '');
+      p.from = BASE_IATA;
+      p.to   = otherStations[0] || (knownRoute ? knownRoute.to : '') || '';
+      p.type = 'DEP';
     }
 
     // 3. PAX/BABIES — ne prendre QUE la ligne de la station NKC/GQNO (pour ARR)
@@ -1232,12 +1246,15 @@ function extractFields(text, dateReceived) {
       const isNKC = (cityCode === BASE_IATA || cityCode === BASE);
       if (isNKC) {
         p.type = 'ARR';
-        p.from = '';      // opérateur complète l'origine
+        // Chercher route connue d'abord, sinon hub compagnie
+        const knownRoute = getKnownRoute(p.flightNumber || '');
+        const hub        = getAirlineHub(p.flightNumber || '');
+        p.from = (knownRoute ? knownRoute.from : '') || hub || '';
         p.to   = BASE_IATA;
       } else {
         p.type = 'DEP';
         p.from = BASE_IATA;
-        p.to   = cityCode;
+        p.to   = cityCode || (getKnownRoute(p.flightNumber||'') ? getKnownRoute(p.flightNumber||'').to : '') || '';
       }
     } else {
       // Fallback: chercher N°vol/jour dans n'importe quelle ligne
@@ -1425,9 +1442,46 @@ async function importFlight(i, force) {
   }
 }
 
+// Hub ICAO de chaque compagnie (aéroport de base)
+// Utilisé pour déduire le départ quand le LDM n'a qu'une station (NKC)
+const AIRLINE_HUB = {
+  'L6': 'GQNO', // Mauritania Airlines → Nouakchott
+  'HC': 'GOBD', // Air Sénégal → Dakar
+  'TK': 'LTFM', // Turkish Airlines → Istanbul
+  'NT': 'GCLP', // Binter → Las Palmas
+  'AH': 'DAAG', // Air Algérie → Alger
+  'KP': 'DXXX', // ASKY → Lomé
+  'AT': 'GMMN', // Royal Air Maroc → Casablanca
+  'TU': 'DTTA', // Tunisair → Tunis
+  'AF': 'LFPG', // Air France → Paris CDG
+  'UU': 'FMMI', // Air Austral → La Réunion
+  'BJ': 'GABS', // Air Burkina / Bamako
+  'VT': 'DIAP', // Air Ivoire → Abidjan
+  'ZL': 'FOOL', // Nouvelle Air Gabon → Libreville
+  'W3': 'DNMM', // Arik Air → Lagos
+  'WT': 'DNAA', // Air Nigeria → Abuja
+  'QC': 'FZAA', // Camair-Co → Douala
+  'S9': 'HAAB', // Ethiopian Airlines → Addis-Abeba
+  '8U': 'DAAG', // Afriqiyah → Alger
+  'IX': 'OMDB', // Air Arabia → Dubaï
+  'G9': 'OMSJ', // Air Arabia → Sharjah
+  'EK': 'OMDB', // Emirates → Dubaï
+  'QR': 'OTHH', // Qatar Airways → Doha
+  'GF': 'OBBI', // Gulf Air → Bahreïn
+  'SV': 'OERK', // Saudia → Riyad
+  'MS': 'HECA', // EgyptAir → Le Caire
+};
+
 function detectCompany(fn) {
   const m = {'L6':'Mauritania Airlines','HC':'Air Sénégal','TK':'Turkish Airlines','NT':'Binter','AH':'Air Algérie','KP':'ASKY','AT':'Royal Air Maroc','TU':'Tunisair','AF':'Air France'};
   return m[fn.slice(0,2)] || fn.slice(0,2);
+}
+
+// Retourne le hub ICAO d'une compagnie selon le préfixe du vol
+function getAirlineHub(fn) {
+  if (!fn) return '';
+  const prefix = fn.slice(0,2).toUpperCase();
+  return AIRLINE_HUB[prefix] || '';
 }
 
 // ── AUTO REFRESH ──
@@ -1478,6 +1532,44 @@ function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 updateStats();
 setStatus('idle','Prêt');
 
+// Charger le cache des routes Firebase en arrière-plan au démarrage
+_loadRouteCache();
+
+
+// ── CACHE ROUTES CONNUES ─────────────────────────────────────────
+// Mémorise from/to par N° de vol pour éviter des requêtes répétées
+const _routeByFlight = {};
+
+// Charge en mémoire tous les vols Firebase pour construire un cache des routes
+async function _loadRouteCache() {
+  if (_routeByFlight._loaded) return;
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    const db  = getFirestore(app);
+    const snap = await getDocs(collection(db,'flights'));
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (!d.flightNumber) return;
+      const fn = d.flightNumber.toUpperCase().replace(/[-\s]/g,'');
+      if (!_routeByFlight[fn] && d.from && d.to) {
+        _routeByFlight[fn] = { from: d.from, to: d.to };
+      }
+    });
+    _routeByFlight._loaded = true;
+    console.log('Route cache loaded:', Object.keys(_routeByFlight).length - 1, 'vols');
+  } catch(e) {
+    console.warn('Route cache error:', e);
+  }
+}
+
+// Retourne la route connue pour un N° de vol (depuis cache Firebase)
+function getKnownRoute(flightNumber) {
+  if (!flightNumber) return null;
+  const fn = flightNumber.toUpperCase().replace(/[-\s]/g,'');
+  return _routeByFlight[fn] || null;
+}
 
 // ── LOOKUP AUTORISATION ──────────────────────────────────────────
 async function lookupAuthNumber(i) {
