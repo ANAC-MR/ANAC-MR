@@ -2178,58 +2178,62 @@ async function exportArchivesPDF(items) {
     const x = margin;
     const y = margin + posOnPage * (boxH + margin);
 
-    // Bordure
-    pdf.setDrawColor(212, 175, 55);
+    // ── Bordure noire ──
+    pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(0.5);
     pdf.rect(x, y, boxW, boxH);
 
-    // ── En-tête: date à gauche, N° auth grand à droite ──
-    pdf.setDrawColor(0,0,0);
+    // ── En-tête : date à gauche, N° auth à droite ──
+    // Ligne séparatrice après en-tête
+    pdf.setDrawColor(0, 0, 0);
     pdf.setLineWidth(0.4);
-    pdf.line(x, y+10, x+boxW, y+10);
+    pdf.line(x, y+11, x+boxW, y+11);
 
-    // Date + vol (gauche)
-    pdf.setTextColor(0,0,0);
+    // Date seulement à gauche (pas le N° vol)
+    pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica','bold');
     pdf.setFontSize(10);
-    pdf.text(`${arch.flightNumber}   ${arch.date}`, x+2, y+7);
+    pdf.text(arch.date || '', x+2, y+7.5);
 
     // N° autorisation : grand, gras, à droite
     if (arch.authorizationNumber) {
       pdf.setFont('helvetica','bold');
       pdf.setFontSize(14);
-      pdf.setTextColor(0,0,0);
-      pdf.text(arch.authorizationNumber, x+boxW-2, y+7, {align:'right'});
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(arch.authorizationNumber, x+boxW-2, y+8, {align:'right'});
     }
 
-    // Ville départ → ville arrivée sous l'en-tête
+    // ── Sous le trait : destination et PAX ──
     const _cFr = CITY_NAMES_ARCH[arch.from] || CITY_NAMES_ARCH[ICAO_TO_IATA[arch.from]] || arch.from || '?';
     const _cTo = CITY_NAMES_ARCH[arch.to]   || CITY_NAMES_ARCH[ICAO_TO_IATA[arch.to]]   || arch.to   || '?';
     pdf.setFont('helvetica','normal');
     pdf.setFontSize(8);
-    pdf.setTextColor(80,80,80);
-    pdf.text(`${arch.company||''}   ${_cFr} → ${_cTo}   PAX: ${arch.passengers||0}`, x+2, y+9.5);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(`${_cFr} → ${_cTo}   PAX: ${arch.passengers||0}`, x+2, y+15);
 
-    // Contenu LDM/MVT
-    const textContent = arch.rawText || arch.generatedText || '(aucun contenu)';
-    const displayLines = textContent.split('\n').slice(0, 30);
-    pdf.setTextColor(0,0,0);
+    // ── Contenu LDM/MVT — filtrer la ligne RCV ──
+    const rawContent = arch.rawText || arch.generatedText || '(aucun contenu)';
+    const displayLines = rawContent.split('\n')
+      .filter(l => !/^RCV\s/i.test(l.trim()) && !/^AUTH:/i.test(l.trim()))
+      .slice(0, 28);
+    pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(8);
     pdf.setFont('courier','normal');
 
     displayLines.forEach((line, li) => {
-      const lineY = y + 15 + li * 4.2;
+      const lineY = y + 20 + li * 4.2;
       if (lineY < y + boxH - 5) {
         pdf.text(line.slice(0, 90), x+2, lineY);
       }
     });
 
-    // Source (bas gauche, petit)
-    pdf.setFontSize(6);
-    pdf.setTextColor(120,120,120);
-    pdf.setFont('helvetica','italic');
-    const srcLabel = arch.source === 'GENERATED' ? 'Généré automatiquement' : `Source: ${arch.source||'?'}`;
-    pdf.text(srcLabel, x+2, y+boxH-2);
+    // Source (bas gauche, très petit)
+    if (arch.source === 'GENERATED') {
+      pdf.setFontSize(6);
+      pdf.setTextColor(150, 150, 150);
+      pdf.setFont('helvetica','italic');
+      pdf.text('Généré automatiquement', x+2, y+boxH-2);
+    }
   });
 
   // Nom fichier
