@@ -1843,52 +1843,25 @@ function _fmtDate(dt){
   return yy+mm+dd;
 }
 
-// ── Générer LDM format IATA exact (basé sur exemples réels) ──
-// Exemple: AT510/26.CNRGF.J12Y147.2/4
-//          -CMN.109/39/3/1.0.T3686.1/370.2/1713.3/1110.4/493.PAX/9/142
+// ── Générer LDM simplifié pour vols déjà dans le système ──
 function generateLDMText(flight, authNumber) {
   const fn   = (flight.flightNumber||'').toUpperCase();
-  const reg  = (flight.registration||'XXXXX').toUpperCase();
   const dt   = flight.date || '';
-  const day  = dt ? _pad2(new Date(dt+'T12:00:00Z').getUTCDate()) : '01';
   const fr   = (flight.from||'???').toUpperCase();
   const to   = (flight.to||'???').toUpperCase();
   const pax  = parseInt(flight.passengers)||0;
   const bb   = parseInt(flight.babies)||0;
   const auth = (authNumber||flight.authorizationNumber||'').toUpperCase();
+  const co   = flight.company || detectCompany(fn);
 
-  const isArr   = (to==='GQNO'||to==='NKC'||to==='GQNN');
-  const nkc     = 'NKC';       // code utilisé dans le LDM
-  const other   = isArr ? (ICAO_TO_IATA[fr]||fr) : (ICAO_TO_IATA[to]||to);
-
-  // Ligne vol: FN/DD.REG.J0Y{pax}.{bb}/{bb}
-  const flightLine = `${fn}/${day}.${reg}.J0Y${pax}.${bb}/${bb}`;
-
-  // Ligne station: -XXX.{J}/{C}/{Y}/{bb}.T0.{pax}.PAX/{bb}/{pax}
-  // Format simplifié proche du réel: -CMN.109/39/3/1.0.T3686.1/370...
-  const paxLine = `-${other}.0/0/${pax}/${bb}.0.T0.1/${pax}.PAX/${bb}/${pax}`;
-  const nkcLine = isArr
-    ? `-${nkc}.0/0/${pax}/${bb}.0.T0.1/${pax}.PAX/${bb}/${pax}`
-    : `-${nkc}.0/0/0/0`;
+  // Noms de villes
+  const cityFrom = CITY_NAMES_ARCH[fr] || CITY_NAMES_ARCH[ICAO_TO_IATA[fr]] || fr;
+  const cityTo   = CITY_NAMES_ARCH[to] || CITY_NAMES_ARCH[ICAO_TO_IATA[to]] || to;
 
   const lines = [];
   lines.push(`LDM`);
-  lines.push(flightLine);
-  if (isArr) {
-    lines.push(paxLine);   // origine
-    lines.push(nkcLine);   // destination NKC
-  } else {
-    lines.push(nkcLine);   // NKC départ
-    lines.push(paxLine);   // destination
-  }
-  lines.push(`.PAD/0/0`);
-  lines.push(`SI LOAD IN CPTS 0/0 1/${pax} PAX/${bb}/${pax}`);
-  lines.push(`${other} TRA                    BAG`);
-  lines.push(`${other} 4/T/${bb||0}             ${pax}  POS`);
-  lines.push(`CHECKED BAGGAGE PIECES ${other} 0`);
-  lines.push(`FUEL IN TANKS 0`);
-  lines.push(`TOTAL GROSS JOINING CARGO: 0`);
-  lines.push(`END LDM`);
+  lines.push(`${fn}  ${dt}`);
+  lines.push(`${co} - ${cityFrom} -> ${cityTo} - PAX: ${pax}  BEB: ${bb}`);
   return lines.join('\n');
 }
 
@@ -1902,37 +1875,58 @@ const ICAO_TO_IATA = {
   'LEMD':'MAD','LIRF':'FCO','LSZH':'ZRH','LOWW':'VIE','LPPT':'LIS','EGLL':'LHR',
 };
 
-// ── Générer MVT format IATA exact (basé sur exemples réels) ──
-// Exemple: NT1805/26.ECNPU.NKC
-//          AD260128/260138  EA0317  LPA
-//          PX50
+// Noms de villes pour l'affichage dans les LDM/MVT générés
+const CITY_NAMES_ARCH = {
+  'NKC':'Nouakchott','GQNO':'Nouakchott','GQNN':'Nouakchott',
+  'NDB':'Nouadhibou','GQPP':'Nouadhibou',
+  'CMN':'Casablanca','GMMN':'Casablanca',
+  'TUN':'Tunis','DTTA':'Tunis',
+  'ALG':'Alger','DAAG':'Alger',
+  'CDG':'Paris','LFPG':'Paris',
+  'IST':'Istanbul','LTFM':'Istanbul',
+  'DSS':'Dakar','GOBD':'Dakar',
+  'LPA':'Las Palmas','GCLP':'Las Palmas',
+  'BJL':'Banjul','GBYD':'Banjul',
+  'CKY':'Conakry','GUCY':'Conakry',
+  'ABJ':'Abidjan','DIAP':'Abidjan',
+  'LOS':'Lagos','DNMM':'Lagos',
+  'BKO':'Bamako','GABS':'Bamako',
+  'MED':'Madinah','OEMA':'Madinah',
+  'LFW':'Lomé','DXXX':'Lomé',
+  'DXB':'Dubaï','OMDB':'Dubaï',
+  'DOH':'Doha','OTHH':'Doha',
+  'CAI':'Le Caire','HECA':'Le Caire',
+  'ADD':'Addis-Abeba','HAAB':'Addis-Abeba',
+  'LBV':'Libreville','FOOL':'Libreville',
+  'DLA':'Douala','FKKD':'Douala',
+  'FRA':'Francfort','EDDF':'Francfort',
+  'AMS':'Amsterdam','EHAM':'Amsterdam',
+  'MAD':'Madrid','LEMD':'Madrid',
+  'FCO':'Rome','LIRF':'Rome',
+  'LHR':'Londres','EGLL':'Londres',
+  'ZRH':'Zurich','LSZH':'Zurich',
+  'OUZ':'Zouerate','GQPZ':'Zouerate',
+  'EMN':'Nema','GQNI':'Nema',
+  'KFA':'Kiffa','GQPF':'Kiffa',
+};
+
+// ── Générer MVT simplifié pour vols déjà dans le système ──
 function generateMVTText(flight, authNumber) {
   const fn   = (flight.flightNumber||'').toUpperCase();
-  const reg  = (flight.registration||'XXXXX').toUpperCase();
   const dt   = flight.date || '';
-  const day  = dt ? _pad2(new Date(dt+'T12:00:00Z').getUTCDate()) : '01';
   const fr   = (flight.from||'???').toUpperCase();
   const to   = (flight.to||'???').toUpperCase();
   const pax  = parseInt(flight.passengers)||0;
   const auth = (authNumber||flight.authorizationNumber||'').toUpperCase();
+  const co   = flight.company || detectCompany(fn);
 
-  const isArr    = (to==='GQNO'||to==='NKC'||to==='GQNN');
-  const hubCity  = isArr ? (ICAO_TO_IATA[fr]||fr) : (ICAO_TO_IATA[to]||to);
-  const yy       = dt ? String(new Date(dt+'T12:00:00Z').getUTCFullYear()).slice(-2) : '00';
-  const mmdd     = dt ? _pad2(new Date(dt+'T12:00:00Z').getUTCMonth()+1) + day : '0000';
-
-  // Ligne vol: FN/DD.REG.NKC (si ARR) ou FN/DD.REG.HUBCITY (si DEP)
-  const mvtCity  = isArr ? 'NKC' : hubCity;
-  // Ligne heures: AD{YYMMDDHHMM}/{YYMMDDHHMM}  EA{HHMM}  DEST
-  // Sans heures connues on met 0000
-  const timeStr  = `AD${yy}${mmdd}0000/${yy}${mmdd}0000`;
-  const destCity = isArr ? hubCity : 'NKC';
+  const cityFrom = CITY_NAMES_ARCH[fr] || CITY_NAMES_ARCH[ICAO_TO_IATA[fr]] || fr;
+  const cityTo   = CITY_NAMES_ARCH[to] || CITY_NAMES_ARCH[ICAO_TO_IATA[to]] || to;
 
   const lines = [];
   lines.push(`MVT`);
-  lines.push(`${fn}/${day}.${reg}.${mvtCity}`);
-  lines.push(`${timeStr}  EA0000  ${destCity}`);
-  if (pax > 0) lines.push(`PX${pax}`);
+  lines.push(`${fn}  ${dt}`);
+  lines.push(`${co} - ${cityFrom} -> ${cityTo} - PAX: ${pax}`);
   return lines.join('\n');
 }
 
@@ -1960,6 +1954,15 @@ async function saveToArchive(parsed, rawText, source) {
       ? generateMVTText(parsed, auth)
       : generateLDMText(parsed, auth);
 
+    // Pour les messages reçus: extraire depuis "Message Text:" si présent
+    let cleanRaw = rawText || '';
+    if (source !== 'GENERATED' && cleanRaw) {
+      const mtIdx = cleanRaw.search(/Message\s+Text\s*:/i);
+      if (mtIdx !== -1) {
+        cleanRaw = cleanRaw.slice(mtIdx + cleanRaw.slice(mtIdx).indexOf(':') + 1).trim();
+      }
+    }
+
     await setDoc(doc(db, 'ldm_archive', docId), {
       flightNumber: fn,
       date: dt,
@@ -1968,7 +1971,7 @@ async function saveToArchive(parsed, rawText, source) {
       month: month,
       year: year,
       authorizationNumber: auth,
-      rawText: rawText || '',
+      rawText: cleanRaw,
       generatedText: generatedText,
       from: parsed.from || '',
       to: parsed.to || '',
@@ -2094,10 +2097,11 @@ async function loadArchives() {
               ${a.authorizationNumber ? `<span style="font-size:16px;font-weight:800;color:#D4AF37;letter-spacing:.04em;">${a.authorizationNumber}</span>` : ''}
             </div>
             <div id="arch-detail-${a.id}" style="display:none;margin-top:12px;">
-              <div style="text-align:right;margin-bottom:6px;">
-                ${a.authorizationNumber ? `<span style="font-size:22px;font-weight:900;color:#D4AF37;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;">${a.authorizationNumber}</span>` : ''}
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);">
+                <span style="font-size:12px;color:#94a3b8;">${a.flightNumber} · ${a.date}</span>
+                ${a.authorizationNumber ? `<span style="font-size:20px;font-weight:900;color:#fff;letter-spacing:.05em;font-family:'JetBrains Mono',monospace;">${a.authorizationNumber}</span>` : ''}
               </div>
-              <pre style="background:#0a1628;border:1px solid rgba(212,175,55,0.2);border-radius:8px;padding:14px;font-size:12px;font-family:'JetBrains Mono',monospace;color:#D4AF37;white-space:pre-wrap;overflow-x:auto;">${escArch(a.rawText || a.generatedText || '')}</pre>
+              <pre style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:14px;font-size:12px;font-family:'JetBrains Mono',monospace;color:#e2e8f0;white-space:pre-wrap;overflow-x:auto;line-height:1.6;">${escArch(a.source==='GENERATED' ? a.generatedText||'' : a.rawText||a.generatedText||'')}</pre>
               <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
                 <button onclick="event.stopPropagation();exportSinglePDF('${a.id}')"
                   style="background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.4);color:#60a5fa;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">
@@ -2180,62 +2184,45 @@ async function exportArchivesPDF(items) {
     pdf.setLineWidth(0.5);
     pdf.rect(x, y, boxW, boxH);
 
-    // En-tête: type badge + vol + date (fond sombre)
-    pdf.setFillColor(15, 31, 61);
-    pdf.rect(x, y, boxW, 14, 'F');
+    // ── En-tête: date à gauche, N° auth grand à droite ──
+    pdf.setDrawColor(0,0,0);
+    pdf.setLineWidth(0.4);
+    pdf.line(x, y+10, x+boxW, y+10); // ligne séparatrice en-tête
 
-    const typeColor = arch.type === 'LDM' ? [0, 201, 141] : [74, 158, 255];
-    pdf.setFillColor(...typeColor);
-    pdf.rect(x+2, y+3, 14, 8, 'F');
-    pdf.setTextColor(255,255,255);
-    pdf.setFontSize(8);
+    // Date + vol (gauche)
+    pdf.setTextColor(0,0,0);
     pdf.setFont('helvetica','bold');
-    pdf.text(arch.type, x+9, y+8.5, {align:'center'});
+    pdf.setFontSize(10);
+    pdf.text(`${arch.flightNumber}   ${arch.date}`, x+2, y+7);
 
-    // Vol + date
-    pdf.setTextColor(212, 175, 55);
-    pdf.setFontSize(11);
-    pdf.text(`${arch.flightNumber}  •  ${arch.date}`, x+20, y+9);
-
-    // Compagnie + route
-    pdf.setTextColor(180, 190, 210);
-    pdf.setFontSize(7.5);
-    pdf.setFont('helvetica','normal');
-    pdf.text(`${arch.company||''}   ${arch.from||'?'} → ${arch.to||'?'}   PAX: ${arch.passengers||0}  BÉB: ${arch.babies||0}`, x+4, y+18);
-
-    // ── N° AUTORISATION : grand, gras, en haut à droite ──
+    // N° autorisation : grand, gras, à droite
     if (arch.authorizationNumber) {
       pdf.setFont('helvetica','bold');
-      pdf.setFontSize(16);
-      pdf.setTextColor(212, 175, 55);
-      pdf.text(arch.authorizationNumber, x+boxW-3, y+18, {align:'right'});
+      pdf.setFontSize(14);
+      pdf.setTextColor(0,0,0);
+      pdf.text(arch.authorizationNumber, x+boxW-2, y+7, {align:'right'});
     }
 
-    // Ligne séparatrice
-    pdf.setDrawColor(212, 175, 55);
-    pdf.setLineWidth(0.3);
-    pdf.line(x+3, y+21, x+boxW-3, y+21);
-
-    // Contenu LDM/MVT (texte IATA)
+    // Contenu LDM/MVT
     const textContent = arch.rawText || arch.generatedText || '(aucun contenu)';
-    const displayLines = textContent.split('\n').slice(0, 28);
-    pdf.setTextColor(30, 50, 80);
-    pdf.setFontSize(7.5);
+    const displayLines = textContent.split('\n').slice(0, 30);
+    pdf.setTextColor(0,0,0);
+    pdf.setFontSize(8);
     pdf.setFont('courier','normal');
 
     displayLines.forEach((line, li) => {
-      const lineY = y + 25 + li * 4.2;
-      if (lineY < y + boxH - 6) {
-        pdf.text(line.slice(0, 90), x+4, lineY);
+      const lineY = y + 15 + li * 4.2;
+      if (lineY < y + boxH - 5) {
+        pdf.text(line.slice(0, 90), x+2, lineY);
       }
     });
 
-    // Source badge (bas gauche)
+    // Source (bas gauche, petit)
     pdf.setFontSize(6);
-    pdf.setTextColor(100,120,150);
+    pdf.setTextColor(120,120,120);
     pdf.setFont('helvetica','italic');
     const srcLabel = arch.source === 'GENERATED' ? 'Généré automatiquement' : `Source: ${arch.source||'?'}`;
-    pdf.text(srcLabel, x+4, y+boxH-3);
+    pdf.text(srcLabel, x+2, y+boxH-2);
   });
 
   // Nom fichier
