@@ -277,13 +277,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
           style="background:#1e293b;border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:12px;min-width:160px;">
           <option value="ALL">Toutes compagnies</option>
         </select>
-        <select id="archTypeFilter" onchange="loadArchives()"
-          style="background:#1e293b;border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:12px;">
-          <option value="ALL">LDM + MVT</option>
-          <option value="LDM">LDM seulement</option>
-          <option value="MVT">MVT seulement</option>
-        </select>
-        <button onclick="loadArchives()" style="background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.4);color:#D4AF37;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Actualiser</button>
         <button onclick="generateMissingArchives()" style="background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.4);color:#00c98d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;" title="Génère les archives pour les vols déjà dans le système">⚡ Générer manquants</button>
         <button onclick="exportArchivesPDF()" style="background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.4);color:#60a5fa;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">📄 Exporter PDF</button>
       </div>
@@ -301,11 +294,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
         </div>
       </div>
 
-      <!-- Liste archives -->
+      <!-- Liste archives — se charge automatiquement à l'ouverture -->
       <div id="archiveList" style="display:flex;flex-direction:column;gap:10px;">
-        <div style="color:#64748b;font-size:13px;text-align:center;padding:30px;">
-          Cliquez sur "Actualiser" pour charger les archives
-        </div>
+        <div style="color:#64748b;font-size:13px;text-align:center;padding:30px;"><span class="spin"></span> Chargement...</div>
       </div>
     </div>
   </div>
@@ -2030,18 +2021,26 @@ async function loadArchives() {
       });
     }
 
-    // Appliquer filtres
+    // Appliquer filtres (sans filtre type)
     const fMonth = (document.getElementById('archMonthFilter')||{}).value||'ALL';
     const fYear  = (document.getElementById('archYearFilter')||{}).value||'ALL';
     const fCo    = (document.getElementById('archCompanyFilter')||{}).value||'ALL';
-    const fType  = (document.getElementById('archTypeFilter')||{}).value||'ALL';
 
     archives = archives.filter(a => {
       if (fMonth !== 'ALL' && String(a.month) !== fMonth) return false;
       if (fYear  !== 'ALL' && String(a.year)  !== fYear)  return false;
       if (fCo    !== 'ALL' && a.company !== fCo)           return false;
-      if (fType  !== 'ALL' && a.type    !== fType)         return false;
       return true;
+    });
+
+    // Trier par numéro d'autorisation du plus petit au plus grand
+    archives.sort((a, b) => {
+      const getNum = auth => {
+        if (!auth) return 999999;
+        const m = auth.match(/(\d+)$/);
+        return m ? parseInt(m[1]) : 999999;
+      };
+      return getNum(a.authorizationNumber) - getNum(b.authorizationNumber);
     });
 
     _archivesCache = archives;
@@ -2092,7 +2091,7 @@ async function loadArchives() {
               <span style="background:${typeColor}22;color:${typeColor};border:1px solid ${typeColor}44;border-radius:6px;padding:2px 9px;font-size:11px;font-weight:800;">${a.type}</span>
               <span style="font-size:13px;font-weight:700;color:#e2e8f0;">${a.flightNumber}</span>
               <span style="font-size:12px;color:#64748b;">${a.date}</span>
-              <span style="font-size:11px;color:#94a3b8;">${a.from||'?'} → ${a.to||'?'}</span>
+              <span style="font-size:11px;color:#94a3b8;">${(CITY_NAMES_ARCH[a.from]||CITY_NAMES_ARCH[ICAO_TO_IATA[a.from]]||a.from||'?')} → ${(CITY_NAMES_ARCH[a.to]||CITY_NAMES_ARCH[ICAO_TO_IATA[a.to]]||a.to||'?')}</span>
               <span style="font-size:10px;color:#64748b;margin-left:auto;">${srcBadge}</span>
               ${a.authorizationNumber ? `<span style="font-size:16px;font-weight:800;color:#D4AF37;letter-spacing:.04em;">${a.authorizationNumber}</span>` : ''}
             </div>
@@ -2187,7 +2186,7 @@ async function exportArchivesPDF(items) {
     // ── En-tête: date à gauche, N° auth grand à droite ──
     pdf.setDrawColor(0,0,0);
     pdf.setLineWidth(0.4);
-    pdf.line(x, y+10, x+boxW, y+10); // ligne séparatrice en-tête
+    pdf.line(x, y+10, x+boxW, y+10);
 
     // Date + vol (gauche)
     pdf.setTextColor(0,0,0);
@@ -2202,6 +2201,14 @@ async function exportArchivesPDF(items) {
       pdf.setTextColor(0,0,0);
       pdf.text(arch.authorizationNumber, x+boxW-2, y+7, {align:'right'});
     }
+
+    // Ville départ → ville arrivée sous l'en-tête
+    const _cFr = CITY_NAMES_ARCH[arch.from] || CITY_NAMES_ARCH[ICAO_TO_IATA[arch.from]] || arch.from || '?';
+    const _cTo = CITY_NAMES_ARCH[arch.to]   || CITY_NAMES_ARCH[ICAO_TO_IATA[arch.to]]   || arch.to   || '?';
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(80,80,80);
+    pdf.text(`${arch.company||''}   ${_cFr} → ${_cTo}   PAX: ${arch.passengers||0}`, x+2, y+9.5);
 
     // Contenu LDM/MVT
     const textContent = arch.rawText || arch.generatedText || '(aucun contenu)';
