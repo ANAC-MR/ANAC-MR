@@ -258,6 +258,20 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div id="tabArchive" style="display:none;margin-bottom:16px;">
     <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.2);border-radius:14px;padding:20px;">
 
+      <!-- Sous-onglets Archives / Config -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid rgba(212,175,55,0.2);padding-bottom:10px;">
+        <button id="archSubBtnList" onclick="switchArchSub('list')"
+          style="border:none;background:rgba(212,175,55,0.15);color:#D4AF37;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;">
+          📋 Archives
+        </button>
+        <button id="archSubBtnConfig" onclick="switchArchSub('config')"
+          style="border:none;background:rgba(255,255,255,0.05);color:#64748b;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;">
+          ⚙️ Config paires DEP/ARR
+        </button>
+      </div>
+
+      <!-- PANEL LISTE ARCHIVES -->
+      <div id="archSubList">
       <!-- Filtres archives -->
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
         <span style="font-size:13px;font-weight:700;color:#D4AF37;">📁 Archives LDM/MVT</span>
@@ -298,6 +312,45 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div id="archiveList" style="display:flex;flex-direction:column;gap:10px;">
         <div style="color:#64748b;font-size:13px;text-align:center;padding:30px;"><span class="spin"></span> Chargement...</div>
       </div>
+      </div><!-- end archSubList -->
+
+      <!-- PANEL CONFIG PAIRES DEP/ARR -->
+      <div id="archSubConfig" style="display:none;">
+        <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <span style="font-size:13px;font-weight:700;color:#D4AF37;">⚙️ Configuration des paires DEP / ARR</span>
+          <button onclick="showAddPairForm()" style="background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.4);color:#00c98d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Ajouter une paire</button>
+        </div>
+
+        <!-- Formulaire ajout/édition paire -->
+        <div id="pairForm" style="display:none;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.3);border-radius:10px;padding:14px;margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:10px;" id="pairFormTitle">Nouvelle paire</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
+            <div>
+              <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">Compagnie</label>
+              <input id="pairCompany" placeholder="ex: Air Algérie" style="width:100%;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;">
+            </div>
+            <div>
+              <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">N° vol DÉPART</label>
+              <input id="pairDep" placeholder="ex: AH4015" style="width:100%;background:#1e293b;border:1px solid rgba(74,158,255,0.3);border-radius:6px;padding:6px 10px;color:#60a5fa;font-size:12px;font-weight:700;" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div>
+              <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">N° vol ARRIVÉE</label>
+              <input id="pairArr" placeholder="ex: AH4014 (vide=solo)" style="width:100%;background:#1e293b;border:1px solid rgba(0,201,141,0.3);border-radius:6px;padding:6px 10px;color:#00c98d;font-size:12px;font-weight:700;" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button onclick="savePair()" style="background:rgba(212,175,55,0.2);border:1px solid rgba(212,175,55,0.5);color:#D4AF37;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">💾 Sauver</button>
+              <button onclick="cancelPairForm()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#64748b;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">✕</button>
+            </div>
+          </div>
+          <input id="pairEditId" type="hidden" value="">
+        </div>
+
+        <!-- Liste des paires configurées -->
+        <div id="pairList" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="color:#64748b;font-size:13px;text-align:center;padding:20px;"><span class="spin"></span> Chargement...</div>
+        </div>
+      </div><!-- end archSubConfig -->
+
     </div>
   </div>
 
@@ -1966,6 +2019,7 @@ async function saveToArchive(parsed, rawText, source) {
       generatedText: generatedText,
       from: parsed.from || '',
       to: parsed.to || '',
+      flightType: parsed.type || (parsed.to==='GQNO'||parsed.to==='NKC'||parsed.to==='GQNN' ? 'ARR' : 'DEP'),
       passengers: parseInt(parsed.totalPax)||0,
       babies: parseInt(parsed.paxBabies)||0,
       registration: parsed.registration || '',
@@ -2094,6 +2148,7 @@ async function loadArchives() {
               <span style="font-size:11px;color:#94a3b8;">${(CITY_NAMES_ARCH[a.from]||CITY_NAMES_ARCH[ICAO_TO_IATA[a.from]]||a.from||'?')} → ${(CITY_NAMES_ARCH[a.to]||CITY_NAMES_ARCH[ICAO_TO_IATA[a.to]]||a.to||'?')}</span>
               <span style="font-size:10px;color:#64748b;margin-left:auto;">${srcBadge}</span>
               ${a.authorizationNumber ? `<span style="font-size:16px;font-weight:800;color:#D4AF37;letter-spacing:.04em;">${a.authorizationNumber}</span>` : ''}
+              ${a.flightType === 'DEP' ? `<span style="font-size:10px;font-weight:700;color:#60a5fa;background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.3);border-radius:4px;padding:1px 6px;">DEP</span>` : a.flightType === 'ARR' ? `<span style="font-size:10px;font-weight:700;color:#00c98d;background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.3);border-radius:4px;padding:1px 6px;">ARR</span>` : ''}
             </div>
             <div id="arch-detail-${a.id}" style="display:none;margin-top:12px;">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);">
@@ -2163,20 +2218,38 @@ async function exportArchivesPDF(items) {
   const list = items || _archivesCache;
   if (!list.length) { toast('Aucune archive à exporter','warn'); return; }
 
+  // Charger les paires si pas encore fait
+  if (!_volPairs.length) await _loadVolPairs();
+
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   const pageW = 210, pageH = 297;
   const margin = 12;
-  const boxH = (pageH - margin*3) / 2; // 2 par page
+  const boxH = (pageH - margin*3) / 2;
   const boxW = pageW - margin*2;
 
-  list.forEach((arch, idx) => {
-    const posOnPage = idx % 2;
-    if (idx > 0 && posOnPage === 0) pdf.addPage();
+  // Grouper par paires DEP/ARR
+  const pages = groupArchivesForPDF(list);
+  let pageIdx = 0;
 
-    const x = margin;
-    const y = margin + posOnPage * (boxH + margin);
+  pages.forEach((pageItems, pi) => {
+    if (pi > 0) pdf.addPage();
+    pageItems.forEach((arch, posOnPage) => {
+      const x = margin;
+      const y = margin + posOnPage * (boxH + margin);
+      _drawArchiveBox(pdf, arch, x, y, boxW, boxH);
+    });
+  });
+
+  const fMonth = (document.getElementById('archMonthFilter')||{}).value||'ALL';
+  const fCo    = (document.getElementById('archCompanyFilter')||{}).value||'ALL';
+  const fname  = 'Archives_LDM_MVT'+(fMonth!=='ALL'?'_'+MONTHS_FR_ARCH[+fMonth]:'')+(fCo!=='ALL'?'_'+fCo.replace(/\s+/g,'_'):'')+'_('+list.length+').pdf';
+  pdf.save(fname);
+  toast('PDF exporté — '+list.length+' archive(s)','ok');
+}
+
+function _drawArchiveBox(pdf, arch, x, y, boxW, boxH) {
 
     // ── Bordure noire ──
     pdf.setDrawColor(0, 0, 0);
@@ -2195,12 +2268,22 @@ async function exportArchivesPDF(items) {
     pdf.setFontSize(10);
     pdf.text(arch.date || '', x+2, y+7.5);
 
-    // N° autorisation : grand, gras, à droite
+    // N° autorisation + badge DEP/ARR : grand, gras, à droite
     if (arch.authorizationNumber) {
+      // Badge DEP ou ARR (depuis le type du vol dans Firebase)
+      const flightType = arch.type || '';  // 'DEP' ou 'ARR'
+      const typeLbl    = flightType === 'DEP' ? 'DEP' : flightType === 'ARR' ? 'ARR' : '';
       pdf.setFont('helvetica','bold');
       pdf.setFontSize(14);
       pdf.setTextColor(0, 0, 0);
       pdf.text(arch.authorizationNumber, x+boxW-2, y+8, {align:'right'});
+      if (typeLbl) {
+        pdf.setFontSize(7);
+        pdf.setFont('helvetica','bold');
+        pdf.setTextColor(typeLbl==='DEP' ? 74 : 0, typeLbl==='DEP' ? 158 : 180, typeLbl==='DEP' ? 255 : 80);
+        pdf.text(typeLbl, x+boxW-2, y+12, {align:'right'});
+        pdf.setTextColor(0,0,0);
+      }
     }
 
     // ── Sous le trait : destination et PAX ──
@@ -2234,15 +2317,7 @@ async function exportArchivesPDF(items) {
       pdf.setFont('helvetica','italic');
       pdf.text('Généré automatiquement', x+2, y+boxH-2);
     }
-  });
-
-  // Nom fichier
-  const fMonth = (document.getElementById('archMonthFilter')||{}).value||'ALL';
-  const fCo    = (document.getElementById('archCompanyFilter')||{}).value||'ALL';
-  const fname  = `Archives_LDM_MVT${fMonth!=='ALL'?'_'+MONTHS_FR_ARCH[+fMonth]:''}${fCo!=='ALL'?'_'+fCo.replace(/\s+/g,'_'):''}_(${list.length}).pdf`;
-  pdf.save(fname);
-  toast(`✅ PDF exporté — ${list.length} archive(s)`,'ok');
-}
+}  // end _drawArchiveBox
 
 // ── Générer automatiquement les archives pour les vols déjà dans Firebase ──
 async function generateMissingArchives() {
@@ -2292,6 +2367,7 @@ async function generateMissingArchives() {
         passengers: parseInt(flight.passengers)||0,
         babies: parseInt(flight.babies)||0,
         registration: flight.registration||'',
+        flightType: flight.type || (((flight.to||'')==='GQNO'||(flight.to||'')==='NKC') ? 'ARR' : 'DEP'),
         source: 'GENERATED',
         createdAt: new Date().toISOString()
       }, { merge: false }));
@@ -2308,6 +2384,198 @@ async function generateMissingArchives() {
     if (btn) { btn.disabled = false; btn.textContent = '⚡ Générer manquants'; }
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+// CONFIG PAIRES DEP/ARR
+// ══════════════════════════════════════════════════════════════
+
+let _volPairs = []; // cache paires depuis Firebase
+
+function switchArchSub(sub) {
+  document.getElementById('archSubList').style.display   = sub === 'list'   ? '' : 'none';
+  document.getElementById('archSubConfig').style.display = sub === 'config' ? '' : 'none';
+  document.getElementById('archSubBtnList').style.background   = sub === 'list'   ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.05)';
+  document.getElementById('archSubBtnList').style.color        = sub === 'list'   ? '#D4AF37' : '#64748b';
+  document.getElementById('archSubBtnConfig').style.background = sub === 'config' ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.05)';
+  document.getElementById('archSubBtnConfig').style.color      = sub === 'config' ? '#D4AF37' : '#64748b';
+  if (sub === 'config') loadPairs();
+}
+
+async function _getPairsDB() {
+  const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+  const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+  return getFirestore(app);
+}
+
+async function loadPairs() {
+  const listEl = document.getElementById('pairList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="color:#64748b;font-size:13px;text-align:center;padding:16px;"><span class="spin"></span></div>';
+  try {
+    const { collection, getDocs, orderBy, query } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const db   = await _getPairsDB();
+    const snap = await getDocs(query(collection(db,'vol_pairs'), orderBy('company')));
+    _volPairs  = snap.docs.map(d => ({id: d.id, ...d.data()}));
+
+    if (!_volPairs.length) {
+      listEl.innerHTML = '<div style="color:#64748b;font-size:13px;text-align:center;padding:20px;">Aucune paire configurée — cliquez sur "+ Ajouter une paire"</div>';
+      return;
+    }
+
+    listEl.innerHTML = _volPairs.map(p => `
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:700;color:#94a3b8;min-width:140px;">${esc(p.company||'—')}</span>
+        <span style="font-size:13px;font-weight:800;color:#60a5fa;">${esc(p.dep||'—')}</span>
+        <span style="font-size:11px;color:#D4AF37;">DEP</span>
+        <span style="font-size:14px;color:#475569;">↔</span>
+        <span style="font-size:11px;color:#00c98d;">ARR</span>
+        <span style="font-size:13px;font-weight:800;color:#00c98d;">${p.arr ? esc(p.arr) : '<em style="color:#475569;font-weight:400;">solo</em>'}</span>
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <button onclick="editPair('${p.id}')" style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.3);color:#D4AF37;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✏️ Modifier</button>
+          <button onclick="deletePair('${p.id}')" style="background:rgba(229,62,62,0.08);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">🗑️</button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    listEl.innerHTML = `<div style="color:#fc8181;font-size:13px;text-align:center;padding:16px;">Erreur: ${e.message}</div>`;
+  }
+}
+
+function showAddPairForm() {
+  document.getElementById('pairFormTitle').textContent = 'Nouvelle paire';
+  document.getElementById('pairCompany').value = '';
+  document.getElementById('pairDep').value = '';
+  document.getElementById('pairArr').value = '';
+  document.getElementById('pairEditId').value = '';
+  document.getElementById('pairForm').style.display = '';
+}
+
+function editPair(id) {
+  const p = _volPairs.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('pairFormTitle').textContent = 'Modifier la paire';
+  document.getElementById('pairCompany').value = p.company || '';
+  document.getElementById('pairDep').value     = p.dep     || '';
+  document.getElementById('pairArr').value     = p.arr     || '';
+  document.getElementById('pairEditId').value  = id;
+  document.getElementById('pairForm').style.display = '';
+}
+
+function cancelPairForm() {
+  document.getElementById('pairForm').style.display = 'none';
+}
+
+async function savePair() {
+  const company = document.getElementById('pairCompany').value.trim();
+  const dep     = document.getElementById('pairDep').value.trim().toUpperCase();
+  const arr     = document.getElementById('pairArr').value.trim().toUpperCase();
+  const editId  = document.getElementById('pairEditId').value;
+  if (!company || !dep) { toast('Compagnie et N° vol DEP requis','warn'); return; }
+  try {
+    const { collection, doc, setDoc, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const db   = await _getPairsDB();
+    const data = { company, dep, arr: arr||'', solo: !arr, updatedAt: new Date().toISOString() };
+    if (editId) {
+      await setDoc(doc(db,'vol_pairs',editId), data, {merge:true});
+      toast('Paire mise à jour','ok');
+    } else {
+      await addDoc(collection(db,'vol_pairs'), data);
+      toast('Paire ajoutée','ok');
+    }
+    cancelPairForm();
+    await loadPairs();
+  } catch(e) { toast('Erreur: '+e.message,'err'); }
+}
+
+async function deletePair(id) {
+  if (!confirm('Supprimer cette paire ?')) return;
+  try {
+    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const db = await _getPairsDB();
+    await deleteDoc(doc(db,'vol_pairs',id));
+    toast('Paire supprimée','ok');
+    await loadPairs();
+  } catch(e) { toast('Erreur: '+e.message,'err'); }
+}
+
+// Charger les paires en mémoire (pour PDF)
+async function _loadVolPairs() {
+  try {
+    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const db   = await _getPairsDB();
+    const snap = await getDocs(collection(db,'vol_pairs'));
+    _volPairs  = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  } catch(e) { console.warn('loadVolPairs:', e.message); }
+}
+
+// Trouver la paire d'un vol (retourne {dep, arr, company} ou null)
+function findPair(flightNumber) {
+  const fn = (flightNumber||'').toUpperCase();
+  return _volPairs.find(p => p.dep === fn || p.arr === fn) || null;
+}
+
+// Grouper les archives en pages PDF selon les paires configurées
+// Règle: DEP + ARR correspondant → même page (2 par page)
+//        Si pas de paire trouvée ou vol solo → page seule
+function groupArchivesForPDF(archives) {
+  const pages  = [];
+  const used   = new Set();
+
+  archives.forEach(arch => {
+    if (used.has(arch.id)) return;
+
+    const pair = findPair(arch.flightNumber);
+
+    if (!pair || pair.solo || !pair.arr) {
+      // Vol solo → seul sur sa page
+      pages.push([arch]);
+      used.add(arch.id);
+      return;
+    }
+
+    // Chercher le vol complémentaire dans les archives
+    const isThisDep = pair.dep === arch.flightNumber;
+    const partnerFn = isThisDep ? pair.arr : pair.dep;
+
+    // Chercher le partenaire avec N° autorisation consécutif (±1) et même date (ou ±1 jour)
+    const myAuthNum = getAuthNum(arch.authorizationNumber);
+    const partner   = archives.find(a => {
+      if (used.has(a.id) || a.id === arch.id) return false;
+      if (a.flightNumber !== partnerFn) return false;
+      const pAuthNum = getAuthNum(a.authorizationNumber);
+      return Math.abs(pAuthNum - myAuthNum) === 1;
+    });
+
+    if (partner) {
+      // Mettre DEP en haut, ARR en bas
+      const depArch = isThisDep ? arch : partner;
+      const arrArch = isThisDep ? partner : arch;
+      pages.push([depArch, arrArch]);
+      used.add(arch.id);
+      used.add(partner.id);
+    } else {
+      // Partenaire non trouvé → seul sur sa page
+      pages.push([arch]);
+      used.add(arch.id);
+    }
+  });
+
+  return pages;
+}
+
+function getAuthNum(auth) {
+  if (!auth) return 0;
+  const m = auth.match(/(\d+)$/);
+  return m ? parseInt(m[1]) : 0;
+}
+
+window.switchArchSub    = switchArchSub;
+window.loadPairs        = loadPairs;
+window.showAddPairForm  = showAddPairForm;
+window.editPair         = editPair;
+window.cancelPairForm   = cancelPairForm;
+window.savePair         = savePair;
+window.deletePair       = deletePair;
 
 window.loadArchives        = loadArchives;
 window.toggleArchiveDetail = toggleArchiveDetail;
