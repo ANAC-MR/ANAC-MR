@@ -1327,45 +1327,72 @@ function extractFields(text, dateReceived) {
     //   Si ville != NKC → vol DEP (de NKC vers cette ville)
     // ─────────────────────────────────────────────────
 
-    // Regex robuste MVT — cherche dans toutes les lignes (pas seulement ^)
-    // Formats supportés:
-    //   L6301/22.5TCLJ.AD1430/1525.TUN
-    //   L6-301/22.5TCLJ.D1430.NKC
-    //   AF598/25.FHTYF.AD1430.NKC
-    //   AD/L6100/22.5TCLJ.D1545/1615.TUN
-    const mvtRx = /([A-Z]{1,2}\d{1,2}-?\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,8})\.([A-Z]{1,3})(\d{3,4})(?:\/(\d{3,4}))?\.([A-Z]{2,4})/;
-    let mvtLine = null;
-    let mvtMatch = null;
+    // Formats MVT supportés:
+    //   Format 1 (avec heure sur même ligne): L6301/22.5TCLJ.AD1430/1525.TUN
+    //   Format 2 (ville seule):               NT1805/26.ECNPU.NKC  + AD260128/260138 EA0317 LPA
+
+    // Regex Format 1: vol/jour.immat.type_heure/heure.ville
+    const mvtRx1 = /([A-Z]{1,2}\d{1,2}-?\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,8})\.([A-Z]{1,3})(\d{3,4})(?:\/(\d{3,4}))?\.([A-Z]{2,4})/;
+    // Regex Format 2: vol/jour.immat.ville (sans heure)
+    const mvtRx2 = /([A-Z]{1,2}\d{1,2}-?\d{2,4})\/([0-9]{1,2})\.([A-Z0-9]{4,8})\.([A-Z]{2,4})$/;
+    // Regex ligne AD/AA/DD + destination: AD260128/260138  EA0317  LPA
+    const mvtAdRx = /^(?:AD|AA|DD|DL)\d{6,10}(?:\/\d{6,10})?\s+(?:EA|AD|AA)\d{3,4}\s+([A-Z]{2,4})/;
+
+    let mvtMatch = null, mvtFmt = 0, mvtDestFromAd = '';
+
     for (const line of lines) {
-      const m = line.match(mvtRx);
-      if (m) { mvtLine = line; mvtMatch = m; break; }
+      if (!mvtMatch) {
+        const m1 = line.match(mvtRx1);
+        if (m1) { mvtMatch = m1; mvtFmt = 1; continue; }
+        const m2 = line.match(mvtRx2);
+        if (m2) { mvtMatch = m2; mvtFmt = 2; continue; }
+      }
+      // Chercher la ligne AD avec destination (format 2)
+      if (!mvtDestFromAd) {
+        const mAd = line.match(mvtAdRx);
+        if (mAd) mvtDestFromAd = mAd[1];
+      }
     }
 
     if (mvtMatch) {
       const m = mvtMatch;
-      // Nettoyer le N° vol: enlever tiret éventuel (L6-301 → L6301)
       p.flightNumber = m[1].replace(/-/g, '');
       p.registration = m[3];
-      const cityCode = m[7];
-
-      // Utiliser le mois global sélectionné
       p.date = _buildDate(parseInt(m[2],10));
 
-      // Règle: ville dans le MVT = hub de la compagnie
-      // NKC → vol ARR à Nouakchott (vient de cityCode)
-      // Autre ville → vol DEP de Nouakchott vers cityCode
+      let cityCode = mvtFmt === 1 ? m[7] : m[4]; // ville sur la ligne vol
+
+      // Format 2: ville = hub compagnie (NKC si ARR, autre si DEP)
+      // La vraie destination est dans la ligne AD
       const isNKC = (cityCode === BASE_IATA || cityCode === BASE);
+
       if (isNKC) {
         p.type = 'ARR';
-        // Chercher route connue d'abord, sinon hub compagnie
+        // Destination réelle depuis ligne AD (si trouvée), sinon route connue/hub
         const knownRoute = getKnownRoute(p.flightNumber || '');
         const hub        = getAirlineHub(p.flightNumber || '');
-        p.from = (knownRoute ? knownRoute.from : '') || hub || '';
+        p.from = mvtDestFromAd || (knownRoute ? knownRoute.from : '') || hub || '';
         p.to   = BASE_IATA;
       } else {
         p.type = 'DEP';
         p.from = BASE_IATA;
-        p.to   = cityCode || (getKnownRoute(p.flightNumber||'') ? getKnownRoute(p.flightNumber||'').to : '') || '';
+        // Destination: ligne AD si trouvée, sinon cityCode, sinon route connue
+        p.to = mvtDestFromAd || cityCode || (getKnownRoute(p.flightNumber||'')||{}).to || '';
+      }
+
+      // Extraire PAX depuis PX{n}
+      const pxM2 = text.match(/PX(\d+)/);
+      if (pxM2) p.totalPax = parseInt(pxM2[1]);
+
+      // Extraire heures depuis ligne AD (Format 2): AD260128/260138  EA0317
+      if (mvtFmt === 2) {
+        const adLine = lines.find(l => /^(?:AD|AA|DD)\d{6}/.test(l));
+        if (adLine) {
+          const tDep = adLine.match(/^(?:AD|AA|DD)\d{4}(\d{4})/);
+          const tArr = adLine.match(/EA(\d{4})/);
+          if (tDep) p.timeDep = tDep[1].slice(0,2)+':'+tDep[1].slice(2);
+          if (tArr) p.timeArr = tArr[1].slice(0,2)+':'+tArr[1].slice(2);
+        }
       }
     } else {
       // Fallback: chercher N°vol/jour dans n'importe quelle ligne
@@ -1804,61 +1831,108 @@ const MONTHS_FR_ARCH = ['','Janvier','Février','Mars','Avril','Mai','Juin','Jui
 let _archivesCache = [];
 
 // ── Générer le texte LDM au format IATA depuis les données d'un vol ──
+// ── Helpers format ──
+function _pad2(n){ return String(n).padStart(2,'0'); }
+function _fmtDate(dt){
+  // Retourne YYMMDD depuis YYYY-MM-DD
+  if(!dt) return '000000';
+  const d = new Date(dt+'T12:00:00Z');
+  const yy = String(d.getUTCFullYear()).slice(-2);
+  const mm = _pad2(d.getUTCMonth()+1);
+  const dd = _pad2(d.getUTCDate());
+  return yy+mm+dd;
+}
+
+// ── Générer LDM format IATA exact (basé sur exemples réels) ──
+// Exemple: AT510/26.CNRGF.J12Y147.2/4
+//          -CMN.109/39/3/1.0.T3686.1/370.2/1713.3/1110.4/493.PAX/9/142
 function generateLDMText(flight, authNumber) {
-  const fn  = (flight.flightNumber||'').toUpperCase();
-  const reg = (flight.registration||'XXXXX').toUpperCase();
-  const dt  = flight.date || '';
-  const day = dt ? String(new Date(dt).getUTCDate()).padStart(2,'0') : '01';
-  const fr  = (flight.from||'???').toUpperCase();
-  const to  = (flight.to||'???').toUpperCase();
-  const pax = parseInt(flight.passengers)||0;
-  const bb  = parseInt(flight.babies)||0;
+  const fn   = (flight.flightNumber||'').toUpperCase();
+  const reg  = (flight.registration||'XXXXX').toUpperCase();
+  const dt   = flight.date || '';
+  const day  = dt ? _pad2(new Date(dt+'T12:00:00Z').getUTCDate()) : '01';
+  const fr   = (flight.from||'???').toUpperCase();
+  const to   = (flight.to||'???').toUpperCase();
+  const pax  = parseInt(flight.passengers)||0;
+  const bb   = parseInt(flight.babies)||0;
   const auth = (authNumber||flight.authorizationNumber||'').toUpperCase();
-  const isArr = (to === 'GQNO' || to === 'NKC');
-  const nkcCode = 'NKC';
-  const otherCode = isArr ? fr : to;
 
-  // Répartition PAX par classe (simplifié: tout en Y)
-  const paxStr = pax > 0 ? `0/0/${pax}/${bb}` : `0/0/0/0`;
+  const isArr   = (to==='GQNO'||to==='NKC'||to==='GQNN');
+  const nkc     = 'NKC';       // code utilisé dans le LDM
+  const other   = isArr ? (ICAO_TO_IATA[fr]||fr) : (ICAO_TO_IATA[to]||to);
 
-  let lines = [];
-  if (auth) lines.push(`AUTH: ${auth}`);
-  lines.push(`RCV ${dt} 00:00`);
+  // Ligne vol: FN/DD.REG.J0Y{pax}.{bb}/{bb}
+  const flightLine = `${fn}/${day}.${reg}.J0Y${pax}.${bb}/${bb}`;
+
+  // Ligne station: -XXX.{J}/{C}/{Y}/{bb}.T0.{pax}.PAX/{bb}/{pax}
+  // Format simplifié proche du réel: -CMN.109/39/3/1.0.T3686.1/370...
+  const paxLine = `-${other}.0/0/${pax}/${bb}.0.T0.1/${pax}.PAX/${bb}/${pax}`;
+  const nkcLine = isArr
+    ? `-${nkc}.0/0/${pax}/${bb}.0.T0.1/${pax}.PAX/${bb}/${pax}`
+    : `-${nkc}.0/0/0/0`;
+
+  const lines = [];
   lines.push(`LDM`);
-  lines.push(`${fn}/${day}.${reg}.J0Y0${pax}.${bb}/${bb}`);
+  lines.push(flightLine);
   if (isArr) {
-    lines.push(`-${otherCode}.T0.0`);
-    lines.push(`-${nkcCode}.0/0/${pax}/${bb}`);
+    lines.push(paxLine);   // origine
+    lines.push(nkcLine);   // destination NKC
   } else {
-    lines.push(`-${nkcCode}.0/0/${pax}/${bb}`);
-    lines.push(`-${otherCode}.T0.0`);
+    lines.push(nkcLine);   // NKC départ
+    lines.push(paxLine);   // destination
   }
   lines.push(`.PAD/0/0`);
-  lines.push(`SI NKC BAG`);
+  lines.push(`SI LOAD IN CPTS 0/0 1/${pax} PAX/${bb}/${pax}`);
+  lines.push(`${other} TRA                    BAG`);
+  lines.push(`${other} 4/T/${bb||0}             ${pax}  POS`);
+  lines.push(`CHECKED BAGGAGE PIECES ${other} 0`);
+  lines.push(`FUEL IN TANKS 0`);
+  lines.push(`TOTAL GROSS JOINING CARGO: 0`);
+  lines.push(`END LDM`);
   return lines.join('\n');
 }
 
-// ── Générer le texte MVT au format IATA depuis les données d'un vol ──
-function generateMVTText(flight, authNumber) {
-  const fn  = (flight.flightNumber||'').toUpperCase();
-  const reg = (flight.registration||'XXXXX').toUpperCase();
-  const dt  = flight.date || '';
-  const day = String(new Date(dt||Date.now()).getUTCDate()).padStart(2,'0');
-  const fr  = (flight.from||'???').toUpperCase();
-  const to  = (flight.to||'???').toUpperCase();
-  const pax = parseInt(flight.passengers)||0;
-  const auth = (authNumber||flight.authorizationNumber||'').toUpperCase();
-  const isArr = (to === 'GQNO' || to === 'NKC');
-  const cityCode = isArr ? fr : to;
-  const type = isArr ? 'AD' : 'AD';
+// Table inverse ICAO→IATA pour affichage dans le LDM/MVT
+const ICAO_TO_IATA = {
+  'GQNO':'NKC','GQNN':'NKC','GQPP':'NDB','GQPZ':'OUZ','GQNI':'EMN','GQPF':'KFA',
+  'LFPG':'CDG','LTFM':'IST','DAAG':'ALG','DTTA':'TUN','GMMN':'CMN','GOBD':'DSS',
+  'GCLP':'LPA','GBYD':'BJL','GUCY':'CKY','DIAP':'ABJ','DNMM':'LOS','GABS':'BKO',
+  'OEMA':'MED','DXXX':'LFW','OMDB':'DXB','OTHH':'DOH','HECA':'CAI','HAAB':'ADD',
+  'FOOL':'LBV','FKKD':'DLA','LLBG':'TLV','OJAI':'AMM','EDDF':'FRA','EHAM':'AMS',
+  'LEMD':'MAD','LIRF':'FCO','LSZH':'ZRH','LOWW':'VIE','LPPT':'LIS','EGLL':'LHR',
+};
 
-  let lines = [];
-  if (auth) lines.push(`AUTH: ${auth}`);
-  lines.push(`RCV ${dt} 00:00`);
+// ── Générer MVT format IATA exact (basé sur exemples réels) ──
+// Exemple: NT1805/26.ECNPU.NKC
+//          AD260128/260138  EA0317  LPA
+//          PX50
+function generateMVTText(flight, authNumber) {
+  const fn   = (flight.flightNumber||'').toUpperCase();
+  const reg  = (flight.registration||'XXXXX').toUpperCase();
+  const dt   = flight.date || '';
+  const day  = dt ? _pad2(new Date(dt+'T12:00:00Z').getUTCDate()) : '01';
+  const fr   = (flight.from||'???').toUpperCase();
+  const to   = (flight.to||'???').toUpperCase();
+  const pax  = parseInt(flight.passengers)||0;
+  const auth = (authNumber||flight.authorizationNumber||'').toUpperCase();
+
+  const isArr    = (to==='GQNO'||to==='NKC'||to==='GQNN');
+  const hubCity  = isArr ? (ICAO_TO_IATA[fr]||fr) : (ICAO_TO_IATA[to]||to);
+  const yy       = dt ? String(new Date(dt+'T12:00:00Z').getUTCFullYear()).slice(-2) : '00';
+  const mmdd     = dt ? _pad2(new Date(dt+'T12:00:00Z').getUTCMonth()+1) + day : '0000';
+
+  // Ligne vol: FN/DD.REG.NKC (si ARR) ou FN/DD.REG.HUBCITY (si DEP)
+  const mvtCity  = isArr ? 'NKC' : hubCity;
+  // Ligne heures: AD{YYMMDDHHMM}/{YYMMDDHHMM}  EA{HHMM}  DEST
+  // Sans heures connues on met 0000
+  const timeStr  = `AD${yy}${mmdd}0000/${yy}${mmdd}0000`;
+  const destCity = isArr ? hubCity : 'NKC';
+
+  const lines = [];
   lines.push(`MVT`);
-  lines.push(`${fn}/${day}.${reg}.${cityCode}`);
-  lines.push(`${type}0000/0000`);
-  if (pax > 0) lines.push(`.PX${pax}`);
+  lines.push(`${fn}/${day}.${reg}.${mvtCity}`);
+  lines.push(`${timeStr}  EA0000  ${destCity}`);
+  if (pax > 0) lines.push(`PX${pax}`);
   return lines.join('\n');
 }
 
@@ -2016,11 +2090,14 @@ async function loadArchives() {
               <span style="font-size:13px;font-weight:700;color:#e2e8f0;">${a.flightNumber}</span>
               <span style="font-size:12px;color:#64748b;">${a.date}</span>
               <span style="font-size:11px;color:#94a3b8;">${a.from||'?'} → ${a.to||'?'}</span>
-              ${a.authorizationNumber ? `<span style="background:rgba(212,175,55,0.12);color:#D4AF37;border-radius:6px;padding:2px 9px;font-size:11px;font-weight:700;">${a.authorizationNumber}</span>` : ''}
               <span style="font-size:10px;color:#64748b;margin-left:auto;">${srcBadge}</span>
+              ${a.authorizationNumber ? `<span style="font-size:16px;font-weight:800;color:#D4AF37;letter-spacing:.04em;">${a.authorizationNumber}</span>` : ''}
             </div>
             <div id="arch-detail-${a.id}" style="display:none;margin-top:12px;">
-              <pre style="background:#0a1628;border:1px solid rgba(212,175,55,0.2);border-radius:8px;padding:14px;font-size:12px;font-family:'JetBrains Mono',monospace;color:#D4AF37;white-space:pre-wrap;overflow-x:auto;">${escArch(a.authorizationNumber ? 'AUTH: '+a.authorizationNumber+'\n' : '')}${escArch(a.rawText || a.generatedText || '')}</pre>
+              <div style="text-align:right;margin-bottom:6px;">
+                ${a.authorizationNumber ? `<span style="font-size:22px;font-weight:900;color:#D4AF37;letter-spacing:.06em;font-family:'JetBrains Mono',monospace;">${a.authorizationNumber}</span>` : ''}
+              </div>
+              <pre style="background:#0a1628;border:1px solid rgba(212,175,55,0.2);border-radius:8px;padding:14px;font-size:12px;font-family:'JetBrains Mono',monospace;color:#D4AF37;white-space:pre-wrap;overflow-x:auto;">${escArch(a.rawText || a.generatedText || '')}</pre>
               <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
                 <button onclick="event.stopPropagation();exportSinglePDF('${a.id}')"
                   style="background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.4);color:#60a5fa;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">
@@ -2103,55 +2180,61 @@ async function exportArchivesPDF(items) {
     pdf.setLineWidth(0.5);
     pdf.rect(x, y, boxW, boxH);
 
-    // En-tête coloré
+    // En-tête: type badge + vol + date (fond sombre)
     pdf.setFillColor(15, 31, 61);
-    pdf.rect(x, y, boxW, 12, 'F');
+    pdf.rect(x, y, boxW, 14, 'F');
 
-    // Type badge
     const typeColor = arch.type === 'LDM' ? [0, 201, 141] : [74, 158, 255];
     pdf.setFillColor(...typeColor);
-    pdf.rect(x+2, y+2, 14, 8, 'F');
+    pdf.rect(x+2, y+3, 14, 8, 'F');
     pdf.setTextColor(255,255,255);
     pdf.setFontSize(8);
     pdf.setFont('helvetica','bold');
-    pdf.text(arch.type, x+9, y+7.5, {align:'center'});
+    pdf.text(arch.type, x+9, y+8.5, {align:'center'});
 
     // Vol + date
     pdf.setTextColor(212, 175, 55);
     pdf.setFontSize(11);
-    pdf.text(`${arch.flightNumber}  •  ${arch.date}`, x+20, y+7.5);
-
-    // N° autorisation (en haut à droite)
-    if (arch.authorizationNumber) {
-      pdf.setTextColor(212, 175, 55);
-      pdf.setFontSize(8);
-      pdf.text(`Auth: ${arch.authorizationNumber}`, x+boxW-2, y+7.5, {align:'right'});
-    }
+    pdf.text(`${arch.flightNumber}  •  ${arch.date}`, x+20, y+9);
 
     // Compagnie + route
     pdf.setTextColor(180, 190, 210);
-    pdf.setFontSize(8);
+    pdf.setFontSize(7.5);
     pdf.setFont('helvetica','normal');
-    pdf.text(`${arch.company||''}  •  ${arch.from||'?'} → ${arch.to||'?'}  •  PAX: ${arch.passengers||0}  BÉB: ${arch.babies||0}`, x+4, y+16);
+    pdf.text(`${arch.company||''}   ${arch.from||'?'} → ${arch.to||'?'}   PAX: ${arch.passengers||0}  BÉB: ${arch.babies||0}`, x+4, y+18);
 
-    // Contenu LDM/MVT
+    // ── N° AUTORISATION : grand, gras, en haut à droite ──
+    if (arch.authorizationNumber) {
+      pdf.setFont('helvetica','bold');
+      pdf.setFontSize(16);
+      pdf.setTextColor(212, 175, 55);
+      pdf.text(arch.authorizationNumber, x+boxW-3, y+18, {align:'right'});
+    }
+
+    // Ligne séparatrice
+    pdf.setDrawColor(212, 175, 55);
+    pdf.setLineWidth(0.3);
+    pdf.line(x+3, y+21, x+boxW-3, y+21);
+
+    // Contenu LDM/MVT (texte IATA)
     const textContent = arch.rawText || arch.generatedText || '(aucun contenu)';
-    const displayLines = textContent.split('\n').slice(0, 30); // max 30 lignes
-    pdf.setTextColor(212, 175, 55);
+    const displayLines = textContent.split('\n').slice(0, 28);
+    pdf.setTextColor(30, 50, 80);
     pdf.setFontSize(7.5);
     pdf.setFont('courier','normal');
 
     displayLines.forEach((line, li) => {
-      const lineY = y + 22 + li * 4.5;
-      if (lineY < y + boxH - 4) {
-        pdf.text(line.slice(0, 85), x+4, lineY);
+      const lineY = y + 25 + li * 4.2;
+      if (lineY < y + boxH - 6) {
+        pdf.text(line.slice(0, 90), x+4, lineY);
       }
     });
 
-    // Source badge
-    pdf.setFontSize(6.5);
+    // Source badge (bas gauche)
+    pdf.setFontSize(6);
     pdf.setTextColor(100,120,150);
-    const srcLabel = arch.source === 'GENERATED' ? '⚡ Généré automatiquement' : `Source: ${arch.source||'?'}`;
+    pdf.setFont('helvetica','italic');
+    const srcLabel = arch.source === 'GENERATED' ? 'Généré automatiquement' : `Source: ${arch.source||'?'}`;
     pdf.text(srcLabel, x+4, y+boxH-3);
   });
 
