@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ANAC – Lecteur LDM/MVT</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#0a1628;--navy2:#0f1f3d;--blue:#1a3a6b;--accent:#D4AF37;--green:#00c98d;--red:#e53e3e;--text:#e8edf5;--dim:#7a8ba8;--border:rgba(212,175,55,0.15);--card:rgba(255,255,255,0.04);}
@@ -226,6 +227,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       style="border:1px solid;border-radius:20px;padding:6px 18px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#64748b;">
       🖼️ Image
     </button>
+    <button id="tabBtnArchive" onclick="_ldmSetTab('archive')"
+      style="border:1px solid;border-radius:20px;padding:6px 18px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#64748b;">
+      📁 Archives
+    </button>
   </div>
 
   <!-- TAB: COLLER TEXTE -->
@@ -249,6 +254,62 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- TAB: IMAGE -->
+  <!-- ARCHIVE PANEL -->
+  <div id="tabArchive" style="display:none;margin-bottom:16px;">
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.2);border-radius:14px;padding:20px;">
+
+      <!-- Filtres archives -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+        <span style="font-size:13px;font-weight:700;color:#D4AF37;">📁 Archives LDM/MVT</span>
+        <select id="archMonthFilter" onchange="loadArchives()"
+          style="background:#1e293b;border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:12px;">
+          <option value="ALL">Tous les mois</option>
+          <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+          <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+          <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+          <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+        </select>
+        <select id="archYearFilter" onchange="loadArchives()"
+          style="background:#1e293b;border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:12px;">
+          <option value="ALL">Toutes années</option>
+        </select>
+        <select id="archCompanyFilter" onchange="loadArchives()"
+          style="background:#1e293b;border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:12px;min-width:160px;">
+          <option value="ALL">Toutes compagnies</option>
+        </select>
+        <select id="archTypeFilter" onchange="loadArchives()"
+          style="background:#1e293b;border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:12px;">
+          <option value="ALL">LDM + MVT</option>
+          <option value="LDM">LDM seulement</option>
+          <option value="MVT">MVT seulement</option>
+        </select>
+        <button onclick="loadArchives()" style="background:rgba(212,175,55,0.15);border:1px solid rgba(212,175,55,0.4);color:#D4AF37;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Actualiser</button>
+        <button onclick="generateMissingArchives()" style="background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.4);color:#00c98d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;" title="Génère les archives pour les vols déjà dans le système">⚡ Générer manquants</button>
+        <button onclick="exportArchivesPDF()" style="background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.4);color:#60a5fa;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">📄 Exporter PDF</button>
+      </div>
+
+      <!-- Stats archives -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.2);border-radius:8px;padding:8px 14px;font-size:12px;">
+          📋 Total : <strong id="archStatTotal" style="color:#D4AF37;">0</strong>
+        </div>
+        <div style="background:rgba(0,201,141,0.08);border:1px solid rgba(0,201,141,0.2);border-radius:8px;padding:8px 14px;font-size:12px;">
+          LDM : <strong id="archStatLDM" style="color:#00c98d;">0</strong>
+        </div>
+        <div style="background:rgba(74,158,255,0.08);border:1px solid rgba(74,158,255,0.2);border-radius:8px;padding:8px 14px;font-size:12px;">
+          MVT : <strong id="archStatMVT" style="color:#60a5fa;">0</strong>
+        </div>
+      </div>
+
+      <!-- Liste archives -->
+      <div id="archiveList" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="color:#64748b;font-size:13px;text-align:center;padding:30px;">
+          Cliquez sur "Actualiser" pour charger les archives
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="tabImage" style="display:none;margin-bottom:16px;">
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;">
       <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:10px;">🖼️ Importer une image LDM/MVT</div>
@@ -371,9 +432,11 @@ function _buildDate(day) {
 // ══ LDM TABS ══════════════════════════════════════════════════════
 
 window._ldmSetTab = function(tab) {
-    const tabs = ['email','paste','image'];
-    const btnIds = {email:'tabBtnEmail', paste:'tabBtnPaste', image:'tabBtnImage'};
-    const panelIds = {paste:'tabPaste', image:'tabImage'};
+    const tabs = ['email','paste','image','archive'];
+    const btnIds = {email:'tabBtnEmail', paste:'tabBtnPaste', image:'tabBtnImage', archive:'tabBtnArchive'};
+    const panelIds = {paste:'tabPaste', image:'tabImage', archive:'tabArchive'};
+
+    if (tab === 'archive') loadArchives();
 
     tabs.forEach(t => {
         const btn = document.getElementById(btnIds[t]);
@@ -429,6 +492,9 @@ window._ldmParsePaste = function() {
     // Recharger Firebase pour vérifier doublon + auth en temps réel
     _checkManualEntry(mi, fn, dt, rg, parsed).then(() => {
         div.innerHTML = _renderManualCard(em, mi);
+        // Sauvegarder automatiquement en archive
+        const parsedWithDoc = Object.assign({}, parsed, {type_doc: em.type, company: parsed.company||detectCompany(fn)});
+        saveToArchive(parsedWithDoc, em.rawText, 'PASTE');
         setTimeout(() => {
             const bdy = document.getElementById('mbdy-'+mi);
             const arr = document.getElementById('marr-'+mi);
@@ -547,6 +613,10 @@ window._ldmParseImage = async function(input) {
         const parsed  = extractFields(text, refDate);
         const type    = text.toUpperCase().includes('MVT') && !text.toUpperCase().includes('LDM') ? 'MVT' : 'LDM';
         const result  = { id:'img_'+Date.now(), type, subject:'(image)', from:'', date:parsed.date||refDate, rawText:text, parsed };
+        // Sauvegarder en archive
+        const fnImg = (parsed.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
+        const parsedImg = Object.assign({}, parsed, {type_doc: type, company: parsed.company||detectCompany(fnImg)});
+        saveToArchive(parsedImg, text, 'IMAGE');
 
         if (!window._manualEntries) window._manualEntries = [];
         const fn2 = (parsed.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
@@ -1723,6 +1793,445 @@ async function _laLogin(){
   if(ok){sessionStorage.setItem(_LS,JSON.stringify({u:u.toUpperCase(),ts:Date.now()}));document.getElementById('ldmAuth').classList.add('hidden');}
   else{err.textContent='Identifiants incorrects';document.getElementById('laPass').value='';}
 }
+// ══════════════════════════════════════════════════════════════
+// SECTION ARCHIVES LDM/MVT
+// ══════════════════════════════════════════════════════════════
+
+const MONTHS_FR_ARCH = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+let _archivesCache = [];
+
+// ── Générer le texte LDM au format IATA depuis les données d'un vol ──
+function generateLDMText(flight, authNumber) {
+  const fn  = (flight.flightNumber||'').toUpperCase();
+  const reg = (flight.registration||'XXXXX').toUpperCase();
+  const dt  = flight.date || '';
+  const day = dt ? String(new Date(dt).getUTCDate()).padStart(2,'0') : '01';
+  const fr  = (flight.from||'???').toUpperCase();
+  const to  = (flight.to||'???').toUpperCase();
+  const pax = parseInt(flight.passengers)||0;
+  const bb  = parseInt(flight.babies)||0;
+  const auth = (authNumber||flight.authorizationNumber||'').toUpperCase();
+  const isArr = (to === 'GQNO' || to === 'NKC');
+  const nkcCode = 'NKC';
+  const otherCode = isArr ? fr : to;
+
+  // Répartition PAX par classe (simplifié: tout en Y)
+  const paxStr = pax > 0 ? `0/0/${pax}/${bb}` : `0/0/0/0`;
+
+  let lines = [];
+  if (auth) lines.push(`AUTH: ${auth}`);
+  lines.push(`RCV ${dt} 00:00`);
+  lines.push(`LDM`);
+  lines.push(`${fn}/${day}.${reg}.J0Y0${pax}.${bb}/${bb}`);
+  if (isArr) {
+    lines.push(`-${otherCode}.T0.0`);
+    lines.push(`-${nkcCode}.0/0/${pax}/${bb}`);
+  } else {
+    lines.push(`-${nkcCode}.0/0/${pax}/${bb}`);
+    lines.push(`-${otherCode}.T0.0`);
+  }
+  lines.push(`.PAD/0/0`);
+  lines.push(`SI NKC BAG`);
+  return lines.join('\n');
+}
+
+// ── Générer le texte MVT au format IATA depuis les données d'un vol ──
+function generateMVTText(flight, authNumber) {
+  const fn  = (flight.flightNumber||'').toUpperCase();
+  const reg = (flight.registration||'XXXXX').toUpperCase();
+  const dt  = flight.date || '';
+  const day = String(new Date(dt||Date.now()).getUTCDate()).padStart(2,'0');
+  const fr  = (flight.from||'???').toUpperCase();
+  const to  = (flight.to||'???').toUpperCase();
+  const pax = parseInt(flight.passengers)||0;
+  const auth = (authNumber||flight.authorizationNumber||'').toUpperCase();
+  const isArr = (to === 'GQNO' || to === 'NKC');
+  const cityCode = isArr ? fr : to;
+  const type = isArr ? 'AD' : 'AD';
+
+  let lines = [];
+  if (auth) lines.push(`AUTH: ${auth}`);
+  lines.push(`RCV ${dt} 00:00`);
+  lines.push(`MVT`);
+  lines.push(`${fn}/${day}.${reg}.${cityCode}`);
+  lines.push(`${type}0000/0000`);
+  if (pax > 0) lines.push(`.PX${pax}`);
+  return lines.join('\n');
+}
+
+// ── Sauvegarder un LDM/MVT en archive Firebase ──
+async function saveToArchive(parsed, rawText, source) {
+  if (!parsed || !parsed.flightNumber) return;
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, collection, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    const db  = getFirestore(app);
+
+    const fn   = (parsed.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
+    const dt   = parsed.date || new Date().toISOString().slice(0,10);
+    const co   = parsed.company || detectCompany(fn);
+    const type = parsed.type_doc || 'LDM'; // LDM or MVT
+    const month = parseInt(dt.split('-')[1]||'1');
+    const year  = parseInt(dt.split('-')[0]||new Date().getFullYear());
+    const auth  = (parsed.authorizationNumber||'').toUpperCase();
+
+    // ID unique: compagnie_vol_date
+    const docId = `${co.replace(/\s+/g,'_')}_${fn}_${dt}`.replace(/[^a-zA-Z0-9_-]/g,'_');
+
+    const generatedText = type === 'MVT'
+      ? generateMVTText(parsed, auth)
+      : generateLDMText(parsed, auth);
+
+    await setDoc(doc(db, 'ldm_archive', docId), {
+      flightNumber: fn,
+      date: dt,
+      company: co,
+      type: type,
+      month: month,
+      year: year,
+      authorizationNumber: auth,
+      rawText: rawText || '',
+      generatedText: generatedText,
+      from: parsed.from || '',
+      to: parsed.to || '',
+      passengers: parseInt(parsed.totalPax)||0,
+      babies: parseInt(parsed.paxBabies)||0,
+      registration: parsed.registration || '',
+      source: source || 'PASTE',
+      createdAt: new Date().toISOString()
+    }, { merge: true });
+
+    console.log('Archive saved:', docId);
+  } catch(e) {
+    console.warn('saveToArchive error:', e.message);
+  }
+}
+
+// ── Charger les archives depuis Firebase ──
+async function loadArchives() {
+  const listEl = document.getElementById('archiveList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="color:#64748b;font-size:13px;text-align:center;padding:20px;"><span class="spin"></span> Chargement...</div>';
+
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, collection, getDocs, query, orderBy } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    const db  = getFirestore(app);
+
+    const snap = await getDocs(query(collection(db,'ldm_archive'), orderBy('date','desc')));
+    let archives = snap.docs.map(d => ({id: d.id, ...d.data()}));
+
+    // Peupler filtres compagnies et années
+    const companies = [...new Set(archives.map(a=>a.company).filter(Boolean))].sort();
+    const years     = [...new Set(archives.map(a=>a.year).filter(Boolean))].sort((a,b)=>b-a);
+
+    const coSel = document.getElementById('archCompanyFilter');
+    const yrSel = document.getElementById('archYearFilter');
+    if (coSel) {
+      const curCo = coSel.value;
+      coSel.innerHTML = '<option value="ALL">Toutes compagnies</option>';
+      companies.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        if (c === curCo) o.selected = true;
+        coSel.appendChild(o);
+      });
+    }
+    if (yrSel) {
+      const curYr = yrSel.value;
+      yrSel.innerHTML = '<option value="ALL">Toutes années</option>';
+      years.forEach(y => {
+        const o = document.createElement('option');
+        o.value = y; o.textContent = y;
+        if (String(y) === curYr) o.selected = true;
+        yrSel.appendChild(o);
+      });
+    }
+
+    // Appliquer filtres
+    const fMonth = (document.getElementById('archMonthFilter')||{}).value||'ALL';
+    const fYear  = (document.getElementById('archYearFilter')||{}).value||'ALL';
+    const fCo    = (document.getElementById('archCompanyFilter')||{}).value||'ALL';
+    const fType  = (document.getElementById('archTypeFilter')||{}).value||'ALL';
+
+    archives = archives.filter(a => {
+      if (fMonth !== 'ALL' && String(a.month) !== fMonth) return false;
+      if (fYear  !== 'ALL' && String(a.year)  !== fYear)  return false;
+      if (fCo    !== 'ALL' && a.company !== fCo)           return false;
+      if (fType  !== 'ALL' && a.type    !== fType)         return false;
+      return true;
+    });
+
+    _archivesCache = archives;
+
+    // Stats
+    const el = id => document.getElementById(id);
+    if (el('archStatTotal')) el('archStatTotal').textContent = archives.length;
+    if (el('archStatLDM'))   el('archStatLDM').textContent   = archives.filter(a=>a.type==='LDM').length;
+    if (el('archStatMVT'))   el('archStatMVT').textContent   = archives.filter(a=>a.type==='MVT').length;
+
+    if (!archives.length) {
+      listEl.innerHTML = '<div style="color:#64748b;font-size:13px;text-align:center;padding:30px;">Aucune archive trouvée pour ces filtres</div>';
+      return;
+    }
+
+    // Grouper par mois/année puis compagnie
+    const grouped = {};
+    archives.forEach(a => {
+      const grpKey = `${a.year}-${String(a.month).padStart(2,'0')}`;
+      const coKey  = a.company || '—';
+      if (!grouped[grpKey]) grouped[grpKey] = {};
+      if (!grouped[grpKey][coKey]) grouped[grpKey][coKey] = [];
+      grouped[grpKey][coKey].push(a);
+    });
+
+    let html = '';
+    Object.keys(grouped).sort().reverse().forEach(grpKey => {
+      const [yr, mo] = grpKey.split('-');
+      html += `<div style="margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:800;color:#D4AF37;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(212,175,55,0.2);">
+          📅 ${MONTHS_FR_ARCH[parseInt(mo)]} ${yr}
+        </div>`;
+
+      Object.keys(grouped[grpKey]).sort().forEach(co => {
+        const items = grouped[grpKey][co];
+        html += `<div style="margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">✈️ ${co} — ${items.length} message(s)</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">`;
+
+        items.forEach(a => {
+          const typeColor = a.type === 'LDM' ? '#00c98d' : '#60a5fa';
+          const srcBadge  = a.source === 'GENERATED' ? '⚡ Généré' : (a.source === 'EMAIL' ? '📨 Email' : (a.source === 'IMAGE' ? '🖼️ Image' : '📋 Collé'));
+          html += `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;"
+            onclick="toggleArchiveDetail('${a.id}')"
+            onmouseover="this.style.background='rgba(255,255,255,0.06)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span style="background:${typeColor}22;color:${typeColor};border:1px solid ${typeColor}44;border-radius:6px;padding:2px 9px;font-size:11px;font-weight:800;">${a.type}</span>
+              <span style="font-size:13px;font-weight:700;color:#e2e8f0;">${a.flightNumber}</span>
+              <span style="font-size:12px;color:#64748b;">${a.date}</span>
+              <span style="font-size:11px;color:#94a3b8;">${a.from||'?'} → ${a.to||'?'}</span>
+              ${a.authorizationNumber ? `<span style="background:rgba(212,175,55,0.12);color:#D4AF37;border-radius:6px;padding:2px 9px;font-size:11px;font-weight:700;">${a.authorizationNumber}</span>` : ''}
+              <span style="font-size:10px;color:#64748b;margin-left:auto;">${srcBadge}</span>
+            </div>
+            <div id="arch-detail-${a.id}" style="display:none;margin-top:12px;">
+              <pre style="background:#0a1628;border:1px solid rgba(212,175,55,0.2);border-radius:8px;padding:14px;font-size:12px;font-family:'JetBrains Mono',monospace;color:#D4AF37;white-space:pre-wrap;overflow-x:auto;">${escArch(a.authorizationNumber ? 'AUTH: '+a.authorizationNumber+'\n' : '')}${escArch(a.rawText || a.generatedText || '')}</pre>
+              <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                <button onclick="event.stopPropagation();exportSinglePDF('${a.id}')"
+                  style="background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.4);color:#60a5fa;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">
+                  📄 PDF
+                </button>
+                <button onclick="event.stopPropagation();deleteArchive('${a.id}')"
+                  style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">
+                  🗑️ Supprimer
+                </button>
+              </div>
+            </div>
+          </div>`;
+        });
+
+        html += `</div></div>`;
+      });
+
+      html += '</div>';
+    });
+
+    listEl.innerHTML = html;
+  } catch(e) {
+    listEl.innerHTML = `<div style="color:#fc8181;font-size:13px;text-align:center;padding:20px;">Erreur: ${e.message}</div>`;
+    console.error('loadArchives:', e);
+  }
+}
+
+function escArch(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toggleArchiveDetail(id) {
+  const el = document.getElementById('arch-detail-'+id);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+// ── Supprimer une archive ──
+async function deleteArchive(id) {
+  if (!confirm('Supprimer cette archive ?')) return;
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    const db  = getFirestore(app);
+    await deleteDoc(doc(db,'ldm_archive',id));
+    toast('Archive supprimée','ok');
+    loadArchives();
+  } catch(e) { toast('Erreur suppression: '+e.message,'err'); }
+}
+
+// ── Exporter un seul LDM/MVT en PDF ──
+async function exportSinglePDF(archiveId) {
+  const arch = _archivesCache.find(a => a.id === archiveId);
+  if (!arch) return;
+  await exportArchivesPDF([arch]);
+}
+
+// ── Exporter toutes les archives filtrées en PDF (2 par page, portrait) ──
+async function exportArchivesPDF(items) {
+  const list = items || _archivesCache;
+  if (!list.length) { toast('Aucune archive à exporter','warn'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const pageW = 210, pageH = 297;
+  const margin = 12;
+  const boxH = (pageH - margin*3) / 2; // 2 par page
+  const boxW = pageW - margin*2;
+
+  list.forEach((arch, idx) => {
+    const posOnPage = idx % 2;
+    if (idx > 0 && posOnPage === 0) pdf.addPage();
+
+    const x = margin;
+    const y = margin + posOnPage * (boxH + margin);
+
+    // Bordure
+    pdf.setDrawColor(212, 175, 55);
+    pdf.setLineWidth(0.5);
+    pdf.rect(x, y, boxW, boxH);
+
+    // En-tête coloré
+    pdf.setFillColor(15, 31, 61);
+    pdf.rect(x, y, boxW, 12, 'F');
+
+    // Type badge
+    const typeColor = arch.type === 'LDM' ? [0, 201, 141] : [74, 158, 255];
+    pdf.setFillColor(...typeColor);
+    pdf.rect(x+2, y+2, 14, 8, 'F');
+    pdf.setTextColor(255,255,255);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica','bold');
+    pdf.text(arch.type, x+9, y+7.5, {align:'center'});
+
+    // Vol + date
+    pdf.setTextColor(212, 175, 55);
+    pdf.setFontSize(11);
+    pdf.text(`${arch.flightNumber}  •  ${arch.date}`, x+20, y+7.5);
+
+    // N° autorisation (en haut à droite)
+    if (arch.authorizationNumber) {
+      pdf.setTextColor(212, 175, 55);
+      pdf.setFontSize(8);
+      pdf.text(`Auth: ${arch.authorizationNumber}`, x+boxW-2, y+7.5, {align:'right'});
+    }
+
+    // Compagnie + route
+    pdf.setTextColor(180, 190, 210);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica','normal');
+    pdf.text(`${arch.company||''}  •  ${arch.from||'?'} → ${arch.to||'?'}  •  PAX: ${arch.passengers||0}  BÉB: ${arch.babies||0}`, x+4, y+16);
+
+    // Contenu LDM/MVT
+    const textContent = arch.rawText || arch.generatedText || '(aucun contenu)';
+    const displayLines = textContent.split('\n').slice(0, 30); // max 30 lignes
+    pdf.setTextColor(212, 175, 55);
+    pdf.setFontSize(7.5);
+    pdf.setFont('courier','normal');
+
+    displayLines.forEach((line, li) => {
+      const lineY = y + 22 + li * 4.5;
+      if (lineY < y + boxH - 4) {
+        pdf.text(line.slice(0, 85), x+4, lineY);
+      }
+    });
+
+    // Source badge
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(100,120,150);
+    const srcLabel = arch.source === 'GENERATED' ? '⚡ Généré automatiquement' : `Source: ${arch.source||'?'}`;
+    pdf.text(srcLabel, x+4, y+boxH-3);
+  });
+
+  // Nom fichier
+  const fMonth = (document.getElementById('archMonthFilter')||{}).value||'ALL';
+  const fCo    = (document.getElementById('archCompanyFilter')||{}).value||'ALL';
+  const fname  = `Archives_LDM_MVT${fMonth!=='ALL'?'_'+MONTHS_FR_ARCH[+fMonth]:''}${fCo!=='ALL'?'_'+fCo.replace(/\s+/g,'_'):''}_(${list.length}).pdf`;
+  pdf.save(fname);
+  toast(`✅ PDF exporté — ${list.length} archive(s)`,'ok');
+}
+
+// ── Générer automatiquement les archives pour les vols déjà dans Firebase ──
+async function generateMissingArchives() {
+  const btn = event && event.target;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Génération...'; }
+
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, collection, getDocs, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    const db  = getFirestore(app);
+
+    // Lire vols existants
+    const flightsSnap = await getDocs(collection(db,'flights'));
+    // Lire archives existantes (pour éviter doublons)
+    const archSnap    = await getDocs(collection(db,'ldm_archive'));
+    const existingIds = new Set(archSnap.docs.map(d=>d.id));
+
+    let generated = 0;
+    const promises = [];
+
+    flightsSnap.forEach(d => {
+      if (d.id.startsWith('cfg-')) return;
+      const flight = d.data();
+      if (!flight.flightNumber || !flight.date) return;
+
+      const fn    = (flight.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
+      const co    = flight.company || detectCompany(fn);
+      const dt    = flight.date;
+      const docId = `${co.replace(/\s+/g,'_')}_${fn}_${dt}`.replace(/[^a-zA-Z0-9_-]/g,'_');
+
+      if (existingIds.has(docId)) return; // déjà archivé
+
+      const month = parseInt(dt.split('-')[1]||'1');
+      const year  = parseInt(dt.split('-')[0]||new Date().getFullYear());
+      const auth  = (flight.authorizationNumber||'').toUpperCase();
+
+      // Générer format IATA (LDM par défaut pour les vols système)
+      const genType = 'LDM';
+      const genText = generateLDMText(flight, auth);
+
+      promises.push(setDoc(doc(db,'ldm_archive',docId), {
+        flightNumber: fn, date: dt, company: co, type: genType,
+        month, year, authorizationNumber: auth,
+        rawText: '', generatedText: genText,
+        from: flight.from||'', to: flight.to||'',
+        passengers: parseInt(flight.passengers)||0,
+        babies: parseInt(flight.babies)||0,
+        registration: flight.registration||'',
+        source: 'GENERATED',
+        createdAt: new Date().toISOString()
+      }, { merge: false }));
+      generated++;
+    });
+
+    await Promise.all(promises);
+    toast(`✅ ${generated} archive(s) générée(s) automatiquement`,'ok');
+    await loadArchives();
+  } catch(e) {
+    toast('Erreur génération: '+e.message,'err');
+    console.error(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Générer manquants'; }
+  }
+}
+
+window.loadArchives        = loadArchives;
+window.toggleArchiveDetail = toggleArchiveDetail;
+window.deleteArchive       = deleteArchive;
+window.exportArchivesPDF   = exportArchivesPDF;
+window.exportSinglePDF     = exportSinglePDF;
+window.generateMissingArchives = generateMissingArchives;
+
 window._laLogin = _laLogin;
 // Auto-check session
 (async function(){
