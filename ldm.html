@@ -436,8 +436,6 @@ window._ldmSetTab = function(tab) {
     const btnIds = {email:'tabBtnEmail', paste:'tabBtnPaste', image:'tabBtnImage', archive:'tabBtnArchive'};
     const panelIds = {paste:'tabPaste', image:'tabImage', archive:'tabArchive'};
 
-    if (tab === 'archive') loadArchives();
-
     tabs.forEach(t => {
         const btn = document.getElementById(btnIds[t]);
         if (!btn) return;
@@ -452,11 +450,13 @@ window._ldmSetTab = function(tab) {
         }
     });
 
-    ['paste','image'].forEach(t => {
+    // Afficher/cacher les panels non-email
+    ['paste','image','archive'].forEach(t => {
         const el = document.getElementById(panelIds[t]);
         if (el) el.style.display = t === tab ? '' : 'none';
     });
 
+    // Afficher/cacher les éléments spécifiques à l'onglet email
     const emailVisible = tab === 'email';
     document.querySelectorAll('.auth-card, .stats-row, .status-bar, .auto-bar').forEach(el => {
         el.style.display = emailVisible ? '' : 'none';
@@ -465,6 +465,9 @@ window._ldmSetTab = function(tab) {
     const secTitle  = document.querySelector('.sec-title');
     if (emailList) emailList.style.display = emailVisible ? '' : 'none';
     if (secTitle)  secTitle.style.display  = emailVisible ? '' : 'none';
+
+    // Charger les archives après que le panel soit visible
+    if (tab === 'archive') loadArchives();
 };
 
 // ── Analyser texte collé ──
