@@ -2286,77 +2286,65 @@ function _drawArchiveContent(pdf, arch, x, y, boxW, boxH) {
     pdf.setLineWidth(0.5);
     pdf.rect(x, y, boxW, boxH);
 
-    // ── En-tête : date à gauche, N° auth à droite ──
-    // Ligne séparatrice après en-tête
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.4);
-    pdf.line(x, y+11, x+boxW, y+11);
-
-    // Date seulement à gauche (pas le N° vol)
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('helvetica','bold');
-    pdf.setFontSize(10);
-    pdf.text(arch.date || '', x+2, y+7.5);
-
-    // N° autorisation avec DÉPART/ARRIVÉE à côté — à droite de la ligne d'en-tête
-    // Priorité: champ flightType de l'archive → cache _routeByFlight (depuis flights) → déduction from/to
-    const _archFn   = (arch.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
-    const _cached   = _routeByFlight[_archFn];
-    const _toCode   = (arch.to   || '').toUpperCase();
-    const _frCode   = (arch.from || '').toUpperCase();
-    const _isNKCto  = _toCode==='GQNO'||_toCode==='NKC'||_toCode==='GQNN';
-    const _isNKCfr  = _frCode==='GQNO'||_frCode==='NKC'||_frCode==='GQNN';
-    let flightType  = arch.flightType || (_cached && _cached.type) || '';
+    // ── Déterminer le type DEP/ARR ──
+    const _archFn  = (arch.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
+    const _cached  = _routeByFlight[_archFn];
+    const _toCode  = (arch.to   || '').toUpperCase();
+    const _frCode  = (arch.from || '').toUpperCase();
+    const _isNKCto = _toCode==='GQNO'||_toCode==='NKC'||_toCode==='GQNN';
+    const _isNKCfr = _frCode==='GQNO'||_frCode==='NKC'||_frCode==='GQNN';
+    let flightType = arch.flightType || (_cached && _cached.type) || '';
     if (!flightType || (flightType!=='DEP' && flightType!=='ARR')) {
       flightType = _isNKCto ? 'ARR' : _isNKCfr ? 'DEP' : '';
     }
     const typeLbl = flightType === 'DEP' ? 'DÉPART' : flightType === 'ARR' ? 'ARRIVÉE' : '';
 
-    if (arch.authorizationNumber) {
-      // N° autorisation : grand, gras
+    // ── En-tête sur 2 lignes ──
+    // Ligne séparatrice après en-tête (plus haute pour 2 lignes)
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.5);
+    pdf.line(x, y+14, x+boxW, y+14);
+
+    // Ligne 1 : date à gauche | TYPE AU MILIEU (gras, grand) | N° auth à droite
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica','bold');
+    pdf.setFontSize(10);
+    pdf.text(arch.date || '', x+2, y+8);
+
+    // TYPE au centre — gras, 13pt
+    if (typeLbl) {
       pdf.setFont('helvetica','bold');
       pdf.setFontSize(13);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(arch.authorizationNumber, x+boxW-2, y+8, {align:'right'});
-
-      // Type (DÉPART / ARRIVÉE) : petit, juste avant le N° auth
-      if (typeLbl) {
-        pdf.setFont('helvetica','normal');
-        pdf.setFontSize(7);
-        pdf.setTextColor(0, 0, 0);
-        // Estimer largeur du N° auth (13pt ≈ 2.2mm par caractère)
-        const authW = (arch.authorizationNumber.length * 2.2) + 4;
-        pdf.text(typeLbl, x+boxW-2-authW, y+8, {align:'right'});
-      }
-    } else if (typeLbl) {
-      // Pas d'auth mais on affiche quand même le type
-      pdf.setFont('helvetica','bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(0, 0, 0);
-      pdf.text(typeLbl, x+boxW-2, y+8, {align:'right'});
+      pdf.text(typeLbl, x + boxW/2, y+9, {align:'center'});
     }
 
-    // ── Sous le trait : destination et PAX ──
+    // N° autorisation à droite — gras, 13pt
+    if (arch.authorizationNumber) {
+      pdf.setFont('helvetica','bold');
+      pdf.setFontSize(13);
+      pdf.text(arch.authorizationNumber, x+boxW-2, y+9, {align:'right'});
+    }
+
+    // Ligne 2 : ville départ -> ville arrivée + PAX (sous l'en-tête)
     const _cFr = CITY_NAMES_ARCH[arch.from] || CITY_NAMES_ARCH[ICAO_TO_IATA[arch.from]] || arch.from || '?';
     const _cTo = CITY_NAMES_ARCH[arch.to]   || CITY_NAMES_ARCH[ICAO_TO_IATA[arch.to]]   || arch.to   || '?';
     pdf.setFont('helvetica','normal');
     pdf.setFontSize(8);
-    pdf.setTextColor(0, 0, 0);
-    pdf.text(`${_cFr}  ->  ${_cTo}   PAX: ${arch.passengers||0}`, x+2, y+15);
+    pdf.text(`${_cFr}  ->  ${_cTo}   PAX: ${arch.passengers||0}`, x+2, y+13);
 
-    // ── Contenu LDM/MVT — filtrer la ligne RCV ──
+    // ── Contenu LDM/MVT — plus grand, en gras ──
     const rawContent = arch.rawText || arch.generatedText || '(aucun contenu)';
     const displayLines = rawContent.split('\n')
       .filter(l => !/^RCV\s/i.test(l.trim()) && !/^AUTH:/i.test(l.trim()))
-      .slice(0, 28);
+      .slice(0, 24);
     pdf.setTextColor(0, 0, 0);
-    pdf.setFontSize(8);
-    pdf.setFont('courier','normal');
+    pdf.setFontSize(10);
+    pdf.setFont('courier','bold');
 
     displayLines.forEach((line, li) => {
-      const lineY = y + 20 + li * 4.2;
+      const lineY = y + 19 + li * 5;
       if (lineY < y + boxH - 5) {
-        pdf.text(line.slice(0, 90), x+2, lineY);
+        pdf.text(line.slice(0, 80), x+2, lineY);
       }
     });
 
