@@ -93,6 +93,7 @@ async function initializeFirebase() {
         return true;
     } catch (error) {
         console.error('Error initializing Firebase:', error);
+        if (_isQuotaError(error)) _showQuotaBanner();
         showNotification('Erreur de connexion à la base de données', 'error');
         return initializeMockMode();
     }
@@ -106,8 +107,10 @@ async function testConnection() {
         const testQuery = query(flightsCollection, orderBy('timestamp', 'desc'), limit(1));
         await getDocs(testQuery);
         console.log('Firebase connection test successful');
+        _hideQuotaBanner();
     } catch (error) {
         console.error('Firebase connection test failed:', error);
+        if (_isQuotaError(error)) _showQuotaBanner();
         throw error;
     }
 }
@@ -232,6 +235,7 @@ async function addFlightToFirestore(flightData) {
         };
     } catch (error) {
         console.error('Error adding flight:', error);
+        if (_isQuotaError(error)) _showQuotaBanner();
         throw error;
     }
 }
@@ -268,6 +272,7 @@ async function updateFlightInFirestore(flightId, flightData) {
         console.error('Error updating flight:', error);
         console.error('FlightId was:', flightId);
         console.error('FlightData was:', flightData);
+        if (_isQuotaError(error)) _showQuotaBanner();
         throw error;
     }
 }
@@ -290,6 +295,7 @@ async function deleteFlightFromFirestore(flightId) {
         return true;
     } catch (error) {
         console.error('Error deleting flight:', error);
+        if (_isQuotaError(error)) _showQuotaBanner();
         throw error;
     }
 }
@@ -317,6 +323,7 @@ async function getAllFlights() {
         return flights;
     } catch (error) {
         console.error('Error getting flights:', error);
+        if (_isQuotaError(error)) _showQuotaBanner();
         throw error;
     }
 }
@@ -391,6 +398,7 @@ function startRealtimeListener() {
         });
         
         console.log('Real-time listener started');
+        _hideQuotaBanner();
     } catch (error) {
         console.error('Error starting real-time listener:', error);
     }
@@ -461,9 +469,49 @@ function getFirebaseStatus() {
 /**
  * Handle Firebase errors and attempt recovery
  */
+// ── Détection quota Firebase ──────────────────────────────────
+function _isQuotaError(error) {
+    if (!error) return false;
+    const code = (error.code || '').toLowerCase();
+    const msg  = (error.message || '').toLowerCase();
+    return code === 'resource-exhausted'
+        || code === 'quota-exceeded'
+        || msg.includes('quota')
+        || msg.includes('resource-exhausted')
+        || msg.includes('429');
+}
+
+function _showQuotaBanner() {
+    if (document.getElementById('_quotaBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = '_quotaBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-size:13px;font-weight:700;padding:10px 20px;text-align:center;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,0.4)';
+    banner.innerHTML = '⚠️ QUOTA FIREBASE DÉPASSÉ — Les opérations sont bloquées. Attendez minuit (UTC) ou vérifiez votre plan Firebase.'
+        + '<button onclick="document.getElementById('_quotaBanner').remove();sessionStorage.removeItem('_quotaExceeded')" '
+        + 'style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;">✕ Fermer</button>';
+    document.body.prepend(banner);
+    sessionStorage.setItem('_quotaExceeded', '1');
+}
+
+function _hideQuotaBanner() {
+    const b = document.getElementById('_quotaBanner');
+    if (b) b.remove();
+    sessionStorage.removeItem('_quotaExceeded');
+}
+
+// Réafficher le bandeau si quota était dépassé lors du dernier chargement
+if (sessionStorage.getItem('_quotaExceeded') === '1') {
+    document.addEventListener('DOMContentLoaded', () => _showQuotaBanner());
+}
+
 function handleFirebaseError(error) {
     console.error('Firebase error:', error);
-    
+
+    if (_isQuotaError(error)) {
+        _showQuotaBanner();
+        return;
+    }
+
     switch (error.code) {
         case 'unavailable':
         case 'timeout':
