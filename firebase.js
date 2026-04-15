@@ -487,7 +487,7 @@ function _showQuotaBanner() {
     banner.id = '_quotaBanner';
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-size:13px;font-weight:700;padding:10px 20px;text-align:center;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,0.4)';
     banner.innerHTML = '⚠️ QUOTA FIREBASE DÉPASSÉ — Les opérations sont bloquées. Attendez minuit (UTC) ou vérifiez votre plan Firebase.'
-        + '<button onclick="document.getElementById('_quotaBanner').remove();sessionStorage.removeItem('_quotaExceeded')" '
+        + '<button onclick="document.getElementById(\'_quotaBanner\').remove();sessionStorage.removeItem(\'_quotaExceeded\')" '
         + 'style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;">✕ Fermer</button>';
     document.body.prepend(banner);
     sessionStorage.setItem('_quotaExceeded', '1');
