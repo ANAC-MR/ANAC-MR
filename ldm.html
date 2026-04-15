@@ -1005,10 +1005,10 @@ async function checkImportedFromFirebase() {
     if (fn && d.authorizationNumber) {
       _authByFlight[fn] = d.authorizationNumber;
     }
-    // ── Mémoriser la route (from/to) par N° vol ──
+    // ── Mémoriser la route (from/to) et le type (DEP/ARR) par N° vol ──
     if (fn && d.from && d.to) {
       if (!_routeByFlight[fn] || (d.date && d.date > (_routeByFlight[fn]._date||''))) {
-        _routeByFlight[fn] = { from: d.from, to: d.to, _date: d.date||'' };
+        _routeByFlight[fn] = { from: d.from, to: d.to, type: d.type||'', _date: d.date||'' };
       }
     }
   });
@@ -1741,8 +1741,8 @@ async function _loadRouteCache() {
       const d = doc.data();
       if (!d.flightNumber) return;
       const fn = d.flightNumber.toUpperCase().replace(/[-\s]/g,'');
-      if (!_routeByFlight[fn] && d.from && d.to) {
-        _routeByFlight[fn] = { from: d.from, to: d.to };
+      if ((!_routeByFlight[fn] || !_routeByFlight[fn].type) && d.from && d.to) {
+        _routeByFlight[fn] = { from: d.from, to: d.to, type: d.type||'' };
       }
     });
     _routeByFlight._loaded = true;
@@ -2222,8 +2222,9 @@ async function exportArchivesPDF(items) {
   const list = items || _archivesCache;
   if (!list.length) { toast('Aucune archive à exporter','warn'); return; }
 
-  // Charger les paires si pas encore fait
+  // Charger les paires et le cache de routes si pas encore fait
   if (!_volPairs.length) await _loadVolPairs();
+  if (!_routeByFlight._loaded) await _loadRouteCache();
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -2298,8 +2299,18 @@ function _drawArchiveContent(pdf, arch, x, y, boxW, boxH) {
     pdf.text(arch.date || '', x+2, y+7.5);
 
     // N° autorisation avec DÉPART/ARRIVÉE à côté — à droite de la ligne d'en-tête
-    const flightType = arch.flightType || arch.type || '';
-    const typeLbl    = flightType === 'DEP' ? 'DÉPART' : flightType === 'ARR' ? 'ARRIVÉE' : '';
+    // Priorité: champ flightType de l'archive → cache _routeByFlight (depuis flights) → déduction from/to
+    const _archFn   = (arch.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
+    const _cached   = _routeByFlight[_archFn];
+    const _toCode   = (arch.to   || '').toUpperCase();
+    const _frCode   = (arch.from || '').toUpperCase();
+    const _isNKCto  = _toCode==='GQNO'||_toCode==='NKC'||_toCode==='GQNN';
+    const _isNKCfr  = _frCode==='GQNO'||_frCode==='NKC'||_frCode==='GQNN';
+    let flightType  = arch.flightType || (_cached && _cached.type) || '';
+    if (!flightType || (flightType!=='DEP' && flightType!=='ARR')) {
+      flightType = _isNKCto ? 'ARR' : _isNKCfr ? 'DEP' : '';
+    }
+    const typeLbl = flightType === 'DEP' ? 'DÉPART' : flightType === 'ARR' ? 'ARRIVÉE' : '';
 
     if (arch.authorizationNumber) {
       // N° autorisation : grand, gras
@@ -2308,13 +2319,14 @@ function _drawArchiveContent(pdf, arch, x, y, boxW, boxH) {
       pdf.setTextColor(0, 0, 0);
       pdf.text(arch.authorizationNumber, x+boxW-2, y+8, {align:'right'});
 
-      // Type (DÉPART / ARRIVÉE) : petit, à gauche du N° auth, même ligne
+      // Type (DÉPART / ARRIVÉE) : petit, juste avant le N° auth
       if (typeLbl) {
-        pdf.setFont('helvetica','bold');
+        pdf.setFont('helvetica','normal');
         pdf.setFontSize(7);
         pdf.setTextColor(0, 0, 0);
-        const authTextW = pdf.getStringUnitWidth(arch.authorizationNumber) * 13 / pdf.internal.scaleFactor + 2;
-        pdf.text(typeLbl, x+boxW-2-authTextW, y+8, {align:'right'});
+        // Estimer largeur du N° auth (13pt ≈ 2.2mm par caractère)
+        const authW = (arch.authorizationNumber.length * 2.2) + 4;
+        pdf.text(typeLbl, x+boxW-2-authW, y+8, {align:'right'});
       }
     } else if (typeLbl) {
       // Pas d'auth mais on affiche quand même le type
