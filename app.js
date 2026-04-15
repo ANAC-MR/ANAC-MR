@@ -1075,10 +1075,6 @@ async function deleteFlight(flightId) {
                 try {
                     await window.dbService.deleteFlight(flightId);
 
-                    // ── Supprimer aussi l'entrée dans programme_vols ──
-                    _deleteProgrammeVol(flight).catch(e =>
-                        console.warn('programme_vols delete:', e.message));
-
                     flights = flights.filter(f => f.id !== flightId);
                     render();
                     showUndoButton();
@@ -1766,53 +1762,6 @@ async function _syncArchiveFromFlight(flightData) {
         console.log('Archive synced for', fn, dt);
     } catch(e) {
         console.warn('_syncArchiveFromFlight error:', e.message);
-    }
-}
-
-// ── Supprimer l'entrée dans programme_vols quand un vol est supprimé ──
-async function _deleteProgrammeVol(flight) {
-    if (!flight) return;
-    try {
-        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, collection, query, where, getDocs, deleteDoc, doc } =
-            await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-
-        const FB = { apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
-            authDomain:"anacmr-67835.firebaseapp.com", projectId:"anacmr-67835",
-            storageBucket:"anacmr-67835.firebasestorage.app",
-            messagingSenderId:"906668222910",
-            appId:"1:906668222910:web:19d92b627f155bd2dbb1ef" };
-        const app = getApps().find(a=>a.name==='app-prog') || initializeApp(FB,'app-prog');
-        const db  = getFirestore(app);
-
-        const fn   = (flight.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
-        const dt   = flight.date || '';
-        const auth = (flight.authorizationNumber||'').toUpperCase().replace(/[-\s]/g,'');
-
-        // Chercher par auth (le plus fiable) ET par vol+date
-        const queries = [];
-        if (auth) {
-            queries.push(getDocs(query(collection(db,'programme_vols'), where('auth','==', flight.authorizationNumber||''))));
-            queries.push(getDocs(query(collection(db,'programme_vols'), where('auth','==', auth))));
-        }
-        if (fn && dt) {
-            queries.push(getDocs(query(collection(db,'programme_vols'), where('flightNorm','==', fn), where('date','==', dt))));
-            queries.push(getDocs(query(collection(db,'programme_vols'), where('flight','==', fn), where('date','==', dt))));
-        }
-
-        const snaps = await Promise.all(queries);
-        const toDelete = new Set();
-        snaps.forEach(snap => snap.docs.forEach(d => toDelete.add(d.id)));
-
-        if (toDelete.size === 0) {
-            console.log('Aucune entrée programme_vols trouvée pour ce vol');
-            return;
-        }
-
-        await Promise.all([...toDelete].map(id => deleteDoc(doc(db,'programme_vols', id))));
-        console.log('✅ programme_vols nettoyé:', toDelete.size, 'entrée(s) supprimée(s)');
-    } catch(e) {
-        console.warn('_deleteProgrammeVol error:', e.message);
     }
 }
 
