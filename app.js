@@ -379,7 +379,7 @@ function handleKeyboardShortcuts(event) {
 // MODAL FUNCTIONS
 // ============================================
 function openModal(flightId = null) {
-    requireAuthentication(() => {
+    const _openModalAction = () => {
         elements.flightModal.classList.add('active');
         
         // Validate flightId - ensure it's a string, not an event object
@@ -453,7 +453,8 @@ function openModal(flightId = null) {
                 updateFlightNumberPrefix(true); // true = isAddMode → champs vides
             }, 60);
         }
-    });
+    };
+    if (window._hasPerm) { _openModalAction(); } else { requireAuthentication(_openModalAction); }
 }
 
 function openEditModal(flightId) {
@@ -1058,31 +1059,25 @@ async function deleteFlight(flightId) {
     }
     console.log('Delete flight called with ID:', flightId);
     
-    const success = await requireAuthentication(async () => {
-        console.log('Authentication passed, proceeding with delete');
+    // Si _hasPerm est actif, l'authentification est déjà validée — pas besoin du mot de passe
+    const doDelete = async () => {
         try {
             const flight = flights.find(f => f.id === flightId);
             if (!flight) {
                 console.log('Flight not found:', flightId);
                 return false;
             }
-            
-            console.log('Found flight to delete:', flight);
-            
+
             // Store for undo
             lastDeletedFlight = { flight, id: flightId };
-            
-            // Delete from Firebase
+
             if (window.dbService && window.dbService.deleteFlight) {
-                console.log('Calling dbService.deleteFlight');
                 try {
-                    const deleteResult = await window.dbService.deleteFlight(flightId);
-                    console.log('Firebase delete result:', deleteResult);
-                    
-                    // Manual UI update as fallback
+                    await window.dbService.deleteFlight(flightId);
+                    // Le listener onSnapshot mettra à jour la liste automatiquement
+                    // mais on met aussi à jour localement pour une réponse immédiate
                     flights = flights.filter(f => f.id !== flightId);
                     render();
-                    
                     showUndoButton();
                     showNotification('Vol supprimé', 'warning');
                     return true;
@@ -1092,7 +1087,6 @@ async function deleteFlight(flightId) {
                     return false;
                 }
             } else {
-                console.error('dbService not available');
                 showNotification('Service de base de données non disponible', 'error');
                 return false;
             }
@@ -1101,8 +1095,17 @@ async function deleteFlight(flightId) {
             showNotification('Erreur lors de la suppression du vol', 'error');
             return false;
         }
-    });
-    
+    };
+
+    let success;
+    if (window._hasPerm) {
+        // Système de permissions actif — pas besoin du mot de passe supplémentaire
+        success = await doDelete();
+    } else {
+        // Ancien système — demande mot de passe
+        success = await requireAuthentication(doDelete);
+    }
+
     console.log('Delete operation result:', success);
     return success;
 }
