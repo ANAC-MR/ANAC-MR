@@ -2093,14 +2093,12 @@ async function loadArchives() {
       return true;
     });
 
-    // Trier par numéro d'autorisation du plus petit au plus grand
+    // Trier par date (asc) puis par N° autorisation (asc)
     archives.sort((a, b) => {
-      const getNum = auth => {
-        if (!auth) return 999999;
-        const m = auth.match(/(\d+)$/);
-        return m ? parseInt(m[1]) : 999999;
-      };
-      return getNum(a.authorizationNumber) - getNum(b.authorizationNumber);
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      if (dateA !== dateB) return dateA < dateB ? -1 : 1;
+      return getAuthNum(a.authorizationNumber) - getAuthNum(b.authorizationNumber);
     });
 
     _archivesCache = archives;
@@ -2237,15 +2235,40 @@ async function exportArchivesPDF(items) {
 
   // Grouper par paires DEP/ARR
   const pages = groupArchivesForPDF(list);
-  let pageIdx = 0;
 
   pages.forEach((pageItems, pi) => {
     if (pi > 0) pdf.addPage();
-    pageItems.forEach((arch, posOnPage) => {
+
+    if (pageItems.length === 2) {
+      // Paire DEP+ARR : un seul grand cadre, ligne au milieu
       const x = margin;
-      const y = margin + posOnPage * (boxH + margin);
-      _drawArchiveBox(pdf, arch, x, y, boxW, boxH);
-    });
+      const y = margin;
+      const fullH = pageH - margin * 2;
+      const halfH = (fullH - 1) / 2; // -1 pour la ligne de séparation
+
+      // Grand cadre unique
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.6);
+      pdf.rect(x, y, boxW, fullH);
+
+      // Ligne horizontale de séparation au milieu
+      pdf.setLineWidth(0.8);
+      pdf.line(x, y + halfH, x + boxW, y + halfH);
+
+      // Dessiner chaque vol dans sa moitié
+      _drawArchiveContent(pdf, pageItems[0], x, y,          boxW, halfH);
+      _drawArchiveContent(pdf, pageItems[1], x, y + halfH,  boxW, halfH);
+
+    } else {
+      // Vol seul : cadre sur toute la page
+      const x = margin;
+      const y = margin;
+      const fullH = pageH - margin * 2;
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.6);
+      pdf.rect(x, y, boxW, fullH);
+      _drawArchiveContent(pdf, pageItems[0], x, y, boxW, fullH);
+    }
   });
 
   const fMonth = (document.getElementById('archMonthFilter')||{}).value||'ALL';
@@ -2255,7 +2278,7 @@ async function exportArchivesPDF(items) {
   toast('PDF exporté — '+list.length+' archive(s)','ok');
 }
 
-function _drawArchiveBox(pdf, arch, x, y, boxW, boxH) {
+function _drawArchiveContent(pdf, arch, x, y, boxW, boxH) {
 
     // ── Bordure noire ──
     pdf.setDrawColor(0, 0, 0);
@@ -2274,22 +2297,31 @@ function _drawArchiveBox(pdf, arch, x, y, boxW, boxH) {
     pdf.setFontSize(10);
     pdf.text(arch.date || '', x+2, y+7.5);
 
-    // N° autorisation + badge DEP/ARR : grand, gras, à droite
+    // N° autorisation avec DÉPART/ARRIVÉE à côté — à droite de la ligne d'en-tête
+    const flightType = arch.flightType || arch.type || '';
+    const typeLbl    = flightType === 'DEP' ? 'DÉPART' : flightType === 'ARR' ? 'ARRIVÉE' : '';
+
     if (arch.authorizationNumber) {
-      // Badge DEP ou ARR (depuis le type du vol dans Firebase)
-      const flightType = arch.type || '';  // 'DEP' ou 'ARR'
-      const typeLbl    = flightType === 'DEP' ? 'DEP' : flightType === 'ARR' ? 'ARR' : '';
+      // N° autorisation : grand, gras
       pdf.setFont('helvetica','bold');
-      pdf.setFontSize(14);
+      pdf.setFontSize(13);
       pdf.setTextColor(0, 0, 0);
       pdf.text(arch.authorizationNumber, x+boxW-2, y+8, {align:'right'});
+
+      // Type (DÉPART / ARRIVÉE) : petit, à gauche du N° auth, même ligne
       if (typeLbl) {
-        pdf.setFontSize(7);
         pdf.setFont('helvetica','bold');
-        pdf.setTextColor(typeLbl==='DEP' ? 74 : 0, typeLbl==='DEP' ? 158 : 180, typeLbl==='DEP' ? 255 : 80);
-        pdf.text(typeLbl, x+boxW-2, y+12, {align:'right'});
-        pdf.setTextColor(0,0,0);
+        pdf.setFontSize(7);
+        pdf.setTextColor(0, 0, 0);
+        const authTextW = pdf.getStringUnitWidth(arch.authorizationNumber) * 13 / pdf.internal.scaleFactor + 2;
+        pdf.text(typeLbl, x+boxW-2-authTextW, y+8, {align:'right'});
       }
+    } else if (typeLbl) {
+      // Pas d'auth mais on affiche quand même le type
+      pdf.setFont('helvetica','bold');
+      pdf.setFontSize(9);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(typeLbl, x+boxW-2, y+8, {align:'right'});
     }
 
     // ── Sous le trait : destination et PAX ──
@@ -2323,7 +2355,7 @@ function _drawArchiveBox(pdf, arch, x, y, boxW, boxH) {
       pdf.setFont('helvetica','italic');
       pdf.text('Généré automatiquement', x+2, y+boxH-2);
     }
-}  // end _drawArchiveBox
+}  // end _drawArchiveContent
 
 // ── Générer automatiquement les archives pour les vols déjà dans Firebase ──
 async function generateMissingArchives() {
@@ -2605,9 +2637,10 @@ function findPair(flightNumber) {
 // Règle: DEP + ARR correspondant → même page (2 par page)
 //        Si pas de paire trouvée ou vol solo → page seule
 function groupArchivesForPDF(archives) {
-  const pages  = [];
-  const used   = new Set();
+  const pages = [];
+  const used  = new Set();
 
+  // archives est déjà trié : date asc, puis auth num asc
   archives.forEach(arch => {
     if (used.has(arch.id)) return;
 
@@ -2620,28 +2653,39 @@ function groupArchivesForPDF(archives) {
       return;
     }
 
-    // Chercher le vol complémentaire dans les archives
+    // Identifier le N° de vol partenaire
     const isThisDep = pair.dep === arch.flightNumber;
     const partnerFn = isThisDep ? pair.arr : pair.dep;
-
-    // Chercher le partenaire avec N° autorisation consécutif (±1) et même date (ou ±1 jour)
     const myAuthNum = getAuthNum(arch.authorizationNumber);
-    const partner   = archives.find(a => {
+    const myMonth   = arch.month || (arch.date ? parseInt(arch.date.split('-')[1]) : 0);
+    const myYear    = arch.year  || (arch.date ? parseInt(arch.date.split('-')[0]) : 0);
+
+    // Chercher le partenaire :
+    //   - même N° vol partenaire
+    //   - N° autorisation consécutif (±1)
+    //   - MÊME mois et même année (contrainte de mois)
+    const partner = archives.find(a => {
       if (used.has(a.id) || a.id === arch.id) return false;
       if (a.flightNumber !== partnerFn) return false;
       const pAuthNum = getAuthNum(a.authorizationNumber);
-      return Math.abs(pAuthNum - myAuthNum) === 1;
+      if (Math.abs(pAuthNum - myAuthNum) !== 1) return false;
+      // Même mois
+      const pMonth = a.month || (a.date ? parseInt(a.date.split('-')[1]) : 0);
+      const pYear  = a.year  || (a.date ? parseInt(a.date.split('-')[0]) : 0);
+      return pMonth === myMonth && pYear === myYear;
     });
 
     if (partner) {
-      // Mettre DEP en haut, ARR en bas
-      const depArch = isThisDep ? arch : partner;
-      const arrArch = isThisDep ? partner : arch;
-      pages.push([depArch, arrArch]);
+      // Ordre dans la page: N° autorisation le plus petit en haut
+      const authA = getAuthNum(arch.authorizationNumber);
+      const authP = getAuthNum(partner.authorizationNumber);
+      const top    = authA < authP ? arch : partner;
+      const bottom = authA < authP ? partner : arch;
+      pages.push([top, bottom]);
       used.add(arch.id);
       used.add(partner.id);
     } else {
-      // Partenaire non trouvé → seul sur sa page
+      // Partenaire absent dans ce mois → seul sur sa page
       pages.push([arch]);
       used.add(arch.id);
     }
