@@ -281,20 +281,25 @@ async function updateFlightInFirestore(flightId, flightData) {
  * Delete a flight from Firestore
  */
 async function deleteFlightFromFirestore(flightId) {
-    console.log('deleteFlightFromFirestore called with ID:', flightId);
+    console.log('deleteFlightFromFirestore called with ID:', flightId, 'type:', typeof flightId);
     if (!isInitialized) {
         throw new Error('Firebase not initialized');
     }
-    
+    if (!flightId || typeof flightId !== 'string' || flightId.trim() === '') {
+        throw new Error('ID de vol invalide: ' + flightId);
+    }
+
     try {
-        const flightRef = doc(db, 'flights', flightId);
-        console.log('Attempting to delete document:', flightRef);
+        const flightRef = doc(db, 'flights', flightId.trim());
+        console.log('Attempting to delete document path:', 'flights/' + flightId.trim());
         await deleteDoc(flightRef);
-        console.log('Flight deleted with ID:', flightId);
-        
+        console.log('✅ Flight successfully deleted from Firebase:', flightId);
         return true;
     } catch (error) {
-        console.error('Error deleting flight:', error);
+        console.error('❌ Error deleting flight from Firebase:');
+        console.error('  - error.code:', error.code);
+        console.error('  - error.message:', error.message);
+        console.error('  - flightId:', flightId);
         if (_isQuotaError(error)) _showQuotaBanner();
         throw error;
     }
