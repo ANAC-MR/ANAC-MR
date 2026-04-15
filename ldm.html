@@ -327,15 +327,21 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
             <div>
               <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">Compagnie</label>
-              <input id="pairCompany" placeholder="ex: Air Algérie" style="width:100%;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;">
+              <select id="pairCompany" onchange="onPairCompanyChange()" style="width:100%;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;">
+                <option value="">— Choisir —</option>
+              </select>
             </div>
             <div>
               <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">N° vol DÉPART</label>
-              <input id="pairDep" placeholder="ex: AH4015" style="width:100%;background:#1e293b;border:1px solid rgba(74,158,255,0.3);border-radius:6px;padding:6px 10px;color:#60a5fa;font-size:12px;font-weight:700;" oninput="this.value=this.value.toUpperCase()">
+              <select id="pairDep" style="width:100%;background:#1e293b;border:1px solid rgba(74,158,255,0.3);border-radius:6px;padding:6px 10px;color:#60a5fa;font-size:12px;font-weight:700;">
+                <option value="">— Choisir compagnie d'abord —</option>
+              </select>
             </div>
             <div>
-              <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">N° vol ARRIVÉE</label>
-              <input id="pairArr" placeholder="ex: AH4014 (vide=solo)" style="width:100%;background:#1e293b;border:1px solid rgba(0,201,141,0.3);border-radius:6px;padding:6px 10px;color:#00c98d;font-size:12px;font-weight:700;" oninput="this.value=this.value.toUpperCase()">
+              <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">N° vol ARRIVÉE <span style="color:#475569;font-weight:400;">(vide = solo)</span></label>
+              <select id="pairArr" style="width:100%;background:#1e293b;border:1px solid rgba(0,201,141,0.3);border-radius:6px;padding:6px 10px;color:#00c98d;font-size:12px;font-weight:700;">
+                <option value="">— Solo (pas de paire) —</option>
+              </select>
             </div>
             <div style="display:flex;gap:6px;">
               <button onclick="savePair()" style="background:rgba(212,175,55,0.2);border:1px solid rgba(212,175,55,0.5);color:#D4AF37;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">💾 Sauver</button>
@@ -2441,23 +2447,104 @@ async function loadPairs() {
   }
 }
 
-function showAddPairForm() {
+// Cache des compagnies et numéros de vols depuis Firebase
+let _pairCompanies = [];
+let _pairFlightNums = {}; // { company: [fn1, fn2, ...] }
+
+async function _loadPairOptions() {
+  if (_pairCompanies.length) return; // déjà chargé
+  try {
+    const { collection, getDocs, query, orderBy } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const db = await _getPairsDB();
+
+    // Charger les numéros de vols depuis flight_numbers
+    const snap = await getDocs(collection(db, 'flight_numbers'));
+    const byCompany = {};
+    snap.forEach(doc => {
+      const d = doc.data();
+      const co = d.company || '';
+      const fn = (d.number || d.flightNumber || '').toUpperCase();
+      if (!co || !fn) return;
+      if (!byCompany[co]) byCompany[co] = new Set();
+      byCompany[co].add(fn);
+    });
+
+    // Fallback: extraire depuis les vols existants si flight_numbers vide
+    if (!Object.keys(byCompany).length) {
+      const snapF = await getDocs(collection(db, 'flights'));
+      snapF.forEach(doc => {
+        if (doc.id.startsWith('cfg-')) return;
+        const d = doc.data();
+        const co = d.company || '';
+        const fn = (d.flightNumber || '').toUpperCase();
+        if (!co || !fn) return;
+        if (!byCompany[co]) byCompany[co] = new Set();
+        byCompany[co].add(fn);
+      });
+    }
+
+    _pairCompanies = Object.keys(byCompany).sort();
+    _pairFlightNums = {};
+    _pairCompanies.forEach(co => {
+      _pairFlightNums[co] = [...byCompany[co]].sort();
+    });
+  } catch(e) { console.warn('loadPairOptions:', e.message); }
+}
+
+function _fillCompanySelect(curVal) {
+  const sel = document.getElementById('pairCompany');
+  sel.innerHTML = '<option value="">— Choisir —</option>';
+  _pairCompanies.forEach(co => {
+    const o = document.createElement('option');
+    o.value = co; o.textContent = co;
+    if (co === curVal) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function _fillFlightSelects(company, curDep, curArr) {
+  const fns  = company ? (_pairFlightNums[company] || []) : [];
+  const depSel = document.getElementById('pairDep');
+  const arrSel = document.getElementById('pairArr');
+
+  depSel.innerHTML = '<option value="">— Choisir —</option>';
+  arrSel.innerHTML = '<option value="">— Solo (pas de paire) —</option>';
+
+  fns.forEach(fn => {
+    const od = document.createElement('option');
+    od.value = fn; od.textContent = fn;
+    if (fn === curDep) od.selected = true;
+    depSel.appendChild(od);
+
+    const oa = document.createElement('option');
+    oa.value = fn; oa.textContent = fn;
+    if (fn === curArr) oa.selected = true;
+    arrSel.appendChild(oa);
+  });
+}
+
+async function onPairCompanyChange() {
+  const co = document.getElementById('pairCompany').value;
+  _fillFlightSelects(co, '', '');
+}
+
+async function showAddPairForm() {
+  await _loadPairOptions();
   document.getElementById('pairFormTitle').textContent = 'Nouvelle paire';
-  document.getElementById('pairCompany').value = '';
-  document.getElementById('pairDep').value = '';
-  document.getElementById('pairArr').value = '';
   document.getElementById('pairEditId').value = '';
+  _fillCompanySelect('');
+  _fillFlightSelects('', '', '');
   document.getElementById('pairForm').style.display = '';
 }
 
-function editPair(id) {
+async function editPair(id) {
   const p = _volPairs.find(x => x.id === id);
   if (!p) return;
+  await _loadPairOptions();
   document.getElementById('pairFormTitle').textContent = 'Modifier la paire';
-  document.getElementById('pairCompany').value = p.company || '';
-  document.getElementById('pairDep').value     = p.dep     || '';
-  document.getElementById('pairArr').value     = p.arr     || '';
-  document.getElementById('pairEditId').value  = id;
+  document.getElementById('pairEditId').value = id;
+  _fillCompanySelect(p.company || '');
+  _fillFlightSelects(p.company || '', p.dep || '', p.arr || '');
   document.getElementById('pairForm').style.display = '';
 }
 
@@ -2466,9 +2553,9 @@ function cancelPairForm() {
 }
 
 async function savePair() {
-  const company = document.getElementById('pairCompany').value.trim();
-  const dep     = document.getElementById('pairDep').value.trim().toUpperCase();
-  const arr     = document.getElementById('pairArr').value.trim().toUpperCase();
+  const company = document.getElementById('pairCompany').value;
+  const dep     = document.getElementById('pairDep').value.toUpperCase();
+  const arr     = document.getElementById('pairArr').value.toUpperCase();
   const editId  = document.getElementById('pairEditId').value;
   if (!company || !dep) { toast('Compagnie et N° vol DEP requis','warn'); return; }
   try {
@@ -2569,7 +2656,8 @@ function getAuthNum(auth) {
   return m ? parseInt(m[1]) : 0;
 }
 
-window.switchArchSub    = switchArchSub;
+window.switchArchSub      = switchArchSub;
+window.onPairCompanyChange = onPairCompanyChange;
 window.loadPairs        = loadPairs;
 window.showAddPairForm  = showAddPairForm;
 window.editPair         = editPair;
