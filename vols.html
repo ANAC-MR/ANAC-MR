@@ -232,6 +232,268 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
 </style>
 </head>
 <body>
+<!-- ═══════════════════════════════════════════════════════════════
+     MENU HAMBURGER UNIFIÉ ANAC - à insérer en haut de chaque page
+     ═══════════════════════════════════════════════════════════════ -->
+<style>
+.anac-menu-btn {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 9998;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0f1e3d 0%, #1a3a6b 100%);
+  border: 1px solid rgba(212,175,55,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.anac-menu-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(212,175,55,0.7);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+.anac-menu-btn .bar {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #D4AF37;
+  margin: 2px 0;
+  border-radius: 1px;
+  transition: all 0.25s ease;
+}
+.anac-menu-btn.open .bar:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.anac-menu-btn.open .bar:nth-child(2) { opacity: 0; }
+.anac-menu-btn.open .bar:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+.anac-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(2px);
+  z-index: 9996;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.anac-menu-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.anac-menu-panel {
+  position: fixed;
+  top: 72px;
+  left: 16px;
+  z-index: 9997;
+  width: 280px;
+  background: linear-gradient(180deg, #0f1e3d 0%, #162a4f 100%);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+  opacity: 0;
+  transform: translateY(-12px) scale(0.96);
+  transform-origin: top left;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  overflow: hidden;
+}
+.anac-menu-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.anac-menu-header {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(212,175,55,0.2);
+  background: rgba(212,175,55,0.05);
+}
+.anac-menu-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #D4AF37;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0;
+}
+.anac-menu-sub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 3px 0 0;
+}
+.anac-menu-items {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.anac-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  color: #e2e8f0;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.anac-menu-item:hover {
+  background: rgba(212,175,55,0.08);
+  border-color: rgba(212,175,55,0.2);
+  color: #D4AF37;
+}
+.anac-menu-item.active {
+  background: rgba(212,175,55,0.15);
+  border-color: rgba(212,175,55,0.4);
+  color: #D4AF37;
+}
+.anac-menu-item .icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.anac-menu-item:hover .icon,
+.anac-menu-item.active .icon {
+  background: rgba(212,175,55,0.15);
+}
+.anac-menu-item .label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.anac-menu-item .label .main {
+  font-weight: 700;
+  line-height: 1.2;
+}
+.anac-menu-item .label .desc {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+.anac-menu-item:hover .label .desc,
+.anac-menu-item.active .label .desc {
+  color: #94a3b8;
+}
+.anac-menu-divider {
+  height: 1px;
+  background: rgba(212,175,55,0.12);
+  margin: 6px 10px;
+}
+.anac-menu-footer {
+  padding: 10px 18px;
+  border-top: 1px solid rgba(212,175,55,0.2);
+  background: rgba(0,0,0,0.15);
+  font-size: 10px;
+  color: #64748b;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 640px) {
+  .anac-menu-panel { width: calc(100vw - 32px); max-width: 320px; }
+}
+</style>
+
+<button class="anac-menu-btn" id="anacMenuBtn" onclick="_anacToggleMenu()" aria-label="Menu principal">
+  <span class="bar"></span>
+  <span class="bar"></span>
+  <span class="bar"></span>
+</button>
+
+<div class="anac-menu-backdrop" id="anacMenuBackdrop" onclick="_anacToggleMenu()"></div>
+
+<div class="anac-menu-panel" id="anacMenuPanel" role="menu">
+  <div class="anac-menu-header">
+    <div class="anac-menu-title">ANAC Mauritanie</div>
+    <div class="anac-menu-sub">Navigation principale</div>
+  </div>
+  <div class="anac-menu-items">
+    <a href="index.html" class="anac-menu-item" data-nav="suivi">
+      <div class="icon">📋</div>
+      <div class="label"><div class="main">Suivi des Vols</div><div class="desc">LISTE ET FILTRES</div></div>
+    </a>
+    <a href="index.html?tab=rapports" class="anac-menu-item" data-nav="rapports">
+      <div class="icon">📊</div>
+      <div class="label"><div class="main">Diagrammes &amp; Rapports</div><div class="desc">STATISTIQUES</div></div>
+    </a>
+    <a href="index.html?tab=facturation" class="anac-menu-item" data-nav="facturation">
+      <div class="icon">🧾</div>
+      <div class="label"><div class="main">Ordre d'émission</div><div class="desc">FACTURATION</div></div>
+    </a>
+    <div class="anac-menu-divider"></div>
+    <a href="vols.html" class="anac-menu-item" data-nav="vols">
+      <div class="icon">🛫</div>
+      <div class="label"><div class="main">Carte des Vols</div><div class="desc">VISUALISATION TEMPS RÉEL</div></div>
+    </a>
+    <a href="ldm.html" class="anac-menu-item" data-nav="ldm">
+      <div class="icon">📨</div>
+      <div class="label"><div class="main">LDM / MVT</div><div class="desc">MESSAGES DE VOL</div></div>
+    </a>
+    <div class="anac-menu-divider"></div>
+    <a href="admin.html" class="anac-menu-item" data-nav="admin">
+      <div class="icon">⚙️</div>
+      <div class="label"><div class="main">Administration</div><div class="desc">CONFIGURATION SYSTÈME</div></div>
+    </a>
+  </div>
+  <div class="anac-menu-footer">AVIATION CIVILE · MAURITANIE</div>
+</div>
+
+<script>
+function _anacToggleMenu() {
+  const btn = document.getElementById('anacMenuBtn');
+  const panel = document.getElementById('anacMenuPanel');
+  const bd = document.getElementById('anacMenuBackdrop');
+  const isOpen = panel.classList.contains('open');
+  if (isOpen) {
+    panel.classList.remove('open');
+    bd.classList.remove('open');
+    btn.classList.remove('open');
+  } else {
+    panel.classList.add('open');
+    bd.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+// Fermer le menu avec Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const panel = document.getElementById('anacMenuPanel');
+    if (panel && panel.classList.contains('open')) _anacToggleMenu();
+  }
+});
+// Marquer l'item actif selon la page courante
+(function() {
+  const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  const urlParams = new URLSearchParams(location.search);
+  const tab = urlParams.get('tab') || 'suivi';
+  document.querySelectorAll('.anac-menu-item').forEach(el => {
+    const nav = el.getAttribute('data-nav');
+    if (path.includes('index') && nav === tab) el.classList.add('active');
+    else if (path.includes('vols') && nav === 'vols') el.classList.add('active');
+    else if (path.includes('ldm') && nav === 'ldm') el.classList.add('active');
+    else if (path.includes('admin') && nav === 'admin') el.classList.add('active');
+  });
+})();
+</script>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
 <header>
   <a class="logo" href="index.html">
     <div class="logo-icon">✈️</div>
