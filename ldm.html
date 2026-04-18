@@ -12,7 +12,9 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Sora',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(212,175,55,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
-.header{position:relative;z-index:10;background:linear-gradient(135deg,var(--navy2),var(--blue));border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;}
+.header{
+  padding-left: 64px;
+position:relative;z-index:10;background:linear-gradient(135deg,var(--navy2),var(--blue));border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;}
 .header-left{display:flex;align-items:center;gap:14px;}
 .hlogo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#b8942a);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .htitle{font-size:18px;font-weight:800;color:var(--accent);}
@@ -339,7 +341,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="anac-menu-items">
     <a href="index.html" class="anac-menu-item" data-nav="suivi">
       <div class="icon">📋</div>
-      <div class="label"><div class="main">Suivi des Vols</div><div class="desc">LISTE ET FILTRES</div></div>
+      <div class="label"><div class="main">Accueil</div><div class="desc">LISTE DES VOLS</div></div>
     </a>
     <a href="index.html?tab=rapports" class="anac-menu-item" data-nav="rapports">
       <div class="icon">📊</div>
