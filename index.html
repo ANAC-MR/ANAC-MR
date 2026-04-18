@@ -4,7 +4,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANAC Mauritanie – Suivi des Vols</title>
+    <title>ANAC Mauritanie – Accueil</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -675,7 +675,7 @@
   <div class="anac-menu-items">
     <a href="index.html" class="anac-menu-item" data-nav="suivi">
       <div class="icon">📋</div>
-      <div class="label"><div class="main">Suivi des Vols</div><div class="desc">LISTE ET FILTRES</div></div>
+      <div class="label"><div class="main">Accueil</div><div class="desc">LISTE DES VOLS</div></div>
     </a>
     <a href="index.html?tab=rapports" class="anac-menu-item" data-nav="rapports">
       <div class="icon">📊</div>
@@ -746,20 +746,14 @@ document.addEventListener('keydown', e => {
     <header>
         <div class="header-content">
             <img src="assets/ANAC-logo.png" alt="ANAC Logo" class="logo">
-            <h1>ANAC Mauritanie – Suivi des Vols</h1>
-            <div style="position:absolute;top:10px;right:10px;display:flex;gap:8px;align-items:center;">
+            <h1>ANAC Mauritanie – Accueil</h1>
 
-            </div>
         </div>
     </header>
 
     <main>
         <!-- TABS -->
-        <div class="main-tabs">
-            <button class="main-tab active" onclick="switchTab('suivi')">📋 Suivi des Vols</button>
-            <button class="main-tab" onclick="switchTab('rapports')">📊 Diagrammes & Rapports</button>
-            <button class="main-tab" onclick="switchTab('facturation')">🧾 Ordre d'émission de facture</button>
-        </div>
+        
 
         <!-- ═══ TAB 1 : SUIVI ═══ -->
         <div class="tab-content active" id="tab-suivi">
