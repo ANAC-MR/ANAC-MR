@@ -20,7 +20,9 @@ html,body{font-family:var(--font);background:var(--bg);color:var(--text);min-hei
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(212,175,55,0.06) 0%,transparent 55%);}
 /* Header */
-header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-filter:blur(20px);
+header{
+  padding-left: 64px;
+position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-filter:blur(20px);
   border-bottom:1px solid var(--border);padding:0 28px;height:54px;
   display:flex;align-items:center;justify-content:space-between;}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
@@ -427,7 +429,7 @@ header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-
   <div class="anac-menu-items">
     <a href="index.html" class="anac-menu-item" data-nav="suivi">
       <div class="icon">📋</div>
-      <div class="label"><div class="main">Suivi des Vols</div><div class="desc">LISTE ET FILTRES</div></div>
+      <div class="label"><div class="main">Accueil</div><div class="desc">LISTE DES VOLS</div></div>
     </a>
     <a href="index.html?tab=rapports" class="anac-menu-item" data-nav="rapports">
       <div class="icon">📊</div>
