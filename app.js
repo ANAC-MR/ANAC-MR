@@ -1153,16 +1153,17 @@ function hideUndoButton() {
 // FILTER FUNCTIONS
 // ============================================
 function handleFilterChange() {
+    if (window._resetPage) window._resetPage();
     render();
 }
 
 function handleTypeFilter(button) {
     currentTypeFilter = button.dataset.type;
-    
-    // Update active state
+
     elements.typeButtons.forEach(btn => btn.classList.remove('btn-active'));
     button.classList.add('btn-active');
-    
+
+    if (window._resetPage) window._resetPage();
     render();
 }
 
@@ -1257,30 +1258,119 @@ function filterFlights() {
 // ============================================
 // RENDER FUNCTIONS
 // ============================================
+// Variables globales pour la pagination
+window._currentPage = window._currentPage || 1;
+window._pageSize    = 50;
+
 function render() {
     const filteredFlights = filterFlights();
-    
-    // Sort by authorization number ascending (smallest to largest)
+
+    // Tri : date croissante (plus ancien en haut), puis N° auth croissant
     filteredFlights.sort((a, b) => {
+        const dA = a.date || '';
+        const dB = b.date || '';
+        if (dA !== dB) return dA < dB ? -1 : 1;
         const getAuthNum = (auth) => {
             if (!auth) return 0;
-            const match = auth.match(/(\d+)$/);
-            return match ? parseInt(match[1]) : 0;
+            const m = auth.match(/(\d+)$/);
+            return m ? parseInt(m[1]) : 0;
         };
         return getAuthNum(a.authorizationNumber) - getAuthNum(b.authorizationNumber);
     });
-    
-    renderTable(filteredFlights);
+
+    // Mémoriser la liste triée pour la pagination
+    window._filteredSorted = filteredFlights;
+
+    // Ajuster la page courante si hors limites (ex: après filtre)
+    const totalPages = Math.max(1, Math.ceil(filteredFlights.length / window._pageSize));
+    if (window._currentPage > totalPages) window._currentPage = totalPages;
+
+    renderTableWithPagination(filteredFlights);
     renderTotals(filteredFlights);
+    renderPaginationControls(filteredFlights.length);
 }
 
-function renderTable(filteredFlights) {
+function renderTableWithPagination(filteredFlights) {
+    const start = (window._currentPage - 1) * window._pageSize;
+    const end   = start + window._pageSize;
+    const pageFlights = filteredFlights.slice(start, end);
+    renderTable(pageFlights, start); // passer l'offset pour la numérotation
+}
+
+function renderPaginationControls(total) {
+    let ctr = document.getElementById('flightPagination');
+    if (!ctr) {
+        // Créer le conteneur sous le tableau s'il n'existe pas
+        const table = document.querySelector('.flights-table, .main-container .table-wrapper, #flightTableBody');
+        if (!table) return;
+        ctr = document.createElement('div');
+        ctr.id = 'flightPagination';
+        ctr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px;margin-top:8px;background:linear-gradient(180deg,#fff,#f8fafb);border:1px solid #e2e8f0;border-radius:12px;font-size:13px;color:#475569;flex-wrap:wrap;';
+        // Insérer après le tableau
+        const parent = document.getElementById('flightTableBody');
+        if (parent && parent.closest('table')) {
+            parent.closest('table').parentNode.appendChild(ctr);
+        }
+    }
+
+    const totalPages = Math.max(1, Math.ceil(total / window._pageSize));
+    const cur = window._currentPage;
+    const start = total === 0 ? 0 : (cur - 1) * window._pageSize + 1;
+    const end   = Math.min(cur * window._pageSize, total);
+
+    const btn = (label, disabled, action) => {
+        const bg = disabled ? '#f1f5f9' : 'linear-gradient(135deg,#0f1e3d,#1a3a6b)';
+        const col = disabled ? '#94a3b8' : '#D4AF37';
+        const bd = disabled ? '#e2e8f0' : 'rgba(212,175,55,0.3)';
+        const cursor = disabled ? 'not-allowed' : 'pointer';
+        return `<button ${disabled?'disabled':''} onclick="${action}" style="background:${bg};color:${col};border:1px solid ${bd};border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:${cursor};transition:all 0.15s;">${label}</button>`;
+    };
+
+    ctr.innerHTML = `
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+            <span style="font-weight:700;color:#1a2d45;">
+                ${total.toLocaleString()} vol${total>1?'s':''}
+            </span>
+            ${total > 0 ? `<span style="color:#64748b;">Affichage ${start.toLocaleString()}–${end.toLocaleString()}</span>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+            ${btn('← Précédent', cur<=1, '_goPrevPage()')}
+            <span style="padding:7px 14px;background:#f8fafb;border:1px solid #e2e8f0;border-radius:8px;font-weight:700;color:#1a2d45;min-width:90px;text-align:center;">
+                Page ${cur} / ${totalPages}
+            </span>
+            ${btn('Suivant →', cur>=totalPages, '_goNextPage()')}
+        </div>
+    `;
+}
+
+window._goPrevPage = function() {
+    if (window._currentPage > 1) {
+        window._currentPage--;
+        render();
+        window.scrollTo({top: document.querySelector('.flights-table')?.getBoundingClientRect().top + window.scrollY - 80 || 0, behavior:'smooth'});
+    }
+};
+window._goNextPage = function() {
+    const total = (window._filteredSorted || []).length;
+    const totalPages = Math.max(1, Math.ceil(total / window._pageSize));
+    if (window._currentPage < totalPages) {
+        window._currentPage++;
+        render();
+        window.scrollTo({top: document.querySelector('.flights-table')?.getBoundingClientRect().top + window.scrollY - 80 || 0, behavior:'smooth'});
+    }
+};
+
+// Reset à la page 1 quand un filtre change
+window._resetPage = function() { window._currentPage = 1; };
+
+function renderTable(filteredFlights, offset) {
     elements.flightTableBody.innerHTML = '';
-    
+    offset = offset || 0;
+
     if (filteredFlights.length === 0) {
         elements.flightTableBody.innerHTML = `
             <tr>
-                <td colspan="11" class="empty-state">
+                <td colspan="12" class="empty-state">
                     <p>Aucun vol trouvé</p>
                     <small>Ajoutez un vol ou modifiez vos filtres</small>
                 </td>
@@ -1288,24 +1378,26 @@ function renderTable(filteredFlights) {
         `;
         return;
     }
-    
-    filteredFlights.forEach(flight => {
-        const row = createFlightRow(flight);
+
+    filteredFlights.forEach((flight, idx) => {
+        const row = createFlightRow(flight, offset + idx + 1);
         elements.flightTableBody.appendChild(row);
     });
 }
 
-function createFlightRow(flight) {
+function createFlightRow(flight, rowNum) {
     const row = document.createElement('tr');
-    
+
     const formattedDate = formatDateEU(flight.date);
     const typeText = flight.type === 'DEP' ? 'Départ' : 'Arrivée';
     const typeClass = flight.type === 'DEP' ? 'type-depart' : 'type-arrivee';
     const authNumber = flight.authorizationNumber || 'N/A';
     const fromCode = flight.from || '–';
     const toCode = flight.to || '–';
-    
+    const numCell = rowNum != null ? `<td style="color:#94a3b8;font-weight:700;text-align:center;width:44px;">${rowNum}</td>` : '';
+
     row.innerHTML = `
+        ${numCell}
         <td><strong>${escapeHtml(authNumber)}</strong></td>
         <td>${formattedDate}</td>
         <td>${escapeHtml(flight.company)}</td>
