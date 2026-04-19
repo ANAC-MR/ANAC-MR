@@ -902,7 +902,7 @@ document.addEventListener('keydown', e => {
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
   <div>
     <h2 style="font-size:20px;font-weight:800;color:#1a2d45;margin:0;">📊 Diagrammes</h2>
-    <p id="chartsSubtitle" style="font-size:12px;color:#5A7A9A;margin:3px 0 0;">Analyse automatique des données de vol</p>
+    
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
     <select id="chartYearFilter" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
@@ -1219,7 +1219,7 @@ document.addEventListener('keydown', e => {
     <div class="fm-grid fm-grid-4">
       <div class="fm-field">
         <label>N° autorisation</label>
-        <input type="text" id="fAuthNumber" placeholder="SNA26-0001" required maxlength="10">
+        <input type="text" id="fAuthNumber" placeholder="" required maxlength="10">
         <small class="field-hint">Format : SNA26-XXXX</small>
       </div>
       <div class="fm-field">
@@ -1228,11 +1228,11 @@ document.addEventListener('keydown', e => {
       </div>
       <div class="fm-field">
         <label>Immatriculation</label>
-        <input type="text" id="fImm" placeholder="Ex: 5T-CLC" required>
+        <input type="text" id="fImm" placeholder="" required>
       </div>
       <div class="fm-field">
         <label>N° Vol</label>
-        <input type="text" id="fVol" placeholder="Ex: L6-123" required>
+        <input type="text" id="fVol" placeholder="" required>
       </div>
     </div>
 
@@ -2697,7 +2697,7 @@ window._hasPerm = function(perm) {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <div>
         <div style="font-size:17px;font-weight:800;color:#e2e8f0;">⬇ Exporter en Excel</div>
-        <div style="font-size:12px;color:#5A7A9A;margin-top:3px;">Choisissez les colonnes à inclure</div>
+        
       </div>
       <button onclick="document.getElementById('exportModal').style.display='none'"
         style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
@@ -2971,10 +2971,10 @@ window._hasPerm = function(perm) {
       html = `<label>Aéroport d'arrivée</label><select id="_fTo" data-autoapply="to">${$('toSelect').innerHTML}</select>`;
     }
     else if (id === 'imm') {
-      html = `<label>Immatriculation</label><input type="text" id="_fIm" value="${$('searchImm').value}" placeholder="Ex: 7T-VKB">`;
+      html = `<label>Immatriculation</label><input type="text" id="_fIm" value="${$('searchImm').value}" placeholder="">`;
     }
     else if (id === 'vol') {
-      html = `<label>N° Vol</label><input type="text" id="_fVn" value="${$('searchVol').value}" placeholder="Ex: AH4015">`;
+      html = `<label>N° Vol</label><input type="text" id="_fVn" value="${$('searchVol').value}" placeholder="">`;
     }
 
     // Bouton Appliquer uniquement pour les champs texte (immat, vol)
@@ -2983,7 +2983,7 @@ window._hasPerm = function(perm) {
         <button class="btn-cancel" onclick="this.closest('.chip-edit').remove()">Annuler</button>
         <button class="btn-ok" onclick="_applyChipEdit('${id}')">Appliquer</button></div>`;
     } else {
-      html += `<div style="margin-top:10px;font-size:11px;color:#94a3b8;text-align:center;">Le filtre s'applique automatiquement</div>`;
+      // Pas de message d'aide superflu
     }
 
     box.innerHTML = html;
