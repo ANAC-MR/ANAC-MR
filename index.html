@@ -486,12 +486,12 @@
 <style>
 .anac-menu-btn {
   position: fixed;
-  top: 16px;
-  left: 16px;
+  top: 14px;
+  left: 14px;
   z-index: 9998;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
   background: linear-gradient(135deg, #0f1e3d 0%, #1a3a6b 100%);
   border: 1px solid rgba(212,175,55,0.3);
   display: flex;
@@ -508,7 +508,7 @@
 }
 .anac-menu-btn .bar {
   display: block;
-  width: 18px;
+  width: 16px;
   height: 2px;
   background: #D4AF37;
   margin: 2px 0;
@@ -536,10 +536,10 @@
 
 .anac-menu-panel {
   position: fixed;
-  top: 72px;
-  left: 16px;
+  top: 62px;
+  left: 14px;
   z-index: 9997;
-  width: 280px;
+  width: 270px;
   background: linear-gradient(180deg, #0f1e3d 0%, #162a4f 100%);
   border: 1px solid rgba(212,175,55,0.3);
   border-radius: 14px;
@@ -603,6 +603,21 @@
   background: rgba(212,175,55,0.15);
   border-color: rgba(212,175,55,0.4);
   color: #D4AF37;
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.65;
+}
+.anac-menu-item.active::after {
+  content: '';
+  margin-left: auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #D4AF37;
+}
+.anac-menu-item.active:hover {
+  background: rgba(212,175,55,0.15);
+  border-color: rgba(212,175,55,0.4);
 }
 .anac-menu-item .icon {
   width: 28px;
@@ -733,10 +748,19 @@ document.addEventListener('keydown', e => {
   const tab = urlParams.get('tab') || 'suivi';
   document.querySelectorAll('.anac-menu-item').forEach(el => {
     const nav = el.getAttribute('data-nav');
-    if (path.includes('index') && nav === tab) el.classList.add('active');
-    else if (path.includes('vols') && nav === 'vols') el.classList.add('active');
-    else if (path.includes('ldm') && nav === 'ldm') el.classList.add('active');
-    else if (path.includes('admin') && nav === 'admin') el.classList.add('active');
+    let isActive = false;
+    if (path.includes('index')) {
+      if (nav === tab) isActive = true;
+    }
+    else if (path.includes('vols') && nav === 'vols') isActive = true;
+    else if (path.includes('ldm') && nav === 'ldm') isActive = true;
+    else if (path.includes('admin') && nav === 'admin') isActive = true;
+
+    if (isActive) {
+      el.classList.add('active');
+      // Prévenir navigation quand on est déjà sur la page
+      el.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+    }
   });
 })();
 </script>
@@ -1481,16 +1505,20 @@ function darkOpts(extra){
 }
 
 // ── Colonnes disponibles pour l'export ──
+// Colonnes d'export — lues directement depuis les objets vols (pas depuis le DOM)
 const EXPORT_COLS=[
-    {key:'date',         label:'Date',              tdIdx:1,  def:true},
-    {key:'company',      label:'Compagnie',          tdIdx:2,  def:true},
-    {key:'registration', label:'Immatriculation',    tdIdx:3,  def:false},
-    {key:'flightNum',    label:'N° de vol',          tdIdx:4,  def:true},
-    {key:'from',         label:'Ville Départ',       tdIdx:5,  def:true},
-    {key:'to',           label:'Ville Arrivée',      tdIdx:6,  def:true},
-    {key:'type',         label:'Type (DEP/ARR)',     tdIdx:7,  def:false},
-    {key:'pax',          label:'Passagers',          tdIdx:8,  def:true},
-    {key:'babies',       label:'Bébés',              tdIdx:9,  def:true},
+    {key:'authorizationNumber', label:"N° d'autorisation", def:false},
+    {key:'date',                label:'Date',              def:true},
+    {key:'company',             label:'Compagnie',         def:true},
+    {key:'registration',        label:'Immatriculation',   def:false},
+    {key:'flightNumber',        label:'N° de vol',         def:true},
+    {key:'from',                label:'Départ (code)',     def:true},
+    {key:'_fromCity',           label:'Ville Départ',      def:false},
+    {key:'to',                  label:'Arrivée (code)',    def:true},
+    {key:'_toCity',             label:'Ville Arrivée',     def:false},
+    {key:'type',                label:'Type (DEP/ARR)',    def:true},
+    {key:'passengers',          label:'Passagers',         def:true},
+    {key:'babies',              label:'Bébés',             def:true},
 ];
 
 function exportSuiviExcel(){
@@ -1503,31 +1531,68 @@ window.exportSuiviExcel=exportSuiviExcel;
 
 
 window.doExport=function(){
-    const tbody=document.getElementById('flightTableBody');
-    const trs=tbody.querySelectorAll('tr');
     // Colonnes cochées
     const selected=EXPORT_COLS.filter(col=>document.getElementById('excol_'+col.key)?.checked);
     if(!selected.length){alert('Cochez au moins une colonne.');return;}
 
-    const rows=[];
-    trs.forEach(tr=>{
-        const cells=[...tr.querySelectorAll('td')];
-        if(!cells.length)return;
-        rows.push(selected.map(col=>(cells[col.tdIdx]?.textContent||'').trim()));
-    });
+    // Utiliser la LISTE FILTRÉE COMPLÈTE (pas le DOM paginé)
+    // window._filteredSorted est maintenu par app.js render()
+    const flights = window._filteredSorted || (window.app && window.app.filterFlights && window.app.filterFlights()) || window.appFlights || [];
 
-    if(!rows.length){alert('Aucun vol à exporter.');return;}
+    if(!flights.length){alert('Aucun vol à exporter.');return;}
 
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet([selected.map(c=>c.label),...rows]);
-    ws['!cols']=selected.map(()=>({wch:16}));
-    const co=document.getElementById('companySelect')?.value||'ALL';
-    const parts=['ANAC-Vols'];
-    if(co!=='ALL')parts.push(co.replace(/\s+/g,'_').slice(0,15));
-    parts.push('('+rows.length+'vols)');
-    XLSX.utils.book_append_sheet(wb,ws,'Vols');
-    XLSX.writeFile(wb,parts.join('-')+'.xlsx');
-    document.getElementById('exportModal').style.display='none';
+    // Construire les lignes depuis les objets vols directement
+    const formatDateEU = (d) => {
+        if(!d) return '';
+        const s = d.toString().slice(0,10);
+        const parts = s.split('-');
+        if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
+        return s;
+    };
+
+    const cityName = (code) => {
+        if(!code) return '';
+        const CITIES = {
+            'GQNO':'Nouakchott','GQNN':'Nouakchott','NKC':'Nouakchott',
+            'GQPP':'Nouadhibou','NDB':'Nouadhibou','GQPZ':'Zouerate','OUZ':'Zouerate',
+            'GQNI':'Nema','EMN':'Nema','GQPF':'Kiffa','KFA':'Kiffa',
+            'GMMN':'Casablanca','CMN':'Casablanca','GMAD':'Agadir','AGA':'Agadir',
+            'DAAG':'Alger','ALG':'Alger','DTTA':'Tunis','TUN':'Tunis',
+            'GOBD':'Dakar','DKR':'Dakar','LFPG':'Paris','CDG':'Paris',
+            'GMME':'Rabat','RBA':'Rabat','LEMD':'Madrid','MAD':'Madrid',
+            'GCLP':'Las Palmas','LPA':'Las Palmas','DXXX':'Lome','LFW':'Lome',
+        };
+        return CITIES[code.toUpperCase()] || code;
+    };
+
+    const getCellValue = (flight, key) => {
+        if (key === 'date') return formatDateEU(flight.date);
+        if (key === '_fromCity') return cityName(flight.from || '');
+        if (key === '_toCity') return cityName(flight.to || '');
+        if (key === 'type') return flight.type === 'DEP' ? 'Départ' : (flight.type === 'ARR' ? 'Arrivée' : (flight.type || ''));
+        if (key === 'passengers' || key === 'babies') return +flight[key] || 0;
+        return flight[key] || '';
+    };
+
+    const rows = flights.map(f => selected.map(col => getCellValue(f, col.key)));
+
+    // Créer le workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([selected.map(c=>c.label), ...rows]);
+
+    // Largeurs colonnes adaptées
+    const widths = { date:12, company:22, registration:14, flightNumber:10, from:8, _fromCity:16, to:8, _toCity:16, type:10, passengers:12, babies:8, authorizationNumber:18 };
+    ws['!cols'] = selected.map(c => ({ wch: widths[c.key] || 14 }));
+
+    // Nom de fichier
+    const co = document.getElementById('companySelect')?.value || 'ALL';
+    const parts = ['ANAC-Vols'];
+    if (co !== 'ALL') parts.push(co.replace(/\s+/g,'_').slice(0,15));
+    parts.push('(' + rows.length + 'vols)');
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Vols');
+    XLSX.writeFile(wb, parts.join('-') + '.xlsx');
+    document.getElementById('exportModal').style.display = 'none';
 };
 
 function exportExcel(){
