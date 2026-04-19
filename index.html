@@ -797,13 +797,15 @@ document.addEventListener('keydown', e => {
                 .chip .close{opacity:0.7;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;border-radius:50%;transition:all 0.15s;}
                 .chip .close:hover{opacity:1;background:rgba(255,255,255,0.15);}
                 .chip-add{padding:6px 14px;font-size:12px;background:#fff;color:#D4AF37;border:1px dashed #D4AF37;border-radius:20px;font-weight:600;cursor:pointer;transition:all 0.15s;}
+                .chip-quick{padding:6px 12px;font-size:12px;background:#f8fafc;color:#1a2d45;border:1px solid #e5e7eb;border-radius:20px;font-weight:600;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:4px;}
+                .chip-quick:hover{background:#fff;border-color:#D4AF37;color:#0f1e3d;}
                 .chip-add:hover{background:#D4AF37;color:#0f1e3d;}
                 .type-seg{display:flex;gap:2px;padding:3px;background:#f1f5f9;border-radius:10px;margin-left:auto;}
                 .type-seg button{padding:6px 12px;font-size:12px;background:transparent;color:#475569;border:none;border-radius:7px;font-weight:600;cursor:pointer;transition:all 0.15s;}
                 .type-seg button.btn-active{background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;}
                 .chip-reset{padding:6px 12px;font-size:11px;background:transparent;color:#64748b;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;font-weight:600;}
                 .chip-reset:hover{background:#f8fafc;color:#1a2d45;}
-                .chip-picker{position:absolute;z-index:100;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.12);padding:10px;min-width:280px;}
+                .chip-picker{position:absolute;z-index:100;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.12);padding:8px;width:260px;}
                 .chip-picker .pk-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:#1a2d45;font-weight:500;}
                 .chip-picker .pk-item:hover{background:#f1f5f9;color:#0f1e3d;}
                 .chip-picker .pk-ic{width:26px;height:26px;border-radius:7px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:13px;}
@@ -820,7 +822,14 @@ document.addEventListener('keydown', e => {
               <div class="chips-bar" id="chipsBar" style="position:relative;">
                 <span class="chip-label">Filtres actifs :</span>
                 <div id="chipsList" style="display:contents;"></div>
+
+                <!-- Raccourcis filtres fréquents -->
+                <button class="chip-quick" id="qkPeriod" onclick="_openChipEditor('period',event)">📅 Période</button>
+                <button class="chip-quick" id="qkDates" onclick="_openChipEditor('dates',event)">📆 Dates</button>
+                <button class="chip-quick" id="qkCompany" onclick="_openChipEditor('company',event)">✈️ Compagnie</button>
+
                 <button class="chip-add" id="btnAddChip" onclick="_toggleChipPicker(event)">＋ Ajouter filtre</button>
+
                 <div class="type-seg" id="typeSeg">
                   <button class="btn-active" data-type="ALL">Tout</button>
                   <button data-type="DEP">Départ</button>
@@ -2768,10 +2777,8 @@ window._hasPerm = function(perm) {
 (function(){
   // ═══ CONFIG FILTRES DISPONIBLES ═══
   const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  // Filtres accessibles via "+ Ajouter filtre" (les fréquents sont déjà en raccourci)
   const FILTER_DEFS = [
-    { id:'period',   icon:'📅', label:'Période (année/mois)' },
-    { id:'dates',    icon:'📆', label:'Dates personnalisées' },
-    { id:'company',  icon:'✈️', label:'Compagnie' },
     { id:'from',     icon:'🛫', label:'Départ de' },
     { id:'to',       icon:'🛬', label:'Arrivée à' },
     { id:'imm',      icon:'🏷️', label:'Immatriculation' },
@@ -2897,8 +2904,12 @@ window._hasPerm = function(perm) {
     const pk = document.createElement('div');
     pk.className = 'chip-picker';
     const rect = btn.getBoundingClientRect();
-    pk.style.top = (rect.bottom + window.scrollY + 6) + 'px';
-    pk.style.left = (rect.left + window.scrollX) + 'px';
+    // Position le picker sous le bouton, en s'assurant qu'il ne dépasse pas à droite
+    const pkWidth = 260;
+    let left = rect.left + window.scrollX;
+    if (left + pkWidth > window.innerWidth - 10) left = window.innerWidth - pkWidth - 10;
+    pk.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+    pk.style.left = left + 'px';
     pk.innerHTML = FILTER_DEFS.map(f => `
       <div class="pk-item" onclick="_openChipEditor('${f.id}',event)">
         <span class="pk-ic">${f.icon}</span>
@@ -2921,32 +2932,43 @@ window._hasPerm = function(perm) {
     if (existing) existing.remove();
     const box = document.createElement('div');
     box.className = 'chip-edit';
-    const anchor = e ? e.currentTarget.getBoundingClientRect() : $('btnAddChip').getBoundingClientRect();
-    box.style.top = (anchor.bottom + window.scrollY + 6) + 'px';
-    box.style.left = Math.min(anchor.left + window.scrollX, window.innerWidth-280) + 'px';
 
+    // Positionner SOUS l'élément cliqué, pas en haut à droite
+    const anchor = e && e.currentTarget
+      ? e.currentTarget.getBoundingClientRect()
+      : $('btnAddChip').getBoundingClientRect();
+    const boxWidth = 260;
+    let left = anchor.left + window.scrollX;
+    if (left + boxWidth > window.innerWidth - 10) left = window.innerWidth - boxWidth - 10;
+    if (left < 10) left = 10;
+    box.style.top = (anchor.bottom + window.scrollY + 8) + 'px';
+    box.style.left = left + 'px';
+
+    // Champs avec attributs pour l'application auto
+    const isInputOnly = (id === 'imm' || id === 'vol');
     let html = '';
+
     if (id === 'period') {
       const ySel = $('yearSelect').innerHTML;
       const mCur = $('monthSelect').value;
-      html = `<label>Année</label><select id="_fY">${ySel}</select>
+      html = `<label>Année</label><select id="_fY" data-autoapply="period_year">${ySel}</select>
               <label style="margin-top:10px;">Mois</label>
-              <select id="_fM"><option value="ALL">Tous les mois</option>
+              <select id="_fM" data-autoapply="period_month"><option value="ALL">Tous les mois</option>
                 ${MONTHS_FR.map((n,i)=>`<option value="${i}"${i==mCur?' selected':''}>${n}</option>`).join('')}
               </select>`;
     }
     else if (id === 'dates') {
-      html = `<div class="row"><div><label>Du</label><input type="date" id="_fD1" value="${$('searchFrom').value}"></div>
-              <div><label>Au</label><input type="date" id="_fD2" value="${$('searchTo').value}"></div></div>`;
+      html = `<div class="row"><div><label>Du</label><input type="date" id="_fD1" data-autoapply="dates" value="${$('searchFrom').value}"></div>
+              <div><label>Au</label><input type="date" id="_fD2" data-autoapply="dates" value="${$('searchTo').value}"></div></div>`;
     }
     else if (id === 'company') {
-      html = `<label>Compagnie</label><select id="_fCo">${$('companySelect').innerHTML}</select>`;
+      html = `<label>Compagnie</label><select id="_fCo" data-autoapply="company">${$('companySelect').innerHTML}</select>`;
     }
     else if (id === 'from') {
-      html = `<label>Aéroport de départ</label><select id="_fFr">${$('fromSelect').innerHTML}</select>`;
+      html = `<label>Aéroport de départ</label><select id="_fFr" data-autoapply="from">${$('fromSelect').innerHTML}</select>`;
     }
     else if (id === 'to') {
-      html = `<label>Aéroport d'arrivée</label><select id="_fTo">${$('toSelect').innerHTML}</select>`;
+      html = `<label>Aéroport d'arrivée</label><select id="_fTo" data-autoapply="to">${$('toSelect').innerHTML}</select>`;
     }
     else if (id === 'imm') {
       html = `<label>Immatriculation</label><input type="text" id="_fIm" value="${$('searchImm').value}" placeholder="Ex: 7T-VKB">`;
@@ -2954,28 +2976,69 @@ window._hasPerm = function(perm) {
     else if (id === 'vol') {
       html = `<label>N° Vol</label><input type="text" id="_fVn" value="${$('searchVol').value}" placeholder="Ex: AH4015">`;
     }
-    html += `<div class="btns">
-      <button class="btn-cancel" onclick="this.closest('.chip-edit').remove()">Annuler</button>
-      <button class="btn-ok" onclick="_applyChipEdit('${id}')">Appliquer</button></div>`;
+
+    // Bouton Appliquer uniquement pour les champs texte (immat, vol)
+    if (isInputOnly) {
+      html += `<div class="btns">
+        <button class="btn-cancel" onclick="this.closest('.chip-edit').remove()">Annuler</button>
+        <button class="btn-ok" onclick="_applyChipEdit('${id}')">Appliquer</button></div>`;
+    } else {
+      html += `<div style="margin-top:10px;font-size:11px;color:#94a3b8;text-align:center;">Le filtre s'applique automatiquement</div>`;
+    }
+
     box.innerHTML = html;
     document.body.appendChild(box);
-    // Set year value
+
+    // Set current values
     if (id === 'period') { $('_fY').value = $('yearSelect').value; }
     if (id === 'company') { $('_fCo').value = $('companySelect').value; }
     if (id === 'from') { $('_fFr').value = $('fromSelect').value; }
     if (id === 'to') { $('_fTo').value = $('toSelect').value; }
+
+    // AUTO-APPLY : écouter les changements et appliquer immédiatement
+    box.querySelectorAll('[data-autoapply]').forEach(el => {
+      el.addEventListener('change', () => {
+        _applyChipEdit(id);
+        // Pour les selects : fermer après application
+        if (el.tagName === 'SELECT') {
+          setTimeout(() => box.remove(), 150);
+        }
+      });
+    });
+
+    // Pour les inputs texte : Entrée pour appliquer
+    box.querySelectorAll('input[type="text"]').forEach(el => {
+      el.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') _applyChipEdit(id);
+      });
+    });
+
+    // Fermer si clic en dehors
+    setTimeout(() => {
+      document.addEventListener('click', function rm(ev) {
+        if (!box.contains(ev.target) && !ev.target.closest('.chip, .chip-quick, #btnAddChip, .pk-item')) {
+          box.remove();
+          document.removeEventListener('click', rm);
+        }
+      });
+    }, 10);
   };
 
   window._applyChipEdit = function(id) {
-    if (id === 'period') { _set('yearSelect', $('_fY').value); _set('monthSelect', $('_fM').value); }
-    else if (id === 'dates') { _set('searchFrom', $('_fD1').value); _set('searchTo', $('_fD2').value); }
-    else if (id === 'company') { _set('companySelect', $('_fCo').value); }
-    else if (id === 'from') { _set('fromSelect', $('_fFr').value); }
-    else if (id === 'to') { _set('toSelect', $('_fTo').value); }
-    else if (id === 'imm') { _set('searchImm', $('_fIm').value.trim()); }
-    else if (id === 'vol') { _set('searchVol', $('_fVn').value.trim()); }
+    if (id === 'period') {
+      if ($('_fY')) _set('yearSelect', $('_fY').value);
+      if ($('_fM')) _set('monthSelect', $('_fM').value);
+    }
+    else if (id === 'dates') {
+      if ($('_fD1')) _set('searchFrom', $('_fD1').value);
+      if ($('_fD2')) _set('searchTo', $('_fD2').value);
+    }
+    else if (id === 'company' && $('_fCo')) { _set('companySelect', $('_fCo').value); }
+    else if (id === 'from' && $('_fFr'))    { _set('fromSelect', $('_fFr').value); }
+    else if (id === 'to' && $('_fTo'))      { _set('toSelect', $('_fTo').value); }
+    else if (id === 'imm' && $('_fIm'))     { _set('searchImm', $('_fIm').value.trim()); document.querySelector('.chip-edit')?.remove(); }
+    else if (id === 'vol' && $('_fVn'))     { _set('searchVol', $('_fVn').value.trim()); document.querySelector('.chip-edit')?.remove(); }
     _syncBothWays(id);
-    document.querySelector('.chip-edit')?.remove();
     _renderChips();
   };
 
