@@ -1272,11 +1272,11 @@ document.addEventListener('keydown', e => {
         <form id="loginForm">
             <div class="login-field">
                 <label>Identifiant</label>
-                <input type="text" id="loginUser" placeholder="admin" autocomplete="username" required>
+                <input type="text" id="loginUser" placeholder="" autocomplete="username" required>
             </div>
             <div class="login-field">
                 <label>Mot de passe</label>
-                <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
+                <input type="password" id="loginPass" placeholder="" autocomplete="current-password" required>
                 <span class="login-error" id="loginError">Identifiants incorrects. Réessayez.</span>
             </div>
             <button type="submit" class="btn-login">Connexion</button>
@@ -1347,7 +1347,6 @@ document.addEventListener('keydown', e => {
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>Tableau de bord</h2>
-                        <p>Vue d'ensemble de la configuration</p>
                     </div>
                 </div>
 
@@ -1386,7 +1385,6 @@ document.addEventListener('keydown', e => {
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>Compagnies aériennes</h2>
-                        <p>Gérez les compagnies disponibles dans le système</p>
                     </div>
                     <button class="btn-gold" onclick="openAirlineModal()">
                         ＋ Ajouter une compagnie
@@ -1425,7 +1423,6 @@ document.addEventListener('keydown', e => {
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>Aéroports & Destinations</h2>
-                        <p>Gérez les aéroports de départ et d'arrivée</p>
                     </div>
                     <button class="btn-gold" onclick="openAirportModal()">
                         ＋ Ajouter un aéroport
@@ -1463,7 +1460,6 @@ document.addEventListener('keydown', e => {
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>Format du numéro d'autorisation</h2>
-                        <p>Définissez et verrouillez le format du numéro d'autorisation</p>
                     </div>
                 </div>
 
@@ -1473,7 +1469,7 @@ document.addEventListener('keydown', e => {
                     <div class="form-grid" style="margin-bottom:24px;">
                         <div class="field-group">
                             <label>Préfixe (texte fixe)</label>
-                            <input type="text" id="fmtPrefix" placeholder="Ex: SNA26" maxlength="8"
+                            <input type="text" id="fmtPrefix" placeholder="" maxlength="8"
                                    oninput="this.value=this.value.toUpperCase(); updateFormatPreview()">
                             <span class="hint">Partie fixe au début (lettres, chiffres)</span>
                         </div>
@@ -1497,7 +1493,7 @@ document.addEventListener('keydown', e => {
                         </div>
                         <div class="field-group">
                             <label>Suffixe (optionnel)</label>
-                            <input type="text" id="fmtSuffix" placeholder="Ex: /MR" maxlength="6"
+                            <input type="text" id="fmtSuffix" placeholder="" maxlength="6"
                                    oninput="this.value=this.value.toUpperCase(); updateFormatPreview()">
                         </div>
                     </div>
@@ -1539,7 +1535,6 @@ document.addEventListener('keydown', e => {
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>📋 Programme de Vols</h2>
-                        <p>Gérez les programmes importés par compagnie — vert = saisi, rouge = manquant</p>
                     </div>
                     <button class="btn-primary" onclick="openImportProgModal()">📥 Importer un Programme</button>
                 </div>
@@ -1548,7 +1543,7 @@ document.addEventListener('keydown', e => {
                 <div class="card" style="margin-bottom:16px;">
                     <div class="card-title">🔍 Recherche par N° Autorisation</div>
                     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                        <input type="text" id="authSearchInput" placeholder="Ex: SNA26-0042"
+                        <input type="text" id="authSearchInput" placeholder=""
                             style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 16px;color:#fff;font-size:14px;font-weight:600;width:260px;text-transform:uppercase;"
                             oninput="this.value=this.value.toUpperCase()" onkeyup="if(event.key==='Enter')searchByAuth()">
                         <button class="btn-primary" onclick="searchByAuth()" style="padding:10px 22px;">🔍 Rechercher</button>
@@ -1566,7 +1561,6 @@ document.addEventListener('keydown', e => {
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>🔢 Numéros de Vol</h2>
-                        <p>Associez un numéro de vol à ses informations (compagnie, origine, destination, type)</p>
                     </div>
                     <button class="btn-primary" onclick="showAddFlightNumModal()">+ Ajouter un numéro</button>
                 </div>
@@ -1579,7 +1573,7 @@ document.addEventListener('keydown', e => {
                                 style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 10px;color:#e2e8f0;font-size:12px;">
                                 <option value="">Toutes les compagnies</option>
                             </select>
-                            <input type="text" id="fnSearch" placeholder="Rechercher..." oninput="filterFlightNums()"
+                            <input type="text" id="fnSearch" placeholder="Rechercher" oninput="filterFlightNums()"
                                 style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 12px;color:#fff;font-size:12px;width:160px;">
                         </div>
                     </div>
@@ -1591,7 +1585,6 @@ document.addEventListener('keydown', e => {
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>Sécurité & Utilisateurs</h2>
-                        <p>Contrôle total des accès — modifications appliquées sur tous les appareils</p>
                     </div>
                 </div>
 
@@ -1604,19 +1597,19 @@ document.addEventListener('keydown', e => {
                     <div class="form-grid">
                         <div class="field-group">
                             <label>Identifiant actuel</label>
-                            <input type="text" id="secCurrUser" autocomplete="new-password" placeholder="Identifiant actuel">
+                            <input type="text" id="secCurrUser" autocomplete="new-password" placeholder="">
                         </div>
                         <div class="field-group">
                             <label>Nouvel identifiant <span style="color:var(--text-dim);font-weight:400;">(laisser vide = inchangé)</span></label>
-                            <input type="text" id="secNewUser" autocomplete="new-password" placeholder="Nouveau identifiant" style="text-transform:uppercase;">
+                            <input type="text" id="secNewUser" autocomplete="new-password" placeholder="" style="text-transform:uppercase;">
                         </div>
                         <div class="field-group">
                             <label>Mot de passe actuel</label>
-                            <input type="password" id="secCurrentPass" autocomplete="new-password" placeholder="••••••••">
+                            <input type="password" id="secCurrentPass" autocomplete="new-password" placeholder="">
                         </div>
                         <div class="field-group">
                             <label>Nouveau mot de passe <span style="color:var(--text-dim);font-weight:400;">(laisser vide = inchangé)</span></label>
-                            <input type="password" id="secNewPass" autocomplete="new-password" placeholder="••••••••" oninput="checkPasswordStrength()">
+                            <input type="password" id="secNewPass" autocomplete="new-password" placeholder="" oninput="checkPasswordStrength()">
                             <div id="strengthBar" style="height:4px;border-radius:2px;background:rgba(255,255,255,0.1);margin-top:8px;overflow:hidden;">
                                 <div id="strengthFill" style="height:100%;width:0%;transition:width 0.3s,background 0.3s;"></div>
                             </div>
@@ -1624,7 +1617,7 @@ document.addEventListener('keydown', e => {
                         </div>
                         <div class="field-group">
                             <label>Confirmer nouveau mot de passe</label>
-                            <input type="password" id="secConfirmPass" autocomplete="new-password" placeholder="••••••••">
+                            <input type="password" id="secConfirmPass" autocomplete="new-password" placeholder="">
                         </div>
                     </div>
                     <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -1662,7 +1655,6 @@ document.addEventListener('keydown', e => {
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>📂 Chargement de Vols</h2>
-                        <p>Importez un fichier Excel ou Word pour alimenter automatiquement les vols</p>
                     </div>
                 </div>
 
@@ -1745,7 +1737,6 @@ document.addEventListener('keydown', e => {
                 <div class="page-header">
                     <div class="page-header-left">
                         <h2>🗓️ Horaires & Vols</h2>
-                        <p>Programme d'exploitation par compagnie — jours d'opération, routing et périodes</p>
                     </div>
                     <button class="btn-primary" onclick="_schedOpenAdd()">+ Ajouter un vol</button>
                 </div>
@@ -1756,7 +1747,7 @@ document.addEventListener('keydown', e => {
                         style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;min-width:200px;">
                         <option value="">Toutes les compagnies</option>
                     </select>
-                    <input type="text" id="schedSearch" placeholder="Rechercher vol, routing..."
+                    <input type="text" id="schedSearch" placeholder="Rechercher"
                         oninput="_schedRender()"
                         style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;width:220px;">
                     <span id="schedCount" style="font-size:12px;color:#64748b;"></span>
@@ -1812,7 +1803,7 @@ document.addEventListener('keydown', e => {
         <div class="form-grid">
             <div class="field-group form-full">
                 <label>Numéro de vol *</label>
-                <input type="text" id="fnNumber" placeholder="Ex: L6301" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                <input type="text" id="fnNumber" placeholder="" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="field-group">
                 <label>Compagnie *</label>
@@ -1854,9 +1845,7 @@ document.addEventListener('keydown', e => {
                 </div>
             </div>
         </div>
-        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:9px;padding:12px 14px;margin-top:12px;font-size:12px;color:#60a5fa;">
-            💡 Quand un opérateur saisit ce numéro, les champs <strong>Compagnie, De, Vers, Type et Escale</strong> sont remplis automatiquement. Les codes IATA sont affichés.
-        </div>
+
         <div class="modal-footer">
             <button class="btn-secondary" onclick="closeModal('flightNumModal')">Annuler</button>
             <button class="btn-primary" onclick="saveFlightNum()">💾 Enregistrer</button>
@@ -1924,13 +1913,13 @@ document.addEventListener('keydown', e => {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
             <div>
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">N° AUTORISATION *</label>
-                <input id="addVolProgAuth" type="text" placeholder="SNA26-XXXX"
+                <input id="addVolProgAuth" type="text" placeholder=""
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;text-transform:uppercase;"
                     oninput="this.value=this.value.toUpperCase()">
             </div>
             <div>
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">N° VOL</label>
-                <input id="addVolProgFlight" type="text" placeholder="Ex: TK571"
+                <input id="addVolProgFlight" type="text" placeholder=""
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;text-transform:uppercase;"
                     oninput="this.value=this.value.toUpperCase()">
             </div>
@@ -1941,7 +1930,7 @@ document.addEventListener('keydown', e => {
             </div>
             <div>
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">DÉCISION</label>
-                <input id="addVolProgDecision" type="text" placeholder="Ex: 0844/ANAC/DG/DTA/2025"
+                <input id="addVolProgDecision" type="text" placeholder=""
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;text-transform:uppercase;"
                     oninput="this.value=this.value.toUpperCase()">
             </div>
@@ -1984,13 +1973,13 @@ document.addEventListener('keydown', e => {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div>
                         <label style="font-size:12px;color:#64748b;">Premier N° auth</label>
-                        <input type="text" id="impAuthFirst" placeholder="Ex: SNA25-0080" maxlength="20"
+                        <input type="text" id="impAuthFirst" placeholder="" maxlength="20"
                             oninput="this.value=this.value.toUpperCase();previewAuthRange()"
                             style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;margin-top:4px;">
                     </div>
                     <div>
                         <label style="font-size:12px;color:#64748b;">Dernier N° auth</label>
-                        <input type="text" id="impAuthLast" placeholder="Ex: SNA25-0120" maxlength="20"
+                        <input type="text" id="impAuthLast" placeholder="" maxlength="20"
                             oninput="this.value=this.value.toUpperCase();previewAuthRange()"
                             style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;margin-top:4px;">
                     </div>
@@ -2002,13 +1991,13 @@ document.addEventListener('keydown', e => {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div>
                         <label style="font-size:12px;color:#64748b;">Premier N° auth (plage 2)</label>
-                        <input type="text" id="impAuthFirst2" placeholder="Ex: SNA26-0001" maxlength="20"
+                        <input type="text" id="impAuthFirst2" placeholder="" maxlength="20"
                             oninput="this.value=this.value.toUpperCase();previewAuthRange()"
                             style="background:var(--input-bg);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;margin-top:4px;">
                     </div>
                     <div>
                         <label style="font-size:12px;color:#64748b;">Dernier N° auth (plage 2)</label>
-                        <input type="text" id="impAuthLast2" placeholder="Ex: SNA26-0040" maxlength="20"
+                        <input type="text" id="impAuthLast2" placeholder="" maxlength="20"
                             oninput="this.value=this.value.toUpperCase();previewAuthRange()"
                             style="background:var(--input-bg);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;margin-top:4px;">
                     </div>
@@ -2045,22 +2034,22 @@ document.addEventListener('keydown', e => {
             <!-- Infos de base -->
             <div class="field-group form-full">
                 <label>Nom de la compagnie *</label>
-                <input type="text" id="airlineName" placeholder="Ex: Mauritania Airlines" required>
+                <input type="text" id="airlineName" placeholder="" required>
             </div>
             <div class="field-group">
                 <label>Préfixe de vol (2-3 lettres) *</label>
-                <input type="text" id="airlinePrefix" placeholder="Ex: L6" maxlength="3"
+                <input type="text" id="airlinePrefix" placeholder="" maxlength="3"
                        oninput="this.value=this.value.toUpperCase()">
                 <span class="hint">Code utilisé pour les numéros de vol</span>
             </div>
             <div class="field-group">
                 <label>Code IATA (2 lettres)</label>
-                <input type="text" id="airlineIATA" placeholder="Ex: MV" maxlength="2"
+                <input type="text" id="airlineIATA" placeholder="" maxlength="2"
                        oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="field-group form-full">
                 <label>Pays d'origine</label>
-                <input type="text" id="airlineCountry" placeholder="Ex: Mauritanie">
+                <input type="text" id="airlineCountry" placeholder="">
             </div>
 
             <!-- Aéroport Hub -->
@@ -2088,7 +2077,7 @@ document.addEventListener('keydown', e => {
             <!-- Immatriculations -->
             <div class="field-group form-full" style="border-top:1px solid var(--border); padding-top:18px; margin-top:4px;">
                 <label>Préfixe immatriculation <span class="immat-count" id="immatPrefixHint"></span></label>
-                <input type="text" id="airlineImmPrefix" placeholder="Ex: 5T-" maxlength="5"
+                <input type="text" id="airlineImmPrefix" placeholder="" maxlength="5"
                        oninput="this.value=this.value.toUpperCase(); updateImmPrefixHint()">
                 <span class="hint">Les immatriculations de cette compagnie commencent par ce préfixe</span>
             </div>
@@ -2104,7 +2093,7 @@ document.addEventListener('keydown', e => {
                 </div>
                 <div class="immat-list" id="immatList"></div>
                 <div class="immat-add-row">
-                    <input type="text" id="immatInput" placeholder="Ex: 5T-CLC" maxlength="8"
+                    <input type="text" id="immatInput" placeholder="" maxlength="8"
                            oninput="this.value=this.value.toUpperCase()"
                            onkeydown="if(event.key==='Enter'){event.preventDefault();addImmat();}">
                     <button type="button" class="btn-primary" onclick="addImmat()" style="white-space:nowrap;">+ Ajouter</button>
@@ -2131,7 +2120,7 @@ document.addEventListener('keydown', e => {
                 <div id="progImportStatus" style="font-size:12px;color:#718096;margin:4px 0;min-height:16px;"></div>
                 <div class="immat-list" id="volList"></div>
                 <div class="immat-add-row">
-                    <input type="text" id="volInput" placeholder="Ex: L6-101" maxlength="10"
+                    <input type="text" id="volInput" placeholder="" maxlength="10"
                            oninput="this.value=this.value.toUpperCase()"
                            onkeydown="if(event.key==='Enter'){event.preventDefault();addVol();}">
                     <button type="button" class="btn-primary" onclick="addVol()" style="white-space:nowrap;">+ Ajouter</button>
@@ -2156,25 +2145,25 @@ document.addEventListener('keydown', e => {
         <div class="form-grid">
             <div class="field-group">
                 <label>Code ICAO (4 lettres) *</label>
-                <input type="text" id="airportICAO" placeholder="Ex: GQNO" maxlength="4"
+                <input type="text" id="airportICAO" placeholder="" maxlength="4"
                        oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="field-group">
                 <label>Code IATA (3 lettres)</label>
-                <input type="text" id="airportIATA" placeholder="Ex: NKC" maxlength="3"
+                <input type="text" id="airportIATA" placeholder="" maxlength="3"
                        oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="field-group form-full">
                 <label>Nom de l'aéroport *</label>
-                <input type="text" id="airportName" placeholder="Ex: Nouakchott Oumtounsy International">
+                <input type="text" id="airportName" placeholder="">
             </div>
             <div class="field-group">
                 <label>Ville</label>
-                <input type="text" id="airportCity" placeholder="Ex: Nouakchott">
+                <input type="text" id="airportCity" placeholder="">
             </div>
             <div class="field-group">
                 <label>Pays</label>
-                <input type="text" id="airportCountry" placeholder="Ex: Mauritanie">
+                <input type="text" id="airportCountry" placeholder="">
             </div>
         </div>
         <div class="modal-footer">
@@ -2216,7 +2205,7 @@ document.addEventListener('keydown', e => {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;">
             <div>
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">N° VOL *</label>
-                <input id="schedFVol" type="text" placeholder="Ex: AFR0594"
+                <input id="schedFVol" type="text" placeholder=""
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;text-transform:uppercase;"
                     oninput="this.value=this.value.toUpperCase()">
             </div>
@@ -2244,7 +2233,7 @@ document.addEventListener('keydown', e => {
                 <div style="font-size:11px;color:#64748b;margin-top:4px;">
                     Code généré : <span id="schedDayCode" style="color:#D4AF37;font-family:monospace;">-------</span>
                     &nbsp;·&nbsp;
-                    <input id="schedFDays" placeholder="Ou saisir manuellement: J1---J5--"
+                    <input id="schedFDays" placeholder=""
                         style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;width:160px;"
                         oninput="_schedDaysFromText(this.value)">
                 </div>
@@ -2325,7 +2314,7 @@ document.addEventListener('keydown', e => {
             </div>
             <div style="grid-column:1/-1;">
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">NOTES (optionnel)</label>
-                <input id="schedFNotes" type="text" placeholder="Ex: Saisonnier, charter..."
+                <input id="schedFNotes" type="text" placeholder=""
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;">
             </div>
         </div>
