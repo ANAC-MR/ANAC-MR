@@ -42,6 +42,11 @@
         body.authenticated #loginScreen { display: none !important; }
         body.authenticated #adminPanel  { display: block !important; }
 
+        
+        /* Fix select dropdown options visibility */
+        select option { background: #1a2d45 !important; color: #e2e8f0 !important; }
+        select:focus option:checked { background: #0f1e3d !important; }
+
         /* ─── GRID BG ─── */
         body::before {
             content: '';
@@ -1014,6 +1019,9 @@
   pointer-events: auto;
 }
 
+.anac-menu-panel, .anac-menu-btn, .anac-menu-panel * {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif !important;
+}
 .anac-menu-panel {
   position: fixed;
   top: 62px;
@@ -1570,8 +1578,8 @@ document.addEventListener('keydown', e => {
                         <span>📋 Numéros enregistrés</span>
                         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                             <select id="fnFilterCompany" onchange="filterFlightNums()"
-                                style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 10px;color:#e2e8f0;font-size:12px;">
-                                <option value="">Toutes les compagnies</option>
+                                style="background:#1a2d45;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:6px 10px;color:#e2e8f0;font-size:12px;min-width:180px;">
+                                <option value="" style="background:#1a2d45;color:#e2e8f0;">Toutes les compagnies</option>
                             </select>
                             <input type="text" id="fnSearch" placeholder="Rechercher" oninput="filterFlightNums()"
                                 style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 12px;color:#fff;font-size:12px;width:160px;">
@@ -1744,8 +1752,8 @@ document.addEventListener('keydown', e => {
                 <!-- Filtres -->
                 <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
                     <select id="schedCompanyFilter" onchange="_schedRender()"
-                        style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;min-width:200px;">
-                        <option value="">Toutes les compagnies</option>
+                        style="background:#1a2d45;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;min-width:200px;">
+                        <option value="" style="background:#1a2d45;color:#e2e8f0;">Toutes les compagnies</option>
                     </select>
                     <input type="text" id="schedSearch" placeholder="Rechercher"
                         oninput="_schedRender()"
