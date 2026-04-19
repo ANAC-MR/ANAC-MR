@@ -21,9 +21,9 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(212,175,55,0.06) 0%,transparent 55%);}
 /* Header */
 header{
-  padding-left: 64px;
+  
 position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);padding:0 28px;height:54px;
+  border-bottom:1px solid var(--border);padding:0 28px 0 78px;height:54px;
   display:flex;align-items:center;justify-content:space-between;}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
 .logo-icon{font-size:20px;}
@@ -240,12 +240,12 @@ position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-filter:
 <style>
 .anac-menu-btn {
   position: fixed;
-  top: 16px;
-  left: 16px;
+  top: 14px;
+  left: 14px;
   z-index: 9998;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
   background: linear-gradient(135deg, #0f1e3d 0%, #1a3a6b 100%);
   border: 1px solid rgba(212,175,55,0.3);
   display: flex;
@@ -262,7 +262,7 @@ position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-filter:
 }
 .anac-menu-btn .bar {
   display: block;
-  width: 18px;
+  width: 16px;
   height: 2px;
   background: #D4AF37;
   margin: 2px 0;
@@ -290,10 +290,10 @@ position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-filter:
 
 .anac-menu-panel {
   position: fixed;
-  top: 72px;
-  left: 16px;
+  top: 62px;
+  left: 14px;
   z-index: 9997;
-  width: 280px;
+  width: 270px;
   background: linear-gradient(180deg, #0f1e3d 0%, #162a4f 100%);
   border: 1px solid rgba(212,175,55,0.3);
   border-radius: 14px;
@@ -357,6 +357,21 @@ position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-filter:
   background: rgba(212,175,55,0.15);
   border-color: rgba(212,175,55,0.4);
   color: #D4AF37;
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.65;
+}
+.anac-menu-item.active::after {
+  content: '';
+  margin-left: auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #D4AF37;
+}
+.anac-menu-item.active:hover {
+  background: rgba(212,175,55,0.15);
+  border-color: rgba(212,175,55,0.4);
 }
 .anac-menu-item .icon {
   width: 28px;
@@ -487,10 +502,19 @@ document.addEventListener('keydown', e => {
   const tab = urlParams.get('tab') || 'suivi';
   document.querySelectorAll('.anac-menu-item').forEach(el => {
     const nav = el.getAttribute('data-nav');
-    if (path.includes('index') && nav === tab) el.classList.add('active');
-    else if (path.includes('vols') && nav === 'vols') el.classList.add('active');
-    else if (path.includes('ldm') && nav === 'ldm') el.classList.add('active');
-    else if (path.includes('admin') && nav === 'admin') el.classList.add('active');
+    let isActive = false;
+    if (path.includes('index')) {
+      if (nav === tab) isActive = true;
+    }
+    else if (path.includes('vols') && nav === 'vols') isActive = true;
+    else if (path.includes('ldm') && nav === 'ldm') isActive = true;
+    else if (path.includes('admin') && nav === 'admin') isActive = true;
+
+    if (isActive) {
+      el.classList.add('active');
+      // Prévenir navigation quand on est déjà sur la page
+      el.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+    }
   });
 })();
 </script>
