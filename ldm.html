@@ -441,7 +441,7 @@ document.addEventListener('keydown', e => {
   <div class="la-box">
     <div class="ico">📡</div>
     <h2>LDM / MVT Reader</h2>
-    <p>ANAC Mauritanie — Connexion requise</p>
+    
     <div class="la-f"><label>Identifiant</label>
       <input type="text" id="laUser" autocomplete="new-password" spellcheck="false"></div>
     <div class="la-f"><label>Mot de passe</label>
@@ -457,7 +457,7 @@ document.addEventListener('keydown', e => {
     <div class="hlogo">📨</div>
     <div>
       <div class="htitle">LDM / MVT Reader</div>
-      <div class="hsub">Lecture automatique des messages de vol depuis Gmail</div>
+      
     </div>
   </div>
 
@@ -477,11 +477,7 @@ document.addEventListener('keydown', e => {
     <div class="auth-actions" id="authActions">
       <button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>
     </div>
-    <div class="auth-info">
-      💡 Clique sur <strong>"Connecter mon Gmail"</strong> et autorise l'accès en lecture.
-      Le système lira automatiquement les emails contenant <code>LDM</code> ou <code>MVT</code> dans l'objet ou le corps.
-      Transfère tes emails LDM/MVT vers ce compte Gmail pour qu'ils soient détectés.
-    </div>
+
   </div>
 
   <!-- SÉLECTEUR MOIS GLOBAL -->
@@ -526,7 +522,7 @@ document.addEventListener('keydown', e => {
   <div id="tabPaste" style="display:none;margin-bottom:16px;">
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;">
       <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:10px;">📋 Coller un LDM ou MVT</div>
-      <textarea id="ldmPasteArea" placeholder="Collez ici le texte de votre LDM ou MVT..." rows="10"
+      <textarea id="ldmPasteArea" placeholder="" rows="10"
         style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:#e2e8f0;font-size:12px;font-family:monospace;resize:vertical;box-sizing:border-box;"></textarea>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button onclick="_ldmParsePaste()"
@@ -709,7 +705,7 @@ document.addEventListener('keydown', e => {
     <div class="empty">
       <div class="ico">📭</div>
       <h3>Aucun email chargé</h3>
-      <p>Connectez votre Gmail puis cliquez sur "Lire emails"</p>
+      
     </div>
   </div>
 
@@ -1006,16 +1002,16 @@ function _renderManualCard(em, mi) {
             <div class="pf-auth-wrap">
               <div class="pf" style="flex:1;">
                 <label>N° Autorisation <span class="auth-badge ${p.authorizationNumber?'found':''}" id="mauth-badge-${mi}">${p.authorizationNumber?'✓ Auto':''}</span></label>
-                <input id="m${mi}-auth" value="${esc2(p.authorizationNumber||'')}" placeholder="SNA26-XXXX" style="text-transform:uppercase;"
+                <input id="m${mi}-auth" value="${esc2(p.authorizationNumber||'')}" placeholder="" style="text-transform:uppercase;"
                        onchange="document.getElementById('mauth-badge-'+${mi}).textContent=''">
               </div>
               <button class="auth-lookup-btn" onclick="lookupAuthNumberManual(${mi})">🔍 Chercher</button>
             </div>
-            <div class="pf"><label>N° Vol</label><input id="m${mi}-fn" value="${esc2(p.flightNumber||'')}" placeholder="ex: AT510" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>Immatriculation</label><input id="m${mi}-rg" value="${esc2(p.registration||'')}" placeholder="ex: CNRGE" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>N° Vol</label><input id="m${mi}-fn" value="${esc2(p.flightNumber||'')}" placeholder="" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Immatriculation</label><input id="m${mi}-rg" value="${esc2(p.registration||'')}" placeholder="" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>Date du vol</label><input type="date" id="m${mi}-dt" value="${p.date||em.date||''}"></div>
-            <div class="pf"><label>Départ</label><input id="m${mi}-fr" value="${esc2(p.from||'')}" placeholder="ex: NKC" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>Arrivée</label><input id="m${mi}-to" value="${esc2(p.to||'')}" placeholder="ex: CMN" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Départ</label><input id="m${mi}-fr" value="${esc2(p.from||'')}" placeholder="" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Arrivée</label><input id="m${mi}-to" value="${esc2(p.to||'')}" placeholder="" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>PAX</label><input type="number" id="m${mi}-px" value="${p.totalPax||0}" min="0"></div>
             <div class="pf"><label>Bébés</label><input type="number" id="m${mi}-bb" value="${p.paxBabies||0}" min="0"></div>
           </div>
@@ -1794,16 +1790,16 @@ function renderEmails() {
             <div class="pf-auth-wrap">
               <div class="pf" style="flex:1;">
                 <label>N° Autorisation <span class="auth-badge" id="auth-badge-${i}">${p.authorizationNumber ? '&#10003; Auto' : ''}</span></label>
-                <input id="p${i}-auth" value="${esc(p.authorizationNumber||'')}" placeholder="SNA26-XXXX" style="text-transform:uppercase;"
+                <input id="p${i}-auth" value="${esc(p.authorizationNumber||'')}" placeholder="" style="text-transform:uppercase;"
                        onchange="document.getElementById('auth-badge-'+${i}).textContent=''">
               </div>
               <button class="auth-lookup-btn" onclick="lookupAuthNumber(${i})">🔍 Chercher</button>
             </div>
-            <div class="pf"><label>N° Vol</label><input id="p${i}-fn" value="${esc(p.flightNumber||'')}" placeholder="ex: L6212" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>Immatriculation</label><input id="p${i}-rg" value="${esc(p.registration||'')}" placeholder="ex: 5TCLJ" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>N° Vol</label><input id="p${i}-fn" value="${esc(p.flightNumber||'')}" placeholder="" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Immatriculation</label><input id="p${i}-rg" value="${esc(p.registration||'')}" placeholder="" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>Date du vol</label><input type="date" id="p${i}-dt" value="${p.date||em.date||''}"></div>
-            <div class="pf"><label>Départ</label><input id="p${i}-fr" value="${esc(p.from||'')}" placeholder="ex: NKC" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="pf"><label>Arrivée</label><input id="p${i}-to" value="${esc(p.to||'')}" placeholder="ex: CDG" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Départ</label><input id="p${i}-fr" value="${esc(p.from||'')}" placeholder="" oninput="this.value=this.value.toUpperCase()"></div>
+            <div class="pf"><label>Arrivée</label><input id="p${i}-to" value="${esc(p.to||'')}" placeholder="" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>PAX (adultes+enfants)</label><input type="number" id="p${i}-px" value="${p.totalPax||p.paxAdults||0}" min="0"></div>
             <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
 
