@@ -540,6 +540,7 @@
   left: 14px;
   z-index: 9997;
   width: 270px;
+  max-height: calc(100vh - 80px);
   background: linear-gradient(180deg, #0f1e3d 0%, #162a4f 100%);
   border: 1px solid rgba(212,175,55,0.3);
   border-radius: 14px;
@@ -549,7 +550,13 @@
   transform-origin: top left;
   pointer-events: none;
   transition: opacity 0.22s ease, transform 0.22s ease;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+}
+.anac-menu-items {
+  overflow-y: auto;
+  flex: 1;
 }
 .anac-menu-panel.open {
   opacity: 1;
@@ -557,7 +564,7 @@
   pointer-events: auto;
 }
 .anac-menu-header {
-  padding: 16px 18px 12px;
+  padding: 12px 18px 10px;
   border-bottom: 1px solid rgba(212,175,55,0.2);
   background: rgba(212,175,55,0.05);
 }
@@ -583,8 +590,8 @@
 .anac-menu-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 12px;
+  gap: 11px;
+  padding: 9px 12px;
   border-radius: 9px;
   color: #e2e8f0;
   text-decoration: none;
@@ -620,8 +627,8 @@
   border-color: rgba(212,175,55,0.4);
 }
 .anac-menu-item .icon {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 7px;
   background: rgba(255,255,255,0.04);
   display: flex;
@@ -781,75 +788,75 @@ document.addEventListener('keydown', e => {
 
         <!-- ═══ TAB 1 : SUIVI ═══ -->
         <div class="tab-content active" id="tab-suivi">
-            <section class="filters-section">
-                <div class="filters">
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="yearSelect">Année</label>
-                            <select id="yearSelect"><option value="ALL">Toutes les années</option></select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="monthSelect">Mois</label>
-                            <select id="monthSelect"><option value="ALL">Tous les mois</option></select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="companySelect">Compagnie</label>
-                            <select id="companySelect"><option value="ALL">Toutes les compagnies</option></select>
-                        </div>
-                    </div>
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="fromSelect">Départ de</label>
-                            <select id="fromSelect"><option value="ALL">Tous les aéroports</option></select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="toSelect">Arrivée à</label>
-                            <select id="toSelect"><option value="ALL">Tous les aéroports</option></select>
-                        </div>
-                    </div>
-                    <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="searchFrom">Date début</label>
-                            <input type="date" id="searchFrom">
-                        </div>
-                        <div class="filter-group">
-                            <label for="searchTo">Date fin</label>
-                            <input type="date" id="searchTo">
-                        </div>
-                        <div class="filter-group">
-                            <label for="searchImm">Immatriculation</label>
-                            <input type="text" id="searchImm" placeholder="Rechercher..." autocomplete="off">
-                        </div>
-                        <div class="filter-group">
-                            <label for="searchVol">N° Vol</label>
-                            <input type="text" id="searchVol" placeholder="Rechercher..." autocomplete="off">
-                        </div>
-                    </div>
-                    <div class="filter-row">
-                        <div class="button-group">
-                            <button class="btn-primary btn-active" data-type="ALL">Tout</button>
-                            <button class="btn-primary" data-type="DEP">Départ</button>
-                            <button class="btn-primary" data-type="ARR">Arrivée</button>
-                            <button class="btn-secondary" id="resetFilters">Réinitialiser</button>
-                        </div>
+            <!-- ═══ FILTRES CHIPS ═══ -->
+            <section class="chips-section" style="margin-bottom:18px;">
+              <style>
+                .chips-bar{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:12px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);}
+                .chip-label{font-size:12px;color:#64748b;font-weight:600;margin-right:4px;}
+                .chip{padding:6px 12px;font-size:12px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;border-radius:20px;font-weight:600;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(212,175,55,0.4);}
+                .chip .close{opacity:0.7;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;border-radius:50%;transition:all 0.15s;}
+                .chip .close:hover{opacity:1;background:rgba(255,255,255,0.15);}
+                .chip-add{padding:6px 14px;font-size:12px;background:#fff;color:#D4AF37;border:1px dashed #D4AF37;border-radius:20px;font-weight:600;cursor:pointer;transition:all 0.15s;}
+                .chip-add:hover{background:#D4AF37;color:#0f1e3d;}
+                .type-seg{display:flex;gap:2px;padding:3px;background:#f1f5f9;border-radius:10px;margin-left:auto;}
+                .type-seg button{padding:6px 12px;font-size:12px;background:transparent;color:#475569;border:none;border-radius:7px;font-weight:600;cursor:pointer;transition:all 0.15s;}
+                .type-seg button.btn-active{background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;}
+                .chip-reset{padding:6px 12px;font-size:11px;background:transparent;color:#64748b;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;font-weight:600;}
+                .chip-reset:hover{background:#f8fafc;color:#1a2d45;}
+                .chip-picker{position:absolute;z-index:100;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.12);padding:10px;min-width:280px;}
+                .chip-picker .pk-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:#1a2d45;font-weight:500;}
+                .chip-picker .pk-item:hover{background:#f1f5f9;color:#0f1e3d;}
+                .chip-picker .pk-ic{width:26px;height:26px;border-radius:7px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:13px;}
+                .chip-edit{position:absolute;z-index:100;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.12);padding:14px;min-width:260px;}
+                .chip-edit label{font-size:11px;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:6px;}
+                .chip-edit select,.chip-edit input{width:100%;padding:8px 10px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#1a2d45;font-family:inherit;box-sizing:border-box;}
+                .chip-edit .row{display:flex;gap:8px;}
+                .chip-edit .row>*{flex:1;}
+                .chip-edit .btns{display:flex;gap:6px;margin-top:12px;}
+                .chip-edit .btn-ok{flex:1;padding:8px;font-size:12px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;border:none;border-radius:7px;cursor:pointer;font-weight:700;}
+                .chip-edit .btn-cancel{padding:8px 14px;font-size:12px;background:#f1f5f9;color:#64748b;border:none;border-radius:7px;cursor:pointer;font-weight:600;}
+              </style>
 
-                    </div>
+              <div class="chips-bar" id="chipsBar" style="position:relative;">
+                <span class="chip-label">Filtres actifs :</span>
+                <div id="chipsList" style="display:contents;"></div>
+                <button class="chip-add" id="btnAddChip" onclick="_toggleChipPicker(event)">＋ Ajouter filtre</button>
+                <div class="type-seg" id="typeSeg">
+                  <button class="btn-active" data-type="ALL">Tout</button>
+                  <button data-type="DEP">Départ</button>
+                  <button data-type="ARR">Arrivée</button>
                 </div>
+                <button class="chip-reset" id="resetFilters">↻ Réinitialiser</button>
+              </div>
+
+              <!-- Inputs cachés (app.js utilise ces IDs) -->
+              <div style="display:none;">
+                <select id="yearSelect"><option value="ALL">Toutes les années</option></select>
+                <select id="monthSelect"><option value="ALL">Tous les mois</option></select>
+                <select id="companySelect"><option value="ALL">Toutes les compagnies</option></select>
+                <select id="fromSelect"><option value="ALL">Tous les aéroports</option></select>
+                <select id="toSelect"><option value="ALL">Tous les aéroports</option></select>
+                <input type="date" id="searchFrom">
+                <input type="date" id="searchTo">
+                <input type="text" id="searchImm">
+                <input type="text" id="searchVol">
+              </div>
             </section>
 
-            <section class="actions-section">
-                <div class="actions">
-                    <button class="btn-success" id="addFlightBtn">➕ Ajouter un vol</button>
+            <!-- ═══ ACTIONS ═══ -->
+            <section class="actions-section" style="margin-bottom:14px;">
+                <div class="actions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                    <button id="addFlightBtn" style="padding:10px 18px;font-size:13px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;border:1px solid rgba(212,175,55,0.5);border-radius:10px;font-weight:700;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;"
+                        onmouseover="this.style.boxShadow='0 6px 18px rgba(15,30,61,0.25)';this.style.transform='translateY(-1px)'"
+                        onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+                        ＋ Ajouter un vol
+                    </button>
                     <button class="btn-warning" id="undoBtn" style="display:none;">↩️ Annuler suppression</button>
                     <button id="btnExportSuivi" onclick="exportSuiviExcel()"
-                        style="background:linear-gradient(135deg,rgba(45,212,160,.25),rgba(45,212,160,.1));
-                               border:1px solid rgba(45,212,160,.5);color:#34d399;border-radius:8px;
-                               padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;
-                               font-family:inherit;display:inline-flex;align-items:center;gap:6px;
-                               transition:all .15s;"
-                        onmouseover="this.style.background='rgba(45,212,160,.3)'"
-                        onmouseout="this.style.background='linear-gradient(135deg,rgba(45,212,160,.25),rgba(45,212,160,.1))'">
-                        ⬇ Exporter Excel
+                        style="padding:10px 18px;font-size:13px;background:#fff;color:#1a2d45;border:1px solid #e5e7eb;border-radius:10px;font-weight:600;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;"
+                        onmouseover="this.style.background='#f8fafc';this.style.borderColor='#D4AF37';this.style.color='#0f1e3d'"
+                        onmouseout="this.style.background='#fff';this.style.borderColor='#e5e7eb';this.style.color='#1a2d45'">
+                        ↓ Exporter Excel
                     </button>
                 </div>
             </section>
@@ -2731,5 +2738,274 @@ window._hasPerm = function(perm) {
   }
 })();
 </script>
+
+<!-- ═══ CHIP FILTERS MANAGER ═══ -->
+<style>
+/* Modernisation tableau */
+.table-wrapper table thead tr {
+  background: linear-gradient(135deg, #0f1e3d, #1a3a6b) !important;
+}
+.table-wrapper table thead th {
+  color: #D4AF37 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.2px !important;
+  text-transform: uppercase;
+  padding: 12px 10px !important;
+  border-bottom: 2px solid rgba(212,175,55,0.3) !important;
+}
+.table-wrapper table tbody tr:nth-child(even) { background: #fafbfc; }
+.table-wrapper table tbody tr:hover { background: rgba(212,175,55,0.04) !important; }
+.table-wrapper table tbody td { padding: 11px 10px !important; font-size: 12px; border-bottom: 1px solid #f1f5f9 !important; }
+.table-wrapper .type-badge { padding: 3px 10px !important; font-size: 10px !important; font-weight: 700 !important; border-radius: 5px !important; letter-spacing: 0.5px; }
+.table-wrapper .type-depart { background: rgba(74,158,255,0.12) !important; color: #2B5A8E !important; border: none !important; }
+.table-wrapper .type-arrivee { background: rgba(0,201,141,0.12) !important; color: #047857 !important; border: none !important; }
+.table-wrapper table tfoot tr { background: linear-gradient(to right, rgba(212,175,55,0.08), rgba(212,175,55,0.03)) !important; }
+.table-wrapper table tfoot td { padding: 14px 10px !important; font-weight: 700 !important; color: #0f1e3d !important; font-size: 13px !important; border-top: 2px solid rgba(212,175,55,0.3) !important; }
+</style>
+
+<script>
+(function(){
+  // ═══ CONFIG FILTRES DISPONIBLES ═══
+  const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const FILTER_DEFS = [
+    { id:'period',   icon:'📅', label:'Période (année/mois)' },
+    { id:'dates',    icon:'📆', label:'Dates personnalisées' },
+    { id:'company',  icon:'✈️', label:'Compagnie' },
+    { id:'from',     icon:'🛫', label:'Départ de' },
+    { id:'to',       icon:'🛬', label:'Arrivée à' },
+    { id:'imm',      icon:'🏷️', label:'Immatriculation' },
+    { id:'vol',      icon:'🔢', label:'N° Vol' },
+  ];
+
+  // ═══ HELPERS ═══
+  const $ = id => document.getElementById(id);
+  const formatDateFR = d => { if(!d) return ''; const [y,m,dd]=d.split('-'); return dd+'/'+m+'/'+y; };
+
+  function getActiveChips() {
+    const chips = [];
+    const y = $('yearSelect').value;
+    const m = $('monthSelect').value;
+    const co = $('companySelect').value;
+    const fr = $('fromSelect').value;
+    const to = $('toSelect').value;
+    const d1 = $('searchFrom').value;
+    const d2 = $('searchTo').value;
+    const im = $('searchImm').value.trim();
+    const vn = $('searchVol').value.trim();
+
+    if (y !== 'ALL' || m !== 'ALL') {
+      let lbl = '';
+      if (m !== 'ALL') lbl = MONTHS_FR[+m] + ' ';
+      lbl += (y !== 'ALL') ? y : 'toutes années';
+      chips.push({ id:'period', icon:'📅', text: lbl.trim() });
+    }
+    if (d1 || d2) {
+      let lbl = 'Du ' + (d1 ? formatDateFR(d1) : '…') + ' au ' + (d2 ? formatDateFR(d2) : '…');
+      chips.push({ id:'dates', icon:'📆', text: lbl });
+    }
+    if (co !== 'ALL') chips.push({ id:'company', icon:'✈️', text: co });
+    if (fr !== 'ALL') chips.push({ id:'from', icon:'🛫', text: 'De : ' + fr });
+    if (to !== 'ALL') chips.push({ id:'to', icon:'🛬', text: 'Vers : ' + to });
+    if (im) chips.push({ id:'imm', icon:'🏷️', text: 'Imm : ' + im });
+    if (vn) chips.push({ id:'vol', icon:'🔢', text: 'N° : ' + vn });
+    return chips;
+  }
+
+  window._renderChips = function() {
+    const list = $('chipsList');
+    if (!list) return;
+    const chips = getActiveChips();
+    const lbl = document.querySelector('.chip-label');
+    if (lbl) lbl.style.display = chips.length ? '' : 'none';
+    list.innerHTML = chips.map(c => `
+      <div class="chip" onclick="_editChip(event,'${c.id}')" style="cursor:pointer;">
+        <span>${c.icon} ${c.text}</span>
+        <span class="close" onclick="event.stopPropagation();_removeChip('${c.id}')" title="Retirer">×</span>
+      </div>
+    `).join('');
+  };
+
+  window._removeChip = function(id) {
+    if (id==='period') { $('yearSelect').value='ALL'; $('monthSelect').value='ALL'; }
+    if (id==='dates')  { $('searchFrom').value=''; $('searchTo').value=''; }
+    if (id==='company'){ $('companySelect').value='ALL'; }
+    if (id==='from')   { $('fromSelect').value='ALL'; }
+    if (id==='to')     { $('toSelect').value='ALL'; }
+    if (id==='imm')    { $('searchImm').value=''; }
+    if (id==='vol')    { $('searchVol').value=''; }
+    _syncBothWays(id);
+    if (window.app && window.app.handleFilterChange) window.app.handleFilterChange();
+    else if (typeof handleFilterChange === 'function') handleFilterChange();
+    _renderChips();
+  };
+
+  // Synchronisation bidirectionnelle année/mois ↔ dates
+  function _syncBothWays(changedId) {
+    const y = $('yearSelect').value;
+    const m = $('monthSelect').value;
+    const d1 = $('searchFrom').value;
+    const d2 = $('searchTo').value;
+
+    if (changedId === 'period') {
+      // Année/mois changés → recalculer les dates
+      if (y==='ALL' && m==='ALL') { $('searchFrom').value=''; $('searchTo').value=''; }
+      else {
+        const yr = y==='ALL' ? new Date().getFullYear() : +y;
+        if (m==='ALL') {
+          $('searchFrom').value = yr+'-01-01';
+          $('searchTo').value   = yr+'-12-31';
+        } else {
+          const mm = +m;
+          const lastDay = new Date(yr, mm+1, 0).getDate();
+          const pad = n => String(n).padStart(2,'0');
+          $('searchFrom').value = yr+'-'+pad(mm+1)+'-01';
+          $('searchTo').value   = yr+'-'+pad(mm+1)+'-'+pad(lastDay);
+        }
+      }
+    }
+    if (changedId === 'dates') {
+      // Dates changées → ajuster année/mois si possible
+      if (!d1 && !d2) { /* rien */ }
+      else if (d1 && d2) {
+        const dt1 = new Date(d1);
+        const dt2 = new Date(d2);
+        if (dt1.getFullYear()===dt2.getFullYear() && dt1.getMonth()===dt2.getMonth()) {
+          $('yearSelect').value = String(dt1.getFullYear());
+          $('monthSelect').value = String(dt1.getMonth());
+        } else {
+          $('yearSelect').value = 'ALL';
+          $('monthSelect').value = 'ALL';
+        }
+      }
+    }
+  }
+  window._syncBothWays = _syncBothWays;
+
+  // ═══ PICKER (ajout filtre) ═══
+  window._toggleChipPicker = function(e) {
+    e.stopPropagation();
+    const existing = document.querySelector('.chip-picker');
+    if (existing) { existing.remove(); return; }
+    const btn = $('btnAddChip');
+    const pk = document.createElement('div');
+    pk.className = 'chip-picker';
+    const rect = btn.getBoundingClientRect();
+    pk.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+    pk.style.left = (rect.left + window.scrollX) + 'px';
+    pk.innerHTML = FILTER_DEFS.map(f => `
+      <div class="pk-item" onclick="_openChipEditor('${f.id}',event)">
+        <span class="pk-ic">${f.icon}</span>
+        <span>${f.label}</span>
+      </div>
+    `).join('');
+    document.body.appendChild(pk);
+    setTimeout(() => {
+      document.addEventListener('click', function rm(ev){
+        if (!pk.contains(ev.target)) { pk.remove(); document.removeEventListener('click', rm); }
+      });
+    }, 0);
+  };
+
+  // ═══ EDITOR (modifier filtre) ═══
+  window._editChip = function(e, id) { e.stopPropagation(); _openChipEditor(id, e); };
+
+  window._openChipEditor = function(id, e) {
+    const existing = document.querySelector('.chip-picker, .chip-edit');
+    if (existing) existing.remove();
+    const box = document.createElement('div');
+    box.className = 'chip-edit';
+    const anchor = e ? e.currentTarget.getBoundingClientRect() : $('btnAddChip').getBoundingClientRect();
+    box.style.top = (anchor.bottom + window.scrollY + 6) + 'px';
+    box.style.left = Math.min(anchor.left + window.scrollX, window.innerWidth-280) + 'px';
+
+    let html = '';
+    if (id === 'period') {
+      const ySel = $('yearSelect').innerHTML;
+      const mCur = $('monthSelect').value;
+      html = `<label>Année</label><select id="_fY">${ySel}</select>
+              <label style="margin-top:10px;">Mois</label>
+              <select id="_fM"><option value="ALL">Tous les mois</option>
+                ${MONTHS_FR.map((n,i)=>`<option value="${i}"${i==mCur?' selected':''}>${n}</option>`).join('')}
+              </select>`;
+    }
+    else if (id === 'dates') {
+      html = `<div class="row"><div><label>Du</label><input type="date" id="_fD1" value="${$('searchFrom').value}"></div>
+              <div><label>Au</label><input type="date" id="_fD2" value="${$('searchTo').value}"></div></div>`;
+    }
+    else if (id === 'company') {
+      html = `<label>Compagnie</label><select id="_fCo">${$('companySelect').innerHTML}</select>`;
+    }
+    else if (id === 'from') {
+      html = `<label>Aéroport de départ</label><select id="_fFr">${$('fromSelect').innerHTML}</select>`;
+    }
+    else if (id === 'to') {
+      html = `<label>Aéroport d'arrivée</label><select id="_fTo">${$('toSelect').innerHTML}</select>`;
+    }
+    else if (id === 'imm') {
+      html = `<label>Immatriculation</label><input type="text" id="_fIm" value="${$('searchImm').value}" placeholder="Ex: 7T-VKB">`;
+    }
+    else if (id === 'vol') {
+      html = `<label>N° Vol</label><input type="text" id="_fVn" value="${$('searchVol').value}" placeholder="Ex: AH4015">`;
+    }
+    html += `<div class="btns">
+      <button class="btn-cancel" onclick="this.closest('.chip-edit').remove()">Annuler</button>
+      <button class="btn-ok" onclick="_applyChipEdit('${id}')">Appliquer</button></div>`;
+    box.innerHTML = html;
+    document.body.appendChild(box);
+    // Set year value
+    if (id === 'period') { $('_fY').value = $('yearSelect').value; }
+    if (id === 'company') { $('_fCo').value = $('companySelect').value; }
+    if (id === 'from') { $('_fFr').value = $('fromSelect').value; }
+    if (id === 'to') { $('_fTo').value = $('toSelect').value; }
+  };
+
+  window._applyChipEdit = function(id) {
+    if (id === 'period') { $('yearSelect').value = $('_fY').value; $('monthSelect').value = $('_fM').value; }
+    else if (id === 'dates') { $('searchFrom').value = $('_fD1').value; $('searchTo').value = $('_fD2').value; }
+    else if (id === 'company') { $('companySelect').value = $('_fCo').value; }
+    else if (id === 'from') { $('fromSelect').value = $('_fFr').value; }
+    else if (id === 'to') { $('toSelect').value = $('_fTo').value; }
+    else if (id === 'imm') { $('searchImm').value = $('_fIm').value.trim(); }
+    else if (id === 'vol') { $('searchVol').value = $('_fVn').value.trim(); }
+    _syncBothWays(id);
+    document.querySelector('.chip-edit')?.remove();
+    if (window.app && window.app.handleFilterChange) window.app.handleFilterChange();
+    else if (typeof handleFilterChange === 'function') handleFilterChange();
+    _renderChips();
+  };
+
+  // ═══ TYPE BUTTONS (Tout/Dép/Arr) ═══
+  document.addEventListener('DOMContentLoaded', () => {
+    const seg = $('typeSeg');
+    if (seg) {
+      seg.querySelectorAll('button').forEach(b => {
+        b.addEventListener('click', () => {
+          seg.querySelectorAll('button').forEach(x => x.classList.remove('btn-active'));
+          b.classList.add('btn-active');
+          // Piloter le filtre type d'app.js
+          const type = b.dataset.type;
+          if (window.currentTypeFilter !== undefined) window.currentTypeFilter = type;
+          // Trigger app.js typeButtons click equivalent
+          const oldBtns = document.querySelectorAll('.button-group .btn-primary[data-type]');
+          oldBtns.forEach(ob => { if (ob.dataset.type === type) ob.click(); });
+          // Si pas de vrais boutons, appeler directement
+          if (!oldBtns.length && window.app && window.app.handleTypeFilter) {
+            window.app.handleTypeFilter({dataset:{type}});
+          }
+        });
+      });
+    }
+    // Render initial chips
+    setTimeout(_renderChips, 500);
+    // Re-render après chaque changement
+    ['yearSelect','monthSelect','companySelect','fromSelect','toSelect','searchFrom','searchTo','searchImm','searchVol'].forEach(id => {
+      const el = $(id);
+      if (el) el.addEventListener('change', _renderChips);
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
