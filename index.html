@@ -868,14 +868,14 @@ document.addEventListener('keydown', e => {
                             <tr>
                                 <th style="width:44px;text-align:center;">N°</th>
                                 <th>N° d'autorisation</th><th>Date</th><th>Compagnie</th>
-                                <th>Immatriculation</th><th>N° Vol</th><th>De</th><th>Vers</th>
+                                <th>Immatriculation</th><th>N° Vol</th><th style="text-align:center;">Trajet</th>
                                 <th>Type</th><th>PAX</th><th>Bébés</th><th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="flightTableBody"></tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="9">TOTAL</td>
+                                <td colspan="8">TOTAL</td>
                                 <td id="totalPassengers">0</td>
                                 <td id="totalBabies">0</td>
                                 <td></td>
@@ -2826,21 +2826,29 @@ window._hasPerm = function(perm) {
     `).join('');
   };
 
+  // Helper: assign value AND dispatch change/input events so app.js listens
+  function _set(id, val) {
+    const el = $(id);
+    if (!el) return;
+    el.value = val;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  window._set = _set;
+
   window._removeChip = function(id) {
-    if (id==='period') { $('yearSelect').value='ALL'; $('monthSelect').value='ALL'; }
-    if (id==='dates')  { $('searchFrom').value=''; $('searchTo').value=''; }
-    if (id==='company'){ $('companySelect').value='ALL'; }
-    if (id==='from')   { $('fromSelect').value='ALL'; }
-    if (id==='to')     { $('toSelect').value='ALL'; }
-    if (id==='imm')    { $('searchImm').value=''; }
-    if (id==='vol')    { $('searchVol').value=''; }
+    if (id==='period') { _set('yearSelect','ALL'); _set('monthSelect','ALL'); }
+    if (id==='dates')  { _set('searchFrom',''); _set('searchTo',''); }
+    if (id==='company'){ _set('companySelect','ALL'); }
+    if (id==='from')   { _set('fromSelect','ALL'); }
+    if (id==='to')     { _set('toSelect','ALL'); }
+    if (id==='imm')    { _set('searchImm',''); }
+    if (id==='vol')    { _set('searchVol',''); }
     _syncBothWays(id);
-    if (window.app && window.app.handleFilterChange) window.app.handleFilterChange();
-    else if (typeof handleFilterChange === 'function') handleFilterChange();
     _renderChips();
   };
 
-  // Synchronisation bidirectionnelle année/mois ↔ dates
+  // Synchronisation bidirectionnelle année/mois ↔ dates (silencieuse, sans déclencher de render en boucle)
   function _syncBothWays(changedId) {
     const y = $('yearSelect').value;
     const m = $('monthSelect').value;
@@ -2848,7 +2856,6 @@ window._hasPerm = function(perm) {
     const d2 = $('searchTo').value;
 
     if (changedId === 'period') {
-      // Année/mois changés → recalculer les dates
       if (y==='ALL' && m==='ALL') { $('searchFrom').value=''; $('searchTo').value=''; }
       else {
         const yr = y==='ALL' ? new Date().getFullYear() : +y;
@@ -2865,7 +2872,6 @@ window._hasPerm = function(perm) {
       }
     }
     if (changedId === 'dates') {
-      // Dates changées → ajuster année/mois si possible
       if (!d1 && !d2) { /* rien */ }
       else if (d1 && d2) {
         const dt1 = new Date(d1);
@@ -2961,17 +2967,15 @@ window._hasPerm = function(perm) {
   };
 
   window._applyChipEdit = function(id) {
-    if (id === 'period') { $('yearSelect').value = $('_fY').value; $('monthSelect').value = $('_fM').value; }
-    else if (id === 'dates') { $('searchFrom').value = $('_fD1').value; $('searchTo').value = $('_fD2').value; }
-    else if (id === 'company') { $('companySelect').value = $('_fCo').value; }
-    else if (id === 'from') { $('fromSelect').value = $('_fFr').value; }
-    else if (id === 'to') { $('toSelect').value = $('_fTo').value; }
-    else if (id === 'imm') { $('searchImm').value = $('_fIm').value.trim(); }
-    else if (id === 'vol') { $('searchVol').value = $('_fVn').value.trim(); }
+    if (id === 'period') { _set('yearSelect', $('_fY').value); _set('monthSelect', $('_fM').value); }
+    else if (id === 'dates') { _set('searchFrom', $('_fD1').value); _set('searchTo', $('_fD2').value); }
+    else if (id === 'company') { _set('companySelect', $('_fCo').value); }
+    else if (id === 'from') { _set('fromSelect', $('_fFr').value); }
+    else if (id === 'to') { _set('toSelect', $('_fTo').value); }
+    else if (id === 'imm') { _set('searchImm', $('_fIm').value.trim()); }
+    else if (id === 'vol') { _set('searchVol', $('_fVn').value.trim()); }
     _syncBothWays(id);
     document.querySelector('.chip-edit')?.remove();
-    if (window.app && window.app.handleFilterChange) window.app.handleFilterChange();
-    else if (typeof handleFilterChange === 'function') handleFilterChange();
     _renderChips();
   };
 
