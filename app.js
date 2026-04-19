@@ -1305,7 +1305,7 @@ function renderPaginationControls(total) {
         if (!table) return;
         ctr = document.createElement('div');
         ctr.id = 'flightPagination';
-        ctr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px;margin-top:8px;background:linear-gradient(180deg,#fff,#f8fafb);border:1px solid #e2e8f0;border-radius:12px;font-size:13px;color:#475569;flex-wrap:wrap;';
+        ctr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 18px;margin-top:10px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;font-size:13px;color:#475569;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,0.02);';
         // Insérer après le tableau
         const parent = document.getElementById('flightTableBody');
         if (parent && parent.closest('table')) {
@@ -1321,21 +1321,21 @@ function renderPaginationControls(total) {
     const btn = (label, disabled, action) => {
         const bg = disabled ? '#f1f5f9' : 'linear-gradient(135deg,#0f1e3d,#1a3a6b)';
         const col = disabled ? '#94a3b8' : '#D4AF37';
-        const bd = disabled ? '#e2e8f0' : 'rgba(212,175,55,0.3)';
+        const bd = disabled ? '#e2e8f0' : 'rgba(212,175,55,0.4)';
         const cursor = disabled ? 'not-allowed' : 'pointer';
-        return `<button ${disabled?'disabled':''} onclick="${action}" style="background:${bg};color:${col};border:1px solid ${bd};border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:${cursor};transition:all 0.15s;">${label}</button>`;
+        return `<button ${disabled?'disabled':''} onclick="${action}" style="background:${bg};color:${col};border:1px solid ${bd};border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:${cursor};transition:all 0.15s;letter-spacing:0.3px;">${label}</button>`;
     };
 
     ctr.innerHTML = `
         <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-            <span style="font-weight:700;color:#1a2d45;">
+            <span style="font-weight:700;color:#0f1e3d;font-size:13px;">
                 ${total.toLocaleString()} vol${total>1?'s':''}
             </span>
-            ${total > 0 ? `<span style="color:#64748b;">Affichage ${start.toLocaleString()}–${end.toLocaleString()}</span>` : ''}
+            ${total > 0 ? `<span style="color:#64748b;font-size:12px;">Affichage ${start.toLocaleString()}–${end.toLocaleString()}</span>` : ''}
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
             ${btn('← Précédent', cur<=1, '_goPrevPage()')}
-            <span style="padding:7px 14px;background:#f8fafb;border:1px solid #e2e8f0;border-radius:8px;font-weight:700;color:#1a2d45;min-width:90px;text-align:center;">
+            <span style="padding:7px 16px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;border:1px solid rgba(212,175,55,0.4);border-radius:8px;font-weight:700;min-width:100px;text-align:center;letter-spacing:0.3px;font-size:12px;">
                 Page ${cur} / ${totalPages}
             </span>
             ${btn('Suivant →', cur>=totalPages, '_goNextPage()')}
