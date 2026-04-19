@@ -1178,12 +1178,14 @@ function resetFilters() {
     elements.searchImm.value = '';
     elements.searchVol.value = '';
     currentTypeFilter = 'ALL';
-    
+
     // Reset active button
     elements.typeButtons.forEach(btn => btn.classList.remove('btn-active'));
-    document.querySelector('[data-type="ALL"]').classList.add('btn-active');
-    
+    document.querySelectorAll('[data-type="ALL"]').forEach(b => b.classList.add('btn-active'));
+
+    if (window._resetPage) window._resetPage();
     render();
+    if (window._renderChips) window._renderChips();
     showNotification('Filtres réinitialisés', 'success');
 }
 
@@ -1370,7 +1372,7 @@ function renderTable(filteredFlights, offset) {
     if (filteredFlights.length === 0) {
         elements.flightTableBody.innerHTML = `
             <tr>
-                <td colspan="12" class="empty-state">
+                <td colspan="11" class="empty-state">
                     <p>Aucun vol trouvé</p>
                     <small>Ajoutez un vol ou modifiez vos filtres</small>
                 </td>
@@ -1403,8 +1405,7 @@ function createFlightRow(flight, rowNum) {
         <td>${escapeHtml(flight.company)}</td>
         <td><strong>${escapeHtml(flight.registration)}</strong></td>
         <td>${escapeHtml(flight.flightNumber)}</td>
-        <td><strong>${escapeHtml(fromCode)}</strong></td>
-        <td><strong>${escapeHtml(toCode)}</strong></td>
+        <td style="text-align:center;white-space:nowrap;"><strong style="color:#0f1e3d;">${escapeHtml(fromCode)}</strong> <span style="color:#D4AF37;font-weight:700;margin:0 4px;">→</span> <strong style="color:#0f1e3d;">${escapeHtml(toCode)}</strong></td>
         <td><span class="type-badge ${typeClass}">${typeText}</span></td>
         <td>${flight.passengers}</td>
         <td>${flight.babies}</td>
