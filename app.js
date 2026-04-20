@@ -1430,11 +1430,11 @@ function createFlightRow(flight, rowNum) {
                     ⋯
                 </button>
                 <div class="actions-menu" id="actions-${flight.id}">
-                    <button onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item">
+                    <button data-perm="edit_flight" onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item">
                         <span class="action-icon">✏️</span>
                         <span>Modifier</span>
                     </button>
-                    <button onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete">
+                    <button data-perm="delete_flight" onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete">
                         <span class="action-icon">🗑️</span>
                         <span>Supprimer</span>
                     </button>
