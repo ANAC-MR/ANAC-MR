@@ -499,6 +499,23 @@
         }
         .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
 
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.14);
+            color: var(--text);
+            padding: 9px 18px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.10);
+            border-color: rgba(255,255,255,0.20);
+        }
+
         .btn-gold {
             background: linear-gradient(135deg, var(--gold), var(--gold-light));
             border: none; border-radius: 9px;
@@ -1668,44 +1685,43 @@ document.addEventListener('keydown', e => {
                 </div>
 
                 <!-- ============== MODAL CRÉATION/ÉDITION UTILISATEUR ============== -->
-                <div id="secUserModal" class="modal-overlay" style="display:none;">
-                    <div class="modal-content" style="max-width:680px;">
+                <div id="secUserModal" class="modal-overlay">
+                    <div class="modal-box" style="width:680px;max-width:95vw;">
                         <div class="modal-header">
                             <h3 id="secUserModalTitle">+ Ajouter un utilisateur</h3>
-                            <button onclick="_secCloseUserModal()" class="btn-icon">✕</button>
+                            <button onclick="_secCloseUserModal()" class="modal-close">✕</button>
                         </div>
-                        <div class="modal-body" style="max-height:75vh;overflow-y:auto;">
-                            <div class="form-grid">
-                                <div class="field-group">
-                                    <label>Identifiant</label>
-                                    <input type="text" id="secUserName" autocomplete="new-password" style="text-transform:uppercase;">
-                                </div>
-                                <div class="field-group">
-                                    <label>Mot de passe</label>
-                                    <input type="text" id="secUserPass" autocomplete="new-password">
-                                </div>
-                                <div class="field-group" style="grid-column:1/-1;">
-                                    <label>Rôle</label>
-                                    <select id="secUserRole" onchange="_secOnRoleChange()">
-                                        <option value="admin">Administrateur — Accès complet</option>
-                                        <option value="operator">Opérateur — Vols + LDM/MVT</option>
-                                        <option value="reader">Lecteur — Consultation seule</option>
-                                        <option value="custom">Personnalisé — Permissions à la carte</option>
-                                    </select>
-                                </div>
-                            </div>
 
-                            <div id="secPermissionsBlock" style="margin-top:16px;display:none;">
-                                <div style="font-size:12px;font-weight:700;color:#D4AF37;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Permissions personnalisées</div>
-                                <div id="secPermissionsList"></div>
+                        <div class="form-grid">
+                            <div class="field-group">
+                                <label>Identifiant</label>
+                                <input type="text" id="secUserName" autocomplete="new-password" style="text-transform:uppercase;">
                             </div>
-
-                            <div class="modal-footer">
-                                <button class="btn-secondary" onclick="_secCloseUserModal()">Annuler</button>
-                                <button class="btn-primary" onclick="_secSaveUser()">💾 Enregistrer</button>
+                            <div class="field-group">
+                                <label>Mot de passe</label>
+                                <input type="text" id="secUserPass" autocomplete="new-password">
                             </div>
-                            <div id="secUserModalMsg" style="margin-top:10px;font-size:13px;font-weight:600;text-align:center;min-height:20px;"></div>
+                            <div class="field-group" style="grid-column:1/-1;">
+                                <label>Rôle</label>
+                                <select id="secUserRole" onchange="_secOnRoleChange()">
+                                    <option value="admin">Administrateur — Accès complet</option>
+                                    <option value="operator">Opérateur — Vols + LDM/MVT</option>
+                                    <option value="reader">Lecteur — Consultation seule</option>
+                                    <option value="custom">Personnalisé — Permissions à la carte</option>
+                                </select>
+                            </div>
                         </div>
+
+                        <div id="secPermissionsBlock" style="margin-top:18px;display:none;">
+                            <div style="font-size:12px;font-weight:700;color:#D4AF37;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">Permissions personnalisées</div>
+                            <div id="secPermissionsList" style="max-height:340px;overflow-y:auto;padding-right:6px;"></div>
+                        </div>
+
+                        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.07);">
+                            <button class="btn-secondary" onclick="_secCloseUserModal()">Annuler</button>
+                            <button class="btn-primary" onclick="_secSaveUser()">💾 Enregistrer</button>
+                        </div>
+                        <div id="secUserModalMsg" style="margin-top:12px;font-size:13px;font-weight:600;text-align:center;min-height:20px;"></div>
                     </div>
                 </div>
             </div>
@@ -5790,7 +5806,9 @@ async function _secLoadUsers() {
   const list = document.getElementById('secUsersList');
   if (!list) return;
   try {
-    _secAllUsers = await listUsers();
+    const allUsers = await listUsers();
+    // Filtrer DADY (compte de secours qui ne doit pas apparaître)
+    _secAllUsers = allUsers.filter(u => (u.username || '').toUpperCase() !== 'DADY');
     if (!_secAllUsers.length) {
       list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px;font-size:13px;">Aucun utilisateur. Cliquez sur "+ Ajouter un utilisateur" pour commencer.</div>';
       return;
@@ -5841,11 +5859,11 @@ window._secOpenUserModal = function() {
   document.getElementById('secUserModalMsg').textContent = '';
   _secOnRoleChange();
   _secBuildPermissionsList();
-  document.getElementById('secUserModal').style.display = 'flex';
+  document.getElementById('secUserModal').classList.add('open');
 };
 
 window._secCloseUserModal = function() {
-  document.getElementById('secUserModal').style.display = 'none';
+  document.getElementById('secUserModal').classList.remove('open');
 };
 
 window._secEditUser = function(userId) {
@@ -5861,7 +5879,7 @@ window._secEditUser = function(userId) {
   document.getElementById('secUserModalMsg').textContent = '';
   _secOnRoleChange();
   _secBuildPermissionsList(u.permissions || []);
-  document.getElementById('secUserModal').style.display = 'flex';
+  document.getElementById('secUserModal').classList.add('open');
 };
 
 window._secOnRoleChange = function() {
@@ -6053,10 +6071,14 @@ window.showSection = function(name) {
 
 // Au chargement, si on arrive directement sur la section
 document.addEventListener('DOMContentLoaded', () => {
+  // Charger systématiquement après un court délai (l'admin sera connecté)
   setTimeout(() => {
-    const cur = document.querySelector('.section-page.active');
-    if (cur && cur.id === 'section-security') _secLoadUsers();
-  }, 500);
+    _secLoadUsers().catch(e => {
+      console.error('[Sec] _secLoadUsers error:', e);
+      const list = document.getElementById('secUsersList');
+      if (list) list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur de chargement: ' + (e.message||e) + '</div>';
+    });
+  }, 800);
 });
 </script>
 
