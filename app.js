@@ -454,7 +454,7 @@ function openModal(flightId = null) {
             }, 60);
         }
     };
-    if (window._hasPerm) { _openModalAction(); } else { requireAuthentication(_openModalAction); }
+    _openModalAction();
 }
 
 function openEditModal(flightId) {
@@ -1112,13 +1112,7 @@ async function deleteFlight(flightId) {
     };
 
     let success;
-    if (window._hasPerm) {
-        // Système de permissions actif — pas besoin du mot de passe supplémentaire
-        success = await doDelete();
-    } else {
-        // Ancien système — demande mot de passe
-        success = await requireAuthentication(doDelete);
-    }
+    success = await doDelete();
 
     console.log('Delete operation result:', success);
     return success;
