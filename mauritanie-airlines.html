@@ -95,7 +95,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('assets/ANAC
 <!-- ANAC_AUTH_GUARD_INJECTED -->
 <script type="module">
   import { requireAuth } from './auth.js';
-  if (!requireAuth('view_ma')) {
+  if (!requireAuth('access_ma')) {
     // requireAuth a déjà géré la redirection / l'écran d'erreur
   }
 </script>
