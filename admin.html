@@ -989,6 +989,9 @@
     // requireAuth a déjà géré la redirection / l'écran d'erreur
   }
 </script>
+<!-- ANAC_PERMS_INJECTED -->
+<script type="module" src="./perms.js"></script>
+
 
 <!-- ═══════════════════════════════════════════════════════════════
      MENU HAMBURGER UNIFIÉ ANAC - à insérer en haut de chaque page
@@ -1356,32 +1359,32 @@ document.addEventListener('keydown', e => {
             <div class="nav-item active" onclick="showSection('dashboard')" data-section="dashboard">
                 <span class="icon">📊</span> Tableau de bord
             </div>
-            <div class="nav-item" onclick="showSection('airlines')" data-section="airlines">
+            <div class="nav-item" onclick="showSection('airlines')" data-section="airlines" data-perm="manage_airlines">
                 <span class="icon">✈️</span> Compagnies
             </div>
-            <div class="nav-item" onclick="showSection('airports')" data-section="airports">
+            <div class="nav-item" onclick="showSection('airports')" data-section="airports" data-perm="manage_airports">
                 <span class="icon">🛬</span> Aéroports
             </div>
             <div class="sidebar-section" style="margin-top:24px;">Paramètres</div>
-            <div class="nav-item" onclick="showSection('formats')" data-section="formats">
+            <div class="nav-item" onclick="showSection('formats')" data-section="formats" data-perm="manage_authformat">
                 <span class="icon">🔢</span> Format N° Auth.
             </div>
-            <div class="nav-item" onclick="showSection('flightnums')" data-section="flightnums">
+            <div class="nav-item" onclick="showSection('flightnums')" data-section="flightnums" data-perm="manage_flightnums">
                 <span class="icon">🔢</span> Numéros de Vol
             </div>
-            <div class="nav-item" onclick="showSection('security')" data-section="security">
+            <div class="nav-item" onclick="showSection('security')" data-section="security" data-admin-only="1">
                 <span class="icon">🛡️</span> Sécurité & Utilisateurs
             </div>
-            <div class="nav-item" onclick="showSection('programme')" data-section="programme">
+            <div class="nav-item" onclick="showSection('programme')" data-section="programme" data-perm="manage_programme">
                 <span class="icon">📋</span> Programme de Vols
             </div>
-            <div class="nav-item" onclick="showSection('chargement')" data-section="chargement">
+            <div class="nav-item" onclick="showSection('chargement')" data-section="chargement" data-perm="manage_chargement">
                 <span class="icon">📂</span> Chargement de Vols
             </div>
-            <div class="nav-item" onclick="showSection('schedules')" data-section="schedules">
+            <div class="nav-item" onclick="showSection('schedules')" data-section="schedules" data-perm="manage_schedules">
                 <span class="icon">🗓️</span> Horaires & Vols
             </div>
-            <div class="nav-item" onclick="window.open('import.html','_blank')">
+            <div class="nav-item" data-perm="import_programme" onclick="window.open('import.html','_blank')">
                 <span class="icon">📥</span> Import Programme
             </div>
         </nav>
