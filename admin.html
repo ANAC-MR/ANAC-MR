@@ -36,11 +36,9 @@
             overflow-x: hidden;
         }
 
-        /* ─── LOGIN ALWAYS VISIBLE BY DEFAULT ─── */
-        #loginScreen { display: flex !important; }
-        #adminPanel  { display: none !important; }
-        body.authenticated #loginScreen { display: none !important; }
-        body.authenticated #adminPanel  { display: block !important; }
+        /* Login screen supprimé — authentification gérée par login.html + auth.js */
+        #loginScreen { display: none !important; }
+        #adminPanel  { display: block !important; }
 
         
         /* Fix select dropdown options visibility */
@@ -1359,32 +1357,32 @@ document.addEventListener('keydown', e => {
             <div class="nav-item active" onclick="showSection('dashboard')" data-section="dashboard">
                 <span class="icon">📊</span> Tableau de bord
             </div>
-            <div class="nav-item" onclick="showSection('airlines')" data-section="airlines" data-perm="manage_airlines">
+            <div class="nav-item" onclick="showSection('airlines')" data-section="airlines">
                 <span class="icon">✈️</span> Compagnies
             </div>
-            <div class="nav-item" onclick="showSection('airports')" data-section="airports" data-perm="manage_airports">
+            <div class="nav-item" onclick="showSection('airports')" data-section="airports">
                 <span class="icon">🛬</span> Aéroports
             </div>
             <div class="sidebar-section" style="margin-top:24px;">Paramètres</div>
-            <div class="nav-item" onclick="showSection('formats')" data-section="formats" data-perm="manage_authformat">
+            <div class="nav-item" onclick="showSection('formats')" data-section="formats">
                 <span class="icon">🔢</span> Format N° Auth.
             </div>
-            <div class="nav-item" onclick="showSection('flightnums')" data-section="flightnums" data-perm="manage_flightnums">
+            <div class="nav-item" onclick="showSection('flightnums')" data-section="flightnums">
                 <span class="icon">🔢</span> Numéros de Vol
             </div>
-            <div class="nav-item" onclick="showSection('security')" data-section="security" data-admin-only="1">
+            <div class="nav-item" onclick="showSection('security')" data-section="security" data-dady-only="1">
                 <span class="icon">🛡️</span> Sécurité & Utilisateurs
             </div>
-            <div class="nav-item" onclick="showSection('programme')" data-section="programme" data-perm="manage_programme">
+            <div class="nav-item" onclick="showSection('programme')" data-section="programme">
                 <span class="icon">📋</span> Programme de Vols
             </div>
-            <div class="nav-item" onclick="showSection('chargement')" data-section="chargement" data-perm="manage_chargement">
+            <div class="nav-item" onclick="showSection('chargement')" data-section="chargement">
                 <span class="icon">📂</span> Chargement de Vols
             </div>
-            <div class="nav-item" onclick="showSection('schedules')" data-section="schedules" data-perm="manage_schedules">
+            <div class="nav-item" onclick="showSection('schedules')" data-section="schedules">
                 <span class="icon">🗓️</span> Horaires & Vols
             </div>
-            <div class="nav-item" data-perm="import_programme" onclick="window.open('import.html','_blank')">
+            <div class="nav-item" onclick="window.open('import.html','_blank')">
                 <span class="icon">📥</span> Import Programme
             </div>
         </nav>
@@ -5984,11 +5982,19 @@ async function _secLoadActivity() {
   if (!list) return;
   list.innerHTML = '<div style="text-align:center;color:#64748b;padding:30px;font-size:13px;">Chargement...</div>';
   try {
-    _secAllActivity = await getActivityLog({ limit: 300 });
+    const [activity, users] = await Promise.all([
+      getActivityLog({ limit: 300 }),
+      listUsers()
+    ]);
+    // Construire la liste des utilisateurs encore existants (+ DADY qui est toujours valide)
+    const existingUsers = new Set(users.map(u => (u.username || '').toUpperCase()));
+    existingUsers.add('DADY');
+    // Garder uniquement les entrées d'activité dont l'utilisateur existe toujours
+    _secAllActivity = activity.filter(a => existingUsers.has((a.username || '').toUpperCase()));
     // Peupler le filtre utilisateurs
     const sel = document.getElementById('secActFilterUser');
-    const users = [...new Set(_secAllActivity.map(a => a.username))].sort();
-    sel.innerHTML = '<option value="">Tous les utilisateurs</option>' + users.map(u => `<option value="${u}">${u}</option>`).join('');
+    const activeUsers = [...new Set(_secAllActivity.map(a => a.username))].sort();
+    sel.innerHTML = '<option value="">Tous les utilisateurs</option>' + activeUsers.map(u => `<option value="${u}">${u}</option>`).join('');
     _secRenderActivity();
   } catch(e) {
     list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur: ' + e.message + '</div>';
