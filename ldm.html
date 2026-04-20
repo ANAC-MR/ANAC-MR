@@ -110,7 +110,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 @media(max-width:680px){.stats-row{grid-template-columns:1fr 1fr;}}
 
 /* ══ LDM AUTH OVERLAY ══ */
-#ldmAuth{position:fixed;inset:0;background:#0a1628;z-index:9990;display:flex;align-items:center;justify-content:center;}
+#ldmAuth{display:none !important;} /* Auth overlay supprimé — géré par login.html + auth.js */
 #ldmAuth.hidden{display:none;}
 .la-box{width:100%;max-width:340px;padding:40px 36px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:18px;}
 .la-box .ico{font-size:36px;text-align:center;margin-bottom:8px;}
@@ -147,7 +147,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <!-- ANAC_AUTH_GUARD_INJECTED -->
 <script type="module">
   import { requireAuth } from './auth.js';
-  if (!requireAuth('view_ldm')) {
+  if (!requireAuth('access_ldm')) {
     // requireAuth a déjà géré la redirection / l'écran d'erreur
   }
 </script>
