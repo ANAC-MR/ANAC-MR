@@ -1012,6 +1012,11 @@ async function addFlight(flightData) {
         
         closeModal();
         showNotification('Vol ajouté avec succès', 'success');
+        // Journal d'activité
+        if (window.ANAC_AUTH) {
+          window.ANAC_AUTH.logActivity('add_flight', flightData.authorizationNumber || flightData.flightNumber || '',
+            'Vol ' + (flightData.flightNumber||'') + ' · ' + (flightData.company||'') + ' · ' + (flightData.date||''));
+        }
     } catch (error) {
         console.error('Error adding flight:', error);
         showNotification('Erreur lors de l\'ajout du vol', 'error');
@@ -1044,6 +1049,11 @@ async function updateFlight(flightId, flightData) {
 
         closeModal();
         showNotification('Vol modifié avec succès', 'success');
+        // Journal d'activité
+        if (window.ANAC_AUTH) {
+          window.ANAC_AUTH.logActivity('edit_flight', flightData.authorizationNumber || flightData.flightNumber || '',
+            'Vol ' + (flightData.flightNumber||'') + ' · ' + (flightData.company||'') + ' · ' + (flightData.date||''));
+        }
     } catch (error) {
         console.error('Error updating flight:', error);
         showNotification('Erreur lors de la modification du vol', 'error');
@@ -1070,6 +1080,11 @@ async function deleteFlight(flightId) {
 
             // Store for undo
             lastDeletedFlight = { flight, id: flightId };
+            // Journal d'activité
+            if (window.ANAC_AUTH) {
+              window.ANAC_AUTH.logActivity('delete_flight', flight.authorizationNumber || flight.flightNumber || '',
+                'Vol ' + (flight.flightNumber||'') + ' · ' + (flight.company||'') + ' · ' + (flight.date||''));
+            }
 
             if (window.dbService && window.dbService.deleteFlight) {
                 try {
@@ -1474,6 +1489,38 @@ function updateFlightsData(newFlights) {
     }
     render();
     if (window.refreshChartsFromApp) window.refreshChartsFromApp(flights);
+
+    // ── Pré-remplissage du modal depuis URL (ex: bouton "Saisir" du programme) ──
+    if (!window._urlPrefillDone) {
+        window._urlPrefillDone = true;
+        const p = new URLSearchParams(location.search);
+        const vol = p.get('vol');
+        const auth = p.get('auth');
+        const date = p.get('date');
+        const company = p.get('company');
+        if (vol || auth || date || company) {
+            setTimeout(() => {
+                openModal();
+                setTimeout(() => {
+                    if (auth && elements.fAuthNumber) elements.fAuthNumber.value = auth;
+                    if (vol && elements.fVol) elements.fVol.value = vol;
+                    if (date && elements.fDate) elements.fDate.value = date;
+                    if (company && elements.fCompany) {
+                        // Tenter la correspondance exacte ou partielle
+                        const opts = [...elements.fCompany.options];
+                        const match = opts.find(o => o.value === company || o.textContent.trim() === company);
+                        if (match) {
+                            elements.fCompany.value = match.value;
+                            elements.fCompany.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                    // Nettoyer l'URL pour que le modal ne se ré-ouvre pas au rechargement
+                    const cleanUrl = location.pathname + (p.get('tab') ? '?tab=' + p.get('tab') : '');
+                    history.replaceState(null, '', cleanUrl);
+                }, 200);
+            }, 300);
+        }
+    }
 }
 
 // ============================================
