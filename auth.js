@@ -1,9 +1,16 @@
-// ═══════════════════════════════════════════════════
-//  ANAC AUTH — Module partagé
-//  Stocke les comptes dans Firestore: collection 'anac_users'
-//  Chaque doc: { username, password, role:'admin', createdAt, createdBy }
-//  Session: sessionStorage 'anac_auth' = { username, role }
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  ANAC AUTH v3 — Système complet
+//  ─────────────────────────────────────────────────────────────
+//  Collections Firestore :
+//    • anac_users         { username, password, role, permissions[], currentSessionId, lastLoginAt, createdAt, createdBy }
+//    • anac_activity_log  { ts, username, action, target, details }
+//
+//  Session locale (sessionStorage 'anac_auth_v3') :
+//    { username, role, permissions[], sessionId, ts }
+//
+//  Compte de secours codé en dur : DADY / ANACdady (jamais visible
+//  dans la liste, jamais désactivable).
+// ═══════════════════════════════════════════════════════════════
 
 const FB_CONFIG = {
   apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
@@ -13,12 +20,92 @@ const FB_CONFIG = {
   messagingSenderId:"906668222910",
   appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"
 };
-const AUTH_SESSION_KEY = 'anac_auth_v2';
-const DEFAULT_USER = 'DADY';
-const DEFAULT_PASS = 'ANACdady';
 
+export const AUTH_SESSION_KEY = 'anac_auth_v3';
+export const FALLBACK_USER = 'DADY';
+export const FALLBACK_PASS = 'ANACdady';
+
+// ── Catalogue COMPLET des permissions ────────────────────────────
+export const ALL_PERMISSIONS = {
+  // Page Accueil / Vols
+  'view_flights':       { label:'Voir la liste des vols',          group:'Vols' },
+  'add_flight':         { label:'Ajouter un vol',                  group:'Vols' },
+  'edit_flight':        { label:'Modifier un vol',                 group:'Vols' },
+  'delete_flight':      { label:'Supprimer un vol',                group:'Vols' },
+  'export_flights':     { label:'Exporter Excel des vols',         group:'Vols' },
+  'view_charts':        { label:'Voir Diagrammes & Rapports',      group:'Vols' },
+  'view_facturation':   { label:"Voir Ordre d'émission",           group:'Vols' },
+
+  // Carte des vols
+  'view_map':           { label:'Voir la carte des vols',          group:'Carte' },
+  'export_map':         { label:'Exporter la carte',               group:'Carte' },
+
+  // LDM / MVT
+  'view_ldm':           { label:'Voir les archives LDM/MVT',       group:'LDM/MVT' },
+  'read_gmail':         { label:'Lire emails Gmail',               group:'LDM/MVT' },
+  'paste_text':         { label:'Coller texte LDM/MVT',            group:'LDM/MVT' },
+  'import_image':       { label:'Importer image LDM/MVT',          group:'LDM/MVT' },
+  'generate_archives':  { label:'Générer archives manquantes',     group:'LDM/MVT' },
+  'delete_archive':     { label:'Supprimer une archive',           group:'LDM/MVT' },
+  'edit_archive':       { label:'Modifier une archive',            group:'LDM/MVT' },
+  'config_pairs':       { label:'Configurer les paires',           group:'LDM/MVT' },
+  'export_pdf':         { label:'Exporter PDF LDM/MVT',            group:'LDM/MVT' },
+
+  // Mauritanie Airlines
+  'view_ma':            { label:'Voir page Mauritanie Airlines',   group:'Mauritanie Airlines' },
+  'export_ma':          { label:'Exporter Excel MA',               group:'Mauritanie Airlines' },
+
+  // Administration
+  'access_admin':       { label:'Accéder au panneau admin',        group:'Administration' },
+  'manage_airlines':    { label:'Gérer les compagnies',            group:'Administration' },
+  'manage_airports':    { label:'Gérer les aéroports',             group:'Administration' },
+  'manage_authformat':  { label:"Gérer le format N° autorisation", group:'Administration' },
+  'manage_flightnums':  { label:'Gérer les numéros de vol',        group:'Administration' },
+  'manage_programme':   { label:'Gérer le programme de vols',      group:'Administration' },
+  'manage_chargement':  { label:'Gérer le chargement de vols',     group:'Administration' },
+  'manage_schedules':   { label:'Gérer les horaires',              group:'Administration' },
+  'import_programme':   { label:'Importer un programme',           group:'Administration' },
+  // Sécurité & Utilisateurs reste réservé à l'admin (non délégable)
+};
+
+// ── Rôles prédéfinis ──────────────────────────────────────────────
+export const ROLES = {
+  'admin': {
+    label: 'Administrateur',
+    desc: 'Accès complet (toutes les permissions)',
+    permissions: '*'
+  },
+  'operator': {
+    label: 'Opérateur',
+    desc: 'Vols + LDM/MVT, sans accès admin',
+    permissions: [
+      'view_flights','add_flight','edit_flight','export_flights','view_charts','view_facturation',
+      'view_map','export_map',
+      'view_ldm','read_gmail','paste_text','import_image','generate_archives','edit_archive','config_pairs','export_pdf',
+      'view_ma','export_ma'
+    ]
+  },
+  'reader': {
+    label: 'Lecteur',
+    desc: 'Consultation seule (aucune modification)',
+    permissions: [
+      'view_flights','view_charts','view_facturation',
+      'view_map',
+      'view_ldm',
+      'view_ma'
+    ]
+  },
+  'custom': {
+    label: 'Personnalisé',
+    desc: "Permissions choisies à l'unité",
+    permissions: []
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────
+// FIREBASE SETUP
+// ─────────────────────────────────────────────────────────────────
 let _db = null;
-
 async function getDB() {
   if (_db) return _db;
   const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
@@ -29,67 +116,218 @@ async function getDB() {
   return _db;
 }
 
-// ── Vérifier identifiants ──────────────────────────────────────
-export async function checkCredentials(username, password) {
-  try {
-    const db = await getDB();
-    const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    // Chercher dans anac_users
-    const q    = query(collection(db,'anac_users'), where('username','==',username.toUpperCase()));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const user = snap.docs[0].data();
-      if (user.password !== password) return { ok:false };
-      return {
-        ok: true,
-        role: user.role || 'user',
-        username: user.username,
-        permissions: user.permissions || []
-      };
-    }
-    // Fallback: compte admin par défaut (legacy DADY/ANACdady depuis cfg-auth)
-    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const cfg = await getDoc(doc(db,'flights','cfg-auth'));
-    const storedUser = cfg.exists() ? (cfg.data().username || DEFAULT_USER) : DEFAULT_USER;
-    const storedPass = cfg.exists() ? (cfg.data().password || DEFAULT_PASS) : DEFAULT_PASS;
-    if (username.toUpperCase() === storedUser.toUpperCase() && password === storedPass) {
-      return { ok:true, role:'admin', username: storedUser, permissions: ['admin','ldm','facturation','add_flight','edit_flight','delete_flight','import'] };
-    }
-    return { ok:false };
-  } catch(e) {
-    console.error('Auth error:', e);
-    return { ok:false, error: e.message };
-  }
-}
-
-// ── Session ────────────────────────────────────────────────────
-export function saveSession(username, role, permissions) {
-  sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
-    username, role,
-    permissions: permissions || [],
-    ts: Date.now()
-  }));
-}
+// ─────────────────────────────────────────────────────────────────
+// SESSION LOCALE (sessionStorage)
+// ─────────────────────────────────────────────────────────────────
 export function getSession() {
   try { return JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)); }
   catch { return null; }
 }
+export function saveSession(data) {
+  sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ ...data, ts: Date.now() }));
+}
 export function clearSession() {
   sessionStorage.removeItem(AUTH_SESSION_KEY);
-}
-
-// Vérifier si l'utilisateur connecté a une permission spécifique
-export function hasPerm(perm) {
-  const s = getSession();
-  if (!s) return false;
-  if (s.role === 'admin') return true; // admin a tout
-  return Array.isArray(s.permissions) && s.permissions.includes(perm);
 }
 export function isLoggedIn() {
   return !!getSession();
 }
+export function currentUser() {
+  return getSession();
+}
 
-// ── Gestion utilisateurs (admin seulement) ────────────────────
+// ─────────────────────────────────────────────────────────────────
+// PERMISSIONS
+// ─────────────────────────────────────────────────────────────────
+export function hasPerm(perm) {
+  const s = getSession();
+  if (!s) return false;
+  if (s.username === FALLBACK_USER) return true;
+  if (s.role === 'admin') return true;
+  return Array.isArray(s.permissions) && s.permissions.includes(perm);
+}
+
+export function resolvePermissions(role, customPerms) {
+  const r = ROLES[role];
+  if (!r) return [];
+  if (r.permissions === '*') return Object.keys(ALL_PERMISSIONS);
+  if (role === 'custom') return Array.isArray(customPerms) ? customPerms : [];
+  return r.permissions.slice();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// AUTHENTIFICATION
+// ─────────────────────────────────────────────────────────────────
+function newSessionId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+}
+
+export async function login(username, password) {
+  const uname = (username || '').toUpperCase().trim();
+  const pass  = password || '';
+
+  // 1. Compte de secours codé en dur — toujours actif, jamais visible dans la liste
+  if (uname === FALLBACK_USER && pass === FALLBACK_PASS) {
+    const sid = newSessionId();
+    saveSession({
+      username: FALLBACK_USER,
+      role: 'admin',
+      permissions: Object.keys(ALL_PERMISSIONS),
+      sessionId: sid,
+      isFallback: true
+    });
+    await logActivity('login_success', uname, 'Compte de secours');
+    return { ok:true };
+  }
+
+  try {
+    const db = await getDB();
+    const { collection, query, where, getDocs, doc, updateDoc } =
+      await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+    const q    = query(collection(db,'anac_users'), where('username','==',uname));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      await logActivity('login_failed', uname, 'Utilisateur introuvable');
+      return { ok:false, error:'Identifiants incorrects' };
+    }
+
+    const userDoc = snap.docs[0];
+    const user    = userDoc.data();
+
+    if (user.password !== pass) {
+      await logActivity('login_failed', uname, 'Mot de passe invalide');
+      return { ok:false, error:'Identifiants incorrects' };
+    }
+
+    if (user.disabled) {
+      await logActivity('login_failed', uname, 'Compte désactivé');
+      return { ok:false, error:'Compte désactivé' };
+    }
+
+    const sid = newSessionId();
+    await updateDoc(doc(db,'anac_users',userDoc.id), {
+      currentSessionId: sid,
+      lastLoginAt: new Date().toISOString()
+    });
+
+    const perms = resolvePermissions(user.role || 'custom', user.permissions);
+
+    saveSession({
+      username: user.username,
+      role: user.role || 'custom',
+      permissions: perms,
+      sessionId: sid,
+      docId: userDoc.id
+    });
+
+    await logActivity('login_success', uname, `Rôle: ${user.role || 'custom'}`);
+    return { ok:true };
+
+  } catch(e) {
+    console.error('Auth error:', e);
+    return { ok:false, error:'Erreur de connexion: ' + e.message };
+  }
+}
+
+export async function logout() {
+  const s = getSession();
+  if (s) {
+    await logActivity('logout', s.username, '');
+    if (!s.isFallback && s.docId) {
+      try {
+        const db = await getDB();
+        const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        await updateDoc(doc(db,'anac_users',s.docId), { currentSessionId: null });
+      } catch(e) { /* silent */ }
+    }
+  }
+  clearSession();
+  location.href = 'login.html';
+}
+
+// ─────────────────────────────────────────────────────────────────
+// VÉRIFICATION SINGLE-DEVICE (poll régulier)
+// ─────────────────────────────────────────────────────────────────
+let _sessionCheckInterval = null;
+
+export function startSessionWatcher() {
+  if (_sessionCheckInterval) return;
+  const s = getSession();
+  if (!s || s.isFallback || !s.docId) return;
+
+  _sessionCheckInterval = setInterval(async () => {
+    try {
+      const cur = getSession();
+      if (!cur || cur.isFallback) { stopSessionWatcher(); return; }
+
+      const db = await getDB();
+      const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+      const snap = await getDoc(doc(db,'anac_users',cur.docId));
+      if (!snap.exists()) {
+        clearSession();
+        alert('Votre compte a été supprimé. Vous allez être déconnecté.');
+        location.href = 'login.html';
+        return;
+      }
+      const serverSid = snap.data().currentSessionId;
+      if (serverSid && serverSid !== cur.sessionId) {
+        stopSessionWatcher();
+        clearSession();
+        alert('Votre session a été ouverte sur un autre appareil. Vous avez été déconnecté.');
+        location.href = 'login.html';
+      }
+    } catch(e) { /* silent */ }
+  }, 6000);
+}
+
+export function stopSessionWatcher() {
+  if (_sessionCheckInterval) {
+    clearInterval(_sessionCheckInterval);
+    _sessionCheckInterval = null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// GARDE DE PAGE
+// ─────────────────────────────────────────────────────────────────
+export function requireAuth(requiredPerm) {
+  const s = getSession();
+  if (!s) {
+    location.href = 'login.html';
+    return false;
+  }
+  if (requiredPerm && !hasPerm(requiredPerm)) {
+    showNoPermissionScreen();
+    return false;
+  }
+  startSessionWatcher();
+  return true;
+}
+
+export function showNoPermissionScreen() {
+  document.body.innerHTML = `
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+                background:linear-gradient(135deg,#0F1E3D,#1A3A6B);z-index:99999;font-family:-apple-system,'Segoe UI',sans-serif;">
+      <div style="background:#fff;border-radius:18px;padding:48px 40px;max-width:440px;width:90%;text-align:center;
+                  box-shadow:0 30px 80px rgba(0,0,0,0.4);">
+        <div style="font-size:60px;margin-bottom:18px;">🔒</div>
+        <h2 style="color:#0F1E3D;font-size:22px;font-weight:700;margin:0 0 10px;">Accès refusé</h2>
+        <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 28px;">
+          Vous n'avez pas la permission d'accéder à cette page. Contactez l'administrateur si vous pensez qu'il s'agit d'une erreur.
+        </p>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button onclick="history.back()" style="padding:10px 20px;background:#f1f5f9;color:#1a2d45;border:1px solid #e2e8f0;border-radius:9px;font-weight:600;cursor:pointer;font-size:13px;">← Retour</button>
+          <button onclick="location.href='index.html'" style="padding:10px 20px;background:linear-gradient(135deg,#0F1E3D,#1A3A6B);color:#D4AF37;border:1px solid #D4AF37;border-radius:9px;font-weight:600;cursor:pointer;font-size:13px;">Accueil</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// GESTION UTILISATEURS (admin only)
+// ─────────────────────────────────────────────────────────────────
 export async function listUsers() {
   const db = await getDB();
   const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
@@ -97,20 +335,39 @@ export async function listUsers() {
   return snap.docs.map(d => ({ id:d.id, ...d.data() }));
 }
 
-export async function createUser(username, password, createdBy) {
+export async function createUser({ username, password, role, permissions, createdBy }) {
   const db = await getDB();
-  const { collection, addDoc, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-  // Vérifier que le username n'existe pas déjà
-  const q    = query(collection(db,'anac_users'), where('username','==',username.toUpperCase()));
+  const { collection, addDoc, query, where, getDocs } =
+    await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const uname = (username || '').toUpperCase().trim();
+  if (!uname) throw new Error('Identifiant requis');
+  if (uname === FALLBACK_USER) throw new Error('Identifiant réservé');
+  if (!password) throw new Error('Mot de passe requis');
+
+  const q    = query(collection(db,'anac_users'), where('username','==',uname));
   const snap = await getDocs(q);
-  if (!snap.empty) throw new Error('Utilisateur déjà existant');
+  if (!snap.empty) throw new Error('Cet identifiant existe déjà');
+
   await addDoc(collection(db,'anac_users'), {
-    username: username.toUpperCase(),
+    username: uname,
     password,
-    role: 'admin',
+    role: role || 'custom',
+    permissions: permissions || [],
+    disabled: false,
     createdAt: new Date().toISOString(),
-    createdBy: createdBy || 'SYSTEM'
+    createdBy: createdBy || 'SYSTEM',
+    currentSessionId: null
   });
+}
+
+export async function updateUser(userId, fields) {
+  const db = await getDB();
+  const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  if (fields.password || fields.role || fields.permissions || fields.disabled) {
+    fields.currentSessionId = null;
+  }
+  fields.updatedAt = new Date().toISOString();
+  await updateDoc(doc(db,'anac_users',userId), fields);
 }
 
 export async function deleteUser(userId) {
@@ -119,8 +376,52 @@ export async function deleteUser(userId) {
   await deleteDoc(doc(db,'anac_users',userId));
 }
 
-export async function changeUserPassword(userId, newPassword) {
-  const db = await getDB();
-  const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-  await updateDoc(doc(db,'anac_users',userId), { password: newPassword, updatedAt: new Date().toISOString() });
+// ─────────────────────────────────────────────────────────────────
+// JOURNAL D'ACTIVITÉ
+// ─────────────────────────────────────────────────────────────────
+export async function logActivity(action, target, details) {
+  try {
+    const db = await getDB();
+    const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const s = getSession();
+    await addDoc(collection(db,'anac_activity_log'), {
+      ts: Date.now(),
+      tsIso: new Date().toISOString(),
+      username: (s ? s.username : target) || 'ANONYMOUS',
+      action,
+      target: target || '',
+      details: details || ''
+    });
+  } catch(e) { /* silent — ne jamais bloquer l'app pour un échec de log */ }
 }
+
+export async function getActivityLog({ limit = 200, since = null } = {}) {
+  const db = await getDB();
+  const { collection, query, orderBy, limit: lim, where, getDocs } =
+    await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  let q;
+  if (since) q = query(collection(db,'anac_activity_log'), where('ts','>=',since), orderBy('ts','desc'), lim(limit));
+  else       q = query(collection(db,'anac_activity_log'), orderBy('ts','desc'), lim(limit));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id:d.id, ...d.data() }));
+}
+
+export const ACTION_LABELS = {
+  'login_success':  '🔓 Connexion réussie',
+  'login_failed':   '⛔ Échec de connexion',
+  'logout':         '🚪 Déconnexion',
+  'add_flight':     '➕ Ajout vol',
+  'edit_flight':    '✏️ Modification vol',
+  'delete_flight':  '🗑️ Suppression vol',
+};
+
+// ─────────────────────────────────────────────────────────────────
+// EXPOSITION GLOBALE pour scripts non-modules
+// ─────────────────────────────────────────────────────────────────
+window.ANAC_AUTH = {
+  login, logout, getSession, currentUser, isLoggedIn, hasPerm,
+  requireAuth, showNoPermissionScreen, startSessionWatcher, stopSessionWatcher,
+  listUsers, createUser, updateUser, deleteUser,
+  logActivity, getActivityLog,
+  ALL_PERMISSIONS, ROLES, ACTION_LABELS, resolvePermissions
+};
