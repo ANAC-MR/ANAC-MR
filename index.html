@@ -724,6 +724,11 @@
       <div class="icon">⚙️</div>
       <div class="label"><div class="main">Administration</div><div class="desc">CONFIGURATION SYSTÈME</div></div>
     </a>
+    <div class="anac-menu-divider"></div>
+    <a href="mauritanie-airlines.html" class="anac-menu-item" data-nav="ma">
+      <div class="icon">🇲🇷</div>
+      <div class="label"><div class="main">Mauritanie Airlines</div><div class="desc">PAX PAR DESTINATION</div></div>
+    </a>
   </div>
   <div class="anac-menu-footer">AVIATION CIVILE · MAURITANIE</div>
 </div>
@@ -765,6 +770,7 @@ document.addEventListener('keydown', e => {
     else if (path.includes('vols') && nav === 'vols') isActive = true;
     else if (path.includes('ldm') && nav === 'ldm') isActive = true;
     else if (path.includes('admin') && nav === 'admin') isActive = true;
+    else if (path.includes('mauritanie-airlines') && nav === 'ma') isActive = true;
 
     if (isActive) {
       el.classList.add('active');
