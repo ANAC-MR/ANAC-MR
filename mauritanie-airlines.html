@@ -31,30 +31,43 @@ header .sub{color:#D4AF37;font-size:12px;font-weight:600;letter-spacing:2px;text
 .btn-export{margin-left:auto;padding:9px 16px;font-size:13px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;border:1px solid rgba(212,175,55,0.4);border-radius:10px;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
 .btn-export:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(15,30,61,0.2);}
 
-.table-block{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;margin-bottom:22px;box-shadow:0 1px 3px rgba(0,0,0,0.03);}
-.table-title{padding:14px 20px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:10px;}
-.table-title .badge{padding:3px 10px;background:rgba(212,175,55,0.2);border:1px solid rgba(212,175,55,0.4);border-radius:14px;font-size:11px;letter-spacing:0.5px;}
+.table-block{background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:22px;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
+.table-title{padding:16px 24px;background:linear-gradient(135deg,#0f1e3d 0%,#1a3a6b 100%);color:#D4AF37;font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:12px;text-align:center;}
+.table-title .badge{padding:4px 12px;background:rgba(212,175,55,0.2);border:1px solid rgba(212,175,55,0.5);border-radius:14px;font-size:11px;letter-spacing:0.5px;}
 
-.data-table{width:100%;border-collapse:collapse;font-size:12px;}
-.data-table thead tr{background:#f8fafc;}
-.data-table th{padding:10px 8px;font-size:10px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid #e2e8f0;text-align:center;}
-.data-table th:first-child{text-align:left;padding-left:18px;min-width:220px;}
-.data-table td{padding:8px 8px;border-bottom:1px solid #f1f5f9;text-align:center;color:#475569;}
-.data-table td:first-child{text-align:left;padding-left:18px;color:#1a2d45;}
+/* Table layout: fixed + zoom out to fit */
+.data-table{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed;}
+.data-table thead tr{background:linear-gradient(135deg,#1a3a6b,#2B5A8E);}
+.data-table th{padding:10px 6px;font-size:10px;font-weight:700;color:#D4AF37;letter-spacing:0.8px;text-transform:uppercase;border-bottom:2px solid rgba(212,175,55,0.3);text-align:center;border-right:1px solid rgba(255,255,255,0.08);}
+.data-table th:first-child{text-align:left;padding-left:14px;width:200px;}
+.data-table th:last-child{background:rgba(212,175,55,0.15);border-right:none;}
 
-.pair-row td{background:#fafbfc;font-weight:700;color:#0f1e3d;font-size:12.5px;padding-top:10px;padding-bottom:10px;}
-.pair-row td:first-child{color:#D4AF37;letter-spacing:0.3px;}
+.data-table td{padding:7px 5px;border-bottom:1px solid #f1f5f9;border-right:1px solid #f5f7fa;text-align:center;color:#475569;vertical-align:middle;}
+.data-table td:first-child{text-align:left;padding-left:14px;color:#1a2d45;border-right:1px solid #e2e8f0;}
+.data-table td:last-child{background:rgba(212,175,55,0.05);border-right:none;}
 
-.route-row td{padding-left:28px;font-size:12px;}
-.route-row td:first-child{padding-left:36px;color:#475569;}
-.route-row:hover td{background:rgba(212,175,55,0.04);}
+/* Pair header rows */
+.pair-row td{background:linear-gradient(to right,#f0f4ff,#f8fafc);font-weight:700;color:#0f1e3d;font-size:12px;padding:10px 14px;border-top:2px solid #e2e8f0;border-bottom:1px solid #dde3ef;letter-spacing:0.3px;}
+.pair-row td:first-child{color:#1a3a6b;border-left:3px solid #D4AF37;padding-left:12px;}
 
-.cell-nb{color:#94a3b8;font-size:11px;font-weight:500;}
-.cell-pax{color:#0f1e3d;font-weight:700;font-size:12.5px;}
+/* Route rows */
+.route-row td:first-child{padding-left:24px;color:#475569;font-size:11px;}
+.route-row:nth-child(odd) td{background:#fafbfd;}
+.route-row:nth-child(even) td{background:#ffffff;}
+.route-row:hover td{background:rgba(212,175,55,0.06) !important;transition:background 0.1s;}
 
-.total-row td{background:linear-gradient(to right,rgba(212,175,55,0.1),rgba(212,175,55,0.04));font-weight:800;color:#0f1e3d;padding:14px 8px;border-top:2px solid rgba(212,175,55,0.3);font-size:13px;}
-.total-row td:first-child{color:#0f1e3d;letter-spacing:0.5px;}
-.col-total{background:rgba(212,175,55,0.04);font-weight:700;color:#0f1e3d !important;}
+/* Cell content */
+.cell-nb{display:block;color:#2B5A8E;font-size:10.5px;font-weight:600;}
+.cell-pax{display:block;color:#0f1e3d;font-weight:700;font-size:12px;}
+
+/* Total row */
+.total-row td{background:linear-gradient(to right,rgba(212,175,55,0.15),rgba(212,175,55,0.08));font-weight:800;color:#0f1e3d;padding:12px 6px;border-top:2px solid #D4AF37;font-size:12px;}
+.total-row td:first-child{color:#0f1e3d;letter-spacing:0.3px;padding-left:14px;border-left:3px solid #D4AF37;}
+.total-row td:last-child{background:linear-gradient(to right,rgba(212,175,55,0.25),rgba(212,175,55,0.18));border-top:2px solid #D4AF37;}
+.col-total{background:rgba(212,175,55,0.08) !important;font-weight:700;color:#0f1e3d !important;}
+
+/* Zebra for odd col-total */
+.route-row:nth-child(odd) td.col-total{background:rgba(212,175,55,0.1) !important;}
 
 .empty-state{text-align:center;padding:60px 20px;color:#94a3b8;}
 .empty-state h3{font-size:15px;color:#475569;margin-bottom:8px;}
@@ -425,7 +438,7 @@ document.addEventListener('keydown', e => {
       🇲🇷 Vols Domestiques
       <span class="badge" id="domBadge">—</span>
     </div>
-    <div style="overflow-x:auto;" id="domTableWrap">
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;" id="domTableWrap">
       <div class="loading">Chargement des données…</div>
     </div>
   </div>
@@ -436,7 +449,7 @@ document.addEventListener('keydown', e => {
       🌍 Vols Internationaux
       <span class="badge" id="intBadge">—</span>
     </div>
-    <div style="overflow-x:auto;" id="intTableWrap">
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;" id="intTableWrap">
       <div class="loading">Chargement des données…</div>
     </div>
   </div>
@@ -489,9 +502,14 @@ const CITY_NAMES = {
   'LEMD':'Madrid','MAD':'Madrid','LEBL':'Barcelone','BCN':'Barcelone',
   'GCLP':'Las Palmas','LPA':'Las Palmas','GCXO':'Tenerife','TFN':'Tenerife',
   'OEJN':'Djeddah','JED':'Djeddah','OERK':'Riyad','RUH':'Riyad',
-  'OETH':'Taif','TIF':'Taif','HECA':'Le Caire','CAI':'Le Caire',
+  'OEMA':'Médine','MED':'Médine','OETH':'Taif','TIF':'Taif',
+  'HECA':'Le Caire','CAI':'Le Caire',
   'OTHH':'Doha','DOH':'Doha','OMDB':'Dubaï','DXB':'Dubaï',
   'OIIE':'Téhéran','IKA':'Téhéran','OYSN':'Sanaa','SAH':'Sanaa',
+  'OLBA':'Beyrouth','BEY':'Beyrouth','OJAM':'Amman','AMM':'Amman',
+  'LTFM':'Istanbul','IST':'Istanbul','LTAC':'Ankara','ESB':'Ankara',
+  'EDDB':'Berlin','BER':'Berlin','LFMN':'Nice','NCE':'Nice',
+  'LPPT':'Lisbonne','LIS':'Lisbonne',
   'GVAC':'Sal','SID':'Sal','GVNP':'Praia','RAI':'Praia',
   'FNLU':'Luanda','LAD':'Luanda','FAOR':'Johannesburg','JNB':'Johannesburg',
   'HAAB':'Addis-Abeba','ADD':'Addis-Abeba','HKJK':'Nairobi','NBO':'Nairobi',
@@ -663,29 +681,29 @@ function renderTable(groupedData, containerId, badgeId){
   // Formater une cellule
   const fmtCell = (cell) => {
     const hasData = cell && (cell.pax > 0 || cell.count > 0);
-    if (!hasData) return '<span style="color:#cbd5e1;">—</span>';
+    if (!hasData) return '<span style="color:#dde3ef;font-size:13px;">—</span>';
     const parts = [];
-    if (showNb) parts.push('<span class="cell-nb">'+cell.count+' vol'+(cell.count>1?'s':'')+'</span>');
+    if (showNb)  parts.push('<span class="cell-nb">'+cell.count+' vol'+(cell.count>1?'s':'')+'</span>');
     if (showPax) parts.push('<span class="cell-pax">'+cell.pax.toLocaleString('fr-FR')+'</span>');
-    return parts.join('<br>');
+    return parts.join('');
   };
 
   // Construire HTML
   let html = '<table class="data-table"><thead><tr>';
-  html += '<th>Destination</th>';
-  MONTHS_SHORT.forEach(m => html += '<th>'+m+'</th>');
-  html += '<th style="background:rgba(212,175,55,0.08);">Total</th>';
+  html += '<th style="width:190px;">Destination</th>';
+  MONTHS_SHORT.forEach(m => html += '<th style="width:62px;">'+m+'</th>');
+  html += '<th style="width:74px;background:rgba(212,175,55,0.15);">Total</th>';
   html += '</tr></thead><tbody>';
 
   groupedData.forEach(grp => {
     // En-tête de paire (ex: "Nouakchott / Nouadhibou")
-    html += '<tr class="pair-row"><td colspan="14">' + grp.pairKey + '</td></tr>';
+    html += '<tr class="pair-row"><td colspan="14" style="padding-left:14px;">' + grp.pairKey + '</td></tr>';
 
     // Lignes de routes (chaque direction)
     grp.routes.forEach(route => {
       let rowTotalPax = 0, rowTotalNb = 0;
       html += '<tr class="route-row">';
-      html += '<td>&nbsp;&nbsp;'+route.fromCity+' — '+route.toCity+'</td>';
+      html += '<td>'+route.fromCity+' → '+route.toCity+'</td>';
       for (let m = 0; m < 12; m++) {
         const cell = route.months[m] || { pax:0, count:0 };
         rowTotalPax += cell.pax;
@@ -698,7 +716,7 @@ function renderTable(groupedData, containerId, badgeId){
   });
 
   // Ligne TOTAL
-  html += '<tr class="total-row"><td>TOTAL</td>';
+  html += '<tr class="total-row"><td style="font-size:12px;font-weight:800;letter-spacing:0.5px;">TOTAL</td>';
   for (let m = 0; m < 12; m++) {
     html += '<td>' + fmtCell({ pax:monthTotalsPax[m], count:monthTotalsNb[m] }) + '</td>';
   }
