@@ -487,6 +487,9 @@
     // requireAuth a déjà géré la redirection / l'écran d'erreur
   }
 </script>
+<!-- ANAC_PERMS_INJECTED -->
+<script type="module" src="./perms.js"></script>
+
 
 <!-- ═══════════════════════════════════════════════════════════════
      MENU HAMBURGER UNIFIÉ ANAC - à insérer en haut de chaque page
@@ -880,13 +883,13 @@ document.addEventListener('keydown', e => {
             <!-- ═══ ACTIONS ═══ -->
             <section class="actions-section" style="margin-bottom:14px;">
                 <div class="actions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                    <button id="addFlightBtn" style="padding:10px 18px;font-size:13px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;border:1px solid rgba(212,175,55,0.5);border-radius:10px;font-weight:700;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;"
+                    <button id="addFlightBtn" data-perm="add_flight" style="padding:10px 18px;font-size:13px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;border:1px solid rgba(212,175,55,0.5);border-radius:10px;font-weight:700;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;"
                         onmouseover="this.style.boxShadow='0 6px 18px rgba(15,30,61,0.25)';this.style.transform='translateY(-1px)'"
                         onmouseout="this.style.boxShadow='none';this.style.transform='none'">
                         ＋ Ajouter un vol
                     </button>
                     <button class="btn-warning" id="undoBtn" style="display:none;">↩️ Annuler suppression</button>
-                    <button id="btnExportSuivi" onclick="exportSuiviExcel()"
+                    <button id="btnExportSuivi" data-perm="export_flights" onclick="exportSuiviExcel()"
                         style="padding:10px 18px;font-size:13px;background:#fff;color:#1a2d45;border:1px solid #e5e7eb;border-radius:10px;font-weight:600;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;"
                         onmouseover="this.style.background='#f8fafc';this.style.borderColor='#D4AF37';this.style.color='#0f1e3d'"
                         onmouseout="this.style.background='#fff';this.style.borderColor='#e5e7eb';this.style.color='#1a2d45'">
@@ -945,7 +948,7 @@ document.addEventListener('keydown', e => {
     </select>
 
     <button onclick="resetChartFilters()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
-    <button onclick="exportExcel()" id="btnExportExcel"
+    <button onclick="exportExcel()" id="btnExportExcel" data-perm="export_flights"
       style="background:linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1));
              border:1px solid rgba(0,182,122,.5);color:#34d399;border-radius:8px;
              padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;
