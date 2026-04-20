@@ -1614,72 +1614,102 @@ document.addEventListener('keydown', e => {
             <div class="section-page" id="section-security">
                 <div class="page-header">
                     <div class="page-header-left">
-                        <h2>Sécurité & Utilisateurs</h2>
+                        <h2>🛡️ Sécurité & Utilisateurs</h2>
                     </div>
                 </div>
 
-                <!-- Identifiants principaux -->
-                <div class="card">
-                    <div class="card-title">🔑 Compte principal</div>
-                    <p style="font-size:13px;color:var(--text-dim);margin-bottom:18px;line-height:1.7;">
-                        Modifier l'identifiant ou le mot de passe <strong style="color:var(--text);">déconnecte automatiquement tous les appareils</strong> connectés au site.
-                    </p>
-                    <div class="form-grid">
-                        <div class="field-group">
-                            <label>Identifiant actuel</label>
-                            <input type="text" id="secCurrUser" autocomplete="new-password" placeholder="">
+                <!-- Onglets -->
+                <div class="sec-tabs" style="display:flex;gap:6px;background:rgba(255,255,255,0.04);padding:5px;border-radius:11px;margin-bottom:18px;width:fit-content;">
+                    <button class="sec-tab-btn active" data-sectab="users" onclick="_secSwitchTab('users')" style="padding:9px 18px;font-size:13px;font-weight:700;background:linear-gradient(135deg,#0F1E3D,#1A3A6B);color:#D4AF37;border:1px solid rgba(212,175,55,0.4);border-radius:8px;cursor:pointer;transition:all 0.15s;">👥 Utilisateurs</button>
+                    <button class="sec-tab-btn" data-sectab="activity" onclick="_secSwitchTab('activity')" style="padding:9px 18px;font-size:13px;font-weight:700;background:transparent;color:#94a3b8;border:1px solid transparent;border-radius:8px;cursor:pointer;transition:all 0.15s;">📋 Activité récente</button>
+                </div>
+
+                <!-- ============== ONGLET UTILISATEURS ============== -->
+                <div class="sec-tab-content" id="sec-tab-users">
+                    <div class="card">
+                        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                            <span>👥 Comptes utilisateurs</span>
+                            <button class="btn-primary" style="padding:8px 16px;font-size:13px;" onclick="_secOpenUserModal()">+ Ajouter un utilisateur</button>
                         </div>
-                        <div class="field-group">
-                            <label>Nouvel identifiant <span style="color:var(--text-dim);font-weight:400;">(laisser vide = inchangé)</span></label>
-                            <input type="text" id="secNewUser" autocomplete="new-password" placeholder="" style="text-transform:uppercase;">
+                        <div id="secUsersList"><div style="text-align:center;color:#64748b;padding:30px;font-size:13px;">Chargement...</div></div>
+                    </div>
+
+                    <div class="card" style="background:rgba(212,175,55,0.05);border-color:rgba(212,175,55,0.2);margin-top:14px;">
+                        <div style="font-size:13px;color:#D4AF37;line-height:1.7;">
+                            <strong style="color:#fff;">🔐 Compte de secours</strong> — L'identifiant <strong style="color:#fff;font-family:monospace;">DADY</strong> est un compte de secours codé en dur dans l'application. Il est toujours actif et n'apparaît pas dans la liste. Utilisez-le uniquement en cas d'oubli de mot de passe d'un compte administrateur.
                         </div>
-                        <div class="field-group">
-                            <label>Mot de passe actuel</label>
-                            <input type="password" id="secCurrentPass" autocomplete="new-password" placeholder="">
-                        </div>
-                        <div class="field-group">
-                            <label>Nouveau mot de passe <span style="color:var(--text-dim);font-weight:400;">(laisser vide = inchangé)</span></label>
-                            <input type="password" id="secNewPass" autocomplete="new-password" placeholder="" oninput="checkPasswordStrength()">
-                            <div id="strengthBar" style="height:4px;border-radius:2px;background:rgba(255,255,255,0.1);margin-top:8px;overflow:hidden;">
-                                <div id="strengthFill" style="height:100%;width:0%;transition:width 0.3s,background 0.3s;"></div>
+                    </div>
+                </div>
+
+                <!-- ============== ONGLET ACTIVITÉ ============== -->
+                <div class="sec-tab-content" id="sec-tab-activity" style="display:none;">
+                    <div class="card">
+                        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                            <span>📋 Journal d'activité</span>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <select id="secActFilterUser" onchange="_secRenderActivity()" style="background:#1a2d45;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:6px 10px;color:#e2e8f0;font-size:12px;min-width:160px;">
+                                    <option value="">Tous les utilisateurs</option>
+                                </select>
+                                <select id="secActFilterAction" onchange="_secRenderActivity()" style="background:#1a2d45;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:6px 10px;color:#e2e8f0;font-size:12px;min-width:160px;">
+                                    <option value="">Toutes les actions</option>
+                                    <option value="login_success">🔓 Connexion réussie</option>
+                                    <option value="login_failed">⛔ Échec de connexion</option>
+                                    <option value="logout">🚪 Déconnexion</option>
+                                    <option value="add_flight">➕ Ajout vol</option>
+                                    <option value="edit_flight">✏️ Modification vol</option>
+                                    <option value="delete_flight">🗑️ Suppression vol</option>
+                                </select>
+                                <button class="btn-secondary" onclick="_secRefreshActivity()" style="padding:6px 12px;font-size:12px;">↻ Actualiser</button>
+                                <button class="btn-primary" onclick="_secExportActivity()" style="padding:6px 12px;font-size:12px;">⬇ Excel</button>
                             </div>
-                            <span id="strengthLabel" class="hint"></span>
                         </div>
-                        <div class="field-group">
-                            <label>Confirmer nouveau mot de passe</label>
-                            <input type="password" id="secConfirmPass" autocomplete="new-password" placeholder="">
-                        </div>
+                        <div id="secActivityList"><div style="text-align:center;color:#64748b;padding:30px;font-size:13px;">Chargement...</div></div>
                     </div>
-                    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                        <button class="btn-primary" onclick="changeCredentials()">💾 Mettre à jour</button>
-                        <button class="btn-danger"  onclick="forceLogoutAll()">⚡ Déconnecter tous les appareils</button>
-                    </div>
-                    <div id="secMsg" style="margin-top:12px;font-size:13px;font-weight:600;min-height:20px;"></div>
                 </div>
 
-                <!-- Utilisateurs secondaires -->
-                <div class="card">
-                    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-                        <span>👥 Utilisateurs secondaires</span>
-                        <button class="btn-primary" style="padding:7px 16px;font-size:12px;" onclick="showAddUserModal()">+ Ajouter</button>
-                    </div>
-                    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Gérez les comptes et leurs permissions d'accès.</p>
-                    <div id="usersList"><div style="text-align:center;color:var(--text-dim);padding:20px;font-size:13px;">Chargement...</div></div>
-                </div>
+                <!-- ============== MODAL CRÉATION/ÉDITION UTILISATEUR ============== -->
+                <div id="secUserModal" class="modal-overlay" style="display:none;">
+                    <div class="modal-content" style="max-width:680px;">
+                        <div class="modal-header">
+                            <h3 id="secUserModalTitle">+ Ajouter un utilisateur</h3>
+                            <button onclick="_secCloseUserModal()" class="btn-icon">✕</button>
+                        </div>
+                        <div class="modal-body" style="max-height:75vh;overflow-y:auto;">
+                            <div class="form-grid">
+                                <div class="field-group">
+                                    <label>Identifiant</label>
+                                    <input type="text" id="secUserName" autocomplete="new-password" style="text-transform:uppercase;">
+                                </div>
+                                <div class="field-group">
+                                    <label>Mot de passe</label>
+                                    <input type="text" id="secUserPass" autocomplete="new-password">
+                                </div>
+                                <div class="field-group" style="grid-column:1/-1;">
+                                    <label>Rôle</label>
+                                    <select id="secUserRole" onchange="_secOnRoleChange()">
+                                        <option value="admin">Administrateur — Accès complet</option>
+                                        <option value="operator">Opérateur — Vols + LDM/MVT</option>
+                                        <option value="reader">Lecteur — Consultation seule</option>
+                                        <option value="custom">Personnalisé — Permissions à la carte</option>
+                                    </select>
+                                </div>
+                            </div>
 
-                <!-- Pages protégées -->
-                <div class="card" style="background:rgba(212,175,55,0.04);border-color:rgba(212,175,55,0.2);">
-                    <div class="card-title" style="color:#D4AF37;">🛡️ Pages nécessitant une connexion</div>
-                    <div style="font-size:13px;color:var(--text-dim);line-height:2.2;">
-                        <strong style="color:var(--text);">📡 ldm.html</strong> — LDM/MVT Reader<br>
-                        <strong style="color:var(--text);">📥 import.html</strong> — Import Programme des Vols<br>
-                        <strong style="color:var(--text);">🧾 Onglet Facturation</strong> — dans le site principal<br>
-                        <strong style="color:var(--text);">⚙️ admin.html</strong> — ce panneau d'administration
+                            <div id="secPermissionsBlock" style="margin-top:16px;display:none;">
+                                <div style="font-size:12px;font-weight:700;color:#D4AF37;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Permissions personnalisées</div>
+                                <div id="secPermissionsList"></div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button class="btn-secondary" onclick="_secCloseUserModal()">Annuler</button>
+                                <button class="btn-primary" onclick="_secSaveUser()">💾 Enregistrer</button>
+                            </div>
+                            <div id="secUserModalMsg" style="margin-top:10px;font-size:13px;font-weight:600;text-align:center;min-height:20px;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-        
             <!-- ─── CHARGEMENT DE VOLS ─── -->
             <div class="section-page" id="section-chargement">
                 <div class="page-header">
@@ -5719,5 +5749,316 @@ window._schedDelete = async function(id) {
     }, 200);
   });
 </script>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SECTION SÉCURITÉ & UTILISATEURS — Logique JS
+══════════════════════════════════════════════════════════════════ -->
+<script type="module">
+import {
+  ALL_PERMISSIONS, ROLES, ACTION_LABELS,
+  listUsers, createUser, updateUser, deleteUser,
+  getActivityLog, resolvePermissions, getSession
+} from './auth.js';
+
+let _secEditingUserId = null;
+let _secAllUsers = [];
+let _secAllActivity = [];
+
+// ── Tabs ────────────────────────────────────────────────────
+window._secSwitchTab = function(name) {
+  document.querySelectorAll('.sec-tab-btn').forEach(b => {
+    const isActive = b.dataset.sectab === name;
+    b.classList.toggle('active', isActive);
+    if (isActive) {
+      b.style.background = 'linear-gradient(135deg,#0F1E3D,#1A3A6B)';
+      b.style.color = '#D4AF37';
+      b.style.border = '1px solid rgba(212,175,55,0.4)';
+    } else {
+      b.style.background = 'transparent';
+      b.style.color = '#94a3b8';
+      b.style.border = '1px solid transparent';
+    }
+  });
+  document.querySelectorAll('.sec-tab-content').forEach(c => {
+    c.style.display = c.id === 'sec-tab-' + name ? 'block' : 'none';
+  });
+  if (name === 'activity') _secLoadActivity();
+};
+
+// ── Liste des utilisateurs ────────────────────────────────────
+async function _secLoadUsers() {
+  const list = document.getElementById('secUsersList');
+  if (!list) return;
+  try {
+    _secAllUsers = await listUsers();
+    if (!_secAllUsers.length) {
+      list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px;font-size:13px;">Aucun utilisateur. Cliquez sur "+ Ajouter un utilisateur" pour commencer.</div>';
+      return;
+    }
+    const roleLabels = { admin:'Administrateur', operator:'Opérateur', reader:'Lecteur', custom:'Personnalisé' };
+    const roleColors = { admin:'#D4AF37', operator:'#60a5fa', reader:'#94a3b8', custom:'#a78bfa' };
+    let html = '<div style="display:grid;grid-template-columns:1fr;gap:8px;">';
+    _secAllUsers.forEach(u => {
+      const role = u.role || 'custom';
+      const color = roleColors[role] || '#94a3b8';
+      const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('fr-FR') : 'Jamais';
+      const isOnline = !!u.currentSessionId;
+      html += `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-left:3px solid ${color};border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+              <span style="font-weight:700;color:#fff;font-size:14px;letter-spacing:0.3px;">${u.username}</span>
+              <span style="font-size:10px;color:${color};background:${color}22;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">${roleLabels[role]||role}</span>
+              ${isOnline ? '<span style="font-size:10px;color:#22c55e;background:#22c55e22;padding:2px 8px;border-radius:10px;font-weight:700;">● EN LIGNE</span>' : ''}
+              ${u.disabled ? '<span style="font-size:10px;color:#ef4444;background:#ef444422;padding:2px 8px;border-radius:10px;font-weight:700;">DÉSACTIVÉ</span>' : ''}
+            </div>
+            <div style="font-size:11px;color:#94a3b8;">Dernière connexion : ${lastLogin}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="_secEditUser('${u.id}')" style="padding:7px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);color:#60a5fa;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✏️ Modifier</button>
+            <button onclick="_secToggleDisable('${u.id}')" style="padding:7px 12px;background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.3);color:#D4AF37;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">${u.disabled?'Réactiver':'Désactiver'}</button>
+            <button onclick="_secDeleteUser('${u.id}','${u.username}')" style="padding:7px 12px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">🗑️</button>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    list.innerHTML = html;
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur: ' + e.message + '</div>';
+  }
+}
+
+// ── Modal utilisateur ────────────────────────────────────────
+window._secOpenUserModal = function() {
+  _secEditingUserId = null;
+  document.getElementById('secUserModalTitle').textContent = '+ Ajouter un utilisateur';
+  document.getElementById('secUserName').value = '';
+  document.getElementById('secUserName').disabled = false;
+  document.getElementById('secUserPass').value = '';
+  document.getElementById('secUserPass').placeholder = '';
+  document.getElementById('secUserRole').value = 'operator';
+  document.getElementById('secUserModalMsg').textContent = '';
+  _secOnRoleChange();
+  _secBuildPermissionsList();
+  document.getElementById('secUserModal').style.display = 'flex';
+};
+
+window._secCloseUserModal = function() {
+  document.getElementById('secUserModal').style.display = 'none';
+};
+
+window._secEditUser = function(userId) {
+  const u = _secAllUsers.find(x => x.id === userId);
+  if (!u) return;
+  _secEditingUserId = userId;
+  document.getElementById('secUserModalTitle').textContent = '✏️ Modifier ' + u.username;
+  document.getElementById('secUserName').value = u.username;
+  document.getElementById('secUserName').disabled = true; // username non modifiable
+  document.getElementById('secUserPass').value = '';
+  document.getElementById('secUserPass').placeholder = 'Laisser vide = ne pas changer';
+  document.getElementById('secUserRole').value = u.role || 'custom';
+  document.getElementById('secUserModalMsg').textContent = '';
+  _secOnRoleChange();
+  _secBuildPermissionsList(u.permissions || []);
+  document.getElementById('secUserModal').style.display = 'flex';
+};
+
+window._secOnRoleChange = function() {
+  const role = document.getElementById('secUserRole').value;
+  const block = document.getElementById('secPermissionsBlock');
+  if (role === 'custom') {
+    block.style.display = 'block';
+  } else {
+    block.style.display = 'none';
+  }
+};
+
+function _secBuildPermissionsList(checkedList) {
+  const list = document.getElementById('secPermissionsList');
+  const checked = new Set(checkedList || []);
+  // Grouper par catégorie
+  const groups = {};
+  Object.entries(ALL_PERMISSIONS).forEach(([key, def]) => {
+    const g = def.group;
+    if (!groups[g]) groups[g] = [];
+    groups[g].push({ key, ...def });
+  });
+  let html = '';
+  Object.entries(groups).forEach(([group, perms]) => {
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:#D4AF37;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid rgba(212,175,55,0.2);">${group}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;">`;
+    perms.forEach(p => {
+      const isChecked = checked.has(p.key) ? 'checked' : '';
+      html += `
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#e2e8f0;cursor:pointer;padding:5px 8px;border-radius:6px;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background=''">
+          <input type="checkbox" class="sec-perm-cb" data-perm="${p.key}" ${isChecked} style="accent-color:#D4AF37;cursor:pointer;">
+          ${p.label}
+        </label>`;
+    });
+    html += '</div></div>';
+  });
+  list.innerHTML = html;
+}
+
+window._secSaveUser = async function() {
+  const username = document.getElementById('secUserName').value.trim().toUpperCase();
+  const password = document.getElementById('secUserPass').value;
+  const role     = document.getElementById('secUserRole').value;
+  const msg      = document.getElementById('secUserModalMsg');
+
+  if (!username) { msg.textContent = '⚠️ Identifiant requis'; msg.style.color = '#fca5a5'; return; }
+  if (!_secEditingUserId && !password) { msg.textContent = '⚠️ Mot de passe requis'; msg.style.color = '#fca5a5'; return; }
+
+  // Récupérer permissions cochées (si rôle custom)
+  let permissions = [];
+  if (role === 'custom') {
+    document.querySelectorAll('#secPermissionsList .sec-perm-cb:checked').forEach(cb => {
+      permissions.push(cb.dataset.perm);
+    });
+  } else {
+    permissions = resolvePermissions(role);
+  }
+
+  try {
+    const me = getSession();
+    const createdBy = me ? me.username : 'SYSTEM';
+    if (_secEditingUserId) {
+      const fields = { role, permissions };
+      if (password) fields.password = password;
+      await updateUser(_secEditingUserId, fields);
+      msg.textContent = '✓ Utilisateur mis à jour'; msg.style.color = '#22c55e';
+    } else {
+      await createUser({ username, password, role, permissions, createdBy });
+      msg.textContent = '✓ Utilisateur créé'; msg.style.color = '#22c55e';
+    }
+    setTimeout(() => { _secCloseUserModal(); _secLoadUsers(); }, 700);
+  } catch(e) {
+    msg.textContent = '⚠️ ' + e.message; msg.style.color = '#fca5a5';
+  }
+};
+
+window._secToggleDisable = async function(userId) {
+  const u = _secAllUsers.find(x => x.id === userId);
+  if (!u) return;
+  if (!confirm((u.disabled ? 'Réactiver' : 'Désactiver') + ' l\'utilisateur ' + u.username + ' ?')) return;
+  try {
+    await updateUser(userId, { disabled: !u.disabled });
+    await _secLoadUsers();
+  } catch(e) { alert('Erreur : ' + e.message); }
+};
+
+window._secDeleteUser = async function(userId, username) {
+  if (!confirm('Supprimer définitivement l\'utilisateur ' + username + ' ? Cette action est irréversible.')) return;
+  try {
+    await deleteUser(userId);
+    await _secLoadUsers();
+  } catch(e) { alert('Erreur : ' + e.message); }
+};
+
+// ── Journal d'activité ──────────────────────────────────────
+async function _secLoadActivity() {
+  const list = document.getElementById('secActivityList');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;color:#64748b;padding:30px;font-size:13px;">Chargement...</div>';
+  try {
+    _secAllActivity = await getActivityLog({ limit: 300 });
+    // Peupler le filtre utilisateurs
+    const sel = document.getElementById('secActFilterUser');
+    const users = [...new Set(_secAllActivity.map(a => a.username))].sort();
+    sel.innerHTML = '<option value="">Tous les utilisateurs</option>' + users.map(u => `<option value="${u}">${u}</option>`).join('');
+    _secRenderActivity();
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur: ' + e.message + '</div>';
+  }
+}
+
+window._secRefreshActivity = _secLoadActivity;
+
+window._secRenderActivity = function() {
+  const list = document.getElementById('secActivityList');
+  const userFilter = document.getElementById('secActFilterUser').value;
+  const actionFilter = document.getElementById('secActFilterAction').value;
+  let filtered = _secAllActivity;
+  if (userFilter)   filtered = filtered.filter(a => a.username === userFilter);
+  if (actionFilter) filtered = filtered.filter(a => a.action === actionFilter);
+
+  if (!filtered.length) {
+    list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px;font-size:13px;">Aucune activité ne correspond aux filtres.</div>';
+    return;
+  }
+
+  let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<thead><tr style="background:rgba(255,255,255,0.04);">';
+  html += '<th style="padding:10px;text-align:left;color:#D4AF37;font-size:10px;letter-spacing:1px;text-transform:uppercase;">Date · Heure</th>';
+  html += '<th style="padding:10px;text-align:left;color:#D4AF37;font-size:10px;letter-spacing:1px;text-transform:uppercase;">Utilisateur</th>';
+  html += '<th style="padding:10px;text-align:left;color:#D4AF37;font-size:10px;letter-spacing:1px;text-transform:uppercase;">Action</th>';
+  html += '<th style="padding:10px;text-align:left;color:#D4AF37;font-size:10px;letter-spacing:1px;text-transform:uppercase;">Détails</th>';
+  html += '</tr></thead><tbody>';
+  filtered.forEach((a, i) => {
+    const dt = new Date(a.ts || Date.parse(a.tsIso));
+    const dateStr = dt.toLocaleDateString('fr-FR') + ' ' + dt.toLocaleTimeString('fr-FR');
+    const actionLabel = ACTION_LABELS[a.action] || a.action;
+    const isFailed = a.action === 'login_failed';
+    const bg = i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+    const actionColor = isFailed ? '#fca5a5' : a.action === 'delete_flight' ? '#fca5a5' : a.action === 'login_success' ? '#86efac' : '#e2e8f0';
+    html += `<tr style="background:${bg};border-bottom:1px solid rgba(255,255,255,0.04);">
+      <td style="padding:10px;color:#94a3b8;font-family:monospace;font-size:11px;white-space:nowrap;">${dateStr}</td>
+      <td style="padding:10px;color:#fff;font-weight:600;">${a.username||'—'}</td>
+      <td style="padding:10px;color:${actionColor};font-weight:600;">${actionLabel}</td>
+      <td style="padding:10px;color:#cbd5e1;">${(a.details||a.target||'').slice(0,80)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  list.innerHTML = html;
+};
+
+window._secExportActivity = function() {
+  const userFilter = document.getElementById('secActFilterUser').value;
+  const actionFilter = document.getElementById('secActFilterAction').value;
+  let filtered = _secAllActivity;
+  if (userFilter)   filtered = filtered.filter(a => a.username === userFilter);
+  if (actionFilter) filtered = filtered.filter(a => a.action === actionFilter);
+
+  if (!filtered.length) { alert('Aucune donnée à exporter.'); return; }
+
+  // CSV (simple, pas besoin de bibliothèque)
+  let csv = '﻿Date,Heure,Utilisateur,Action,Cible,Details\n';
+  filtered.forEach(a => {
+    const dt = new Date(a.ts || Date.parse(a.tsIso));
+    const date = dt.toLocaleDateString('fr-FR');
+    const time = dt.toLocaleTimeString('fr-FR');
+    const action = ACTION_LABELS[a.action] || a.action;
+    const esc = s => '"' + String(s||'').replace(/"/g,'""') + '"';
+    csv += [esc(date), esc(time), esc(a.username), esc(action), esc(a.target), esc(a.details)].join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'journal-activite-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// ── Hook : recharger les utilisateurs quand on entre dans la section
+const _origShowSection = window.showSection;
+window.showSection = function(name) {
+  if (typeof _origShowSection === 'function') _origShowSection(name);
+  if (name === 'security') {
+    _secLoadUsers();
+  }
+};
+
+// Au chargement, si on arrive directement sur la section
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const cur = document.querySelector('.section-page.active');
+    if (cur && cur.id === 'section-security') _secLoadUsers();
+  }, 500);
+});
+</script>
+
 </body>
 </html>
