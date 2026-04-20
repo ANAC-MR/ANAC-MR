@@ -4,16 +4,14 @@
 //  Masque les éléments HTML selon les permissions de l'utilisateur.
 //  Utilisation :
 //    <button data-perm="delete_flight">...</button>
-//    <div data-perm="view_charts">...</div>
-//    <div data-admin-only="1">...</div>   (réservé au rôle admin strict)
+//    <div data-perm="access_admin">...</div>
+//    <div data-dady-only="1">...</div>   (réservé au compte DADY)
 // ═══════════════════════════════════════════════════════════════
 
 import { getSession, hasPerm, FALLBACK_USER } from './auth.js';
 
-function isStrictAdmin(s) {
-  if (!s) return false;
-  if (s.username === FALLBACK_USER) return true;
-  return s.role === 'admin';
+function isDady(s) {
+  return s && s.username === FALLBACK_USER;
 }
 
 export function applyPermissionsToUI() {
@@ -34,9 +32,9 @@ export function applyPermissionsToUI() {
     }
   });
 
-  // ─── data-admin-only : réservé au rôle admin strict ───
-  document.querySelectorAll('[data-admin-only]').forEach(el => {
-    const allowed = !isPublic && isStrictAdmin(s);
+  // ─── data-dady-only : réservé au compte DADY uniquement ───
+  document.querySelectorAll('[data-dady-only]').forEach(el => {
+    const allowed = !isPublic && isDady(s);
     if (!allowed) {
       el.style.display = 'none';
       if (el.tagName === 'BUTTON' || el.tagName === 'INPUT') el.disabled = true;
@@ -49,9 +47,9 @@ export function applyPermissionsToUI() {
     'rapports':   'view_charts',
     'facturation':'view_facturation',
     'vols':       'view_map',
-    'ldm':        'view_ldm',
+    'ldm':        'access_ldm',
     'admin':      'access_admin',
-    'ma':         'view_ma',
+    'ma':         'access_ma',
   };
   document.querySelectorAll('.anac-menu-item[data-nav]').forEach(el => {
     const nav = el.dataset.nav;
@@ -75,31 +73,17 @@ export function applyPermissionsToUI() {
   });
 }
 
-// Wrap window.showSection (admin.html) pour bloquer les sections non autorisées
+// Wrap window.showSection (admin.html) pour bloquer Sécurité (DADY uniquement)
 export function protectShowSection() {
   const origShow = window.showSection;
   if (typeof origShow !== 'function' || origShow._permsWrapped) return;
 
-  // Mapping section → permission (copié d'admin.html)
-  const SEC_PERMS = {
-    'airlines':    'manage_airlines',
-    'airports':    'manage_airports',
-    'formats':     'manage_authformat',
-    'flightnums':  'manage_flightnums',
-    'programme':   'manage_programme',
-    'chargement':  'manage_chargement',
-    'schedules':   'manage_schedules',
-  };
-  const ADMIN_ONLY_SECS = ['security'];
+  const DADY_ONLY_SECS = ['security'];
 
   const wrapped = function(name) {
     const s = getSession();
-    if (ADMIN_ONLY_SECS.includes(name) && !isStrictAdmin(s)) {
-      alert('Accès refusé : cette section est réservée aux administrateurs.');
-      return;
-    }
-    if (SEC_PERMS[name] && !hasPerm(SEC_PERMS[name])) {
-      alert("Accès refusé : vous n'avez pas la permission d'accéder à cette section.");
+    if (DADY_ONLY_SECS.includes(name) && !isDady(s)) {
+      alert('Accès refusé : cette section est réservée au compte principal DADY.');
       return;
     }
     return origShow.apply(this, arguments);
@@ -108,15 +92,12 @@ export function protectShowSection() {
   window.showSection = wrapped;
 }
 
-// Expose globalement
 window.ANAC_APPLY_PERMS = applyPermissionsToUI;
 window.ANAC_PROTECT_SHOWSECTION = protectShowSection;
 
-// Auto-apply au chargement
 function autoApply() {
   applyPermissionsToUI();
   protectShowSection();
-  // Re-appliquer après les chargements async (charts, données)
   setTimeout(() => { applyPermissionsToUI(); protectShowSection(); }, 500);
   setTimeout(() => { applyPermissionsToUI(); protectShowSection(); }, 1500);
 }
@@ -127,7 +108,6 @@ if (document.readyState === 'loading') {
   autoApply();
 }
 
-// Observer pour réappliquer quand le DOM change (boutons injectés dynamiquement)
 const observer = new MutationObserver(() => {
   applyPermissionsToUI();
 });
