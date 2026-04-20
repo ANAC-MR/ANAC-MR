@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ANAC Mauritanie – Mauritanie Airlines</title>
 <link rel="icon" type="image/png" href="assets/ANAC-logo.png">
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;background:#f5f7fa;color:#1a2d45;min-height:100vh;}
@@ -769,6 +769,182 @@ function buildYearSelector(flights){
 // ══════════════════════════════════════════════════════════════════
 // EXPORT EXCEL
 // ══════════════════════════════════════════════════════════════════
+// Styles de cellules pour le fichier Excel
+const STYLES = {
+  title: {
+    font: { name:'Calibri', sz:16, bold:true, color:{rgb:'FFFFFF'} },
+    fill: { fgColor:{rgb:'0F1E3D'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: { top:{style:'medium',color:{rgb:'D4AF37'}}, bottom:{style:'medium',color:{rgb:'D4AF37'}} }
+  },
+  sectionTitle: {
+    font: { name:'Calibri', sz:13, bold:true, color:{rgb:'D4AF37'} },
+    fill: { fgColor:{rgb:'1A3A6B'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'D4AF37'}}, bottom:{style:'thin',color:{rgb:'D4AF37'}},
+      left:{style:'thin',color:{rgb:'D4AF37'}}, right:{style:'thin',color:{rgb:'D4AF37'}}
+    }
+  },
+  monthHeader: {
+    font: { name:'Calibri', sz:11, bold:true, color:{rgb:'D4AF37'} },
+    fill: { fgColor:{rgb:'1A3A6B'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'CBD5E1'}}, bottom:{style:'medium',color:{rgb:'D4AF37'}},
+      left:{style:'thin',color:{rgb:'CBD5E1'}}, right:{style:'thin',color:{rgb:'CBD5E1'}}
+    }
+  },
+  destHeader: {
+    font: { name:'Calibri', sz:11, bold:true, color:{rgb:'D4AF37'} },
+    fill: { fgColor:{rgb:'1A3A6B'} },
+    alignment: { horizontal:'left', vertical:'center', indent:1 },
+    border: {
+      top:{style:'thin',color:{rgb:'CBD5E1'}}, bottom:{style:'medium',color:{rgb:'D4AF37'}},
+      left:{style:'medium',color:{rgb:'D4AF37'}}, right:{style:'thin',color:{rgb:'CBD5E1'}}
+    }
+  },
+  totalHeader: {
+    font: { name:'Calibri', sz:11, bold:true, color:{rgb:'0F1E3D'} },
+    fill: { fgColor:{rgb:'D4AF37'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'CBD5E1'}}, bottom:{style:'medium',color:{rgb:'0F1E3D'}},
+      left:{style:'thin',color:{rgb:'CBD5E1'}}, right:{style:'medium',color:{rgb:'D4AF37'}}
+    }
+  },
+  pairRow: {
+    font: { name:'Calibri', sz:11, bold:true, color:{rgb:'1A3A6B'} },
+    fill: { fgColor:{rgb:'E8F0FB'} },
+    alignment: { horizontal:'left', vertical:'center', indent:1 },
+    border: {
+      top:{style:'thin',color:{rgb:'CBD5E1'}}, bottom:{style:'thin',color:{rgb:'DDE3EF'}},
+      left:{style:'thick',color:{rgb:'D4AF37'}}, right:{style:'thin',color:{rgb:'DDE3EF'}}
+    }
+  },
+  pairRowCell: {
+    font: { name:'Calibri', sz:11, bold:true, color:{rgb:'1A3A6B'} },
+    fill: { fgColor:{rgb:'E8F0FB'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'CBD5E1'}}, bottom:{style:'thin',color:{rgb:'DDE3EF'}},
+      left:{style:'thin',color:{rgb:'DDE3EF'}}, right:{style:'thin',color:{rgb:'DDE3EF'}}
+    }
+  },
+  routeLabel: {
+    font: { name:'Calibri', sz:10, color:{rgb:'475569'} },
+    fill: { fgColor:{rgb:'FFFFFF'} },
+    alignment: { horizontal:'left', vertical:'center', indent:3 },
+    border: {
+      top:{style:'thin',color:{rgb:'F1F5F9'}}, bottom:{style:'thin',color:{rgb:'F1F5F9'}},
+      left:{style:'thin',color:{rgb:'E2E8F0'}}, right:{style:'thin',color:{rgb:'F5F7FA'}}
+    }
+  },
+  routeLabelAlt: {
+    font: { name:'Calibri', sz:10, color:{rgb:'475569'} },
+    fill: { fgColor:{rgb:'FAFBFD'} },
+    alignment: { horizontal:'left', vertical:'center', indent:3 },
+    border: {
+      top:{style:'thin',color:{rgb:'F1F5F9'}}, bottom:{style:'thin',color:{rgb:'F1F5F9'}},
+      left:{style:'thin',color:{rgb:'E2E8F0'}}, right:{style:'thin',color:{rgb:'F5F7FA'}}
+    }
+  },
+  dataCell: {
+    font: { name:'Calibri', sz:10, color:{rgb:'0F1E3D'}, bold:true },
+    fill: { fgColor:{rgb:'FFFFFF'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'F1F5F9'}}, bottom:{style:'thin',color:{rgb:'F1F5F9'}},
+      left:{style:'thin',color:{rgb:'F5F7FA'}}, right:{style:'thin',color:{rgb:'F5F7FA'}}
+    }
+  },
+  dataCellAlt: {
+    font: { name:'Calibri', sz:10, color:{rgb:'0F1E3D'}, bold:true },
+    fill: { fgColor:{rgb:'FAFBFD'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'F1F5F9'}}, bottom:{style:'thin',color:{rgb:'F1F5F9'}},
+      left:{style:'thin',color:{rgb:'F5F7FA'}}, right:{style:'thin',color:{rgb:'F5F7FA'}}
+    }
+  },
+  emptyCell: {
+    font: { name:'Calibri', sz:10, color:{rgb:'CBD5E1'} },
+    fill: { fgColor:{rgb:'FFFFFF'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'F1F5F9'}}, bottom:{style:'thin',color:{rgb:'F1F5F9'}},
+      left:{style:'thin',color:{rgb:'F5F7FA'}}, right:{style:'thin',color:{rgb:'F5F7FA'}}
+    }
+  },
+  emptyCellAlt: {
+    font: { name:'Calibri', sz:10, color:{rgb:'CBD5E1'} },
+    fill: { fgColor:{rgb:'FAFBFD'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'F1F5F9'}}, bottom:{style:'thin',color:{rgb:'F1F5F9'}},
+      left:{style:'thin',color:{rgb:'F5F7FA'}}, right:{style:'thin',color:{rgb:'F5F7FA'}}
+    }
+  },
+  rowTotal: {
+    font: { name:'Calibri', sz:11, bold:true, color:{rgb:'0F1E3D'} },
+    fill: { fgColor:{rgb:'FAEBC8'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'D4AF37'}}, bottom:{style:'thin',color:{rgb:'D4AF37'}},
+      left:{style:'thin',color:{rgb:'D4AF37'}}, right:{style:'medium',color:{rgb:'D4AF37'}}
+    }
+  },
+  rowTotalAlt: {
+    font: { name:'Calibri', sz:11, bold:true, color:{rgb:'0F1E3D'} },
+    fill: { fgColor:{rgb:'F5E0B0'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'thin',color:{rgb:'D4AF37'}}, bottom:{style:'thin',color:{rgb:'D4AF37'}},
+      left:{style:'thin',color:{rgb:'D4AF37'}}, right:{style:'medium',color:{rgb:'D4AF37'}}
+    }
+  },
+  totalRowLabel: {
+    font: { name:'Calibri', sz:12, bold:true, color:{rgb:'0F1E3D'} },
+    fill: { fgColor:{rgb:'F5E0B0'} },
+    alignment: { horizontal:'left', vertical:'center', indent:1 },
+    border: {
+      top:{style:'medium',color:{rgb:'D4AF37'}}, bottom:{style:'medium',color:{rgb:'0F1E3D'}},
+      left:{style:'thick',color:{rgb:'D4AF37'}}, right:{style:'thin',color:{rgb:'D4AF37'}}
+    }
+  },
+  totalRowCell: {
+    font: { name:'Calibri', sz:11, bold:true, color:{rgb:'0F1E3D'} },
+    fill: { fgColor:{rgb:'F5E0B0'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'medium',color:{rgb:'D4AF37'}}, bottom:{style:'medium',color:{rgb:'0F1E3D'}},
+      left:{style:'thin',color:{rgb:'D4AF37'}}, right:{style:'thin',color:{rgb:'D4AF37'}}
+    }
+  },
+  grandTotal: {
+    font: { name:'Calibri', sz:12, bold:true, color:{rgb:'FFFFFF'} },
+    fill: { fgColor:{rgb:'0F1E3D'} },
+    alignment: { horizontal:'center', vertical:'center' },
+    border: {
+      top:{style:'medium',color:{rgb:'D4AF37'}}, bottom:{style:'medium',color:{rgb:'0F1E3D'}},
+      left:{style:'thin',color:{rgb:'D4AF37'}}, right:{style:'medium',color:{rgb:'0F1E3D'}}
+    }
+  }
+};
+
+function setCell(ws, row, col, value, style){
+  const ref = XLSX.utils.encode_cell({ r: row, c: col });
+  ws[ref] = { v: value, t: typeof value === 'number' ? 'n' : 's' };
+  if (style) ws[ref].s = style;
+}
+
+function numericValue(cell, showPax, showNb){
+  if (showPax && showNb) return cell.count + ' vols / ' + cell.pax.toLocaleString('fr-FR') + ' PAX';
+  if (showPax) return cell.pax;
+  if (showNb) return cell.count;
+  return '';
+}
+
 window.exportXLSX = function(){
   if (!allFlights.length) { alert('Aucune donnée à exporter.'); return; }
   const showPax = document.getElementById('cbPax').checked;
@@ -776,70 +952,104 @@ window.exportXLSX = function(){
   if (!showPax && !showNb) { alert('Cochez au moins "Passagers" ou "Nombre de vols".'); return; }
 
   const wb = XLSX.utils.book_new();
-
-  // Une feuille par année
   const maFlights = allFlights.filter(f => isMauritanieAirlines(f.company) && f.date);
   const years = [...new Set(maFlights.map(f => new Date(f.date).getFullYear()))].sort((a,b) => a-b);
+  if (!years.length) years.push(new Date().getFullYear());
 
   years.forEach(year => {
     const data = buildCrossTable(allFlights, year);
+    const ws = {};
+    let r = 0;
+    const merges = [];
 
-    const rows = [];
-    rows.push(['Mauritanie Airlines — Passagers par Destination - ' + year]);
-    rows.push([]);
+    // Titre principal (fusionné sur 14 colonnes)
+    for (let c = 0; c <= 13; c++) {
+      setCell(ws, r, c, c === 0 ? 'MAURITANIE AIRLINES — PASSAGERS PAR DESTINATION — ' + year : '', STYLES.title);
+    }
+    merges.push({ s:{r:r,c:0}, e:{r:r,c:13} });
+    r++; r++;
 
     const addSection = (title, grouped) => {
-      rows.push([title]);
-      rows.push([]);
-      const header = ['Destination', ...MONTHS_FR, 'TOTAL'];
-      rows.push(header);
+      // Titre section (fusionné)
+      for (let c = 0; c <= 13; c++) {
+        setCell(ws, r, c, c === 0 ? title : '', STYLES.sectionTitle);
+      }
+      merges.push({ s:{r:r,c:0}, e:{r:r,c:13} });
+      r++;
+
+      // En-tête tableau
+      setCell(ws, r, 0, 'Destination', STYLES.destHeader);
+      MONTHS_FR.forEach((m, i) => setCell(ws, r, i+1, m, STYLES.monthHeader));
+      setCell(ws, r, 13, 'TOTAL', STYLES.totalHeader);
+      r++;
 
       const monthTotP = Array(12).fill(0), monthTotN = Array(12).fill(0);
+      let routeCounter = 0;
 
       grouped.forEach(grp => {
-        rows.push([grp.pairKey]);
+        // Ligne paire (fusionnée)
+        setCell(ws, r, 0, grp.pairKey, STYLES.pairRow);
+        for (let c = 1; c <= 13; c++) setCell(ws, r, c, '', STYLES.pairRowCell);
+        merges.push({ s:{r:r,c:0}, e:{r:r,c:13} });
+        r++;
+
         grp.routes.forEach(route => {
+          const isAlt = routeCounter % 2 === 1;
+          const labelStyle = isAlt ? STYLES.routeLabelAlt : STYLES.routeLabel;
+          const cellStyleEmpty = isAlt ? STYLES.emptyCellAlt : STYLES.emptyCell;
+          const cellStyleData = isAlt ? STYLES.dataCellAlt : STYLES.dataCell;
+          const rowTotStyle = isAlt ? STYLES.rowTotalAlt : STYLES.rowTotal;
+
           let rtP = 0, rtN = 0;
-          const row = ['  ' + route.fromCity + '-' + route.toCity];
+          setCell(ws, r, 0, route.fromCity + ' → ' + route.toCity, labelStyle);
+
           for (let m = 0; m < 12; m++) {
             const c = route.months[m] || { pax:0, count:0 };
             rtP += c.pax; rtN += c.count;
             monthTotP[m] += c.pax; monthTotN[m] += c.count;
-            row.push(cellValue(c, showPax, showNb));
+
+            if (c.pax === 0 && c.count === 0) {
+              setCell(ws, r, m+1, '—', cellStyleEmpty);
+            } else {
+              setCell(ws, r, m+1, numericValue(c, showPax, showNb), cellStyleData);
+            }
           }
-          row.push(cellValue({ pax:rtP, count:rtN }, showPax, showNb));
-          rows.push(row);
+          setCell(ws, r, 13, numericValue({ pax:rtP, count:rtN }, showPax, showNb), rowTotStyle);
+          r++;
+          routeCounter++;
         });
       });
 
-      // TOTAL
-      const totalRow = ['TOTAL'];
-      for (let m = 0; m < 12; m++) totalRow.push(cellValue({ pax:monthTotP[m], count:monthTotN[m] }, showPax, showNb));
+      // Ligne TOTAL
+      setCell(ws, r, 0, 'TOTAL', STYLES.totalRowLabel);
+      for (let m = 0; m < 12; m++) {
+        setCell(ws, r, m+1, numericValue({ pax:monthTotP[m], count:monthTotN[m] }, showPax, showNb), STYLES.totalRowCell);
+      }
       const grandP = monthTotP.reduce((a,b)=>a+b,0);
       const grandN = monthTotN.reduce((a,b)=>a+b,0);
-      totalRow.push(cellValue({ pax:grandP, count:grandN }, showPax, showNb));
-      rows.push(totalRow);
-      rows.push([]);
+      setCell(ws, r, 13, numericValue({ pax:grandP, count:grandN }, showPax, showNb), STYLES.grandTotal);
+      r++; r++;
     };
 
     addSection('VOLS DOMESTIQUES', data.domestic);
     addSection('VOLS INTERNATIONAUX', data.international);
 
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:30}, ...Array(12).fill({wch:12}), {wch:12}];
+    ws['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:r-1,c:13} });
+    ws['!merges'] = merges;
+    ws['!cols'] = [
+      { wch:32 },
+      ...Array(12).fill({ wch:14 }),
+      { wch:16 }
+    ];
+    ws['!rows'] = [{ hpt:30 }];
+
     XLSX.utils.book_append_sheet(wb, ws, String(year));
   });
 
   XLSX.writeFile(wb, 'Mauritanie-Airlines-PAX-Destinations.xlsx');
 };
 
-function cellValue(cell, showPax, showNb){
-  if (!cell || (cell.pax===0 && cell.count===0)) return '';
-  if (showPax && showNb) return cell.count + ' vols / ' + cell.pax + ' PAX';
-  if (showPax) return cell.pax;
-  if (showNb) return cell.count;
-  return '';
-}
+
 
 // ══════════════════════════════════════════════════════════════════
 // CHARGEMENT DONNÉES
