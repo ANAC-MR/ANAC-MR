@@ -27,7 +27,7 @@ export const FALLBACK_PASS = 'ANACdady';
 
 // ── Catalogue COMPLET des permissions ────────────────────────────
 export const ALL_PERMISSIONS = {
-  // Page Accueil / Vols
+  // Page Accueil / Vols (granularité fine)
   'view_flights':       { label:'Voir la liste des vols',          group:'Vols' },
   'add_flight':         { label:'Ajouter un vol',                  group:'Vols' },
   'edit_flight':        { label:'Modifier un vol',                 group:'Vols' },
@@ -36,36 +36,20 @@ export const ALL_PERMISSIONS = {
   'view_charts':        { label:'Voir Diagrammes & Rapports',      group:'Vols' },
   'view_facturation':   { label:"Voir Ordre d'émission",           group:'Vols' },
 
-  // Carte des vols
+  // Carte des vols (granularité fine)
   'view_map':           { label:'Voir la carte des vols',          group:'Carte' },
   'export_map':         { label:'Exporter la carte',               group:'Carte' },
 
-  // LDM / MVT
-  'view_ldm':           { label:'Voir les archives LDM/MVT',       group:'LDM/MVT' },
-  'read_gmail':         { label:'Lire emails Gmail',               group:'LDM/MVT' },
-  'paste_text':         { label:'Coller texte LDM/MVT',            group:'LDM/MVT' },
-  'import_image':       { label:'Importer image LDM/MVT',          group:'LDM/MVT' },
-  'generate_archives':  { label:'Générer archives manquantes',     group:'LDM/MVT' },
-  'delete_archive':     { label:'Supprimer une archive',           group:'LDM/MVT' },
-  'edit_archive':       { label:'Modifier une archive',            group:'LDM/MVT' },
-  'config_pairs':       { label:'Configurer les paires',           group:'LDM/MVT' },
-  'export_pdf':         { label:'Exporter PDF LDM/MVT',            group:'LDM/MVT' },
+  // LDM / MVT — UNE SEULE PERMISSION POUR TOUTE LA PAGE
+  'access_ldm':         { label:'Accéder à la page LDM/MVT',       group:'LDM/MVT' },
 
-  // Mauritanie Airlines
-  'view_ma':            { label:'Voir page Mauritanie Airlines',   group:'Mauritanie Airlines' },
-  'export_ma':          { label:'Exporter Excel MA',               group:'Mauritanie Airlines' },
+  // Mauritanie Airlines — UNE SEULE PERMISSION POUR TOUTE LA PAGE
+  'access_ma':          { label:'Accéder à la page Mauritanie Airlines', group:'Mauritanie Airlines' },
 
-  // Administration
-  'access_admin':       { label:'Accéder au panneau admin',        group:'Administration' },
-  'manage_airlines':    { label:'Gérer les compagnies',            group:'Administration' },
-  'manage_airports':    { label:'Gérer les aéroports',             group:'Administration' },
-  'manage_authformat':  { label:"Gérer le format N° autorisation", group:'Administration' },
-  'manage_flightnums':  { label:'Gérer les numéros de vol',        group:'Administration' },
-  'manage_programme':   { label:'Gérer le programme de vols',      group:'Administration' },
-  'manage_chargement':  { label:'Gérer le chargement de vols',     group:'Administration' },
-  'manage_schedules':   { label:'Gérer les horaires',              group:'Administration' },
-  'import_programme':   { label:'Importer un programme',           group:'Administration' },
-  // Sécurité & Utilisateurs reste réservé à l'admin (non délégable)
+  // Administration — UNE SEULE PERMISSION POUR TOUTE LA PAGE
+  'access_admin':       { label:"Accéder à la page d'administration", group:'Administration' },
+
+  // Sécurité & Utilisateurs : JAMAIS délégable — réservé au compte DADY uniquement
 };
 
 // ── Rôles prédéfinis ──────────────────────────────────────────────
@@ -77,12 +61,13 @@ export const ROLES = {
   },
   'operator': {
     label: 'Opérateur',
-    desc: 'Vols + LDM/MVT, sans accès admin',
+    desc: 'Vols + LDM/MVT + Admin',
     permissions: [
       'view_flights','add_flight','edit_flight','export_flights','view_charts','view_facturation',
       'view_map','export_map',
-      'view_ldm','read_gmail','paste_text','import_image','generate_archives','edit_archive','config_pairs','export_pdf',
-      'view_ma','export_ma'
+      'access_ldm',
+      'access_ma',
+      'access_admin'
     ]
   },
   'reader': {
@@ -91,8 +76,8 @@ export const ROLES = {
     permissions: [
       'view_flights','view_charts','view_facturation',
       'view_map',
-      'view_ldm',
-      'view_ma'
+      'access_ldm',
+      'access_ma'
     ]
   },
   'custom': {
