@@ -480,6 +480,14 @@
     </style>
 </head>
 <body>
+<!-- ANAC_AUTH_GUARD_INJECTED -->
+<script type="module">
+  import { requireAuth } from './auth.js';
+  if (!requireAuth('view_flights')) {
+    // requireAuth a déjà géré la redirection / l'écran d'erreur
+  }
+</script>
+
 <!-- ═══════════════════════════════════════════════════════════════
      MENU HAMBURGER UNIFIÉ ANAC - à insérer en haut de chaque page
      ═══════════════════════════════════════════════════════════════ -->
@@ -700,7 +708,8 @@
   <div class="anac-menu-items">
     <a href="index.html" class="anac-menu-item" data-nav="suivi">
       <div class="icon">📋</div>
-      <div class="label"><div class="main">Accueil</div><div class="desc">LISTE DES VOLS</div></div>
+      <div class="label"><div class="main">Accueil</div><div class="desc">LISTE DES VOLS</div>
+</div>
     </a>
     <a href="index.html?tab=rapports" class="anac-menu-item" data-nav="rapports">
       <div class="icon">📊</div>
@@ -729,6 +738,13 @@
       <div class="icon">🇲🇷</div>
       <div class="label"><div class="main">Mauritanie Airlines</div><div class="desc">PAX PAR DESTINATION</div></div>
     </a>
+    <!-- ─── Pied de menu : utilisateur connecté ─── -->
+    <div class="anac-menu-userblock" id="anacMenuUserBlock" style="margin-top:auto;padding:14px 18px 12px;border-top:1px solid rgba(212,175,55,0.18);background:linear-gradient(180deg,rgba(212,175,55,0.04),rgba(212,175,55,0.08));">
+      <div style="font-size:10px;color:#D4AF37;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Connecté</div>
+      <div id="anacMenuUserName" style="font-size:13px;color:#fff;font-weight:700;letter-spacing:0.3px;margin-bottom:2px;">—</div>
+      <div id="anacMenuUserRole" style="font-size:11px;color:#94a3b8;margin-bottom:10px;">—</div>
+      <button id="anacMenuLogoutBtn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="width:100%;padding:9px 12px;background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.12)';this.style.color='#fca5a5';">🚪 Déconnexion</button>
+    </div>
   </div>
   <div class="anac-menu-footer">AVIATION CIVILE · MAURITANIE</div>
 </div>
@@ -3083,5 +3099,22 @@ window._hasPerm = function(perm) {
 })();
 </script>
 
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      if (!window.ANAC_AUTH) return;
+      const s = window.ANAC_AUTH.getSession();
+      const block = document.getElementById('anacMenuUserBlock');
+      if (!s) { if (block) block.style.display = 'none'; return; }
+      const nameEl = document.getElementById('anacMenuUserName');
+      const roleEl = document.getElementById('anacMenuUserRole');
+      if (nameEl) nameEl.textContent = s.username || '—';
+      if (roleEl) {
+        const roleMap = { admin:'Administrateur', operator:'Opérateur', reader:'Lecteur', custom:'Personnalisé' };
+        roleEl.textContent = roleMap[s.role] || s.role || '—';
+      }
+    }, 200);
+  });
+</script>
 </body>
 </html>
