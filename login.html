@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANAC Mauritanie — Connexion</title>
+<link rel="icon" type="image/png" href="assets/ANAC-logo.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;
+  background:#0F1E3D;
+  color:#fff;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(212,175,55,0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(43,90,142,0.15) 0%, transparent 50%),
+    linear-gradient(135deg,#0a1428 0%,#0F1E3D 50%,#1A3A6B 100%);
+  z-index:-1;
+}
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url('assets/ANAC-logo.png');
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:600px;
+  opacity:0.04;
+  pointer-events:none;
+  z-index:-1;
+}
+
+.container{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+
+.card{
+  background:rgba(255,255,255,0.04);
+  backdrop-filter:blur(14px);
+  border:1px solid rgba(212,175,55,0.25);
+  border-radius:22px;
+  padding:42px 38px;
+  width:100%;
+  max-width:420px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.5);
+}
+
+.brand{
+  text-align:center;
+  margin-bottom:32px;
+}
+.brand img{
+  width:74px;
+  height:74px;
+  margin-bottom:14px;
+  filter:drop-shadow(0 4px 14px rgba(212,175,55,0.3));
+}
+.brand h1{
+  font-size:22px;
+  font-weight:700;
+  color:#fff;
+  letter-spacing:0.4px;
+  margin-bottom:4px;
+}
+.brand .sub{
+  font-size:11px;
+  color:#D4AF37;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  font-weight:600;
+}
+
+.form-group{
+  margin-bottom:18px;
+}
+.form-group label{
+  display:block;
+  font-size:11px;
+  font-weight:700;
+  color:#D4AF37;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+.form-group input{
+  width:100%;
+  padding:13px 16px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:11px;
+  color:#fff;
+  font-size:14px;
+  font-family:inherit;
+  transition:all 0.15s;
+  outline:none;
+}
+.form-group input:focus{
+  border-color:#D4AF37;
+  background:rgba(255,255,255,0.09);
+  box-shadow:0 0 0 3px rgba(212,175,55,0.15);
+}
+.form-group input::placeholder{
+  color:#5a7494;
+}
+
+.btn-login{
+  width:100%;
+  padding:14px;
+  background:linear-gradient(135deg,#D4AF37 0%,#b8962a 100%);
+  color:#0F1E3D;
+  border:none;
+  border-radius:11px;
+  font-size:14px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all 0.15s;
+  margin-top:6px;
+}
+.btn-login:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 30px rgba(212,175,55,0.3);
+}
+.btn-login:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+  transform:none;
+}
+
+.divider{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:26px 0 20px;
+  color:#5a7494;
+  font-size:11px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+}
+.divider::before,.divider::after{
+  content:'';
+  flex:1;
+  height:1px;
+  background:rgba(255,255,255,0.1);
+}
+
+.btn-public{
+  display:block;
+  width:100%;
+  padding:13px;
+  background:transparent;
+  color:#D4AF37;
+  border:1px solid rgba(212,175,55,0.4);
+  border-radius:11px;
+  font-size:13px;
+  font-weight:700;
+  text-align:center;
+  text-decoration:none;
+  cursor:pointer;
+  transition:all 0.15s;
+  font-family:inherit;
+}
+.btn-public:hover{
+  background:rgba(212,175,55,0.08);
+  border-color:#D4AF37;
+}
+
+.error{
+  background:rgba(229,62,62,0.12);
+  border:1px solid rgba(229,62,62,0.35);
+  color:#fc8181;
+  padding:11px 14px;
+  border-radius:9px;
+  font-size:13px;
+  margin-bottom:16px;
+  display:none;
+  animation:shake 0.4s;
+}
+.error.show{display:block;}
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-4px);}
+  75%{transform:translateX(4px);}
+}
+
+.footer{
+  text-align:center;
+  margin-top:24px;
+  font-size:11px;
+  color:#5a7494;
+  letter-spacing:0.5px;
+}
+
+.spinner{
+  display:inline-block;
+  width:14px;
+  height:14px;
+  border:2px solid rgba(15,30,61,0.3);
+  border-top-color:#0F1E3D;
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  vertical-align:middle;
+  margin-right:6px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <div class="brand">
+      <img src="assets/ANAC-logo.png" alt="ANAC" onerror="this.style.display='none'">
+      <h1>ANAC Mauritanie</h1>
+      <div class="sub">Système de Gestion des Vols</div>
+    </div>
+
+    <div class="error" id="errorBox"></div>
+
+    <form id="loginForm" autocomplete="off">
+      <div class="form-group">
+        <label for="username">Identifiant</label>
+        <input type="text" id="username" autocomplete="off" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" autocomplete="new-password" required>
+      </div>
+      <button type="submit" class="btn-login" id="btnLogin">Connexion</button>
+    </form>
+
+    <div class="divider">ou</div>
+
+    <a href="vols.html?public=1" class="btn-public">🗺️  Accès public — Voir la carte des vols</a>
+
+    <div class="footer">
+      © 2026 ANAC Mauritanie · Accès réservé au personnel autorisé
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { login, getSession, clearSession } from './auth.js';
+
+// Si déjà connecté, rediriger vers l'accueil
+if (getSession()) {
+  location.href = 'index.html';
+}
+
+const form = document.getElementById('loginForm');
+const errorBox = document.getElementById('errorBox');
+const btnLogin = document.getElementById('btnLogin');
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.classList.add('show');
+  setTimeout(() => errorBox.classList.remove('show'), 5000);
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorBox.classList.remove('show');
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  if (!u || !p) { showError('Veuillez remplir tous les champs.'); return; }
+
+  btnLogin.disabled = true;
+  btnLogin.innerHTML = '<span class="spinner"></span> Connexion...';
+
+  const res = await login(u, p);
+
+  if (res.ok) {
+    location.href = 'index.html';
+  } else {
+    showError(res.error || 'Identifiants incorrects');
+    btnLogin.disabled = false;
+    btnLogin.textContent = 'Connexion';
+    document.getElementById('password').value = '';
+    document.getElementById('password').focus();
+  }
+});
+
+// Focus initial
+document.getElementById('username').focus();
+</script>
+
+</body>
+</html>
