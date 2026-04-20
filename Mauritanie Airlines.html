@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANAC Mauritanie – Mauritanie Airlines</title>
+<link rel="icon" type="image/png" href="assets/ANAC-logo.png">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;background:#f5f7fa;color:#1a2d45;min-height:100vh;}
+
+header{background:linear-gradient(135deg,#0f1e3d 0%,#1a3a6b 100%);padding:20px 32px 20px 78px;border-bottom:2px solid #D4AF37;position:sticky;top:0;z-index:10;}
+header h1{color:#fff;font-size:22px;font-weight:700;letter-spacing:0.3px;display:flex;align-items:center;gap:12px;}
+header .sub{color:#D4AF37;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+
+.main{max-width:1400px;margin:0 auto;padding:24px;}
+
+.controls{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,0.03);}
+.controls .lbl{font-size:11px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;}
+
+.year-sel{display:flex;gap:6px;padding:4px;background:#f1f5f9;border-radius:10px;}
+.year-sel button{padding:7px 16px;font-size:13px;font-weight:700;background:transparent;color:#475569;border:none;border-radius:7px;cursor:pointer;transition:all .15s;}
+.year-sel button:hover{background:rgba(212,175,55,0.1);color:#0f1e3d;}
+.year-sel button.active{background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;}
+
+.checkboxes{display:flex;gap:14px;}
+.check-lbl{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;color:#1a2d45;user-select:none;}
+.check-lbl input[type=checkbox]{width:16px;height:16px;accent-color:#D4AF37;cursor:pointer;}
+
+.btn-export{margin-left:auto;padding:9px 16px;font-size:13px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;border:1px solid rgba(212,175,55,0.4);border-radius:10px;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-export:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(15,30,61,0.2);}
+
+.table-block{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;margin-bottom:22px;box-shadow:0 1px 3px rgba(0,0,0,0.03);}
+.table-title{padding:14px 20px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:10px;}
+.table-title .badge{padding:3px 10px;background:rgba(212,175,55,0.2);border:1px solid rgba(212,175,55,0.4);border-radius:14px;font-size:11px;letter-spacing:0.5px;}
+
+.data-table{width:100%;border-collapse:collapse;font-size:12px;}
+.data-table thead tr{background:#f8fafc;}
+.data-table th{padding:10px 8px;font-size:10px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid #e2e8f0;text-align:center;}
+.data-table th:first-child{text-align:left;padding-left:18px;min-width:220px;}
+.data-table td{padding:8px 8px;border-bottom:1px solid #f1f5f9;text-align:center;color:#475569;}
+.data-table td:first-child{text-align:left;padding-left:18px;color:#1a2d45;}
+
+.pair-row td{background:#fafbfc;font-weight:700;color:#0f1e3d;font-size:12.5px;padding-top:10px;padding-bottom:10px;}
+.pair-row td:first-child{color:#D4AF37;letter-spacing:0.3px;}
+
+.route-row td{padding-left:28px;font-size:12px;}
+.route-row td:first-child{padding-left:36px;color:#475569;}
+.route-row:hover td{background:rgba(212,175,55,0.04);}
+
+.cell-nb{color:#94a3b8;font-size:11px;font-weight:500;}
+.cell-pax{color:#0f1e3d;font-weight:700;font-size:12.5px;}
+
+.total-row td{background:linear-gradient(to right,rgba(212,175,55,0.1),rgba(212,175,55,0.04));font-weight:800;color:#0f1e3d;padding:14px 8px;border-top:2px solid rgba(212,175,55,0.3);font-size:13px;}
+.total-row td:first-child{color:#0f1e3d;letter-spacing:0.5px;}
+.col-total{background:rgba(212,175,55,0.04);font-weight:700;color:#0f1e3d !important;}
+
+.empty-state{text-align:center;padding:60px 20px;color:#94a3b8;}
+.empty-state h3{font-size:15px;color:#475569;margin-bottom:8px;}
+.empty-state p{font-size:13px;}
+
+.loading{text-align:center;padding:60px 20px;color:#64748b;font-size:13px;}
+.loading::before{content:'';display:inline-block;width:18px;height:18px;border:2px solid #D4AF37;border-top-color:transparent;border-radius:50%;margin-right:10px;vertical-align:middle;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Bg logo watermark */
+body::before{content:'';position:fixed;inset:0;background-image:url('assets/ANAC-logo.png');background-repeat:no-repeat;background-position:center;background-size:500px;opacity:0.03;pointer-events:none;z-index:0;}
+.main,header{position:relative;z-index:1;}
+
+@media (max-width:768px){
+  .main{padding:14px;}
+  header{padding-left:64px;padding-right:14px;}
+  .controls{padding:12px 14px;}
+  .data-table{font-size:11px;}
+  .data-table th,.data-table td{padding:6px 4px;}
+  .data-table th:first-child,.data-table td:first-child{padding-left:10px;min-width:160px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MENU HAMBURGER UNIFIÉ ANAC - à insérer en haut de chaque page
+     ═══════════════════════════════════════════════════════════════ -->
+<style>
+.anac-menu-btn {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 9998;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #0f1e3d 0%, #1a3a6b 100%);
+  border: 1px solid rgba(212,175,55,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.anac-menu-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(212,175,55,0.7);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+.anac-menu-btn .bar {
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: #D4AF37;
+  margin: 2px 0;
+  border-radius: 1px;
+  transition: all 0.25s ease;
+}
+.anac-menu-btn.open .bar:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.anac-menu-btn.open .bar:nth-child(2) { opacity: 0; }
+.anac-menu-btn.open .bar:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+.anac-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(2px);
+  z-index: 9996;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.anac-menu-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.anac-menu-panel, .anac-menu-btn, .anac-menu-panel * {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif !important;
+}
+.anac-menu-panel {
+  position: fixed;
+  top: 62px;
+  left: 14px;
+  z-index: 9997;
+  width: 270px;
+  max-height: calc(100vh - 80px);
+  background: linear-gradient(180deg, #0f1e3d 0%, #162a4f 100%);
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+  opacity: 0;
+  transform: translateY(-12px) scale(0.96);
+  transform-origin: top left;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.anac-menu-items {
+  overflow-y: auto;
+  flex: 1;
+}
+.anac-menu-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.anac-menu-header {
+  padding: 12px 18px 10px;
+  border-bottom: 1px solid rgba(212,175,55,0.2);
+  background: rgba(212,175,55,0.05);
+}
+.anac-menu-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #D4AF37;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0;
+}
+.anac-menu-sub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 3px 0 0;
+}
+.anac-menu-items {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.anac-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  color: #e2e8f0;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.anac-menu-item:hover {
+  background: rgba(212,175,55,0.08);
+  border-color: rgba(212,175,55,0.2);
+  color: #D4AF37;
+}
+.anac-menu-item.active {
+  background: rgba(212,175,55,0.15);
+  border-color: rgba(212,175,55,0.4);
+  color: #D4AF37;
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.65;
+}
+.anac-menu-item.active::after {
+  content: '';
+  margin-left: auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #D4AF37;
+}
+.anac-menu-item.active:hover {
+  background: rgba(212,175,55,0.15);
+  border-color: rgba(212,175,55,0.4);
+}
+.anac-menu-item .icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.anac-menu-item:hover .icon,
+.anac-menu-item.active .icon {
+  background: rgba(212,175,55,0.15);
+}
+.anac-menu-item .label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.anac-menu-item .label .main {
+  font-weight: 700;
+  line-height: 1.2;
+}
+.anac-menu-item .label .desc {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+.anac-menu-item:hover .label .desc,
+.anac-menu-item.active .label .desc {
+  color: #94a3b8;
+}
+.anac-menu-divider {
+  height: 1px;
+  background: rgba(212,175,55,0.12);
+  margin: 6px 10px;
+}
+.anac-menu-footer {
+  padding: 10px 18px;
+  border-top: 1px solid rgba(212,175,55,0.2);
+  background: rgba(0,0,0,0.15);
+  font-size: 10px;
+  color: #64748b;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 640px) {
+  .anac-menu-panel { width: calc(100vw - 32px); max-width: 320px; }
+}
+</style>
+
+<button class="anac-menu-btn" id="anacMenuBtn" onclick="_anacToggleMenu()" aria-label="Menu principal">
+  <span class="bar"></span>
+  <span class="bar"></span>
+  <span class="bar"></span>
+</button>
+
+<div class="anac-menu-backdrop" id="anacMenuBackdrop" onclick="_anacToggleMenu()"></div>
+
+<div class="anac-menu-panel" id="anacMenuPanel" role="menu">
+  <div class="anac-menu-header">
+    <div class="anac-menu-title">ANAC Mauritanie</div>
+    <div class="anac-menu-sub">Navigation principale</div>
+  </div>
+  <div class="anac-menu-items">
+    <a href="index.html" class="anac-menu-item" data-nav="suivi">
+      <div class="icon">📋</div>
+      <div class="label"><div class="main">Accueil</div><div class="desc">LISTE DES VOLS</div></div>
+    </a>
+    <a href="index.html?tab=rapports" class="anac-menu-item" data-nav="rapports">
+      <div class="icon">📊</div>
+      <div class="label"><div class="main">Diagrammes &amp; Rapports</div><div class="desc">STATISTIQUES</div></div>
+    </a>
+    <a href="index.html?tab=facturation" class="anac-menu-item" data-nav="facturation">
+      <div class="icon">🧾</div>
+      <div class="label"><div class="main">Ordre d'émission</div><div class="desc">FACTURATION</div></div>
+    </a>
+    <div class="anac-menu-divider"></div>
+    <a href="vols.html" class="anac-menu-item" data-nav="vols">
+      <div class="icon">🛫</div>
+      <div class="label"><div class="main">Carte des Vols</div><div class="desc">VISUALISATION TEMPS RÉEL</div></div>
+    </a>
+    <a href="ldm.html" class="anac-menu-item" data-nav="ldm">
+      <div class="icon">📨</div>
+      <div class="label"><div class="main">LDM / MVT</div><div class="desc">MESSAGES DE VOL</div></div>
+    </a>
+    <div class="anac-menu-divider"></div>
+    <a href="admin.html" class="anac-menu-item" data-nav="admin">
+      <div class="icon">⚙️</div>
+      <div class="label"><div class="main">Administration</div><div class="desc">CONFIGURATION SYSTÈME</div></div>
+    </a>
+    <div class="anac-menu-divider"></div>
+    <a href="mauritanie-airlines.html" class="anac-menu-item" data-nav="ma">
+      <div class="icon">🇲🇷</div>
+      <div class="label"><div class="main">Mauritanie Airlines</div><div class="desc">PAX PAR DESTINATION</div></div>
+    </a>
+  </div>
+  <div class="anac-menu-footer">AVIATION CIVILE · MAURITANIE</div>
+</div>
+
+<script>
+function _anacToggleMenu() {
+  const btn = document.getElementById('anacMenuBtn');
+  const panel = document.getElementById('anacMenuPanel');
+  const bd = document.getElementById('anacMenuBackdrop');
+  const isOpen = panel.classList.contains('open');
+  if (isOpen) {
+    panel.classList.remove('open');
+    bd.classList.remove('open');
+    btn.classList.remove('open');
+  } else {
+    panel.classList.add('open');
+    bd.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+// Fermer le menu avec Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const panel = document.getElementById('anacMenuPanel');
+    if (panel && panel.classList.contains('open')) _anacToggleMenu();
+  }
+});
+// Marquer l'item actif selon la page courante
+(function() {
+  const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  const urlParams = new URLSearchParams(location.search);
+  const tab = urlParams.get('tab') || 'suivi';
+  document.querySelectorAll('.anac-menu-item').forEach(el => {
+    const nav = el.getAttribute('data-nav');
+    let isActive = false;
+    if (path.includes('index')) {
+      if (nav === tab) isActive = true;
+    }
+    else if (path.includes('vols') && nav === 'vols') isActive = true;
+    else if (path.includes('ldm') && nav === 'ldm') isActive = true;
+    else if (path.includes('admin') && nav === 'admin') isActive = true;
+    else if (path.includes('mauritanie-airlines') && nav === 'ma') isActive = true;
+
+    if (isActive) {
+      el.classList.add('active');
+      // Prévenir navigation quand on est déjà sur la page
+      el.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+    }
+  });
+})();
+</script>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+<header>
+  <div>
+    <h1>
+      <span style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#D4AF37,#b8962a);display:inline-flex;align-items:center;justify-content:center;font-size:20px;">✈️</span>
+      Mauritanie Airlines
+    </h1>
+    <div class="sub">Passagers par Destination</div>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="controls">
+    <div>
+      <div class="lbl" style="margin-bottom:6px;">Année</div>
+      <div class="year-sel" id="yearSel"></div>
+    </div>
+
+    <div style="width:1px;height:40px;background:#e5e7eb;"></div>
+
+    <div>
+      <div class="lbl" style="margin-bottom:6px;">Afficher</div>
+      <div class="checkboxes">
+        <label class="check-lbl">
+          <input type="checkbox" id="cbPax" checked onchange="renderAll()">
+          Passagers
+        </label>
+        <label class="check-lbl">
+          <input type="checkbox" id="cbNb" onchange="renderAll()">
+          Nombre de vols
+        </label>
+      </div>
+    </div>
+
+    <button class="btn-export" onclick="exportXLSX()">⬇ Exporter Excel</button>
+  </div>
+
+  <!-- TABLEAU 1 : DOMESTIQUES -->
+  <div class="table-block">
+    <div class="table-title">
+      🇲🇷 Vols Domestiques
+      <span class="badge" id="domBadge">—</span>
+    </div>
+    <div style="overflow-x:auto;" id="domTableWrap">
+      <div class="loading">Chargement des données…</div>
+    </div>
+  </div>
+
+  <!-- TABLEAU 2 : INTERNATIONAUX -->
+  <div class="table-block">
+    <div class="table-title">
+      🌍 Vols Internationaux
+      <span class="badge" id="intBadge">—</span>
+    </div>
+    <div style="overflow-x:auto;" id="intTableWrap">
+      <div class="loading">Chargement des données…</div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+// ══════════════════════════════════════════════════════════════════
+// MAURITANIE AIRLINES — Tableau croisé PAX par destination
+// ══════════════════════════════════════════════════════════════════
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getFirestore, collection, onSnapshot, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const FB_CONFIG = {
+  apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
+  authDomain:"anacmr-67835.firebaseapp.com",
+  projectId:"anacmr-67835",
+  storageBucket:"anacmr-67835.firebasestorage.app",
+  messagingSenderId:"906668222910",
+  appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"
+};
+
+const app = initializeApp(FB_CONFIG);
+const db = getFirestore(app);
+
+// ── Dictionnaire codes ICAO → nom de ville ──
+const CITY_NAMES = {
+  'GQNO':'Nouakchott','GQNN':'Nouakchott','NKC':'Nouakchott',
+  'GQPP':'Nouadhibou','NDB':'Nouadhibou',
+  'GQPZ':'Zoueratt','OUZ':'Zoueratt',
+  'GQNI':'Nema','EMN':'Nema',
+  'GQPF':'Kiffa','KFA':'Kiffa',
+  'GQPA':'Atar','ATR':'Atar',
+  'GQNK':'Kaedi','KED':'Kaedi',
+  'GQND':'Tidjikja','TIY':'Tidjikja',
+  'GQNS':'Selibaby','SEY':'Selibaby',
+  // Internationaux fréquents
+  'GMMN':'Casablanca','CMN':'Casablanca','GMAD':'Agadir','AGA':'Agadir',
+  'GMME':'Rabat','RBA':'Rabat','GMMX':'Marrakech','RAK':'Marrakech',
+  'DAAG':'Alger','ALG':'Alger','DAOO':'Oran','ORN':'Oran',
+  'DTTA':'Tunis','TUN':'Tunis',
+  'GOBD':'Dakar','DKR':'Dakar','GOOY':'Dakar',
+  'GABS':'Bamako','BKO':'Bamako','GUCY':'Conakry','CKY':'Conakry',
+  'DIAP':'Abidjan','ABJ':'Abidjan','DGAA':'Accra','ACC':'Accra',
+  'DNMM':'Lagos','LOS':'Lagos','DRRN':'Niamey','NIM':'Niamey',
+  'DXXX':'Lomé','LFW':'Lomé','DFFD':'Ouagadougou','OUA':'Ouagadougou',
+  'FCBB':'Brazzaville','BZV':'Brazzaville','FOOL':'Libreville','LBV':'Libreville',
+  'LFPG':'Paris','CDG':'Paris','LFPO':'Paris','ORY':'Paris',
+  'LEMD':'Madrid','MAD':'Madrid','LEBL':'Barcelone','BCN':'Barcelone',
+  'GCLP':'Las Palmas','LPA':'Las Palmas','GCXO':'Tenerife','TFN':'Tenerife',
+  'OEJN':'Djeddah','JED':'Djeddah','OERK':'Riyad','RUH':'Riyad',
+  'OETH':'Taif','TIF':'Taif','HECA':'Le Caire','CAI':'Le Caire',
+  'OTHH':'Doha','DOH':'Doha','OMDB':'Dubaï','DXB':'Dubaï',
+  'OIIE':'Téhéran','IKA':'Téhéran','OYSN':'Sanaa','SAH':'Sanaa',
+  'GVAC':'Sal','SID':'Sal','GVNP':'Praia','RAI':'Praia',
+  'FNLU':'Luanda','LAD':'Luanda','FAOR':'Johannesburg','JNB':'Johannesburg',
+  'HAAB':'Addis-Abeba','ADD':'Addis-Abeba','HKJK':'Nairobi','NBO':'Nairobi',
+};
+
+const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+// Noms possibles pour Mauritanie Airlines
+const MA_NAMES = ['mauritania airlines','mauritanie airlines','l6','mauritania airlines international','mai','mauritania'];
+
+// ══════════════════════════════════════════════════════════════════
+// ETAT
+// ══════════════════════════════════════════════════════════════════
+let allFlights = [];
+let currentYear = null;
+
+window.allFlights = allFlights;
+
+function cityName(code){
+  if(!code) return '';
+  const upper = code.toUpperCase().trim();
+  return CITY_NAMES[upper] || upper;
+}
+
+function isMauritanieAirport(code){
+  if(!code) return false;
+  return code.toUpperCase().trim().startsWith('GQ');
+}
+
+function isMauritanieAirlines(company){
+  if(!company) return false;
+  const c = company.toLowerCase().trim();
+  return MA_NAMES.some(n => c === n || c.includes(n));
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DÉCOMPOSITION DES VOLS EN SEGMENTS
+// Un vol NKC → LPA via NDB devient : NKC-NDB + NDB-LPA
+// ══════════════════════════════════════════════════════════════════
+function getFlightSegments(flight){
+  const from = (flight.from || '').toUpperCase().trim();
+  const to   = (flight.to   || '').toUpperCase().trim();
+  const stopover = (flight.stopover || '').toUpperCase().trim();
+  const hasStopover = !!flight.hasStopover && !!stopover;
+
+  // PAX et vols principaux
+  const mainPax = (+flight.passengers || 0) - (+flight.stopoverPax || 0);
+  const stopPax = +flight.stopoverPax || 0;
+  const totalPax = +flight.passengers || 0;
+
+  if (!hasStopover) {
+    return [{ from, to, pax: totalPax, count: 1 }];
+  }
+
+  // Avec escale : 2 segments
+  // from → stopover (PAX = totalPax)
+  // stopover → to (PAX = mainPax, les pax d'escale sont descendus à stopover)
+  return [
+    { from, to: stopover, pax: totalPax, count: 1 },
+    { from: stopover, to, pax: mainPax, count: 1 },
+  ];
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CONSTRUCTION DU TABLEAU CROISÉ
+// ══════════════════════════════════════════════════════════════════
+function buildCrossTable(flights, year){
+  // Filtrer MA + année
+  const maFlights = flights.filter(f => {
+    if (!isMauritanieAirlines(f.company)) return false;
+    if (!f.date) return false;
+    const d = new Date(f.date);
+    return d.getFullYear() === year;
+  });
+
+  // Agréger par route + mois
+  const domestic = {};    // key = "A|B"  value = { from, to, pair, months:{0-11:{pax,count}} }
+  const international = {};
+
+  maFlights.forEach(flight => {
+    const segments = getFlightSegments(flight);
+    const d = new Date(flight.date);
+    const month = d.getMonth();
+
+    segments.forEach(seg => {
+      if (!seg.from || !seg.to) return;
+      const isDom = isMauritanieAirport(seg.from) && isMauritanieAirport(seg.to);
+      const bucket = isDom ? domestic : international;
+
+      const key = seg.from + '|' + seg.to;
+      if (!bucket[key]) {
+        // Nom de la paire : on range alphabétiquement pour grouper ARR+DEP
+        const cityA = cityName(seg.from);
+        const cityB = cityName(seg.to);
+        const [c1, c2] = [cityA, cityB].sort((a,b) => a.localeCompare(b, 'fr'));
+        bucket[key] = {
+          from: seg.from,
+          to: seg.to,
+          fromCity: cityA,
+          toCity: cityB,
+          pairKey: c1 + ' / ' + c2,
+          months: {}
+        };
+      }
+      if (!bucket[key].months[month]) bucket[key].months[month] = { pax:0, count:0 };
+      bucket[key].months[month].pax += seg.pax;
+      bucket[key].months[month].count += seg.count;
+    });
+  });
+
+  // Grouper par pairKey (paires A/B)
+  const groupByPair = (bucket) => {
+    const pairs = {};
+    Object.values(bucket).forEach(route => {
+      if (!pairs[route.pairKey]) pairs[route.pairKey] = [];
+      pairs[route.pairKey].push(route);
+    });
+    // Trier les pairs alphabétiquement
+    const sortedPairKeys = Object.keys(pairs).sort((a,b) => a.localeCompare(b, 'fr'));
+    return sortedPairKeys.map(pk => ({
+      pairKey: pk,
+      routes: pairs[pk].sort((a,b) => (a.fromCity+a.toCity).localeCompare(b.fromCity+b.toCity, 'fr'))
+    }));
+  };
+
+  return {
+    domestic: groupByPair(domestic),
+    international: groupByPair(international),
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RENDERING
+// ══════════════════════════════════════════════════════════════════
+function renderTable(groupedData, containerId, badgeId){
+  const wrap = document.getElementById(containerId);
+  const badge = document.getElementById(badgeId);
+
+  const showPax = document.getElementById('cbPax').checked;
+  const showNb  = document.getElementById('cbNb').checked;
+
+  if (!groupedData.length) {
+    wrap.innerHTML = '<div class="empty-state"><h3>Aucune donnée</h3><p>Aucun vol Mauritanie Airlines pour cette année dans cette catégorie.</p></div>';
+    badge.textContent = '0 routes';
+    return;
+  }
+
+  // Calculer totaux colonnes + total général
+  const monthTotalsPax = Array(12).fill(0);
+  const monthTotalsNb  = Array(12).fill(0);
+  let grandTotalPax = 0, grandTotalNb = 0;
+
+  groupedData.forEach(grp => {
+    grp.routes.forEach(route => {
+      for (let m = 0; m < 12; m++) {
+        const cell = route.months[m] || { pax:0, count:0 };
+        monthTotalsPax[m] += cell.pax;
+        monthTotalsNb[m]  += cell.count;
+      }
+    });
+  });
+  grandTotalPax = monthTotalsPax.reduce((a,b)=>a+b, 0);
+  grandTotalNb  = monthTotalsNb.reduce((a,b)=>a+b, 0);
+
+  const totalRoutes = groupedData.reduce((sum,g)=>sum+g.routes.length, 0);
+  badge.textContent = totalRoutes + ' route' + (totalRoutes>1?'s':'');
+
+  // Formater une cellule
+  const fmtCell = (cell) => {
+    const hasData = cell && (cell.pax > 0 || cell.count > 0);
+    if (!hasData) return '<span style="color:#cbd5e1;">—</span>';
+    const parts = [];
+    if (showNb) parts.push('<span class="cell-nb">'+cell.count+' vol'+(cell.count>1?'s':'')+'</span>');
+    if (showPax) parts.push('<span class="cell-pax">'+cell.pax.toLocaleString('fr-FR')+'</span>');
+    return parts.join('<br>');
+  };
+
+  // Construire HTML
+  let html = '<table class="data-table"><thead><tr>';
+  html += '<th>Destination</th>';
+  MONTHS_SHORT.forEach(m => html += '<th>'+m+'</th>');
+  html += '<th style="background:rgba(212,175,55,0.08);">Total</th>';
+  html += '</tr></thead><tbody>';
+
+  groupedData.forEach(grp => {
+    // En-tête de paire (ex: "Nouakchott / Nouadhibou")
+    html += '<tr class="pair-row"><td colspan="14">' + grp.pairKey + '</td></tr>';
+
+    // Lignes de routes (chaque direction)
+    grp.routes.forEach(route => {
+      let rowTotalPax = 0, rowTotalNb = 0;
+      html += '<tr class="route-row">';
+      html += '<td>&nbsp;&nbsp;'+route.fromCity+' — '+route.toCity+'</td>';
+      for (let m = 0; m < 12; m++) {
+        const cell = route.months[m] || { pax:0, count:0 };
+        rowTotalPax += cell.pax;
+        rowTotalNb  += cell.count;
+        html += '<td>' + fmtCell(cell) + '</td>';
+      }
+      html += '<td class="col-total">' + fmtCell({ pax:rowTotalPax, count:rowTotalNb }) + '</td>';
+      html += '</tr>';
+    });
+  });
+
+  // Ligne TOTAL
+  html += '<tr class="total-row"><td>TOTAL</td>';
+  for (let m = 0; m < 12; m++) {
+    html += '<td>' + fmtCell({ pax:monthTotalsPax[m], count:monthTotalsNb[m] }) + '</td>';
+  }
+  html += '<td class="col-total">' + fmtCell({ pax:grandTotalPax, count:grandTotalNb }) + '</td>';
+  html += '</tr>';
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+window.renderAll = function(){
+  if (!currentYear) return;
+  const data = buildCrossTable(allFlights, currentYear);
+  renderTable(data.domestic, 'domTableWrap', 'domBadge');
+  renderTable(data.international, 'intTableWrap', 'intBadge');
+};
+
+// ══════════════════════════════════════════════════════════════════
+// SÉLECTEUR D'ANNÉES
+// ══════════════════════════════════════════════════════════════════
+function buildYearSelector(flights){
+  const ma = flights.filter(f => isMauritanieAirlines(f.company) && f.date);
+  const years = [...new Set(ma.map(f => new Date(f.date).getFullYear()).filter(y => !isNaN(y)))].sort((a,b) => b-a);
+
+  if (!years.length) {
+    const curYear = new Date().getFullYear();
+    years.push(curYear);
+  }
+
+  const sel = document.getElementById('yearSel');
+  sel.innerHTML = '';
+  years.forEach(y => {
+    const btn = document.createElement('button');
+    btn.textContent = y;
+    btn.onclick = () => {
+      currentYear = y;
+      document.querySelectorAll('#yearSel button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderAll();
+    };
+    sel.appendChild(btn);
+  });
+
+  // Sélectionner l'année la plus récente par défaut
+  if (!currentYear || !years.includes(currentYear)) currentYear = years[0];
+  const activeBtn = [...sel.children].find(b => +b.textContent === currentYear);
+  if (activeBtn) activeBtn.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EXPORT EXCEL
+// ══════════════════════════════════════════════════════════════════
+window.exportXLSX = function(){
+  if (!allFlights.length) { alert('Aucune donnée à exporter.'); return; }
+  const showPax = document.getElementById('cbPax').checked;
+  const showNb  = document.getElementById('cbNb').checked;
+  if (!showPax && !showNb) { alert('Cochez au moins "Passagers" ou "Nombre de vols".'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // Une feuille par année
+  const maFlights = allFlights.filter(f => isMauritanieAirlines(f.company) && f.date);
+  const years = [...new Set(maFlights.map(f => new Date(f.date).getFullYear()))].sort((a,b) => a-b);
+
+  years.forEach(year => {
+    const data = buildCrossTable(allFlights, year);
+
+    const rows = [];
+    rows.push(['Mauritanie Airlines — Passagers par Destination - ' + year]);
+    rows.push([]);
+
+    const addSection = (title, grouped) => {
+      rows.push([title]);
+      rows.push([]);
+      const header = ['Destination', ...MONTHS_FR, 'TOTAL'];
+      rows.push(header);
+
+      const monthTotP = Array(12).fill(0), monthTotN = Array(12).fill(0);
+
+      grouped.forEach(grp => {
+        rows.push([grp.pairKey]);
+        grp.routes.forEach(route => {
+          let rtP = 0, rtN = 0;
+          const row = ['  ' + route.fromCity + '-' + route.toCity];
+          for (let m = 0; m < 12; m++) {
+            const c = route.months[m] || { pax:0, count:0 };
+            rtP += c.pax; rtN += c.count;
+            monthTotP[m] += c.pax; monthTotN[m] += c.count;
+            row.push(cellValue(c, showPax, showNb));
+          }
+          row.push(cellValue({ pax:rtP, count:rtN }, showPax, showNb));
+          rows.push(row);
+        });
+      });
+
+      // TOTAL
+      const totalRow = ['TOTAL'];
+      for (let m = 0; m < 12; m++) totalRow.push(cellValue({ pax:monthTotP[m], count:monthTotN[m] }, showPax, showNb));
+      const grandP = monthTotP.reduce((a,b)=>a+b,0);
+      const grandN = monthTotN.reduce((a,b)=>a+b,0);
+      totalRow.push(cellValue({ pax:grandP, count:grandN }, showPax, showNb));
+      rows.push(totalRow);
+      rows.push([]);
+    };
+
+    addSection('VOLS DOMESTIQUES', data.domestic);
+    addSection('VOLS INTERNATIONAUX', data.international);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:30}, ...Array(12).fill({wch:12}), {wch:12}];
+    XLSX.utils.book_append_sheet(wb, ws, String(year));
+  });
+
+  XLSX.writeFile(wb, 'Mauritanie-Airlines-PAX-Destinations.xlsx');
+};
+
+function cellValue(cell, showPax, showNb){
+  if (!cell || (cell.pax===0 && cell.count===0)) return '';
+  if (showPax && showNb) return cell.count + ' vols / ' + cell.pax + ' PAX';
+  if (showPax) return cell.pax;
+  if (showNb) return cell.count;
+  return '';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CHARGEMENT DONNÉES
+// ══════════════════════════════════════════════════════════════════
+const coll = collection(db, 'flights');
+onSnapshot(coll, snap => {
+  allFlights = [];
+  snap.forEach(doc => {
+    const d = doc.data();
+    if (d.date && !d._isConfig) allFlights.push({ id:doc.id, ...d });
+  });
+  window.allFlights = allFlights;
+  buildYearSelector(allFlights);
+  renderAll();
+}, err => {
+  console.error('Firebase error:', err);
+  document.getElementById('domTableWrap').innerHTML = '<div class="empty-state"><h3>Erreur de chargement</h3><p>'+err.message+'</p></div>';
+  document.getElementById('intTableWrap').innerHTML = '';
+});
+
+</script>
+
+</body>
+</html>
