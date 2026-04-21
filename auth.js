@@ -23,7 +23,7 @@ const FB_CONFIG = {
 
 export const AUTH_SESSION_KEY = 'anac_auth_v3';
 export const FALLBACK_USER = 'DADY';
-export const FALLBACK_PASS = 'ANACdady';
+export const FALLBACK_PASS = 'Yahya100';
 
 // ── Catalogue COMPLET des permissions ────────────────────────────
 export const ALL_PERMISSIONS = {
