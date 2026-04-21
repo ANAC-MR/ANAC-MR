@@ -8,7 +8,7 @@
 //  Session locale (sessionStorage 'anac_auth_v3') :
 //    { username, role, permissions[], sessionId, ts }
 //
-//  Compte de secours codé en dur : DADY / ANACdady (jamais visible
+//  Compte de secours codé en dur : DADY / Yahya100 (jamais visible
 //  dans la liste, jamais désactivable).
 // ═══════════════════════════════════════════════════════════════
 
