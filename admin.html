@@ -1344,10 +1344,7 @@ document.addEventListener('keydown', e => {
             <span class="topbar-title">ANAC Mauritanie</span>
             <span class="topbar-badge">Admin</span>
         </div>
-        <div class="topbar-right">
-
-            <button class="btn-logout" onclick="logout()">Déconnexion</button>
-        </div>
+        <div class="topbar-right"></div>
     </div>
 
     <div class="layout">
@@ -1696,11 +1693,14 @@ document.addEventListener('keydown', e => {
                         <div class="form-grid">
                             <div class="field-group">
                                 <label>Identifiant</label>
-                                <input type="text" id="secUserName" autocomplete="new-password" style="text-transform:uppercase;">
+                                <input type="text" id="secUserName" autocomplete="new-password" spellcheck="false">
                             </div>
                             <div class="field-group">
                                 <label>Mot de passe</label>
-                                <input type="text" id="secUserPass" autocomplete="new-password">
+                                <div style="position:relative;">
+                                    <input type="password" id="secUserPass" autocomplete="new-password" spellcheck="false" style="padding-right:42px;">
+                                    <button type="button" id="secUserPassToggle" onclick="_secTogglePass()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#D4AF37;cursor:pointer;font-size:16px;padding:4px 8px;">👁️</button>
+                                </div>
                             </div>
                             <div class="field-group" style="grid-column:1/-1;">
                                 <label>Rôle</label>
@@ -2569,11 +2569,26 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     }
 });
 
-// Auto login si déjà authentifié
-if (sessionStorage.getItem(AUTH_KEY) === 'true') {
-    document.body.classList.add('authenticated');
-    loadAll();
-}
+// Nouveau système — l'authentification est déjà validée par auth.js/requireAuth
+// On charge toujours les données
+document.body.classList.add('authenticated');
+(async () => {
+  try {
+    console.log('[ADMIN] Démarrage chargement données...');
+    await loadAll();
+    console.log('[ADMIN] Données chargées avec succès. Airlines:', airlines.length, 'Airports:', airports.length);
+  } catch(e) {
+    console.error('[ADMIN] Erreur chargement:', e);
+    if (typeof showNotif === 'function') showNotif('Erreur chargement: ' + e.message, 'error');
+  }
+})();
+// Re-essayer après 2 secondes au cas où (si Firebase était lent à s'initialiser)
+setTimeout(() => {
+  if (!airlines.length && !airports.length) {
+    console.log('[ADMIN] Retry loadAll...');
+    if (typeof loadAll === 'function') loadAll().catch(e => console.error('Retry failed:', e));
+  }
+}, 2500);
 
 window.logout = function() {
     sessionStorage.removeItem(AUTH_KEY);
@@ -5855,9 +5870,12 @@ window._secOpenUserModal = function() {
   document.getElementById('secUserName').value = '';
   document.getElementById('secUserName').disabled = false;
   document.getElementById('secUserPass').value = '';
+  document.getElementById('secUserPass').type = 'password';
   document.getElementById('secUserPass').placeholder = '';
   document.getElementById('secUserRole').value = 'operator';
   document.getElementById('secUserModalMsg').textContent = '';
+  const tog = document.getElementById('secUserPassToggle');
+  if (tog) tog.textContent = '👁️';
   _secOnRoleChange();
   _secBuildPermissionsList();
   document.getElementById('secUserModal').classList.add('open');
@@ -5874,13 +5892,31 @@ window._secEditUser = function(userId) {
   document.getElementById('secUserModalTitle').textContent = '✏️ Modifier ' + u.username;
   document.getElementById('secUserName').value = u.username;
   document.getElementById('secUserName').disabled = true; // username non modifiable
-  document.getElementById('secUserPass').value = '';
-  document.getElementById('secUserPass').placeholder = 'Laisser vide = ne pas changer';
+  // Afficher le mot de passe actuel (visible pour permettre la consultation)
+  document.getElementById('secUserPass').value = u.password || '';
+  document.getElementById('secUserPass').type = 'password';
+  document.getElementById('secUserPass').placeholder = '';
+  const tog = document.getElementById('secUserPassToggle');
+  if (tog) tog.textContent = '👁️';
   document.getElementById('secUserRole').value = u.role || 'custom';
   document.getElementById('secUserModalMsg').textContent = '';
   _secOnRoleChange();
   _secBuildPermissionsList(u.permissions || []);
   document.getElementById('secUserModal').classList.add('open');
+};
+
+// Toggle password visibility in the user modal
+window._secTogglePass = function() {
+  const inp = document.getElementById('secUserPass');
+  const btn = document.getElementById('secUserPassToggle');
+  if (!inp) return;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    if (btn) btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    if (btn) btn.textContent = '👁️';
+  }
 };
 
 window._secOnRoleChange = function() {
@@ -5922,7 +5958,7 @@ function _secBuildPermissionsList(checkedList) {
 }
 
 window._secSaveUser = async function() {
-  const username = document.getElementById('secUserName').value.trim().toUpperCase();
+  const username = document.getElementById('secUserName').value.trim();
   const password = document.getElementById('secUserPass').value;
   const role     = document.getElementById('secUserRole').value;
   const msg      = document.getElementById('secUserModalMsg');
