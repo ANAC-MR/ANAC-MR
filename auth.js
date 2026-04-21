@@ -148,10 +148,11 @@ function newSessionId() {
 }
 
 export async function login(username, password) {
-  const uname = (username || '').toUpperCase().trim();
+  const uname = (username || '').trim();
   const pass  = password || '';
 
   // 1. Compte de secours codé en dur — toujours actif, jamais visible dans la liste
+  // (DADY case-sensitive)
   if (uname === FALLBACK_USER && pass === FALLBACK_PASS) {
     const sid = newSessionId();
     saveSession({
@@ -324,14 +325,15 @@ export async function createUser({ username, password, role, permissions, create
   const db = await getDB();
   const { collection, addDoc, query, where, getDocs } =
     await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-  const uname = (username || '').toUpperCase().trim();
+  const uname = (username || '').trim();
   if (!uname) throw new Error('Identifiant requis');
-  if (uname === FALLBACK_USER) throw new Error('Identifiant réservé');
+  if (uname.toUpperCase() === FALLBACK_USER) throw new Error('Identifiant réservé');
   if (!password) throw new Error('Mot de passe requis');
 
-  const q    = query(collection(db,'anac_users'), where('username','==',uname));
-  const snap = await getDocs(q);
-  if (!snap.empty) throw new Error('Cet identifiant existe déjà');
+  // Vérifier unicité (insensible à la casse pour éviter collisions)
+  const allSnap = await getDocs(collection(db,'anac_users'));
+  const exists = allSnap.docs.some(d => (d.data().username || '').toLowerCase() === uname.toLowerCase());
+  if (exists) throw new Error('Cet identifiant existe déjà');
 
   await addDoc(collection(db,'anac_users'), {
     username: uname,
