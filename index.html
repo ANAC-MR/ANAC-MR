@@ -948,14 +948,14 @@ document.addEventListener('keydown', e => {
     </select>
 
     <button onclick="resetChartFilters()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
-    <button onclick="exportChartsToExcel()" id="btnExportExcel" data-perm="export_flights"
-      style="background:linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1));
-             border:1px solid rgba(0,182,122,.5);color:#34d399;border-radius:8px;
+    <button onclick="exportChartsToPDF()" id="btnExportCharts" data-perm="export_flights"
+      style="background:linear-gradient(135deg,rgba(229,62,62,.25),rgba(229,62,62,.1));
+             border:1px solid rgba(229,62,62,.5);color:#fca5a5;border-radius:8px;
              padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;
              font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .15s;"
-      onmouseover="this.style.background='rgba(0,182,122,.3)'"
-      onmouseout="this.style.background='linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1))'">
-      <span>⬇</span> Exporter Excel
+      onmouseover="this.style.background='rgba(229,62,62,.3)'"
+      onmouseout="this.style.background='linear-gradient(135deg,rgba(229,62,62,.25),rgba(229,62,62,.1))'">
+      <span>📄</span> Exporter PDF
     </button>
   </div>
 </div>
@@ -1629,128 +1629,177 @@ window.doExport=function(){
 
 
 // ═══════════════════════════════════════════════════════════════
-// Export Diagrammes & Rapports → Excel (les données derrière les graphiques)
+// Export Diagrammes & Rapports → PDF (images des graphiques + filtres)
 // ═══════════════════════════════════════════════════════════════
-function exportChartsToExcel() {
-    const all = getFlights();
-    const flt = filterFlights(all);
-    if (!flt.length) { alert('Aucune donnée à exporter pour ce filtre.'); return; }
+function exportChartsToPDF() {
+    if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
+        alert('La bibliothèque PDF n\'est pas chargée.');
+        return;
+    }
+    const JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
 
+    // Vérifier que les graphiques sont dessinés
+    if (!charts['v'] || !charts['p'] || !charts['c'] || !charts['pc']) {
+        alert('Les graphiques ne sont pas encore prêts. Attendez quelques secondes puis réessayez.');
+        return;
+    }
+
+    // Récupérer les filtres affichés
     const y  = document.getElementById('chartYearFilter').value;
     const m  = document.getElementById('chartMonthFilter').value;
     const co = document.getElementById('chartCompanyFilter').value;
-    const yearLabel  = y  === 'ALL' ? 'Toutes' : y;
-    const monthLabel = m  === 'ALL' ? 'Tous' : MONTHS_LONG[+m];
-    const coLabel    = co === 'ALL' ? 'Toutes' : co;
+    const yearLabel  = y  === 'ALL' ? 'Toutes les années' : y;
+    const monthLabel = m  === 'ALL' ? 'Tous les mois'     : MONTHS_LONG[+m];
+    const coLabel    = co === 'ALL' ? 'Toutes les compagnies' : co;
+    const dateExport = new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
 
-    const wb = XLSX.utils.book_new();
+    // KPIs
+    const kpiVols = document.getElementById('kpi-vols').textContent;
+    const kpiPax  = document.getElementById('kpi-pax').textContent;
+    const kpiComp = document.getElementById('kpi-comp').textContent;
+    const kpiDest = document.getElementById('kpi-dest').textContent;
 
-    // ─── Feuille 1 : SYNTHÈSE (KPIs) ────────────────────────────
-    const pax    = flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0), 0);
-    const babies = flt.reduce((s,f)=>s+(+f.babies||0), 0);
-    const comps  = new Set(flt.map(f=>f.company).filter(Boolean));
-    const dests  = new Set(flt.map(f=>cityName(getDestCity(f)||'')).filter(d=>d&&d!=='Nouakchott'&&d!==''&&d!=='undefined'));
+    // Créer PDF A4 portrait
+    const pdf = new JsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const pageW = 210, pageH = 297;
+    const margin = 14;
 
-    const kpiRows = [
-        ['DIAGRAMMES & RAPPORTS — SYNTHÈSE'],
-        [],
-        ['Filtres appliqués'],
-        ['Année',     yearLabel],
-        ['Mois',      monthLabel],
-        ['Compagnie', coLabel],
-        [],
-        ['Indicateur',              'Valeur'],
-        ['Nombre total de vols',    flt.length],
-        ['Total passagers (avec bébés)', pax],
-        ['Dont bébés',              babies],
-        ['Nombre de compagnies',    comps.size],
-        ['Nombre de destinations',  dests.size],
+    // ─── En-tête ──────────────────────────────────────
+    pdf.setFillColor(15, 30, 61);
+    pdf.rect(0, 0, pageW, 26, 'F');
+    pdf.setFillColor(200, 168, 75);
+    pdf.rect(0, 26, pageW, 1.2, 'F');
+
+    pdf.setTextColor(255,255,255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.text('ANAC Mauritanie', margin, 12);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(200, 168, 75);
+    pdf.text('Diagrammes & Rapports — Aéroport de Nouakchott', margin, 19);
+
+    pdf.setFontSize(8);
+    pdf.setTextColor(200, 200, 200);
+    pdf.text('Exporté le ' + dateExport, pageW - margin, 19, { align:'right' });
+
+    // ─── Bloc Filtres ─────────────────────────────────
+    let yPos = 36;
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(margin, yPos, pageW - 2*margin, 22, 'F');
+    pdf.setDrawColor(200, 168, 75);
+    pdf.setLineWidth(0.3);
+    pdf.rect(margin, yPos, pageW - 2*margin, 22);
+
+    pdf.setTextColor(15, 30, 61);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.text('FILTRES APPLIQUÉS', margin + 3, yPos + 6);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(60, 60, 60);
+    pdf.text('Année :', margin + 3, yPos + 12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(yearLabel, margin + 22, yPos + 12);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Mois :', margin + 3, yPos + 17);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(monthLabel, margin + 22, yPos + 17);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Compagnie :', pageW/2, yPos + 12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(coLabel, pageW/2 + 25, yPos + 12);
+
+    yPos += 26;
+
+    // ─── Bloc KPIs ────────────────────────────────────
+    pdf.setFillColor(245, 245, 245);
+    pdf.setDrawColor(220, 220, 220);
+    const kpiW = (pageW - 2*margin - 9) / 4;
+    const kpiY = yPos;
+    const kpiH = 20;
+    const kpis = [
+        { label:'Total vols',      value:kpiVols, color:[96, 165, 250] },
+        { label:'Total passagers', value:kpiPax,  color:[52, 211, 153] },
+        { label:'Compagnies',      value:kpiComp, color:[212, 175,  55] },
+        { label:'Destinations',    value:kpiDest, color:[248, 113, 113] },
     ];
-    const ws1 = XLSX.utils.aoa_to_sheet(kpiRows);
-    ws1['!cols'] = [{wch:34}, {wch:20}];
-    XLSX.utils.book_append_sheet(wb, ws1, 'Synthèse');
+    kpis.forEach((k, i) => {
+        const x = margin + i * (kpiW + 3);
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(x, kpiY, kpiW, kpiH, 'F');
+        pdf.setDrawColor(k.color[0], k.color[1], k.color[2]);
+        pdf.setLineWidth(0.4);
+        pdf.line(x, kpiY, x, kpiY + kpiH);
+        pdf.setLineWidth(0.2);
+        pdf.setDrawColor(230, 230, 230);
+        pdf.rect(x + 0.5, kpiY, kpiW - 0.5, kpiH);
 
-    // ─── Feuille 2 : VOLS PAR MOIS ──────────────────────────────
-    const volsByMonth = Array(12).fill(0);
-    flt.forEach(f => { if (f.date) volsByMonth[new Date(f.date).getMonth()]++; });
-    const volsRows = [
-        ['VOLS PAR MOIS'],
-        [],
-        ['Mois', 'Nombre de vols'],
-        ...MONTHS_FR.map((name,i) => [name, volsByMonth[i]]),
-        ['TOTAL', volsByMonth.reduce((a,b)=>a+b,0)],
-    ];
-    const ws2 = XLSX.utils.aoa_to_sheet(volsRows);
-    ws2['!cols'] = [{wch:16}, {wch:18}];
-    XLSX.utils.book_append_sheet(wb, ws2, 'Vols par mois');
-
-    // ─── Feuille 3 : PASSAGERS PAR MOIS (Dép/Arr NKC) ──────────
-    const paxDep = Array(12).fill(0), paxArr = Array(12).fill(0);
-    flt.forEach(f => {
-        if (!f.date) return;
-        const mo = new Date(f.date).getMonth();
-        const p  = (+f.passengers||0) + (+f.babies||0);
-        if (isNKC(f.from))      paxDep[mo] += p;
-        else if (isNKC(f.to))   paxArr[mo] += p;
+        pdf.setTextColor(k.color[0], k.color[1], k.color[2]);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(14);
+        pdf.text(String(k.value), x + kpiW/2, kpiY + 9, { align:'center' });
+        pdf.setTextColor(100, 100, 100);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7);
+        pdf.text(k.label.toUpperCase(), x + kpiW/2, kpiY + 15, { align:'center' });
     });
-    const paxRows = [
-        ['PASSAGERS PAR MOIS'],
-        [],
-        ['Mois', 'Départs NKC', 'Arrivées NKC', 'Total'],
-        ...MONTHS_FR.map((name,i) => [name, paxDep[i], paxArr[i], paxDep[i]+paxArr[i]]),
-        ['TOTAL',
-         paxDep.reduce((a,b)=>a+b,0),
-         paxArr.reduce((a,b)=>a+b,0),
-         paxDep.reduce((a,b)=>a+b,0)+paxArr.reduce((a,b)=>a+b,0)],
-    ];
-    const ws3 = XLSX.utils.aoa_to_sheet(paxRows);
-    ws3['!cols'] = [{wch:16}, {wch:16}, {wch:16}, {wch:14}];
-    XLSX.utils.book_append_sheet(wb, ws3, 'Passagers par mois');
 
-    // ─── Feuille 4 : TOP COMPAGNIES ─────────────────────────────
-    const byComp = {};
-    flt.forEach(f => {
-        if (!f.company) return;
-        if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0 };
-        byComp[f.company].vols++;
-        byComp[f.company].pax += (+f.passengers||0) + (+f.babies||0);
+    yPos += kpiH + 8;
+
+    // ─── Graphiques (2 par ligne, 2 lignes) ────────────
+    const chartW = (pageW - 2*margin - 5) / 2;
+    const chartH = 78;
+
+    const chartData = [
+        { id:'chartVolsMois', title:'Vols par mois' },
+        { id:'chartPaxMois',  title:'Passagers par mois' },
+        { id:'chartTopComp',  title:'Top compagnies' },
+        { id:'chartPaxComp',  title:'Passagers par compagnie' },
+    ];
+
+    chartData.forEach((c, i) => {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const x = margin + col * (chartW + 5);
+        const yC = yPos + row * (chartH + 8);
+
+        // Titre
+        pdf.setTextColor(15, 30, 61);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.text(c.title, x + 2, yC);
+
+        // Convertir canvas en image
+        const canvas = document.getElementById(c.id);
+        if (canvas) {
+            try {
+                const imgData = canvas.toDataURL('image/png', 1.0);
+                pdf.addImage(imgData, 'PNG', x, yC + 2, chartW, chartH - 4);
+            } catch(e) {
+                pdf.setTextColor(200, 60, 60);
+                pdf.setFontSize(8);
+                pdf.text('Graphique indisponible', x + 2, yC + 20);
+            }
+        }
     });
-    const sortedComp = Object.entries(byComp).sort((a,b) => b[1].vols - a[1].vols);
-    const compRows = [
-        ['CLASSEMENT DES COMPAGNIES'],
-        [],
-        ['Rang', 'Compagnie', 'Nombre de vols', 'Passagers transportés'],
-        ...sortedComp.map(([name, info], i) => [i+1, name, info.vols, info.pax]),
-    ];
-    const ws4 = XLSX.utils.aoa_to_sheet(compRows);
-    ws4['!cols'] = [{wch:8}, {wch:34}, {wch:16}, {wch:20}];
-    XLSX.utils.book_append_sheet(wb, ws4, 'Top compagnies');
 
-    // ─── Feuille 5 : DESTINATIONS ───────────────────────────────
-    const byDest = {};
-    flt.forEach(f => {
-        const city = cityName(getDestCity(f)||'');
-        if (!city || city === 'Nouakchott' || city === 'undefined') return;
-        if (!byDest[city]) byDest[city] = { vols:0, pax:0 };
-        byDest[city].vols++;
-        byDest[city].pax += (+f.passengers||0) + (+f.babies||0);
-    });
-    const sortedDest = Object.entries(byDest).sort((a,b) => b[1].vols - a[1].vols);
-    const destRows = [
-        ['DESTINATIONS'],
-        [],
-        ['Rang', 'Ville', 'Nombre de vols', 'Passagers transportés'],
-        ...sortedDest.map(([name, info], i) => [i+1, name, info.vols, info.pax]),
-    ];
-    const ws5 = XLSX.utils.aoa_to_sheet(destRows);
-    ws5['!cols'] = [{wch:8}, {wch:26}, {wch:16}, {wch:20}];
-    XLSX.utils.book_append_sheet(wb, ws5, 'Destinations');
+    // ─── Pied de page ─────────────────────────────────
+    const footerY = pageH - 10;
+    pdf.setDrawColor(220, 220, 220);
+    pdf.setLineWidth(0.2);
+    pdf.line(margin, footerY - 3, pageW - margin, footerY - 3);
+    pdf.setTextColor(130, 130, 130);
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(7);
+    pdf.text('ANAC Mauritanie — Rapport généré par le Système de Gestion des Vols', pageW/2, footerY, { align:'center' });
 
-    // ─── Nom du fichier + téléchargement ────────────────────────
+    // Nom du fichier
     const ts = new Date().toISOString().slice(0,10);
-    XLSX.writeFile(wb, `ANAC-Diagrammes-${ts}.xlsx`);
+    pdf.save('ANAC-Diagrammes-' + ts + '.pdf');
 }
-window.exportChartsToExcel = exportChartsToExcel;
+window.exportChartsToPDF = exportChartsToPDF;
 
 function exportExcel(){
     const all=getFlights();
