@@ -1880,12 +1880,12 @@ async function _doExportPDF(JsPDF, hiResImages) {
         pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(13);
-        pdf.text('ANAC Mauritanie', marg, 10);
+        pdf.text('Direction du Transport Aérien', marg, 10);
 
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(8.5);
         pdf.setTextColor(GOLD[0], GOLD[1], GOLD[2]);
-        pdf.text('Diagrammes & Rapports  —  Aéroport International de Nouakchott', marg, 16);
+        pdf.text('Diagrammes & Rapports', marg, 16);
 
         pdf.setFontSize(7.5);
         pdf.setTextColor(200, 200, 200);
@@ -1908,59 +1908,47 @@ async function _doExportPDF(JsPDF, hiResImages) {
     drawHeader(1);
     let yPos = 30;
 
-    // ── Bloc Filtres (style carte) ───────────────────
+    // ── Bloc résumé (style carte) ───────────────────
+    // Construire la phrase en langage naturel
+    let periodPart;
+    if (y === 'ALL' && m === 'ALL') periodPart = 'toutes les périodes';
+    else if (y !== 'ALL' && m === 'ALL') periodPart = "l'année " + y;
+    else if (y === 'ALL' && m !== 'ALL') periodPart = 'le mois de ' + MONTHS_LONG[+m];
+    else periodPart = MONTHS_LONG[+m] + ' ' + y;
+
+    const companyPart = co === 'ALL' ? 'toutes les compagnies' : co;
+    const summaryText = 'Rapport de ' + companyPart + ' pour ' + periodPart + '.';
+
     pdf.setFillColor(250, 251, 253);
     pdf.setDrawColor(GOLD[0], GOLD[1], GOLD[2]);
     pdf.setLineWidth(0.4);
-    pdf.roundedRect(marg, yPos, pageW - 2*marg, 20, 2, 2, 'FD');
+    pdf.roundedRect(marg, yPos, pageW - 2*marg, 14, 2, 2, 'FD');
 
-    // Titre encadré
+    // Texte résumé centré
     pdf.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.text('FILTRES APPLIQUÉS', marg + 4, yPos + 6);
-
-    // Ligne dorée sous le titre
-    pdf.setDrawColor(GOLD[0], GOLD[1], GOLD[2]);
-    pdf.setLineWidth(0.3);
-    pdf.line(marg + 4, yPos + 7.5, marg + 47, yPos + 7.5);
-
-    // 3 colonnes : Année, Mois, Compagnie
-    const colW = (pageW - 2*marg - 8) / 3;
-    const cy = yPos + 14;
-
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(MID[0], MID[1], MID[2]);
+    pdf.setFontSize(11);
+    // Découper si trop long
+    const maxWidth = pageW - 2*marg - 10;
+    const lines = pdf.splitTextToSize(summaryText, maxWidth);
+    const lineHeight = 4.5;
+    const totalHeight = lines.length * lineHeight;
+    const blockH = Math.max(14, totalHeight + 6);
+    
+    // Redessiner la carte avec la bonne hauteur si besoin
+    if (blockH > 14) {
+        pdf.setFillColor(250, 251, 253);
+        pdf.setDrawColor(GOLD[0], GOLD[1], GOLD[2]);
+        pdf.setLineWidth(0.4);
+        pdf.roundedRect(marg, yPos, pageW - 2*marg, blockH, 2, 2, 'FD');
+    }
+    
+    const textStartY = yPos + (blockH / 2) - ((lines.length - 1) * lineHeight / 2) + 1;
+    lines.forEach((ln, i) => {
+        pdf.text(ln, pageW / 2, textStartY + i * lineHeight, { align:'center' });
+    });
 
-    // Année
-    pdf.text('Année', marg + 4, cy);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9.5);
-    pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
-    pdf.text(yearLabel, marg + 4 + 15, cy);
-
-    // Mois
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(MID[0], MID[1], MID[2]);
-    pdf.text('Mois', marg + 4 + colW, cy);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9.5);
-    pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
-    pdf.text(monthLabel, marg + 4 + colW + 13, cy);
-
-    // Compagnie
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(MID[0], MID[1], MID[2]);
-    pdf.text('Compagnie', marg + 4 + 2*colW, cy);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9.5);
-    pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
-    pdf.text(coLabel, marg + 4 + 2*colW + 23, cy);
-
-    yPos += 26;
+    yPos += blockH + 8;
 
     // ── Bloc KPIs (4 cartes) ─────────────────────────
     const kpiGap = 3;
@@ -2319,7 +2307,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
         pdf.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(11);
-        pdf.text('COMPAGNIES SUR LE TRAJET : NOUAKCHOTT ↔ ' + (cityName(routeSel.split('|')[0]) || routeSel.split('|')[0]).toUpperCase(), marg, yPos - 1);
+        pdf.text('COMPAGNIES SUR LE TRAJET : NOUAKCHOTT - ' + (cityName(routeSel.split('|')[0]) || routeSel.split('|')[0]).toUpperCase(), marg, yPos - 1);
         yPos += 5;
 
         // Récupérer les données
