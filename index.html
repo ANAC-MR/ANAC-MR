@@ -1629,28 +1629,96 @@ window.doExport=function(){
 
 
 // ═══════════════════════════════════════════════════════════════
-// Export Diagrammes & Rapports → PDF (images des graphiques + filtres)
+// Export Diagrammes & Rapports → PDF professionnel
+// Capture les graphiques en haute résolution + toutes les sections sélectionnées
 // ═══════════════════════════════════════════════════════════════
-function exportChartsToPDF() {
-    if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
-        alert('La bibliothèque PDF n\'est pas chargée.');
-        return;
-    }
-    const JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
 
-    // Vérifier que les graphiques sont dessinés
+// Capture un canvas Chart.js en haute résolution via un canvas offscreen
+async function _captureChartHD(chart, targetW, targetH) {
+    if (!chart || !chart.canvas) return null;
+    return new Promise(resolve => {
+        // Utiliser le canvas directement à sa résolution actuelle (Chart.js gère devicePixelRatio)
+        try {
+            const dataUrl = chart.canvas.toDataURL('image/png', 1.0);
+            resolve(dataUrl);
+        } catch(e) {
+            resolve(null);
+        }
+    });
+}
+
+// Redimensionner temporairement les graphiques pour qu\'ils soient rendus en haute résolution
+async function _withHiResCharts(fn) {
+    // Mémoriser les tailles originales
+    const ids = ['chartVolsMois','chartPaxMois','chartTopComp','chartPaxComp'];
+    const originals = {};
+
+    ids.forEach(id => {
+        const c = document.getElementById(id);
+        if (c && c.parentElement) {
+            originals[id] = {
+                height: c.parentElement.style.height,
+                width:  c.parentElement.style.width,
+            };
+            c.parentElement.style.height = '500px';
+            c.parentElement.style.width  = '900px';
+        }
+    });
+
+    // Forcer Chart.js à redessiner à la nouvelle taille
+    Object.values(charts).forEach(chart => { if (chart && chart.resize) chart.resize(); });
+    // Attendre le rendu
+    await new Promise(r => setTimeout(r, 400));
+
+    try {
+        return await fn();
+    } finally {
+        // Restaurer les tailles originales
+        ids.forEach(id => {
+            const c = document.getElementById(id);
+            if (c && c.parentElement && originals[id]) {
+                c.parentElement.style.height = originals[id].height;
+                c.parentElement.style.width  = originals[id].width;
+            }
+        });
+        Object.values(charts).forEach(chart => { if (chart && chart.resize) chart.resize(); });
+    }
+}
+
+async function exportChartsToPDF() {
+    const JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!JsPDF) { alert('La bibliothèque PDF n\'est pas chargée.'); return; }
+
     if (!charts['v'] || !charts['p'] || !charts['c'] || !charts['pc']) {
         alert('Les graphiques ne sont pas encore prêts. Attendez quelques secondes puis réessayez.');
         return;
     }
 
-    // Récupérer les filtres affichés
+    // Feedback visuel
+    const btn = document.getElementById('btnExportCharts');
+    let oldHTML = '';
+    if (btn) { oldHTML = btn.innerHTML; btn.innerHTML = '<span>⏳</span> Génération...'; btn.disabled = true; }
+
+    try {
+        await _withHiResCharts(async () => {
+            await _doExportPDF(JsPDF);
+        });
+    } catch(e) {
+        console.error(e);
+        alert('Erreur lors de l\'export PDF : ' + e.message);
+    } finally {
+        if (btn) { btn.innerHTML = oldHTML; btn.disabled = false; }
+    }
+}
+
+async function _doExportPDF(JsPDF) {
+    // ─── Données des filtres ───────────────────────────
     const y  = document.getElementById('chartYearFilter').value;
     const m  = document.getElementById('chartMonthFilter').value;
     const co = document.getElementById('chartCompanyFilter').value;
     const yearLabel  = y  === 'ALL' ? 'Toutes les années' : y;
     const monthLabel = m  === 'ALL' ? 'Tous les mois'     : MONTHS_LONG[+m];
-    const coLabel    = co === 'ALL' ? 'Toutes les compagnies' : co;
+    const coLabel    = co === 'ALL' ? 'Toutes compagnies' : co;
     const dateExport = new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
 
     // KPIs
@@ -1662,63 +1730,110 @@ function exportChartsToPDF() {
     // Créer PDF A4 portrait
     const pdf = new JsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
     const pageW = 210, pageH = 297;
-    const margin = 14;
+    const marg = 12;
 
-    // ─── En-tête ──────────────────────────────────────
-    pdf.setFillColor(15, 30, 61);
-    pdf.rect(0, 0, pageW, 26, 'F');
-    pdf.setFillColor(200, 168, 75);
-    pdf.rect(0, 26, pageW, 1.2, 'F');
+    const NAVY = [15, 30, 61];
+    const GOLD = [200, 168, 75];
+    const DARK = [30, 30, 30];
+    const MID  = [80, 80, 80];
+    const LGRAY = [240, 240, 240];
 
-    pdf.setTextColor(255,255,255);
+    // ═══════ HEADER (haut de chaque page) ═══════
+    function drawHeader(pageNum) {
+        pdf.setFillColor(NAVY[0], NAVY[1], NAVY[2]);
+        pdf.rect(0, 0, pageW, 22, 'F');
+        pdf.setFillColor(GOLD[0], GOLD[1], GOLD[2]);
+        pdf.rect(0, 22, pageW, 1, 'F');
+
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(13);
+        pdf.text('ANAC Mauritanie', marg, 10);
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(GOLD[0], GOLD[1], GOLD[2]);
+        pdf.text('Diagrammes & Rapports  —  Aéroport International de Nouakchott', marg, 16);
+
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(200, 200, 200);
+        pdf.text('Exporté le ' + dateExport, pageW - marg, 10, { align:'right' });
+        if (pageNum) pdf.text('Page ' + pageNum, pageW - marg, 16, { align:'right' });
+    }
+
+    function drawFooter() {
+        const fy = pageH - 8;
+        pdf.setDrawColor(220, 220, 220);
+        pdf.setLineWidth(0.2);
+        pdf.line(marg, fy - 2, pageW - marg, fy - 2);
+        pdf.setTextColor(140, 140, 140);
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(7);
+        pdf.text('ANAC Mauritanie  —  Rapport généré par le Système de Gestion des Vols', pageW/2, fy, { align:'center' });
+    }
+
+    // ═══════ PAGE 1 ═══════
+    drawHeader(1);
+    let yPos = 30;
+
+    // ── Bloc Filtres (style carte) ───────────────────
+    pdf.setFillColor(250, 251, 253);
+    pdf.setDrawColor(GOLD[0], GOLD[1], GOLD[2]);
+    pdf.setLineWidth(0.4);
+    pdf.roundedRect(marg, yPos, pageW - 2*marg, 20, 2, 2, 'FD');
+
+    // Titre encadré
+    pdf.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.text('ANAC Mauritanie', margin, 12);
-    pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
-    pdf.setTextColor(200, 168, 75);
-    pdf.text('Diagrammes & Rapports — Aéroport de Nouakchott', margin, 19);
+    pdf.text('FILTRES APPLIQUÉS', marg + 4, yPos + 6);
 
-    pdf.setFontSize(8);
-    pdf.setTextColor(200, 200, 200);
-    pdf.text('Exporté le ' + dateExport, pageW - margin, 19, { align:'right' });
-
-    // ─── Bloc Filtres ─────────────────────────────────
-    let yPos = 36;
-    pdf.setFillColor(248, 250, 252);
-    pdf.rect(margin, yPos, pageW - 2*margin, 22, 'F');
-    pdf.setDrawColor(200, 168, 75);
+    // Ligne dorée sous le titre
+    pdf.setDrawColor(GOLD[0], GOLD[1], GOLD[2]);
     pdf.setLineWidth(0.3);
-    pdf.rect(margin, yPos, pageW - 2*margin, 22);
+    pdf.line(marg + 4, yPos + 7.5, marg + 47, yPos + 7.5);
 
-    pdf.setTextColor(15, 30, 61);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
-    pdf.text('FILTRES APPLIQUÉS', margin + 3, yPos + 6);
+    // 3 colonnes : Année, Mois, Compagnie
+    const colW = (pageW - 2*marg - 8) / 3;
+    const cy = yPos + 14;
 
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    pdf.setTextColor(60, 60, 60);
-    pdf.text('Année :', margin + 3, yPos + 12);
+    pdf.setFontSize(8);
+    pdf.setTextColor(MID[0], MID[1], MID[2]);
+
+    // Année
+    pdf.text('Année', marg + 4, cy);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(yearLabel, margin + 22, yPos + 12);
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
+    pdf.text(yearLabel, marg + 4 + 15, cy);
+
+    // Mois
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Mois :', margin + 3, yPos + 17);
+    pdf.setFontSize(8);
+    pdf.setTextColor(MID[0], MID[1], MID[2]);
+    pdf.text('Mois', marg + 4 + colW, cy);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(monthLabel, margin + 22, yPos + 17);
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
+    pdf.text(monthLabel, marg + 4 + colW + 13, cy);
+
+    // Compagnie
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Compagnie :', pageW/2, yPos + 12);
+    pdf.setFontSize(8);
+    pdf.setTextColor(MID[0], MID[1], MID[2]);
+    pdf.text('Compagnie', marg + 4 + 2*colW, cy);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(coLabel, pageW/2 + 25, yPos + 12);
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
+    pdf.text(coLabel, marg + 4 + 2*colW + 23, cy);
 
     yPos += 26;
 
-    // ─── Bloc KPIs ────────────────────────────────────
-    pdf.setFillColor(245, 245, 245);
-    pdf.setDrawColor(220, 220, 220);
-    const kpiW = (pageW - 2*margin - 9) / 4;
-    const kpiY = yPos;
-    const kpiH = 20;
+    // ── Bloc KPIs (4 cartes) ─────────────────────────
+    const kpiGap = 3;
+    const kpiW = (pageW - 2*marg - 3*kpiGap) / 4;
+    const kpiH = 22;
     const kpis = [
         { label:'Total vols',      value:kpiVols, color:[96, 165, 250] },
         { label:'Total passagers', value:kpiPax,  color:[52, 211, 153] },
@@ -1726,79 +1841,372 @@ function exportChartsToPDF() {
         { label:'Destinations',    value:kpiDest, color:[248, 113, 113] },
     ];
     kpis.forEach((k, i) => {
-        const x = margin + i * (kpiW + 3);
+        const x = marg + i * (kpiW + kpiGap);
+        // Fond blanc avec bordure
         pdf.setFillColor(255, 255, 255);
-        pdf.rect(x, kpiY, kpiW, kpiH, 'F');
-        pdf.setDrawColor(k.color[0], k.color[1], k.color[2]);
-        pdf.setLineWidth(0.4);
-        pdf.line(x, kpiY, x, kpiY + kpiH);
-        pdf.setLineWidth(0.2);
         pdf.setDrawColor(230, 230, 230);
-        pdf.rect(x + 0.5, kpiY, kpiW - 0.5, kpiH);
+        pdf.setLineWidth(0.2);
+        pdf.roundedRect(x, yPos, kpiW, kpiH, 1.5, 1.5, 'FD');
 
+        // Barre verticale colorée à gauche
+        pdf.setFillColor(k.color[0], k.color[1], k.color[2]);
+        pdf.rect(x, yPos, 1.5, kpiH, 'F');
+
+        // Valeur
         pdf.setTextColor(k.color[0], k.color[1], k.color[2]);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(14);
-        pdf.text(String(k.value), x + kpiW/2, kpiY + 9, { align:'center' });
-        pdf.setTextColor(100, 100, 100);
+        pdf.setFontSize(18);
+        pdf.text(String(k.value), x + kpiW/2, yPos + 11, { align:'center' });
+
+        // Label
+        pdf.setTextColor(110, 110, 110);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(7);
-        pdf.text(k.label.toUpperCase(), x + kpiW/2, kpiY + 15, { align:'center' });
+        pdf.text(k.label.toUpperCase(), x + kpiW/2, yPos + 18, { align:'center' });
     });
 
-    yPos += kpiH + 8;
+    yPos += kpiH + 7;
 
-    // ─── Graphiques (2 par ligne, 2 lignes) ────────────
-    const chartW = (pageW - 2*margin - 5) / 2;
-    const chartH = 78;
+    // ── Section titre "GRAPHIQUES" ────────────────────
+    pdf.setDrawColor(GOLD[0], GOLD[1], GOLD[2]);
+    pdf.setLineWidth(0.4);
+    pdf.line(marg, yPos, pageW - marg, yPos);
+    pdf.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    pdf.text('GRAPHIQUES', marg, yPos - 1);
+    yPos += 4;
+
+    // ── Graphiques (2 par ligne, 2 lignes) ───────────
+    const chartW = (pageW - 2*marg - 4) / 2;
+    const chartH = 62;
 
     const chartData = [
-        { id:'chartVolsMois', title:'Vols par mois' },
-        { id:'chartPaxMois',  title:'Passagers par mois' },
-        { id:'chartTopComp',  title:'Top compagnies' },
-        { id:'chartPaxComp',  title:'Passagers par compagnie' },
+        { id:'chartVolsMois', title:'Vols par mois',           color:[96, 165, 250] },
+        { id:'chartPaxMois',  title:'Passagers par mois',      color:[52, 211, 153] },
+        { id:'chartTopComp',  title:'Top compagnies',          color:[212, 175, 55]  },
+        { id:'chartPaxComp',  title:'Passagers par compagnie', color:[168, 85, 247]  },
     ];
 
-    chartData.forEach((c, i) => {
+    for (let i = 0; i < chartData.length; i++) {
+        const c = chartData[i];
         const col = i % 2;
         const row = Math.floor(i / 2);
-        const x = margin + col * (chartW + 5);
-        const yC = yPos + row * (chartH + 8);
+        const x = marg + col * (chartW + 4);
+        const yC = yPos + row * (chartH + 5);
 
-        // Titre
-        pdf.setTextColor(15, 30, 61);
+        // Cadre blanc avec bordure subtile
+        pdf.setFillColor(255, 255, 255);
+        pdf.setDrawColor(225, 225, 225);
+        pdf.setLineWidth(0.2);
+        pdf.roundedRect(x, yC, chartW, chartH, 1.5, 1.5, 'FD');
+
+        // Titre coloré
+        pdf.setFillColor(c.color[0], c.color[1], c.color[2]);
+        pdf.rect(x, yC, chartW, 6, 'F');
+        pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(9);
-        pdf.text(c.title, x + 2, yC);
+        pdf.setFontSize(8.5);
+        pdf.text(c.title, x + 2.5, yC + 4.2);
 
-        // Convertir canvas en image
+        // Image du graphique
         const canvas = document.getElementById(c.id);
         if (canvas) {
             try {
                 const imgData = canvas.toDataURL('image/png', 1.0);
-                pdf.addImage(imgData, 'PNG', x, yC + 2, chartW, chartH - 4);
+                pdf.addImage(imgData, 'PNG', x + 2, yC + 8, chartW - 4, chartH - 11);
             } catch(e) {
                 pdf.setTextColor(200, 60, 60);
                 pdf.setFontSize(8);
-                pdf.text('Graphique indisponible', x + 2, yC + 20);
+                pdf.text('Graphique indisponible', x + 3, yC + 25);
             }
         }
-    });
+    }
 
-    // ─── Pied de page ─────────────────────────────────
-    const footerY = pageH - 10;
-    pdf.setDrawColor(220, 220, 220);
-    pdf.setLineWidth(0.2);
-    pdf.line(margin, footerY - 3, pageW - margin, footerY - 3);
-    pdf.setTextColor(130, 130, 130);
-    pdf.setFont('helvetica', 'italic');
-    pdf.setFontSize(7);
-    pdf.text('ANAC Mauritanie — Rapport généré par le Système de Gestion des Vols', pageW/2, footerY, { align:'center' });
+    yPos += 2 * (chartH + 5);
 
-    // Nom du fichier
+    // ══════════════════════════════════════════════════════════
+    // PAGE 2 : DESTINATIONS FRÉQUENTES
+    // ══════════════════════════════════════════════════════════
+    pdf.addPage();
+    drawHeader(2);
+    yPos = 30;
+
+    // Section DESTINATIONS
+    pdf.setDrawColor(GOLD[0], GOLD[1], GOLD[2]);
+    pdf.setLineWidth(0.4);
+    pdf.line(marg, yPos, pageW - marg, yPos);
+    pdf.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    pdf.text('DESTINATIONS FRÉQUENTES', marg, yPos - 1);
+    yPos += 5;
+
+    // Lire les données depuis window._destData si dispo, sinon les recalculer
+    const destData = window._destData || (function() {
+        const all  = getFlights();
+        const flt  = filterFlights(all);
+        const dc   = {};
+        flt.forEach(f => {
+            const city = cityName(getDestCity(f)||'');
+            if (!city || city === 'Nouakchott' || city === '' || city === 'undefined') return;
+            if (!dc[city]) dc[city] = { vols:0, pax:0 };
+            dc[city].vols++;
+            dc[city].pax += (+f.passengers||0) + (+f.babies||0);
+        });
+        return dc;
+    })();
+
+    const sortedDest = Object.entries(destData).sort((a,b) => b[1].vols - a[1].vols).slice(0, 20);
+
+    if (!sortedDest.length) {
+        pdf.setTextColor(150, 150, 150);
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(10);
+        pdf.text('Aucune destination dans les données filtrées.', marg + 4, yPos + 4);
+    } else {
+        const maxVols = sortedDest[0][1].vols;
+
+        // En-tête tableau
+        pdf.setFillColor(NAVY[0], NAVY[1], NAVY[2]);
+        pdf.rect(marg, yPos, pageW - 2*marg, 7, 'F');
+        pdf.setTextColor(GOLD[0], GOLD[1], GOLD[2]);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(8);
+        pdf.text('RANG',        marg + 3,             yPos + 4.8);
+        pdf.text('VILLE',       marg + 18,            yPos + 4.8);
+        pdf.text('VOLS',        marg + 78,            yPos + 4.8);
+        pdf.text('PASSAGERS',   marg + 98,            yPos + 4.8);
+        pdf.text('RÉPARTITION', marg + 125,           yPos + 4.8);
+        yPos += 7;
+
+        // Lignes
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8.5);
+        const PALETTE = [[96,165,250],[52,211,153],[212,175,55],[248,113,113],[168,85,247],[251,146,60],[14,165,233],[236,72,153]];
+        sortedDest.forEach(([city, info], i) => {
+            const color = PALETTE[i % PALETTE.length];
+            const rowH = 7;
+            if (i % 2 === 0) {
+                pdf.setFillColor(248, 250, 252);
+                pdf.rect(marg, yPos, pageW - 2*marg, rowH, 'F');
+            }
+            pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
+            pdf.text(String(i+1), marg + 3, yPos + 5);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(city.length > 26 ? city.substring(0, 26) + '…' : city, marg + 18, yPos + 5);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(String(info.vols),          marg + 78, yPos + 5);
+            pdf.text(info.pax.toLocaleString('fr-FR'), marg + 98, yPos + 5);
+
+            // Barre de répartition
+            const barX = marg + 125;
+            const barW = 55;
+            const barFillW = Math.max(1, (info.vols / maxVols) * barW);
+            pdf.setFillColor(235, 238, 244);
+            pdf.rect(barX, yPos + 2, barW, rowH - 4, 'F');
+            pdf.setFillColor(color[0], color[1], color[2]);
+            pdf.rect(barX, yPos + 2, barFillW, rowH - 4, 'F');
+
+            yPos += rowH;
+            if (yPos > pageH - 40) return; // éviter débordement
+        });
+    }
+
+    yPos += 8;
+
+    // ══════════════════════════════════════════════════════════
+    // COMPARAISON ENTRE 2 COMPAGNIES (si sélectionnées)
+    // ══════════════════════════════════════════════════════════
+    const cmpA = document.getElementById('cmpA')?.value;
+    const cmpB = document.getElementById('cmpB')?.value;
+
+    if (cmpA && cmpB && cmpA !== cmpB) {
+        // Nouvelle page si pas assez de place
+        if (yPos > pageH - 80) { pdf.addPage(); drawHeader(pdf.internal.getNumberOfPages()); yPos = 30; }
+
+        pdf.setDrawColor(GOLD[0], GOLD[1], GOLD[2]);
+        pdf.setLineWidth(0.4);
+        pdf.line(marg, yPos, pageW - marg, yPos);
+        pdf.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.text('COMPARAISON : ' + cmpA.toUpperCase() + '  vs  ' + cmpB.toUpperCase(), marg, yPos - 1);
+        yPos += 5;
+
+        // Calculer les stats
+        const all = getFlights();
+        const cmpYear  = document.getElementById('cmpYear')?.value  || 'ALL';
+        const cmpMonth = document.getElementById('cmpMonth')?.value || 'ALL';
+        const cmpDeb = document.getElementById('cmpDateDeb')?.value || '';
+        const cmpFin = document.getElementById('cmpDateFin')?.value || '';
+        const filter = f => {
+            if (!f.date) return false;
+            const d = new Date(f.date);
+            const ds = f.date.slice(0,10);
+            if (cmpDeb && ds < cmpDeb) return false;
+            if (cmpFin && ds > cmpFin) return false;
+            if (!cmpDeb && !cmpFin) {
+                if (cmpYear !== 'ALL' && d.getFullYear() !== +cmpYear) return false;
+                if (cmpMonth !== 'ALL' && d.getMonth() !== +cmpMonth) return false;
+            }
+            return true;
+        };
+        const fA = all.filter(f => f.company === cmpA && filter(f));
+        const fB = all.filter(f => f.company === cmpB && filter(f));
+        const stats = flights => ({
+            vols: flights.length,
+            pax:  flights.reduce((s,f) => s + (+f.passengers||0) + (+f.babies||0), 0),
+            imm:  new Set(flights.map(f => f.registration).filter(Boolean)).size,
+        });
+        const sA = stats(fA), sB = stats(fB);
+
+        // Tableau comparatif
+        const rowH = 8;
+        const labelW = 55;
+        const valW = (pageW - 2*marg - labelW) / 2;
+
+        // En-tête
+        pdf.setFillColor(NAVY[0], NAVY[1], NAVY[2]);
+        pdf.rect(marg, yPos, pageW - 2*marg, rowH, 'F');
+        pdf.setTextColor(GOLD[0], GOLD[1], GOLD[2]);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(8.5);
+        pdf.text('INDICATEUR', marg + 3, yPos + 5.2);
+        pdf.setTextColor(96, 165, 250);
+        pdf.text(cmpA, marg + labelW + valW/2, yPos + 5.2, { align:'center' });
+        pdf.setTextColor(52, 211, 153);
+        pdf.text(cmpB, marg + labelW + valW + valW/2, yPos + 5.2, { align:'center' });
+        yPos += rowH;
+
+        const rows = [
+            ['Nombre de vols',         sA.vols, sB.vols],
+            ['Passagers transportés',  sA.pax,  sB.pax ],
+            ['Appareils utilisés',     sA.imm,  sB.imm ],
+        ];
+        rows.forEach((r, i) => {
+            if (i % 2 === 0) {
+                pdf.setFillColor(248, 250, 252);
+                pdf.rect(marg, yPos, pageW - 2*marg, rowH, 'F');
+            }
+            pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(9);
+            pdf.text(r[0], marg + 3, yPos + 5.2);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(10);
+            pdf.setTextColor(96, 165, 250);
+            pdf.text(r[1].toLocaleString('fr-FR'), marg + labelW + valW/2, yPos + 5.2, { align:'center' });
+            pdf.setTextColor(52, 211, 153);
+            pdf.text(r[2].toLocaleString('fr-FR'), marg + labelW + valW + valW/2, yPos + 5.2, { align:'center' });
+            yPos += rowH;
+        });
+
+        yPos += 6;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // COMPAGNIES SUR LE MÊME TRAJET
+    // ══════════════════════════════════════════════════════════
+    const routeSel = document.getElementById('routeFilter')?.value;
+
+    if (routeSel) {
+        if (yPos > pageH - 60) { pdf.addPage(); drawHeader(pdf.internal.getNumberOfPages()); yPos = 30; }
+
+        pdf.setDrawColor(GOLD[0], GOLD[1], GOLD[2]);
+        pdf.setLineWidth(0.4);
+        pdf.line(marg, yPos, pageW - marg, yPos);
+        pdf.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.text('COMPAGNIES SUR LE TRAJET : ' + routeSel.toUpperCase(), marg, yPos - 1);
+        yPos += 5;
+
+        // Récupérer les données
+        const all = getFlights();
+        const rYear  = document.getElementById('routeYear')?.value  || 'ALL';
+        const rMonth = document.getElementById('routeMonth')?.value || 'ALL';
+        const rDeb   = document.getElementById('routeDateDeb')?.value || '';
+        const rFin   = document.getElementById('routeDateFin')?.value || '';
+        const rFilter = f => {
+            if (!f.date) return false;
+            const d = new Date(f.date);
+            const ds = f.date.slice(0,10);
+            if (rDeb && ds < rDeb) return false;
+            if (rFin && ds > rFin) return false;
+            if (!rDeb && !rFin) {
+                if (rYear !== 'ALL' && d.getFullYear() !== +rYear) return false;
+                if (rMonth !== 'ALL' && d.getMonth() !== +rMonth) return false;
+            }
+            return true;
+        };
+
+        // Parsing "Ville A ↔ Ville B" ou codes
+        const routeMatches = f => {
+            const dest = cityName(getDestCity(f)||'');
+            return dest && routeSel.includes(dest);
+        };
+        const filtered = all.filter(f => rFilter(f) && routeMatches(f));
+
+        const byCompany = {};
+        filtered.forEach(f => {
+            if (!f.company) return;
+            if (!byCompany[f.company]) byCompany[f.company] = { vols:0, pax:0 };
+            byCompany[f.company].vols++;
+            byCompany[f.company].pax += (+f.passengers||0) + (+f.babies||0);
+        });
+        const sorted = Object.entries(byCompany).sort((a,b) => b[1].vols - a[1].vols);
+
+        if (!sorted.length) {
+            pdf.setTextColor(150, 150, 150);
+            pdf.setFont('helvetica', 'italic');
+            pdf.setFontSize(9);
+            pdf.text('Aucune donnée pour ce trajet avec les filtres sélectionnés.', marg + 4, yPos + 4);
+        } else {
+            // En-tête
+            const rowH = 7;
+            pdf.setFillColor(NAVY[0], NAVY[1], NAVY[2]);
+            pdf.rect(marg, yPos, pageW - 2*marg, rowH, 'F');
+            pdf.setTextColor(GOLD[0], GOLD[1], GOLD[2]);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(8);
+            pdf.text('COMPAGNIE',    marg + 3,   yPos + 4.7);
+            pdf.text('VOLS',         marg + 90,  yPos + 4.7);
+            pdf.text('PASSAGERS',    marg + 115, yPos + 4.7);
+            pdf.text('MOYENNE PAX',  marg + 150, yPos + 4.7);
+            yPos += rowH;
+
+            sorted.forEach(([name, info], i) => {
+                if (i % 2 === 0) {
+                    pdf.setFillColor(248, 250, 252);
+                    pdf.rect(marg, yPos, pageW - 2*marg, rowH, 'F');
+                }
+                pdf.setTextColor(DARK[0], DARK[1], DARK[2]);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(9);
+                pdf.text(name.length > 35 ? name.substring(0,35) + '…' : name, marg + 3, yPos + 4.8);
+                pdf.setFont('helvetica', 'normal');
+                pdf.text(String(info.vols), marg + 90, yPos + 4.8);
+                pdf.text(info.pax.toLocaleString('fr-FR'), marg + 115, yPos + 4.8);
+                const avg = Math.round(info.pax / info.vols);
+                pdf.text(avg.toLocaleString('fr-FR'), marg + 150, yPos + 4.8);
+                yPos += rowH;
+            });
+        }
+    }
+
+    // Ajouter pied de page à chaque page
+    const totalPages = pdf.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+        pdf.setPage(p);
+        drawFooter();
+    }
+
+    // Enregistrer
     const ts = new Date().toISOString().slice(0,10);
     pdf.save('ANAC-Diagrammes-' + ts + '.pdf');
 }
+
 window.exportChartsToPDF = exportChartsToPDF;
 
 function exportExcel(){
