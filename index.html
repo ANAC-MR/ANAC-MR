@@ -948,7 +948,7 @@ document.addEventListener('keydown', e => {
     </select>
 
     <button onclick="resetChartFilters()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
-    <button onclick="exportExcel()" id="btnExportExcel" data-perm="export_flights"
+    <button onclick="exportChartsToExcel()" id="btnExportExcel" data-perm="export_flights"
       style="background:linear-gradient(135deg,rgba(0,182,122,.25),rgba(0,182,122,.1));
              border:1px solid rgba(0,182,122,.5);color:#34d399;border-radius:8px;
              padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;
@@ -1626,6 +1626,131 @@ window.doExport=function(){
     XLSX.writeFile(wb, parts.join('-') + '.xlsx');
     document.getElementById('exportModal').style.display = 'none';
 };
+
+
+// ═══════════════════════════════════════════════════════════════
+// Export Diagrammes & Rapports → Excel (les données derrière les graphiques)
+// ═══════════════════════════════════════════════════════════════
+function exportChartsToExcel() {
+    const all = getFlights();
+    const flt = filterFlights(all);
+    if (!flt.length) { alert('Aucune donnée à exporter pour ce filtre.'); return; }
+
+    const y  = document.getElementById('chartYearFilter').value;
+    const m  = document.getElementById('chartMonthFilter').value;
+    const co = document.getElementById('chartCompanyFilter').value;
+    const yearLabel  = y  === 'ALL' ? 'Toutes' : y;
+    const monthLabel = m  === 'ALL' ? 'Tous' : MONTHS_LONG[+m];
+    const coLabel    = co === 'ALL' ? 'Toutes' : co;
+
+    const wb = XLSX.utils.book_new();
+
+    // ─── Feuille 1 : SYNTHÈSE (KPIs) ────────────────────────────
+    const pax    = flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0), 0);
+    const babies = flt.reduce((s,f)=>s+(+f.babies||0), 0);
+    const comps  = new Set(flt.map(f=>f.company).filter(Boolean));
+    const dests  = new Set(flt.map(f=>cityName(getDestCity(f)||'')).filter(d=>d&&d!=='Nouakchott'&&d!==''&&d!=='undefined'));
+
+    const kpiRows = [
+        ['DIAGRAMMES & RAPPORTS — SYNTHÈSE'],
+        [],
+        ['Filtres appliqués'],
+        ['Année',     yearLabel],
+        ['Mois',      monthLabel],
+        ['Compagnie', coLabel],
+        [],
+        ['Indicateur',              'Valeur'],
+        ['Nombre total de vols',    flt.length],
+        ['Total passagers (avec bébés)', pax],
+        ['Dont bébés',              babies],
+        ['Nombre de compagnies',    comps.size],
+        ['Nombre de destinations',  dests.size],
+    ];
+    const ws1 = XLSX.utils.aoa_to_sheet(kpiRows);
+    ws1['!cols'] = [{wch:34}, {wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Synthèse');
+
+    // ─── Feuille 2 : VOLS PAR MOIS ──────────────────────────────
+    const volsByMonth = Array(12).fill(0);
+    flt.forEach(f => { if (f.date) volsByMonth[new Date(f.date).getMonth()]++; });
+    const volsRows = [
+        ['VOLS PAR MOIS'],
+        [],
+        ['Mois', 'Nombre de vols'],
+        ...MONTHS_FR.map((name,i) => [name, volsByMonth[i]]),
+        ['TOTAL', volsByMonth.reduce((a,b)=>a+b,0)],
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(volsRows);
+    ws2['!cols'] = [{wch:16}, {wch:18}];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Vols par mois');
+
+    // ─── Feuille 3 : PASSAGERS PAR MOIS (Dép/Arr NKC) ──────────
+    const paxDep = Array(12).fill(0), paxArr = Array(12).fill(0);
+    flt.forEach(f => {
+        if (!f.date) return;
+        const mo = new Date(f.date).getMonth();
+        const p  = (+f.passengers||0) + (+f.babies||0);
+        if (isNKC(f.from))      paxDep[mo] += p;
+        else if (isNKC(f.to))   paxArr[mo] += p;
+    });
+    const paxRows = [
+        ['PASSAGERS PAR MOIS'],
+        [],
+        ['Mois', 'Départs NKC', 'Arrivées NKC', 'Total'],
+        ...MONTHS_FR.map((name,i) => [name, paxDep[i], paxArr[i], paxDep[i]+paxArr[i]]),
+        ['TOTAL',
+         paxDep.reduce((a,b)=>a+b,0),
+         paxArr.reduce((a,b)=>a+b,0),
+         paxDep.reduce((a,b)=>a+b,0)+paxArr.reduce((a,b)=>a+b,0)],
+    ];
+    const ws3 = XLSX.utils.aoa_to_sheet(paxRows);
+    ws3['!cols'] = [{wch:16}, {wch:16}, {wch:16}, {wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws3, 'Passagers par mois');
+
+    // ─── Feuille 4 : TOP COMPAGNIES ─────────────────────────────
+    const byComp = {};
+    flt.forEach(f => {
+        if (!f.company) return;
+        if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0 };
+        byComp[f.company].vols++;
+        byComp[f.company].pax += (+f.passengers||0) + (+f.babies||0);
+    });
+    const sortedComp = Object.entries(byComp).sort((a,b) => b[1].vols - a[1].vols);
+    const compRows = [
+        ['CLASSEMENT DES COMPAGNIES'],
+        [],
+        ['Rang', 'Compagnie', 'Nombre de vols', 'Passagers transportés'],
+        ...sortedComp.map(([name, info], i) => [i+1, name, info.vols, info.pax]),
+    ];
+    const ws4 = XLSX.utils.aoa_to_sheet(compRows);
+    ws4['!cols'] = [{wch:8}, {wch:34}, {wch:16}, {wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws4, 'Top compagnies');
+
+    // ─── Feuille 5 : DESTINATIONS ───────────────────────────────
+    const byDest = {};
+    flt.forEach(f => {
+        const city = cityName(getDestCity(f)||'');
+        if (!city || city === 'Nouakchott' || city === 'undefined') return;
+        if (!byDest[city]) byDest[city] = { vols:0, pax:0 };
+        byDest[city].vols++;
+        byDest[city].pax += (+f.passengers||0) + (+f.babies||0);
+    });
+    const sortedDest = Object.entries(byDest).sort((a,b) => b[1].vols - a[1].vols);
+    const destRows = [
+        ['DESTINATIONS'],
+        [],
+        ['Rang', 'Ville', 'Nombre de vols', 'Passagers transportés'],
+        ...sortedDest.map(([name, info], i) => [i+1, name, info.vols, info.pax]),
+    ];
+    const ws5 = XLSX.utils.aoa_to_sheet(destRows);
+    ws5['!cols'] = [{wch:8}, {wch:26}, {wch:16}, {wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws5, 'Destinations');
+
+    // ─── Nom du fichier + téléchargement ────────────────────────
+    const ts = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `ANAC-Diagrammes-${ts}.xlsx`);
+}
+window.exportChartsToExcel = exportChartsToExcel;
 
 function exportExcel(){
     const all=getFlights();
