@@ -1276,16 +1276,27 @@ window._pageSize    = 50;
 function render() {
     const filteredFlights = filterFlights();
 
-    // Tri : date croissante (plus ancien en haut), puis N° auth croissant
+    // Détecter si plusieurs compagnies sont présentes dans le résultat filtré
+    const companiesInResults = new Set(filteredFlights.map(f => f.company).filter(Boolean));
+    const multiCompany = companiesInResults.size > 1;
+
+    // Tri : si plusieurs compagnies → compagnie D'ABORD puis date puis N° auth
+    //       sinon → date croissante puis N° auth croissant
+    const getAuthNum = (auth) => {
+        if (!auth) return 0;
+        const m = auth.match(/(\d+)$/);
+        return m ? parseInt(m[1]) : 0;
+    };
+
     filteredFlights.sort((a, b) => {
+        if (multiCompany) {
+            const cA = (a.company || '').toLowerCase();
+            const cB = (b.company || '').toLowerCase();
+            if (cA !== cB) return cA < cB ? -1 : 1;
+        }
         const dA = a.date || '';
         const dB = b.date || '';
         if (dA !== dB) return dA < dB ? -1 : 1;
-        const getAuthNum = (auth) => {
-            if (!auth) return 0;
-            const m = auth.match(/(\d+)$/);
-            return m ? parseInt(m[1]) : 0;
-        };
         return getAuthNum(a.authorizationNumber) - getAuthNum(b.authorizationNumber);
     });
 
