@@ -1374,7 +1374,10 @@ function switchTab(tab) {
     document.querySelectorAll('.main-tab').forEach(t => {
         if (t.getAttribute('onclick') === `switchTab('${tab}')`) t.classList.add('active');
     });
-    if (tab === 'rapports') setTimeout(refreshCharts, 150);
+    if (tab === 'rapports') {
+        console.log('[CHARTS] Tab rapports activé — appel refreshCharts dans 150ms');
+        setTimeout(refreshCharts, 150);
+    }
 }
 
 // ── Auto-switch tab from URL parameter ?tab=xxx ──
@@ -1769,7 +1772,16 @@ function resetChartFilters(){
 
 function refreshCharts(){
     const all=getFlights();
-    if(!all.length){document.getElementById('chartsSubtitle').textContent='Aucune donnée disponible';return;}
+    if(!all.length){
+      console.warn('[CHARTS] Aucune donnée — window.appFlights est vide');
+      document.getElementById('chartsSubtitle').textContent='Aucune donnée disponible';
+      return;
+    }
+    console.log('[CHARTS] refreshCharts: ' + all.length + ' vols disponibles');
+    if (typeof Chart === 'undefined') {
+      console.error('[CHARTS] Chart.js n\'est pas chargé !');
+      return;
+    }
     populateYearFilter(all);populateCompanyFilter(all);
     populateCmpSelects(all);populateRouteSelect(all);
     const flt=filterFlights(all);
