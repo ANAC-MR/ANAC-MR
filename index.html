@@ -1633,6 +1633,70 @@ window.doExport=function(){
 // Capture les graphiques en haute résolution + toutes les sections sélectionnées
 // ═══════════════════════════════════════════════════════════════
 
+// Agrandit récursivement toutes les tailles de police dans la config Chart.js
+function _boostFonts(obj, scale) {
+    if (!obj || typeof obj !== 'object') return;
+    for (const k in obj) {
+        const v = obj[k];
+        if (k === 'font' && v && typeof v === 'object') {
+            // Multiplier la taille ou fixer une taille minimum
+            const curSize = typeof v.size === 'number' ? v.size : 12;
+            v.size = Math.round(curSize * scale);
+            v.weight = v.weight || 'bold';
+        } else if (typeof v === 'object') {
+            _boostFonts(v, scale);
+        }
+    }
+}
+
+// Applique des réglages de lisibilité HD à une config clonée
+function _applyHiResOptions(config, scale) {
+    if (!config.options) config.options = {};
+    config.options.animation = false;
+    config.options.responsive = false;
+    config.options.maintainAspectRatio = false;
+    config.options.devicePixelRatio = 2;
+
+    // Boost global des polices dans plugins + scales
+    _boostFonts(config.options.plugins, scale);
+    _boostFonts(config.options.scales, scale);
+
+    // Si pas de polices dans plugins.legend, en ajouter
+    if (config.options.plugins && config.options.plugins.legend) {
+        const lg = config.options.plugins.legend;
+        if (!lg.labels) lg.labels = {};
+        if (!lg.labels.font) lg.labels.font = { size: Math.round(11 * scale), weight: 'bold' };
+        else if (!lg.labels.font.size) lg.labels.font.size = Math.round(11 * scale);
+        lg.labels.padding = (lg.labels.padding || 10) * scale;
+        lg.labels.boxWidth = (lg.labels.boxWidth || 16) * scale;
+    }
+
+    // Renforcer la largeur des bordures et la taille des points pour qu'ils soient visibles
+    if (config.data && config.data.datasets) {
+        config.data.datasets.forEach(ds => {
+            if (ds.borderWidth) ds.borderWidth = Math.max(ds.borderWidth * scale * 0.6, 2);
+            if (ds.pointRadius !== undefined) ds.pointRadius = Math.max((ds.pointRadius || 3) * scale * 0.6, 4);
+        });
+    }
+
+    // Boost des polices dans scales.x.ticks.font et scales.y.ticks.font
+    if (config.options.scales) {
+        ['x', 'y'].forEach(axis => {
+            const s = config.options.scales[axis];
+            if (s) {
+                if (!s.ticks) s.ticks = {};
+                if (!s.ticks.font) s.ticks.font = { size: Math.round(11 * scale), weight: 'bold' };
+                else {
+                    if (!s.ticks.font.size) s.ticks.font.size = Math.round(11 * scale);
+                    s.ticks.font.weight = 'bold';
+                }
+            }
+        });
+    }
+
+    return config;
+}
+
 // Capture un graphique Chart.js en haute résolution via un canvas offscreen
 // (sans toucher au DOM visible — aucun redimensionnement de la page)
 async function _captureChartHiRes(chartKey, targetWpx, targetHpx) {
@@ -1655,11 +1719,8 @@ async function _captureChartHiRes(chartKey, targetWpx, targetHpx) {
             data: srcChart.config.data,
             options: srcChart.config.options
         }));
-        // Désactiver l'animation pour un rendu instantané
-        if (!config.options) config.options = {};
-        config.options.animation = false;
-        config.options.responsive = false;
-        config.options.maintainAspectRatio = false;
+        // Appliquer les options HD avec polices agrandies (x2.4 pour très bonne lisibilité)
+        _applyHiResOptions(config, 2.4);
 
         // Créer le graphique dans le canvas offscreen
         const tempChart = new Chart(offCanvas, config);
@@ -1698,10 +1759,8 @@ async function _captureCmpChartHiRes(chartKey, targetWpx, targetHpx) {
             data: srcChart.config.data,
             options: srcChart.config.options
         }));
-        if (!config.options) config.options = {};
-        config.options.animation = false;
-        config.options.responsive = false;
-        config.options.maintainAspectRatio = false;
+        // Appliquer les options HD avec polices agrandies
+        _applyHiResOptions(config, 2.4);
 
         const tempChart = new Chart(offCanvas, config);
         await new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)));
