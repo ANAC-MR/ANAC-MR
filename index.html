@@ -1774,7 +1774,7 @@ function refreshCharts(){
     const all=getFlights();
     if(!all.length){
       console.warn('[CHARTS] Aucune donnée — window.appFlights est vide');
-      document.getElementById('chartsSubtitle').textContent='Aucune donnée disponible';
+      const _sub1 = document.getElementById('chartsSubtitle'); if (_sub1) _sub1.textContent='Aucune donnée disponible';
       return;
     }
     console.log('[CHARTS] refreshCharts: ' + all.length + ' vols disponibles');
@@ -1785,7 +1785,7 @@ function refreshCharts(){
     populateYearFilter(all);populateCompanyFilter(all);
     populateCmpSelects(all);populateRouteSelect(all);
     const flt=filterFlights(all);
-    if(!flt.length){document.getElementById('chartsSubtitle').textContent='Aucun vol pour ce filtre';return;}
+    if(!flt.length){const _sub2 = document.getElementById('chartsSubtitle'); if (_sub2) _sub2.textContent='Aucun vol pour ce filtre'; return;}
 
     const pax=flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
     const comp=new Set(flt.map(f=>f.company).filter(Boolean));
@@ -1804,7 +1804,7 @@ function refreshCharts(){
     const y=document.getElementById('chartYearFilter').value;
     const m=document.getElementById('chartMonthFilter').value;
     const mn=m!=='ALL'?MONTHS_LONG[+m]:'';
-    document.getElementById('chartsSubtitle').textContent=`${flt.length.toLocaleString('fr-FR')} vol(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
+    const _sub3 = document.getElementById('chartsSubtitle'); if (_sub3) _sub3.textContent=`${flt.length.toLocaleString('fr-FR')} vol(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
 
     // Vols/mois
     kill('v');const volData=monthly(flt);
