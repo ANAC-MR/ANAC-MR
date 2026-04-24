@@ -1655,7 +1655,7 @@ function _applyHiResOptions(config, scale) {
     config.options.animation = false;
     config.options.responsive = false;
     config.options.maintainAspectRatio = false;
-    config.options.devicePixelRatio = 2;
+    config.options.devicePixelRatio = 1;  // Pas de x2 — la résolution cible est déjà HD
 
     // Boost global des polices dans plugins + scales
     _boostFonts(config.options.plugins, scale);
@@ -1727,13 +1727,13 @@ async function _captureChartHiRes(chartKey, targetWpx, targetHpx) {
         // Attendre une frame pour que le rendu soit complet
         await new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)));
 
-        const dataUrl = offCanvas.toDataURL('image/png', 1.0);
+        const dataUrl = offCanvas.toDataURL('image/jpeg', 0.92);
         tempChart.destroy();
         return dataUrl;
     } catch(e) {
         console.error('Capture HD failed:', e);
         // Fallback : capturer le canvas visible
-        try { return srcChart.canvas.toDataURL('image/png', 1.0); }
+        try { return srcChart.canvas.toDataURL('image/jpeg', 0.92); }
         catch { return null; }
     } finally {
         container.remove();
@@ -1764,12 +1764,12 @@ async function _captureCmpChartHiRes(chartKey, targetWpx, targetHpx) {
 
         const tempChart = new Chart(offCanvas, config);
         await new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)));
-        const dataUrl = offCanvas.toDataURL('image/png', 1.0);
+        const dataUrl = offCanvas.toDataURL('image/jpeg', 0.92);
         tempChart.destroy();
         return dataUrl;
     } catch(e) {
         console.error('Capture cmp HD failed:', e);
-        try { return srcChart.canvas.toDataURL('image/png', 1.0); }
+        try { return srcChart.canvas.toDataURL('image/jpeg', 0.92); }
         catch { return null; }
     } finally {
         container.remove();
@@ -1781,20 +1781,20 @@ async function _captureAllChartsHiRes() {
     const result = { main:{}, cmp:{} };
     // Graphiques principaux
     const mainJobs = [
-        ['v',  1400, 750],
-        ['p',  1400, 750],
-        ['c',  1400, 750],
-        ['pc', 1400, 750],
+        ['v',  1100, 600],
+        ['p',  1100, 600],
+        ['c',  1100, 600],
+        ['pc', 1100, 600],
     ];
     for (const [key, w, h] of mainJobs) {
         result.main[key] = await _captureChartHiRes(key, w, h);
     }
     // Graphiques de comparaison entre 2 compagnies (si présents)
-    if (cmpCharts['m']) result.cmp.cmpMois = await _captureCmpChartHiRes('m', 1400, 750);
-    if (cmpCharts['p']) result.cmp.cmpPax  = await _captureCmpChartHiRes('p', 1400, 750);
+    if (cmpCharts['m']) result.cmp.cmpMois = await _captureCmpChartHiRes('m', 1100, 600);
+    if (cmpCharts['p']) result.cmp.cmpPax  = await _captureCmpChartHiRes('p', 1100, 600);
     // Graphiques route (si présents)
-    if (cmpCharts['rV']) result.cmp.routeVols = await _captureCmpChartHiRes('rV', 1400, 750);
-    if (cmpCharts['rP']) result.cmp.routePax  = await _captureCmpChartHiRes('rP', 1400, 750);
+    if (cmpCharts['rV']) result.cmp.routeVols = await _captureCmpChartHiRes('rV', 1100, 600);
+    if (cmpCharts['rP']) result.cmp.routePax  = await _captureCmpChartHiRes('rP', 1100, 600);
 
     return result;
 }
@@ -2039,7 +2039,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
         const imgData = hiResImages && hiResImages.main ? hiResImages.main[chartKey] : null;
         if (imgData) {
             try {
-                pdf.addImage(imgData, 'PNG', x + 2, yC + 8, chartW - 4, chartH - 11);
+                pdf.addImage(imgData, 'JPEG', x + 2, yC + 8, chartW - 4, chartH - 11, undefined, 'FAST');
             } catch(e) {
                 pdf.setTextColor(200, 60, 60);
                 pdf.setFontSize(8);
@@ -2051,7 +2051,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
             if (canvas) {
                 try {
                     const fallbackData = canvas.toDataURL('image/png', 1.0);
-                    pdf.addImage(fallbackData, 'PNG', x + 2, yC + 8, chartW - 4, chartH - 11);
+                    pdf.addImage(fallbackData, 'JPEG', x + 2, yC + 8, chartW - 4, chartH - 11, undefined, 'FAST');
                 } catch(e) {
                     pdf.setTextColor(200, 60, 60);
                     pdf.setFontSize(8);
@@ -2271,7 +2271,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(8.5);
                 pdf.text('Vols par mois', marg + 2.5, yPos + 4.2);
-                try { pdf.addImage(cmpImgM, 'PNG', marg + 2, yPos + 8, chW2 - 4, chH2 - 11); }
+                try { pdf.addImage(cmpImgM, 'JPEG', marg + 2, yPos + 8, chW2 - 4, chH2 - 11, undefined, 'FAST'); }
                 catch(e) {}
             }
             if (cmpImgP) {
@@ -2285,7 +2285,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(8.5);
                 pdf.text('Passagers par mois', marg + chW2 + 4 + 2.5, yPos + 4.2);
-                try { pdf.addImage(cmpImgP, 'PNG', marg + chW2 + 4 + 2, yPos + 8, chW2 - 4, chH2 - 11); }
+                try { pdf.addImage(cmpImgP, 'JPEG', marg + chW2 + 4 + 2, yPos + 8, chW2 - 4, chH2 - 11, undefined, 'FAST'); }
                 catch(e) {}
             }
 
@@ -2413,7 +2413,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(8.5);
                     pdf.text('Vols', marg + 2.5, yPos + 4.2);
-                    try { pdf.addImage(routeImgV, 'PNG', marg + 2, yPos + 8, chW3 - 4, chH3 - 11); }
+                    try { pdf.addImage(routeImgV, 'JPEG', marg + 2, yPos + 8, chW3 - 4, chH3 - 11, undefined, 'FAST'); }
                     catch(e) {}
                 }
                 if (routeImgP) {
@@ -2427,7 +2427,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(8.5);
                     pdf.text('Passagers', marg + chW3 + 4 + 2.5, yPos + 4.2);
-                    try { pdf.addImage(routeImgP, 'PNG', marg + chW3 + 4 + 2, yPos + 8, chW3 - 4, chH3 - 11); }
+                    try { pdf.addImage(routeImgP, 'JPEG', marg + chW3 + 4 + 2, yPos + 8, chW3 - 4, chH3 - 11, undefined, 'FAST'); }
                     catch(e) {}
                 }
 
