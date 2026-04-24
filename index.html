@@ -1633,56 +1633,65 @@ window.doExport=function(){
 // Capture les graphiques en haute résolution + toutes les sections sélectionnées
 // ═══════════════════════════════════════════════════════════════
 
-// Capture un canvas Chart.js en haute résolution via un canvas offscreen
-async function _captureChartHD(chart, targetW, targetH) {
-    if (!chart || !chart.canvas) return null;
-    return new Promise(resolve => {
-        // Utiliser le canvas directement à sa résolution actuelle (Chart.js gère devicePixelRatio)
-        try {
-            const dataUrl = chart.canvas.toDataURL('image/png', 1.0);
-            resolve(dataUrl);
-        } catch(e) {
-            resolve(null);
-        }
-    });
-}
+// Capture un graphique Chart.js en haute résolution via un canvas offscreen
+// (sans toucher au DOM visible — aucun redimensionnement de la page)
+async function _captureChartHiRes(chartKey, targetWpx, targetHpx) {
+    const srcChart = charts[chartKey];
+    if (!srcChart || !srcChart.config) return null;
 
-// Redimensionner temporairement les graphiques pour qu\'ils soient rendus en haute résolution
-async function _withHiResCharts(fn) {
-    // Mémoriser les tailles originales
-    const ids = ['chartVolsMois','chartPaxMois','chartTopComp','chartPaxComp'];
-    const originals = {};
-
-    ids.forEach(id => {
-        const c = document.getElementById(id);
-        if (c && c.parentElement) {
-            originals[id] = {
-                height: c.parentElement.style.height,
-                width:  c.parentElement.style.width,
-            };
-            c.parentElement.style.height = '500px';
-            c.parentElement.style.width  = '900px';
-        }
-    });
-
-    // Forcer Chart.js à redessiner à la nouvelle taille
-    Object.values(charts).forEach(chart => { if (chart && chart.resize) chart.resize(); });
-    // Attendre le rendu
-    await new Promise(r => setTimeout(r, 400));
+    // Créer un canvas offscreen (invisible) à haute résolution
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed;left:-99999px;top:-99999px;width:' + targetWpx + 'px;height:' + targetHpx + 'px;';
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width  = targetWpx;
+    offCanvas.height = targetHpx;
+    container.appendChild(offCanvas);
+    document.body.appendChild(container);
 
     try {
-        return await fn();
+        // Cloner la configuration du graphique source
+        const config = JSON.parse(JSON.stringify({
+            type: srcChart.config.type,
+            data: srcChart.config.data,
+            options: srcChart.config.options
+        }));
+        // Désactiver l'animation pour un rendu instantané
+        if (!config.options) config.options = {};
+        config.options.animation = false;
+        config.options.responsive = false;
+        config.options.maintainAspectRatio = false;
+
+        // Créer le graphique dans le canvas offscreen
+        const tempChart = new Chart(offCanvas, config);
+        // Attendre une frame pour que le rendu soit complet
+        await new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)));
+
+        const dataUrl = offCanvas.toDataURL('image/png', 1.0);
+        tempChart.destroy();
+        return dataUrl;
+    } catch(e) {
+        console.error('Capture HD failed:', e);
+        // Fallback : capturer le canvas visible
+        try { return srcChart.canvas.toDataURL('image/png', 1.0); }
+        catch { return null; }
     } finally {
-        // Restaurer les tailles originales
-        ids.forEach(id => {
-            const c = document.getElementById(id);
-            if (c && c.parentElement && originals[id]) {
-                c.parentElement.style.height = originals[id].height;
-                c.parentElement.style.width  = originals[id].width;
-            }
-        });
-        Object.values(charts).forEach(chart => { if (chart && chart.resize) chart.resize(); });
+        container.remove();
     }
+}
+
+// Capture tous les graphiques en HD et retourne un objet { key: dataUrl }
+async function _captureAllChartsHiRes() {
+    const result = {};
+    const jobs = [
+        ['v',  1400, 750],
+        ['p',  1400, 750],
+        ['c',  1400, 750],
+        ['pc', 1400, 750],
+    ];
+    for (const [key, w, h] of jobs) {
+        result[key] = await _captureChartHiRes(key, w, h);
+    }
+    return result;
 }
 
 async function exportChartsToPDF() {
@@ -1711,9 +1720,10 @@ async function exportChartsToPDF() {
     if (btn) { oldHTML = btn.innerHTML; btn.innerHTML = '<span>⏳</span> Génération...'; btn.disabled = true; }
 
     try {
-        await _withHiResCharts(async () => {
-            await _doExportPDF(JsPDF);
-        });
+        // Capturer tous les graphiques en HD dans des canvas offscreen
+        const hiResImages = await _captureAllChartsHiRes();
+        // Passer les images au générateur PDF
+        await _doExportPDF(JsPDF, hiResImages);
     } catch(e) {
         console.error(e);
         alert('Erreur lors de l\'export PDF : ' + e.message);
@@ -1723,7 +1733,7 @@ async function exportChartsToPDF() {
     }
 }
 
-async function _doExportPDF(JsPDF) {
+async function _doExportPDF(JsPDF, hiResImages) {
     // Formateur de nombre : espace standard comme séparateur (évite les caractères bizarres en PDF)
     const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
@@ -1928,16 +1938,32 @@ async function _doExportPDF(JsPDF) {
         pdf.setFontSize(8.5);
         pdf.text(c.title, x + 2.5, yC + 4.2);
 
-        // Image du graphique
-        const canvas = document.getElementById(c.id);
-        if (canvas) {
+        // Image du graphique (version HD capturée hors écran)
+        // c.id = chartVolsMois/chartPaxMois/chartTopComp/chartPaxComp
+        // mapping id → clé du dict charts
+        const KEY = { chartVolsMois:'v', chartPaxMois:'p', chartTopComp:'c', chartPaxComp:'pc' };
+        const chartKey = KEY[c.id];
+        const imgData = hiResImages ? hiResImages[chartKey] : null;
+        if (imgData) {
             try {
-                const imgData = canvas.toDataURL('image/png', 1.0);
                 pdf.addImage(imgData, 'PNG', x + 2, yC + 8, chartW - 4, chartH - 11);
             } catch(e) {
                 pdf.setTextColor(200, 60, 60);
                 pdf.setFontSize(8);
                 pdf.text('Graphique indisponible', x + 3, yC + 25);
+            }
+        } else {
+            // Fallback : canvas visible
+            const canvas = document.getElementById(c.id);
+            if (canvas) {
+                try {
+                    const fallbackData = canvas.toDataURL('image/png', 1.0);
+                    pdf.addImage(fallbackData, 'PNG', x + 2, yC + 8, chartW - 4, chartH - 11);
+                } catch(e) {
+                    pdf.setTextColor(200, 60, 60);
+                    pdf.setFontSize(8);
+                    pdf.text('Graphique indisponible', x + 3, yC + 25);
+                }
             }
         }
     }
