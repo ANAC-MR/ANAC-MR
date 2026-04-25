@@ -3485,6 +3485,23 @@ window.switchTab = function(tab) {
         if (!window._fctInited) {
             window._fctInited = true;
             setTimeout(fctInit, 80);
+        } else {
+            // Re-peupler la liste des compagnies à chaque retour sur l'onglet
+            // (au cas où de nouveaux vols ont été ajoutés ou que les données ont chargé après le 1er clic)
+            setTimeout(fctPopulateAirlines, 80);
+        }
+    }
+};
+
+// Aussi : si les données arrivent après l'init (Firebase async), re-peupler
+const _origRefreshFromApp = window.refreshChartsFromApp;
+window.refreshChartsFromApp = function(flightsData) {
+    if (typeof _origRefreshFromApp === 'function') _origRefreshFromApp(flightsData);
+    // Si l'onglet facturation est ouvert et que les compagnies ne sont pas affichées, les charger
+    if (window._fctInited) {
+        const div = document.getElementById('fctAirlines');
+        if (div && div.children.length === 0 && flightsData && flightsData.length) {
+            fctPopulateAirlines();
         }
     }
 };
