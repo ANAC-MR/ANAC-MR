@@ -1649,6 +1649,49 @@ function _boostFonts(obj, scale) {
     }
 }
 
+// Force un thème clair (textes sombres, grilles claires) pour l'export PDF
+function _forceLightTheme(config) {
+    if (!config.options) config.options = {};
+    if (!config.options.scales) config.options.scales = {};
+    if (!config.options.plugins) config.options.plugins = {};
+
+    // Couleur des textes (axes, ticks)
+    const DARK_TEXT = '#1A2D45';
+    const LIGHT_GRID = '#E5E7EB';
+
+    // Color global pour le défaut
+    config.options.color = DARK_TEXT;
+
+    // Axes X et Y
+    ['x', 'y'].forEach(axis => {
+        if (!config.options.scales[axis]) config.options.scales[axis] = {};
+        const sc = config.options.scales[axis];
+        if (!sc.ticks) sc.ticks = {};
+        sc.ticks.color = DARK_TEXT;
+        if (!sc.grid) sc.grid = {};
+        sc.grid.color = LIGHT_GRID;
+        sc.grid.borderColor = LIGHT_GRID;
+        if (!sc.title) sc.title = {};
+        sc.title.color = DARK_TEXT;
+    });
+
+    // Légende
+    if (!config.options.plugins.legend) config.options.plugins.legend = {};
+    if (!config.options.plugins.legend.labels) config.options.plugins.legend.labels = {};
+    config.options.plugins.legend.labels.color = DARK_TEXT;
+
+    // Datalabels (si plugin présent)
+    if (config.options.plugins.datalabels) {
+        config.options.plugins.datalabels.color = DARK_TEXT;
+    }
+
+    // Tooltip (pas affiché dans le PDF, mais juste au cas où)
+    if (config.options.plugins.tooltip) {
+        config.options.plugins.tooltip.bodyColor = DARK_TEXT;
+        config.options.plugins.tooltip.titleColor = DARK_TEXT;
+    }
+}
+
 // Applique des réglages de lisibilité HD à une config clonée
 function _applyHiResOptions(config, scale) {
     if (!config.options) config.options = {};
@@ -1713,13 +1756,20 @@ async function _captureChartHiRes(chartKey, targetWpx, targetHpx) {
     document.body.appendChild(container);
 
     try {
+        // Remplir le fond en blanc AVANT que Chart.js dessine
+        const ctx = offCanvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, targetWpx, targetHpx);
+
         // Cloner la configuration du graphique source
         const config = JSON.parse(JSON.stringify({
             type: srcChart.config.type,
             data: srcChart.config.data,
             options: srcChart.config.options
         }));
-        // Appliquer les options HD avec polices agrandies (x2.4 pour très bonne lisibilité)
+        // Forcer le thème clair (textes sombres, grilles claires) pour le PDF
+        _forceLightTheme(config);
+        // Appliquer les options HD avec polices agrandies
         _applyHiResOptions(config, 2.4);
 
         // Créer le graphique dans le canvas offscreen
@@ -1754,11 +1804,18 @@ async function _captureCmpChartHiRes(chartKey, targetWpx, targetHpx) {
     document.body.appendChild(container);
 
     try {
+        // Remplir le fond en blanc AVANT que Chart.js dessine
+        const ctx = offCanvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, targetWpx, targetHpx);
+
         const config = JSON.parse(JSON.stringify({
             type: srcChart.config.type,
             data: srcChart.config.data,
             options: srcChart.config.options
         }));
+        // Forcer le thème clair pour le PDF
+        _forceLightTheme(config);
         // Appliquer les options HD avec polices agrandies
         _applyHiResOptions(config, 2.4);
 
@@ -2195,7 +2252,6 @@ async function _doExportPDF(JsPDF, hiResImages) {
         const stats = flights => ({
             vols: flights.length,
             pax:  flights.reduce((s,f) => s + (+f.passengers||0) + (+f.babies||0), 0),
-            imm:  new Set(flights.map(f => f.registration).filter(Boolean)).size,
         });
         const sA = stats(fA), sB = stats(fB);
 
@@ -2220,7 +2276,6 @@ async function _doExportPDF(JsPDF, hiResImages) {
         const rows = [
             ['Nombre de vols',         sA.vols, sB.vols],
             ['Passagers transportés',  sA.pax,  sB.pax ],
-            ['Appareils utilisés',     sA.imm,  sB.imm ],
         ];
         rows.forEach((r, i) => {
             if (i % 2 === 0) {
@@ -2361,9 +2416,8 @@ async function _doExportPDF(JsPDF, hiResImages) {
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(8);
             pdf.text('COMPAGNIE',    marg + 3,   yPos + 4.7);
-            pdf.text('VOLS',         marg + 90,  yPos + 4.7);
-            pdf.text('PASSAGERS',    marg + 115, yPos + 4.7);
-            pdf.text('MOYENNE PAX',  marg + 150, yPos + 4.7);
+            pdf.text('VOLS',         marg + 110, yPos + 4.7);
+            pdf.text('PASSAGERS',    marg + 145, yPos + 4.7);
             yPos += rowH;
 
             sorted.forEach(([name, info], i) => {
@@ -2376,10 +2430,8 @@ async function _doExportPDF(JsPDF, hiResImages) {
                 pdf.setFontSize(9);
                 pdf.text(name.length > 35 ? name.substring(0,35) + '…' : name, marg + 3, yPos + 4.8);
                 pdf.setFont('helvetica', 'normal');
-                pdf.text(String(info.vols), marg + 90, yPos + 4.8);
-                pdf.text(fmt(info.pax), marg + 115, yPos + 4.8);
-                const avg = Math.round(info.pax / info.vols);
-                pdf.text(fmt(avg), marg + 150, yPos + 4.8);
+                pdf.text(String(info.vols), marg + 110, yPos + 4.8);
+                pdf.text(fmt(info.pax), marg + 145, yPos + 4.8);
                 yPos += rowH;
             });
 
