@@ -858,6 +858,12 @@ document.addEventListener('keydown', e => {
 
                 <button class="chip-add" id="btnAddChip" onclick="_toggleChipPicker(event)">＋ Ajouter filtre</button>
 
+                <!-- Compteur total des vols filtrés -->
+                <div id="totalVolsCounter" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);border:1px solid rgba(212,175,55,0.5);border-radius:20px;padding:6px 14px;color:#D4AF37;font-size:12px;font-weight:700;letter-spacing:0.3px;">
+                  <span style="font-size:14px;">✈️</span>
+                  <span id="totalVolsLabel">0 vol</span>
+                </div>
+
                 <div class="type-seg" id="typeSeg">
                   <button class="btn-active" data-type="ALL">Tout</button>
                   <button data-type="DEP">Départ</button>
@@ -1649,18 +1655,33 @@ function _boostFonts(obj, scale) {
     }
 }
 
-// Force un thème clair (textes sombres, grilles claires) pour l'export PDF
+// Plugin Chart.js qui peint l'arrière-plan en blanc avant tout autre dessin
+const _whiteBgPlugin = {
+    id: '_whiteBgPlugin',
+    beforeDraw: (chart) => {
+        const ctx = chart.canvas.getContext('2d');
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, chart.canvas.width, chart.canvas.height);
+        ctx.restore();
+    }
+};
+
+// Force un thème clair (textes sombres, grilles claires, fond blanc) pour l'export PDF
 function _forceLightTheme(config) {
     if (!config.options) config.options = {};
     if (!config.options.scales) config.options.scales = {};
     if (!config.options.plugins) config.options.plugins = {};
 
-    // Couleur des textes (axes, ticks)
+    // Couleur des textes
     const DARK_TEXT = '#1A2D45';
     const LIGHT_GRID = '#E5E7EB';
 
-    // Color global pour le défaut
     config.options.color = DARK_TEXT;
+
+    // Désactiver les fonds explicites au cas où
+    config.options.backgroundColor = '#FFFFFF';
 
     // Axes X et Y
     ['x', 'y'].forEach(axis => {
@@ -1680,16 +1701,17 @@ function _forceLightTheme(config) {
     if (!config.options.plugins.legend.labels) config.options.plugins.legend.labels = {};
     config.options.plugins.legend.labels.color = DARK_TEXT;
 
-    // Datalabels (si plugin présent)
     if (config.options.plugins.datalabels) {
         config.options.plugins.datalabels.color = DARK_TEXT;
     }
-
-    // Tooltip (pas affiché dans le PDF, mais juste au cas où)
     if (config.options.plugins.tooltip) {
         config.options.plugins.tooltip.bodyColor = DARK_TEXT;
         config.options.plugins.tooltip.titleColor = DARK_TEXT;
     }
+
+    // Ajouter le plugin de fond blanc à la config
+    if (!config.plugins) config.plugins = [];
+    config.plugins.push(_whiteBgPlugin);
 }
 
 // Applique des réglages de lisibilité HD à une config clonée
@@ -3646,8 +3668,8 @@ window._hasPerm = function(perm) {
 .table-wrapper .type-badge { padding: 3px 10px !important; font-size: 10px !important; font-weight: 700 !important; border-radius: 5px !important; letter-spacing: 0.5px; }
 .table-wrapper .type-depart { background: rgba(74,158,255,0.12) !important; color: #2B5A8E !important; border: none !important; }
 .table-wrapper .type-arrivee { background: rgba(0,201,141,0.12) !important; color: #047857 !important; border: none !important; }
-.table-wrapper table tfoot tr { background: linear-gradient(to right, rgba(212,175,55,0.08), rgba(212,175,55,0.03)) !important; }
-.table-wrapper table tfoot td { padding: 14px 10px !important; font-weight: 700 !important; color: #0f1e3d !important; font-size: 13px !important; border-top: 2px solid rgba(212,175,55,0.3) !important; }
+.table-wrapper table tfoot tr { background: linear-gradient(135deg, #0f1e3d, #1a3a6b) !important; }
+.table-wrapper table tfoot td { padding: 14px 10px !important; font-weight: 800 !important; color: #D4AF37 !important; font-size: 14px !important; border-top: 2px solid #D4AF37 !important; letter-spacing: 0.5px !important; }
 </style>
 
 <script>
