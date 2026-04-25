@@ -1457,6 +1457,13 @@ function renderTotals(filteredFlights) {
     
     elements.totalPassengers.textContent = totalPassengers.toLocaleString();
     elements.totalBabies.textContent = totalBabies.toLocaleString();
+
+    // Mettre à jour le compteur total des vols filtrés
+    const lbl = document.getElementById('totalVolsLabel');
+    if (lbl) {
+        const n = filteredFlights.length;
+        lbl.textContent = n.toLocaleString('fr-FR') + ' vol' + (n > 1 ? 's' : '');
+    }
 }
 
 // ============================================
