@@ -5988,7 +5988,7 @@ window._secSaveUser = async function() {
       await createUser({ username, password, role, permissions, createdBy });
       msg.textContent = '✓ Utilisateur créé'; msg.style.color = '#22c55e';
     }
-    setTimeout(() => { _secCloseUserModal(); _secLoadUsers(); }, 700);
+    setTimeout(() => { _secCloseUserModal(); _secLoadUsers(); if (typeof _secLoadActivity === 'function') _secLoadActivity(); }, 700);
   } catch(e) {
     msg.textContent = '⚠️ ' + e.message; msg.style.color = '#fca5a5';
   }
@@ -6009,6 +6009,8 @@ window._secDeleteUser = async function(userId, username) {
   try {
     await deleteUser(userId);
     await _secLoadUsers();
+    // Rafraîchir le journal : retirer les entrées de l'utilisateur supprimé
+    if (typeof _secLoadActivity === 'function') _secLoadActivity();
   } catch(e) { alert('Erreur : ' + e.message); }
 };
 
@@ -6019,14 +6021,36 @@ async function _secLoadActivity() {
   list.innerHTML = '<div style="text-align:center;color:#64748b;padding:30px;font-size:13px;">Chargement...</div>';
   try {
     const [activity, users] = await Promise.all([
-      getActivityLog({ limit: 300 }),
+      getActivityLog({ limit: 500 }),
       listUsers()
     ]);
-    // Construire la liste des utilisateurs encore existants (+ DADY qui est toujours valide)
+
+    // Construire la liste des utilisateurs encore existants (+ DADY toujours valide)
     const existingUsers = new Set(users.map(u => (u.username || '').toUpperCase()));
     existingUsers.add('DADY');
-    // Garder uniquement les entrées d'activité dont l'utilisateur existe toujours
-    _secAllActivity = activity.filter(a => existingUsers.has((a.username || '').toUpperCase()));
+
+    // Seuil de 7 jours
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    // Supprimer automatiquement les entrées obsolètes de Firestore (utilisateurs supprimés OU > 7 jours)
+    const toDelete = activity.filter(a => {
+      const isOld = (a.ts || 0) < sevenDaysAgo;
+      const isDeletedUser = !existingUsers.has((a.username || '').toUpperCase());
+      return isOld || isDeletedUser;
+    });
+
+    if (toDelete.length > 0) {
+      // Supprimer en arrière-plan sans bloquer l'affichage
+      _secDeleteActivityEntries(toDelete.map(a => a.id)).catch(e => console.warn('Cleanup error:', e));
+    }
+
+    // Garder uniquement : utilisateurs existants + moins de 7 jours
+    _secAllActivity = activity.filter(a => {
+      const isRecent = (a.ts || 0) >= sevenDaysAgo;
+      const isActiveUser = existingUsers.has((a.username || '').toUpperCase());
+      return isRecent && isActiveUser;
+    });
+
     // Peupler le filtre utilisateurs
     const sel = document.getElementById('secActFilterUser');
     const activeUsers = [...new Set(_secAllActivity.map(a => a.username))].sort();
@@ -6034,6 +6058,20 @@ async function _secLoadActivity() {
     _secRenderActivity();
   } catch(e) {
     list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur: ' + e.message + '</div>';
+  }
+}
+
+// Supprime des entrées du journal par leurs IDs (utilise window._db déjà chargé)
+async function _secDeleteActivityEntries(ids) {
+  if (!ids || !ids.length) return;
+  const db  = window._db;
+  const del = window._deleteDoc;
+  const ref = window._doc;
+  if (!db || !del || !ref) return;
+  const BATCH = 10;
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const batch = ids.slice(i, i + BATCH);
+    await Promise.all(batch.map(id => del(ref(db, 'anac_activity_log', id)).catch(() => {})));
   }
 }
 
