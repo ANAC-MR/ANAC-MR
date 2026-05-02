@@ -8,7 +8,7 @@
 //  Session locale (sessionStorage 'anac_auth_v3') :
 //    { username, role, permissions[], sessionId, ts }
 //
-//  Compte de secours codé en dur : DADY / Yahya100 (jamais visible
+//  Compte de secours codé en dur : DADY / Yahya1996 (jamais visible
 //  dans la liste, jamais désactivable).
 // ═══════════════════════════════════════════════════════════════
 
@@ -23,7 +23,7 @@ const FB_CONFIG = {
 
 export const AUTH_SESSION_KEY = 'anac_auth_v3';
 export const FALLBACK_USER = 'DADY';
-export const FALLBACK_PASS = 'Yahya100';
+export const FALLBACK_PASS = 'Yahya1996';
 
 // ── Catalogue COMPLET des permissions ────────────────────────────
 export const ALL_PERMISSIONS = {
