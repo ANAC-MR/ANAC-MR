@@ -6044,14 +6044,25 @@ async function _secLoadActivity() {
       _secDeleteActivityEntries(toDelete.map(a => a.id)).catch(e => console.warn('Cleanup error:', e));
     }
 
-    // Garder uniquement : utilisateurs existants + moins de 7 jours
-    _secAllActivity = activity.filter(a => {
-      const isRecent = (a.ts || 0) >= sevenDaysAgo;
-      const isActiveUser = existingUsers.has((a.username || '').toUpperCase());
-      return isRecent && isActiveUser;
-    });
+    // Construire un mapping UPPERCASE → vrai nom d'utilisateur (pour normaliser la casse)
+    const userCanonical = {};
+    users.forEach(u => { if (u.username) userCanonical[u.username.toUpperCase()] = u.username; });
+    userCanonical['DADY'] = 'DADY';
 
-    // Peupler le filtre utilisateurs
+    // Garder uniquement : utilisateurs existants + moins de 7 jours
+    // ET normaliser la casse du username pour l'affichage
+    _secAllActivity = activity
+      .filter(a => {
+        const isRecent = (a.ts || 0) >= sevenDaysAgo;
+        const isActiveUser = existingUsers.has((a.username || '').toUpperCase());
+        return isRecent && isActiveUser;
+      })
+      .map(a => ({
+        ...a,
+        username: userCanonical[(a.username || '').toUpperCase()] || a.username
+      }));
+
+    // Peupler le filtre utilisateurs avec UNIQUEMENT les noms canoniques (un par user réel)
     const sel = document.getElementById('secActFilterUser');
     const activeUsers = [...new Set(_secAllActivity.map(a => a.username))].sort();
     sel.innerHTML = '<option value="">Tous les utilisateurs</option>' + activeUsers.map(u => `<option value="${u}">${u}</option>`).join('');
