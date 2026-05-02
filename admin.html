@@ -6062,10 +6062,13 @@ async function _secLoadActivity() {
         username: userCanonical[(a.username || '').toUpperCase()] || a.username
       }));
 
-    // Peupler le filtre utilisateurs avec UNIQUEMENT les noms canoniques (un par user réel)
+    // Peupler le filtre utilisateurs avec TOUS les comptes existants (même sans activité récente)
+    // + DADY (compte de secours)
     const sel = document.getElementById('secActFilterUser');
-    const activeUsers = [...new Set(_secAllActivity.map(a => a.username))].sort();
-    sel.innerHTML = '<option value="">Tous les utilisateurs</option>' + activeUsers.map(u => `<option value="${u}">${u}</option>`).join('');
+    const allActiveUsernames = users.map(u => u.username).filter(Boolean);
+    if (!allActiveUsernames.includes('DADY')) allActiveUsernames.push('DADY');
+    allActiveUsernames.sort();
+    sel.innerHTML = '<option value="">Tous les utilisateurs</option>' + allActiveUsernames.map(u => `<option value="${u}">${u}</option>`).join('');
     _secRenderActivity();
   } catch(e) {
     list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur: ' + e.message + '</div>';
