@@ -42,7 +42,22 @@ async function initializeFirebase() {
         db = getFirestore(app);
         window.db = db; // Exposé globalement pour autoFill etc.
         flightsCollection = collection(db, 'flights');
-        
+
+        // ── Authentifier cette connexion (règles Firestore strictes) ──
+        // Attendre que ANAC_AUTH soit prêt puis authentifier l'instance.
+        try {
+            let _tries = 0;
+            while (!(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) && _tries < 60) {
+                await new Promise(r => setTimeout(r, 100));
+                _tries++;
+            }
+            if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) {
+                await window.ANAC_AUTH.ensureAuthed(app);
+            }
+        } catch(authErr) {
+            console.warn('Firebase auth bootstrap:', authErr && authErr.message);
+        }
+
         // Test connection
         await testConnection();
         
