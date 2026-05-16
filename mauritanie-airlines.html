@@ -1074,20 +1074,34 @@ window.exportXLSX = function(){
 // CHARGEMENT DONNÉES
 // ══════════════════════════════════════════════════════════════════
 const coll = collection(db, 'flights');
-onSnapshot(coll, snap => {
-  allFlights = [];
-  snap.forEach(doc => {
-    const d = doc.data();
-    if (d.date && !d._isConfig) allFlights.push({ id:doc.id, ...d });
+
+// ── Authentifier la connexion avant de lire (règles Firestore strictes) ──
+(async function _maBoot(){
+  try{
+    let _t=0;
+    while(!(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) && _t<80){
+      await new Promise(r=>setTimeout(r,100)); _t++;
+    }
+    if(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed){
+      await window.ANAC_AUTH.ensureAuthed(app);
+    }
+  }catch(e){ console.warn('MA auth bootstrap:', e && e.message); }
+
+  onSnapshot(coll, snap => {
+    allFlights = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (d.date && !d._isConfig) allFlights.push({ id:doc.id, ...d });
+    });
+    window.allFlights = allFlights;
+    buildYearSelector(allFlights);
+    renderAll();
+  }, err => {
+    console.error('Firebase error:', err);
+    document.getElementById('domTableWrap').innerHTML = '<div class="empty-state"><h3>Erreur de chargement</h3><p>'+err.message+'</p></div>';
+    document.getElementById('intTableWrap').innerHTML = '';
   });
-  window.allFlights = allFlights;
-  buildYearSelector(allFlights);
-  renderAll();
-}, err => {
-  console.error('Firebase error:', err);
-  document.getElementById('domTableWrap').innerHTML = '<div class="empty-state"><h3>Erreur de chargement</h3><p>'+err.message+'</p></div>';
-  document.getElementById('intTableWrap').innerHTML = '';
-});
+})();
 
 </script>
 
