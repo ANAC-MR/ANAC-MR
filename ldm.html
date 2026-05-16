@@ -1471,13 +1471,38 @@ async function readEmails() {
   setStatus('loading','Recherche des emails LDM/MVT...');
 
   try {
-    // Emails non lus dans INBOX contenant LDM ou MVT
-    const query = encodeURIComponent('in:inbox is:unread (LDM OR MVT)');
-    const listResp = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    const listData = await listResp.json();
+    // Recherche élargie : emails récents (30 j) contenant LDM ou MVT,
+    // lus OU non lus. Le filtre isLDMorMVT() affine ensuite.
+    // On lance plusieurs requêtes pour maximiser les résultats.
+    const queries = [
+      'newer_than:30d (LDM OR MVT)',
+      'newer_than:30d subject:(LDM OR MVT)',
+      'in:inbox (LDM OR MVT)',
+      'is:unread (LDM OR MVT)'
+    ];
+
+    const seenIds = new Set();
+    let allMessages = [];
+    for (const qstr of queries) {
+      try {
+        const query = encodeURIComponent(qstr);
+        const r = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const d = await r.json();
+        if (d.messages) {
+          for (const m of d.messages) {
+            if (!seenIds.has(m.id)) {
+              seenIds.add(m.id);
+              allMessages.push(m);
+            }
+          }
+        }
+      } catch(qe) { console.warn('Query failed:', qstr, qe && qe.message); }
+    }
+
+    const listData = { messages: allMessages };
 
     if (!listData.messages || listData.messages.length === 0) {
       emails = [];
