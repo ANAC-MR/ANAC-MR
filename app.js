@@ -214,6 +214,9 @@ async function loadAdminConfig() {
         const apps = getApps();
         const fbApp = apps.find(a => a.name === 'admin-reader') || fbInit(fbConfig, 'admin-reader');
         const db = getFirestore(fbApp);
+        if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) {
+            try { await window.ANAC_AUTH.ensureAuthed(fbApp); } catch(e) {}
+        }
         const [airlinesSnap, airportsSnap] = await Promise.all([
             getDoc(doc(db, 'flights', 'cfg-airlines')),
             getDoc(doc(db, 'flights', 'cfg-airports'))
@@ -246,7 +249,15 @@ function populateSelects() {
     const airlinesList = (adminConfig && adminConfig.airlines && adminConfig.airlines.length)
         ? adminConfig.airlines.map(a => a.name)
         : AIRLINES;
-    
+
+    // Option vide par défaut dans le formulaire d'ajout (modal non pré-rempli)
+    const emptyFormOpt = document.createElement('option');
+    emptyFormOpt.value = '';
+    emptyFormOpt.textContent = '— Choisir une compagnie —';
+    emptyFormOpt.disabled = true;
+    emptyFormOpt.selected = true;
+    elements.fCompany.appendChild(emptyFormOpt);
+
     airlinesList.forEach(airline => {
         const filterOption = document.createElement('option');
         filterOption.value = airline;
@@ -444,8 +455,9 @@ function openModal(flightId = null) {
             const sg0 = document.getElementById('stopoverGroup');
             if (sg0) sg0.style.display = 'none';
 
-            // Compagnie par défaut
-            elements.fCompany.value = AIRLINES[0];
+            // Modal vierge : aucune compagnie ni route pré-remplie.
+            // L'utilisateur choisit lui-même la compagnie.
+            elements.fCompany.value = '';
 
             elements.fDate.focus();
             setTimeout(() => {
@@ -817,6 +829,13 @@ function updateRouteByType() {
     const company  = elements.fCompany ? elements.fCompany.value : '';
     const type     = elements.fType    ? elements.fType.value    : 'DEP';
     const NKC_ICAO = 'GQNO';
+
+    // Aucune compagnie choisie → ne rien pré-remplir (modal vierge)
+    if (!company) {
+        if (elements.fFrom) elements.fFrom.value = '';
+        if (elements.fTo)   elements.fTo.value   = '';
+        return;
+    }
 
     // Lire hub et destinations depuis adminConfig Firebase
     let homeCode = COMPANY_HOME_AIRPORT[company] || ''; // fallback hardcodé
@@ -1475,6 +1494,59 @@ function setupRealtimeListener() {
 }
 
 function updateFlightsData(newFlights) {
+    // ── Détection & nettoyage des doublons ───────────────────────
+    // Un vol fantôme qui réapparaît après suppression = doublon en
+    // base (deux documents Firestore pour le même vol). On garde le
+    // plus ancien et on supprime les copies en trop.
+    try {
+        const seen = new Map();
+        const dupes = [];
+        for (const f of newFlights) {
+            // Clé d'unicité : N° autorisation + date + N° vol + trajet
+            const key = [
+                (f.authorizationNumber || '').trim().toUpperCase(),
+                (f.date || '').trim(),
+                (f.flightNumber || '').trim().toUpperCase(),
+                (f.departure || f.from || '').trim().toUpperCase(),
+                (f.arrival || f.to || '').trim().toUpperCase()
+            ].join('|');
+            if (key === '||||') continue; // vol vide, ignorer
+            if (seen.has(key)) {
+                // Garder celui créé en premier, supprimer l'autre
+                const prev = seen.get(key);
+                const prevTime = prev.createdAt || prev.timestamp || '';
+                const curTime  = f.createdAt || f.timestamp || '';
+                const toRemove = (curTime && prevTime && curTime > prevTime) ? f : prev;
+                const toKeep   = (toRemove === f) ? prev : f;
+                seen.set(key, toKeep);
+                if (toRemove.id && !dupes.find(d => d.id === toRemove.id)) {
+                    dupes.push(toRemove);
+                }
+            } else {
+                seen.set(key, f);
+            }
+        }
+        if (dupes.length > 0) {
+            console.warn('Doublons détectés:', dupes.length, '— nettoyage automatique');
+            // Retirer les doublons de la liste affichée immédiatement
+            const dupeIds = new Set(dupes.map(d => d.id));
+            newFlights = newFlights.filter(f => !dupeIds.has(f.id));
+            // Supprimer de Firestore en arrière-plan (sans bloquer l'affichage)
+            (async () => {
+                for (const d of dupes) {
+                    try {
+                        if (window.dbService && window.dbService.deleteFlight) {
+                            await window.dbService.deleteFlight(d.id);
+                            console.log('Doublon supprimé:', d.id, d.authorizationNumber || d.flightNumber);
+                        }
+                    } catch (e) { console.warn('Échec suppression doublon', d.id, e && e.message); }
+                }
+            })();
+        }
+    } catch (e) {
+        console.warn('Dédup:', e && e.message);
+    }
+
     flights = newFlights;
     // Peupler le select année avec les années disponibles
     if (elements.yearSelect) {
@@ -1885,6 +1957,9 @@ async function _syncArchiveFromFlight(flightData) {
             appId:"1:906668222910:web:19d92b627f155bd2dbb1ef" };
         const app = getApps().find(a=>a.name==='app-arch') || initializeApp(FB,'app-arch');
         const db  = getFirestore(app);
+        if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) {
+            try { await window.ANAC_AUTH.ensureAuthed(app); } catch(e) {}
+        }
 
         const fn  = (flightData.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
         const dt  = flightData.date;
