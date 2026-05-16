@@ -1426,12 +1426,54 @@ function saveImported() { /* Firebase est la source de vérité, localStorage ig
 
 // ── GOOGLE SIGN IN ──
 function signIn() {
+  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+    toast('❌ Google Identity non chargé — rechargez la page','err');
+    return;
+  }
   const client = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
+    // 'consent' force Google à RÉ-AFFICHER l'écran de consentement à chaque
+    // connexion : c'est là que l'utilisateur doit COCHER la case
+    // « Consulter vos e-mails ». Sans ça, un ancien jeton sans le scope
+    // Gmail est réutilisé silencieusement → « Aucun email trouvé ».
+    prompt: 'consent',
     callback: (resp) => {
-      if (resp.error) { toast('❌ Erreur connexion: '+resp.error,'err'); return; }
+      if (resp.error) {
+        console.error('OAuth error:', resp);
+        toast('❌ Erreur connexion: ' + (resp.error_description || resp.error), 'err');
+        setStatus('idle', 'Connexion Gmail refusée : ' + resp.error);
+        return;
+      }
       accessToken = resp.access_token;
+
+      // ── VÉRIFICATION DU SCOPE RÉELLEMENT ACCORDÉ ──
+      // Le jeton peut être délivré SANS le scope Gmail si l'utilisateur
+      // n'a pas coché la case. On le détecte ici au lieu de découvrir
+      // l'échec plus tard sous la forme trompeuse « Aucun email trouvé ».
+      let scopeOK = true;
+      try {
+        if (google.accounts.oauth2.hasGrantedAllScopes) {
+          scopeOK = google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPES);
+        } else if (resp.scope) {
+          scopeOK = resp.scope.split(/\s+/).includes(SCOPES);
+        }
+      } catch (e) { console.warn('Scope check failed:', e); }
+
+      console.log('OAuth token reçu. Scopes accordés :', resp.scope || '(non communiqué)');
+
+      if (!scopeOK) {
+        accessToken = null;
+        document.getElementById('readBtn').disabled = true;
+        document.getElementById('authDot').className = 'dot err';
+        document.getElementById('authTxt').textContent = 'Permission Gmail refusée';
+        document.getElementById('authActions').innerHTML =
+          `<button class="btn btn-gold" onclick="signIn()">🔐 Reconnecter mon Gmail</button>`;
+        setStatus('idle', 'Permission « Consulter vos e-mails » NON accordée');
+        toast('⚠️ Vous devez COCHER la case « Consulter vos e-mails » sur l\'écran Google. Reconnectez-vous.', 'err');
+        return;
+      }
+
       onSignedIn();
     }
   });
@@ -1471,26 +1513,42 @@ async function readEmails() {
   setStatus('loading','Recherche des emails LDM/MVT...');
 
   try {
-    // Recherche élargie : emails récents (30 j) contenant LDM ou MVT,
+    // Recherche élargie : emails récents ET anciens contenant LDM ou MVT,
     // lus OU non lus. Le filtre isLDMorMVT() affine ensuite.
     // On lance plusieurs requêtes pour maximiser les résultats.
     const queries = [
-      'newer_than:30d (LDM OR MVT)',
-      'newer_than:30d subject:(LDM OR MVT)',
+      'is:unread (LDM OR MVT)',
       'in:inbox (LDM OR MVT)',
-      'is:unread (LDM OR MVT)'
+      'newer_than:30d (LDM OR MVT)',
+      'subject:(LDM OR MVT)',
+      '(LDM OR MVT)'              // filet large : pas de filtre de date
     ];
 
-    const seenIds = new Set();
+    const seenIds   = new Set();
     let allMessages = [];
+    let okCount     = 0;          // requêtes ayant abouti (réponse valide)
+    let lastApiErr  = null;       // dernière erreur API rencontrée
+
     for (const qstr of queries) {
       try {
         const query = encodeURIComponent(qstr);
-        const r = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
+        const url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`;
+        const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
         const d = await r.json();
+
+        // ── DÉTECTION EXPLICITE DES ERREURS API ──
+        if (!r.ok || d.error) {
+          const err = d.error || { code: r.status, message: r.statusText, status: 'HTTP_' + r.status };
+          lastApiErr = err;
+          console.error('Gmail API ERREUR pour la requête «' + qstr + '» :',
+            JSON.stringify(d, null, 2));
+          continue;   // requête en échec : on n'incrémente PAS okCount
+        }
+
+        okCount++;
+        console.log('Gmail OK «' + qstr + '» →',
+          (d.messages ? d.messages.length : 0), 'message(s)');
+
         if (d.messages) {
           for (const m of d.messages) {
             if (!seenIds.has(m.id)) {
@@ -1499,7 +1557,35 @@ async function readEmails() {
             }
           }
         }
-      } catch(qe) { console.warn('Query failed:', qstr, qe && qe.message); }
+      } catch(qe) {
+        lastApiErr = { code: 0, message: (qe && qe.message) || 'erreur réseau', status: 'NETWORK' };
+        console.warn('Query échouée (réseau):', qstr, qe && qe.message);
+      }
+    }
+
+    // Si AUCUNE requête n'a abouti → ce n'est PAS « aucun email »,
+    // c'est une vraie erreur (scope, API désactivée, jeton expiré…).
+    if (okCount === 0 && lastApiErr) {
+      const code = lastApiErr.code || '?';
+      const st   = lastApiErr.status || '';
+      const msg  = lastApiErr.message || 'erreur inconnue';
+      let conseil = '';
+      if (code === 403 && /scope|permission|insufficient/i.test(msg + ' ' + st)) {
+        conseil = ' → Reconnectez Gmail et COCHEZ la case « Consulter vos e-mails ».';
+      } else if (code === 403 && /disabled|accessNotConfigured|SERVICE_DISABLED/i.test(msg + ' ' + st)) {
+        conseil = ' → Activez l\'API Gmail dans Google Cloud Console (projet 906668222910).';
+      } else if (code === 401) {
+        conseil = ' → Jeton expiré : reconnectez votre Gmail.';
+      } else if (code === 400 && /API key|referer|referrer/i.test(msg)) {
+        conseil = ' → Restriction de référent de la clé API : vérifiez sgv-anac.com.';
+      }
+      emails = [];
+      renderEmails();
+      updateStats();
+      setStatus('idle', `Erreur Gmail ${code} : ${msg}${conseil}`);
+      toast(`❌ Gmail ${code} — ${st}.${conseil}`, 'err');
+      console.error('Échec total Gmail. Dernière erreur :', JSON.stringify(lastApiErr, null, 2));
+      return;
     }
 
     const listData = { messages: allMessages };
@@ -1508,8 +1594,8 @@ async function readEmails() {
       emails = [];
       renderEmails();
       updateStats();
-      setStatus('active','Aucun email LDM/MVT trouvé dans les 30 derniers jours');
-      toast('📭 Aucun email trouvé','warn');
+      setStatus('active','Aucun email LDM/MVT trouvé (l\'API a répondu, 0 résultat)');
+      toast('📭 Aucun email LDM/MVT dans la boîte','warn');
       return;
     }
 
@@ -1563,8 +1649,16 @@ async function fetchEmail(id) {
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-    return await r.json();
-  } catch { return null; }
+    const d = await r.json();
+    if (!r.ok || d.error) {
+      console.error('fetchEmail(' + id + ') erreur :', JSON.stringify(d.error || r.status));
+      return null;
+    }
+    return d;
+  } catch(e) {
+    console.error('fetchEmail(' + id + ') réseau :', e && e.message);
+    return null;
+  }
 }
 
 function isLDMorMVT(em) {
@@ -1573,6 +1667,31 @@ function isLDMorMVT(em) {
   const text    = (subject + ' ' + body).toUpperCase();
   return text.includes('LDM') || text.includes('MVT');
 }
+
+// ── DIAGNOSTIC CONSOLE (F12) ──
+// À coller dans la console après « Connecter mon Gmail » :  gmailDiag()
+// Affiche la réponse BRUTE de l'API Gmail pour identifier l'erreur exacte.
+window.gmailDiag = async function(q) {
+  if (!accessToken) { console.error('❌ accessToken absent — connectez Gmail d\'abord.'); return; }
+  const query = encodeURIComponent(q || '(LDM OR MVT)');
+  try {
+    const r = await fetch(
+      'https://gmail.googleapis.com/gmail/v1/users/me/messages?q=' + query + '&maxResults=10',
+      { headers: { Authorization: 'Bearer ' + accessToken } }
+    );
+    const d = await r.json();
+    console.log('HTTP', r.status, r.ok ? '(OK)' : '(ÉCHEC)');
+    console.log(JSON.stringify(d, null, 2));
+    if (d.error) {
+      console.warn('→ Erreur :', d.error.code, d.error.status, '-', d.error.message);
+      if (d.error.code === 403) console.warn('→ Cause probable : scope Gmail non accordé OU API Gmail désactivée.');
+    } else {
+      console.log('→ ' + (d.messages ? d.messages.length : 0) + ' message(s) renvoyé(s) par Gmail.');
+    }
+    return d;
+  } catch(e) { console.error('Erreur réseau :', e); }
+};
+console.log('💡 Diagnostic disponible : tapez  gmailDiag()  dans la console après connexion Gmail.');
 
 function getHeader(em, name) {
   const h = em.payload && em.payload.headers;
