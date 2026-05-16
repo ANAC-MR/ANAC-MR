@@ -168,6 +168,19 @@ export async function login(username, password) {
       sessionId: sid,
       isFallback: true
     });
+    // DADY n'a pas de compte Firebase Auth réel. Sans session Firebase,
+    // ses opérations admin (créer/modifier/supprimer un utilisateur,
+    // journaliser) s'exécutent NON authentifiées → cela obligerait à
+    // laisser anac_users inscriptible par tout Internet. On ouvre donc
+    // une session ANONYME sur l'app 'anac-auth' partagée (même instance
+    // que getDB()) pour que ces écritures soient authentifiées.
+    try {
+      const auth = await getAuth();
+      if (!auth.currentUser) {
+        const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+        await A.signInAnonymously(auth);
+      }
+    } catch(e) { console.warn('DADY anon session:', e && e.message); }
     await logActivity('login_success', uname, 'Compte de secours');
     return { ok:true };
   }
@@ -505,7 +518,19 @@ export async function createUser({ username, password, role, permissions, create
   try {
     const cred = await A.createUserWithEmailAndPassword(auth, email, password);
     uid = cred.user.uid;
+    // ⚠️ ÉCRIRE LE DOCUMENT AVANT signOut : tant que le compte vient
+    // d'être créé, auth.currentUser = ce nouvel utilisateur, donc
+    // l'écriture est AUTHENTIFIÉE et passe la règle Firestore stricte.
+    // (Avant : addDoc après signOut → écriture anonyme → obligeait
+    //  anac_users à être inscriptible par tout Internet.)
+    await addDoc(collection(db,'anac_users'), {
+      username: uname, email, uid, pwHint: encHint(password),
+      role: role || 'custom', permissions: permissions || [],
+      disabled: false, createdAt: new Date().toISOString(),
+      createdBy: createdBy || 'SYSTEM', currentSessionId: null
+    });
     await A.signOut(auth);   // ne pas casser la session de l'admin
+    return;
   } catch(ce) {
     if (ce.code === 'auth/email-already-in-use') {
       // Email déjà pris dans Auth — utiliser une variante versionnée
@@ -513,13 +538,14 @@ export async function createUser({ username, password, role, permissions, create
       try {
         const cred = await A.createUserWithEmailAndPassword(auth, vEmail, password);
         uid = cred.user.uid;
-        await A.signOut(auth);
+        // Idem : écrire AVANT signOut (écriture authentifiée).
         await addDoc(collection(db,'anac_users'), {
           username: uname, email: vEmail, uid, pwHint: encHint(password),
           role: role || 'custom', permissions: permissions || [],
           disabled: false, createdAt: new Date().toISOString(),
           createdBy: createdBy || 'SYSTEM', currentSessionId: null
         });
+        await A.signOut(auth);
         return;
       } catch(e2) {
         throw new Error('Erreur création compte : ' + e2.message);
@@ -528,13 +554,6 @@ export async function createUser({ username, password, role, permissions, create
     if (ce.code === 'auth/weak-password') throw new Error('Mot de passe trop faible (minimum 6 caractères)');
     throw new Error('Erreur création compte : ' + ce.message);
   }
-
-  await addDoc(collection(db,'anac_users'), {
-    username: uname, email, uid, pwHint: encHint(password),
-    role: role || 'custom', permissions: permissions || [],
-    disabled: false, createdAt: new Date().toISOString(),
-    createdBy: createdBy || 'SYSTEM', currentSessionId: null
-  });
 }
 
 export async function updateUser(userId, fields) {
