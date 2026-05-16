@@ -1648,12 +1648,6 @@ document.addEventListener('keydown', e => {
                         </div>
                         <div id="secUsersList"><div style="text-align:center;color:#64748b;padding:30px;font-size:13px;">Chargement...</div></div>
                     </div>
-
-                    <div class="card" style="background:rgba(212,175,55,0.05);border-color:rgba(212,175,55,0.2);margin-top:14px;">
-                        <div style="font-size:13px;color:#D4AF37;line-height:1.7;">
-                            <strong style="color:#fff;">🔐 Compte de secours</strong> — L'identifiant <strong style="color:#fff;font-family:monospace;">DADY</strong> est un compte de secours codé en dur dans l'application. Il est toujours actif et n'apparaît pas dans la liste. Utilisez-le uniquement en cas d'oubli de mot de passe d'un compte administrateur.
-                        </div>
-                    </div>
                 </div>
 
                 <!-- ============== ONGLET ACTIVITÉ ============== -->
@@ -2434,6 +2428,28 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db    = getFirestore(fbApp);
 
+// ── Authentifier cette connexion (règles Firestore strictes) ──
+// Bloque les opérations Firestore tant que l'auth n'est pas prête.
+window._adminAuthReady = false;
+(async function(){
+  try{
+    let _t=0;
+    while(!(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) && _t<80){
+      await new Promise(r=>setTimeout(r,100)); _t++;
+    }
+    if(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed){
+      await window.ANAC_AUTH.ensureAuthed(fbApp);
+    }
+  }catch(e){ console.warn('Admin auth bootstrap:', e && e.message); }
+  finally{ window._adminAuthReady = true; }
+})();
+async function _adminWaitAuth(){
+  let _t=0;
+  while(!window._adminAuthReady && _t<80){
+    await new Promise(r=>setTimeout(r,100)); _t++;
+  }
+}
+
 // Exposer globalement pour que saveNewUser etc. puissent y accéder
 window._db         = db;
 window._collection = collection;
@@ -2599,12 +2615,14 @@ window.logout = function() {
 // LOAD DATA
 // ────────────────────────────────────────
 async function loadAll() {
+    await _adminWaitAuth();
     await Promise.all([ loadAirlines(), loadAirports(), loadFormatConfig() ]);
     updateDashboard();
 }
 
 async function loadAirlines() {
-    try {
+    try {    await _adminWaitAuth();
+
         const snap = await getDoc(airlinesDoc());
         if (!snap.exists() || !snap.data().list || snap.data().list.length === 0) {
             await setDoc(airlinesDoc(), { list: getDefaultAirlines() });
@@ -2635,7 +2653,8 @@ function getDefaultAirlines() {
 }
 
 async function loadAirports() {
-    try {
+    try {    await _adminWaitAuth();
+
         const snap = await getDoc(airportsDoc());
         if (!snap.exists() || !snap.data().list || snap.data().list.length === 0) {
             await setDoc(airportsDoc(), { list: getDefaultAirports() });
@@ -2676,7 +2695,8 @@ function getDefaultAirports() {
 }
 
 async function loadFormatConfig() {
-    try {
+    try {    await _adminWaitAuth();
+
         const snap = await getDoc(configDoc());
         if (snap.exists()) {
             const d = snap.data();
@@ -3343,6 +3363,7 @@ const ALL_PERMISSIONS = [
 ];
 
 async function loadUsers() {
+    await _adminWaitAuth();
     const div = document.getElementById('usersList');
     if (!div) return;
     div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;">Chargement...</div>';
@@ -3457,6 +3478,7 @@ window.deleteSecUser = async function(id, uname) {
 let allFlightNums = [];
 
 async function loadFlightNums() {
+    await _adminWaitAuth();
     const div = document.getElementById('flightNumsList');
     if (!div) return;
     div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:30px;">Chargement...</div>';
@@ -3745,6 +3767,7 @@ let _allSaisis    = new Set();
 
 // ── Chargement principal ──────────────────────────────────────────
 async function loadProgramme() {
+    await _adminWaitAuth();
     const container = document.getElementById('programmeByCompany');
     if (!container) return;
     container.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px;">Chargement...</div>';
@@ -4761,8 +4784,7 @@ window.showSection = function(name) {
 // Charger users dès que Firebase est prêt (pas besoin d'attendre le clic sur Security)
 (async function initAdminData() {
     try {
-        // Petite attente pour s'assurer que window._db est prêt
-        await new Promise(r => setTimeout(r, 300));
+        await _adminWaitAuth();
         await loadUsers();
         await loadFlightNums();
     } catch(e) { console.warn('initAdminData:', e.message); }
@@ -5789,8 +5811,15 @@ window._schedDelete = async function(id) {
 import {
   ALL_PERMISSIONS, ROLES, ACTION_LABELS,
   listUsers, createUser, updateUser, deleteUser,
-  getActivityLog, resolvePermissions, getSession
+  getActivityLog, resolvePermissions, getSession,
+  getPasswordHint, FALLBACK_USER
 } from './auth.js';
+
+// Seul le compte DADY peut consulter les mots de passe des utilisateurs
+function _isDadyUser() {
+  const s = getSession();
+  return s && s.username === FALLBACK_USER;
+}
 
 let _secEditingUserId = null;
 let _secAllUsers = [];
@@ -5892,12 +5921,20 @@ window._secEditUser = function(userId) {
   document.getElementById('secUserModalTitle').textContent = '✏️ Modifier ' + u.username;
   document.getElementById('secUserName').value = u.username;
   document.getElementById('secUserName').disabled = true; // username non modifiable
-  // Afficher le mot de passe actuel (visible pour permettre la consultation)
-  document.getElementById('secUserPass').value = u.password || '';
-  document.getElementById('secUserPass').type = 'password';
-  document.getElementById('secUserPass').placeholder = '';
-  const tog = document.getElementById('secUserPassToggle');
-  if (tog) tog.textContent = '👁️';
+  // Le mot de passe n'est consultable QUE par le compte DADY
+  const passInp = document.getElementById('secUserPass');
+  const passTog = document.getElementById('secUserPassToggle');
+  if (_isDadyUser()) {
+    passInp.value = getPasswordHint(u) || '';
+    passInp.placeholder = 'Laisser vide = ne pas changer';
+    if (passTog) passTog.style.display = '';
+  } else {
+    passInp.value = '';
+    passInp.placeholder = 'Laisser vide = ne pas changer';
+    if (passTog) passTog.style.display = 'none';
+  }
+  passInp.type = 'password';
+  if (passTog) passTog.textContent = '👁️';
   document.getElementById('secUserRole').value = u.role || 'custom';
   document.getElementById('secUserModalMsg').textContent = '';
   _secOnRoleChange();
