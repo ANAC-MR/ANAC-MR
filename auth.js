@@ -8,9 +8,10 @@
 //    n'est nécessaire AVANT l'authentification.
 //  • La création / réinitialisation / suppression de comptes
 //    passe par des Cloud Functions (SDK Admin, côté serveur).
-//  • DADY / ANACdady reste l'identifiant tapé : il est adossé à
-//    un vrai compte Firebase (créé au bootstrap) portant le claim
-//    admin. Filet de secours conservé si le compte réel échoue.
+//  • L'identifiant DADY reste le compte de secours ; il est adossé
+//    à un vrai compte Firebase (créé au bootstrap) portant le claim
+//    admin. Le filet de secours est conservé mais son mot de passe
+//    n'existe dans le code que sous forme d'empreinte SHA-256.
 // ═══════════════════════════════════════════════════════════════
 
 const FB_CONFIG = {
@@ -26,7 +27,27 @@ const FUNCTIONS_REGION = 'europe-west1';
 
 export const AUTH_SESSION_KEY = 'anac_auth_v4';
 export const FALLBACK_USER = 'DADY';
-export const FALLBACK_PASS = 'ANACdady';
+// Le mot de passe du filet de secours n'est PLUS stocké en clair.
+// On ne conserve que son empreinte SHA-256 (irréversible) : le code
+// peut vérifier un mot de passe sans jamais le contenir. Lire ce
+// fichier ne révèle aucun secret exploitable.
+const FALLBACK_PASS_SHA256 = '1b24b5004bd90d5fdace6cbf87b062892d1de27dabb14fb8c1dc05354412fa84';
+
+// Calcule l'empreinte SHA-256 d'une chaîne (hex minuscule).
+async function _sha256Hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Vrai si le mot de passe saisi correspond à l'empreinte du filet.
+async function _isFallbackPass(pass) {
+  try {
+    const h = await _sha256Hex(String(pass || ''));
+    // Comparaison simple ; l'empreinte n'étant pas un secret, pas
+    // besoin de comparaison à temps constant ici.
+    return h === FALLBACK_PASS_SHA256;
+  } catch (e) { return false; }
+}
 
 const EMAIL_DOMAIN = 'sgv-anac.local';
 
@@ -220,7 +241,7 @@ export async function login(username, password) {
     // (bootstrap non exécuté) ou panne, on autorise l'accès local
     // pour ne JAMAIS être verrouillé dehors. Mode dégradé : la
     // gestion des comptes via Cloud Function exigera le compte réel.
-    if (uname === FALLBACK_USER && pass === FALLBACK_PASS) {
+    if (uname === FALLBACK_USER && await _isFallbackPass(pass)) {
       const sid = newSessionId();
       saveSession({
         username: FALLBACK_USER, role: 'admin',
