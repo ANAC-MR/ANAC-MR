@@ -335,8 +335,8 @@ async function getAllFlights() {
         
         querySnapshot.forEach((doc) => {
             flights.push({
-                id: doc.id,
-                ...doc.data()
+                ...doc.data(),
+                id: doc.id            // ID Firestore réel — prioritaire sur tout champ "id" interne hérité
             });
         });
         
@@ -369,8 +369,8 @@ async function getFlightsByDateRange(startDate, endDate) {
         
         querySnapshot.forEach((doc) => {
             flights.push({
-                id: doc.id,
-                ...doc.data()
+                ...doc.data(),
+                id: doc.id            // ID Firestore réel — prioritaire sur tout champ "id" interne hérité
             });
         });
         
@@ -403,8 +403,8 @@ function startRealtimeListener() {
             
             snapshot.forEach((doc) => {
                 flights.push({
-                    id: doc.id,
-                    ...doc.data()
+                    ...doc.data(),
+                    id: doc.id            // ID Firestore réel — prioritaire sur tout champ "id" interne hérité
                 });
             });
             
