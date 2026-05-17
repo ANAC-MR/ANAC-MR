@@ -110,9 +110,43 @@ async function getFunctions() {
   return _functions;
 }
 async function callFn(name, data) {
-  const fns = await getFunctions();
-  const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js');
-  const res = await httpsCallable(fns, name)(data || {});
+  // ── S'assurer que la session Firebase de DADY (ou de l'admin) est
+  //    active et liée à la MÊME app que l'instance Functions, pour
+  //    que le jeton d'authentification parte avec l'appel.
+  //    Sans ça : 401 Unauthorized (la fonction reçoit un appel
+  //    anonyme et le refuse). ──
+  const auth = await getAuth();          // instance Auth de l'app 'anac-auth'
+  const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+
+  // Si pas connecté côté Firebase : reconnecter avec la session locale.
+  if (!auth.currentUser) {
+    const s = getSession();
+    if (s && s.username) {
+      const email = usernameToEmail(s.username);
+      // Mot de passe non stocké : on tente une reconnexion silencieuse
+      // uniquement possible si une session Firebase persiste déjà.
+      // Sinon on attend brièvement qu'elle se rétablisse.
+      await new Promise((resolve) => {
+        if (auth.currentUser) return resolve();
+        const unsub = A.onAuthStateChanged(auth, (u) => { if (u) { unsub(); resolve(); } });
+        setTimeout(() => { try{unsub();}catch(e){} resolve(); }, 4000);
+      });
+    }
+  }
+
+  if (!auth.currentUser) {
+    throw new Error('Session Firebase expirée — reconnectez-vous (déconnexion puis reconnexion DADY).');
+  }
+
+  // Forcer un jeton frais (le claim admin doit être présent).
+  try { await auth.currentUser.getIdToken(true); } catch(e) {}
+
+  const app = await getApp();
+  const m = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js');
+  // Instance Functions créée à partir de la MÊME app que Auth :
+  // le SDK joint alors automatiquement le jeton à l'appel.
+  const fns = m.getFunctions(app, FUNCTIONS_REGION);
+  const res = await m.httpsCallable(fns, name)(data || {});
   return res.data;
 }
 
