@@ -431,6 +431,33 @@ function _waitAuth(A, auth) {
 
 // ── Gestion utilisateurs (via Cloud Functions) ───────────────────
 export async function listUsers() {
+  // S'assurer qu'une session Firebase est active sur l'app 'anac-auth'
+  // AVANT de lire (la règle exige request.auth != null). Sans ça,
+  // au chargement de admin.html : "Missing or insufficient permissions".
+  const auth = await getAuth();
+  const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+  if (!auth.currentUser) {
+    // Attendre une session déjà en cours d'établissement (login DADY)
+    await new Promise((resolve) => {
+      if (auth.currentUser) return resolve();
+      const unsub = A.onAuthStateChanged(auth, (u) => { if (u) { try{unsub();}catch(e){} resolve(); } });
+      setTimeout(() => { try{unsub();}catch(e){} resolve(); }, 5000);
+    });
+  }
+  if (!auth.currentUser) {
+    // Toujours rien : connexion anonyme (suffisante pour LIRE).
+    try { await A.signInAnonymously(auth); } catch(e) {}
+    await new Promise((resolve) => {
+      if (auth.currentUser) return resolve();
+      const unsub = A.onAuthStateChanged(auth, (u) => { if (u) { try{unsub();}catch(e){} resolve(); } });
+      setTimeout(() => { try{unsub();}catch(e){} resolve(); }, 5000);
+    });
+  }
+  if (!auth.currentUser) {
+    throw new Error('Session Firebase non établie — reconnectez-vous (DADY).');
+  }
+  try { await auth.currentUser.getIdToken(); } catch(e) {}
+
   const db = await getDB();
   const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
   const snap = await getDocs(collection(db,'anac_users'));
