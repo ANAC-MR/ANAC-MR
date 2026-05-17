@@ -1,14 +1,16 @@
 // ═══════════════════════════════════════════════════════════════
-//  ANAC AUTH v4 — Firebase Authentication intégré
+//  ANAC AUTH v5 — Firebase Authentication + Cloud Functions
 //  ─────────────────────────────────────────────────────────────
-//  Les mots de passe sont gérés et chiffrés par Firebase
-//  Authentication (Google). L'utilisateur tape un identifiant
-//  simple (ex: HOUDA) transformé en interne en houda@sgv-anac.local
-//
-//  Migration auto : un ancien compte (champ password) est migré
-//  vers Firebase Auth à sa première connexion.
-//
-//  Compte de secours DADY : codé en dur, toujours actif.
+//  • AUCUN mot de passe n'est lu, écrit ou stocké dans Firestore.
+//    Firebase Authentication est la seule source de vérité.
+//  • L'e-mail interne est DÉRIVÉ de l'identifiant
+//    (DADY → dady@sgv-anac.local) : aucune lecture Firestore
+//    n'est nécessaire AVANT l'authentification.
+//  • La création / réinitialisation / suppression de comptes
+//    passe par des Cloud Functions (SDK Admin, côté serveur).
+//  • DADY / ANACdady reste l'identifiant tapé : il est adossé à
+//    un vrai compte Firebase (créé au bootstrap) portant le claim
+//    admin. Filet de secours conservé si le compte réel échoue.
 // ═══════════════════════════════════════════════════════════════
 
 const FB_CONFIG = {
@@ -19,6 +21,8 @@ const FB_CONFIG = {
   messagingSenderId:"906668222910",
   appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"
 };
+
+const FUNCTIONS_REGION = 'europe-west1';
 
 export const AUTH_SESSION_KEY = 'anac_auth_v4';
 export const FALLBACK_USER = 'DADY';
@@ -74,7 +78,7 @@ export const ROLES = {
 };
 
 // ── Firebase setup ───────────────────────────────────────────────
-let _app = null, _db = null, _auth = null;
+let _app = null, _db = null, _auth = null, _functions = null;
 
 async function getApp() {
   if (_app) return _app;
@@ -97,6 +101,19 @@ async function getAuth() {
   _auth = m.getAuth(app);
   try { await m.setPersistence(_auth, m.browserSessionPersistence); } catch(e) {}
   return _auth;
+}
+async function getFunctions() {
+  if (_functions) return _functions;
+  const app = await getApp();
+  const m = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js');
+  _functions = m.getFunctions(app, FUNCTIONS_REGION);
+  return _functions;
+}
+async function callFn(name, data) {
+  const fns = await getFunctions();
+  const { httpsCallable } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js');
+  const res = await httpsCallable(fns, name)(data || {});
+  return res.data;
 }
 
 // ── Session locale ───────────────────────────────────────────────
@@ -129,202 +146,105 @@ export function resolvePermissions(role, customPerms) {
   return r.permissions.slice();
 }
 
-// ── Chiffrement léger du pwHint (consultation DADY uniquement) ────
-const _PW_KEY = 'anac-sgv-2026-key';
-function _xor(str, key) {
-  let out = '';
-  for (let i = 0; i < str.length; i++) {
-    out += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return out;
-}
-function encHint(plain) {
-  try { return btoa(unescape(encodeURIComponent(_xor(plain, _PW_KEY)))); }
-  catch { return ''; }
-}
-export function decHint(enc) {
-  try { return _xor(decodeURIComponent(escape(atob(enc))), _PW_KEY); }
-  catch { return ''; }
-}
+// Compat : la consultation des mots de passe est SUPPRIMÉE (sécurité).
+// Stubs conservés pour ne pas casser les pages qui les appellent.
+export function decHint() { return ''; }
+export function getPasswordHint() { return ''; }
 
 // ── Authentification ─────────────────────────────────────────────
 function newSessionId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2,10);
 }
 
+async function loadProfileByUid(uid) {
+  const db = await getDB();
+  const { collection, query, where, getDocs } =
+    await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const snap = await getDocs(query(collection(db,'anac_users'), where('uid','==',uid)));
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id:d.id, ...d.data() };
+}
+
 export async function login(username, password) {
   const uname = (username || '').trim();
   const pass  = password || '';
-
   if (!uname || !pass) return { ok:false, error:'Veuillez remplir tous les champs.' };
 
-  // 1. Compte de secours DADY
-  if (uname === FALLBACK_USER && pass === FALLBACK_PASS) {
-    const sid = newSessionId();
-    saveSession({
-      username: FALLBACK_USER,
-      role: 'admin',
-      permissions: Object.keys(ALL_PERMISSIONS),
-      sessionId: sid,
-      isFallback: true
-    });
-    // DADY n'a pas de compte Firebase Auth réel. Sans session Firebase,
-    // ses opérations admin (créer/modifier/supprimer un utilisateur,
-    // journaliser) s'exécutent NON authentifiées → cela obligerait à
-    // laisser anac_users inscriptible par tout Internet. On ouvre donc
-    // une session ANONYME sur l'app 'anac-auth' partagée (même instance
-    // que getDB()) pour que ces écritures soient authentifiées.
-    try {
-      const auth = await getAuth();
-      if (!auth.currentUser) {
-        const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-        await A.signInAnonymously(auth);
-      }
-    } catch(e) { console.warn('DADY anon session:', e && e.message); }
-    await logActivity('login_success', uname, 'Compte de secours');
-    return { ok:true };
-  }
+  const auth = await getAuth();
+  const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+  const email = usernameToEmail(uname);
 
+  // Connexion Firebase Auth directe (e-mail dérivé, aucune lecture
+  // Firestore préalable). Vaut aussi pour DADY (compte réel
+  // dady@sgv-anac.local créé au bootstrap).
+  let cred = null;
   try {
-    const db = await getDB();
-    const { collection, getDocs, doc, updateDoc } =
-      await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-
-    const allSnap = await getDocs(collection(db,'anac_users'));
-    const match = allSnap.docs.find(d =>
-      (d.data().username || '').toLowerCase() === uname.toLowerCase()
-    );
-
-    if (!match) {
-      await logActivity('login_failed', uname, 'Utilisateur introuvable');
-      return { ok:false, error:'Identifiants incorrects' };
+    cred = await A.signInWithEmailAndPassword(auth, email, pass);
+  } catch (err) {
+    // FILET DE SECOURS DADY : si le compte réel n'existe pas encore
+    // (bootstrap non exécuté) ou panne, on autorise l'accès local
+    // pour ne JAMAIS être verrouillé dehors. Mode dégradé : la
+    // gestion des comptes via Cloud Function exigera le compte réel.
+    if (uname === FALLBACK_USER && pass === FALLBACK_PASS) {
+      const sid = newSessionId();
+      saveSession({
+        username: FALLBACK_USER, role: 'admin',
+        permissions: Object.keys(ALL_PERMISSIONS),
+        sessionId: sid, isFallback: true
+      });
+      try { if (!auth.currentUser) await A.signInAnonymously(auth); } catch(e) {}
+      await logActivity('login_success', uname, 'Compte de secours (mode dégradé)');
+      return { ok:true, degraded:true };
     }
-
-    const userDoc = match;
-    const user    = userDoc.data();
-    const email   = user.email || usernameToEmail(user.username);
-
-    if (user.disabled) {
-      await logActivity('login_failed', uname, 'Compte désactivé');
-      return { ok:false, error:'Compte désactivé' };
-    }
-
-    const auth = await getAuth();
-    const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-
-    let uid = user.uid || null;
-
-    // CAS 1 : mot de passe en attente (réinitialisé par admin) → re-créer Auth
-    if (user.pendingPassword) {
-      if (pass !== user.pendingPassword) {
-        await logActivity('login_failed', uname, 'Mot de passe invalide');
-        return { ok:false, error:'Identifiants incorrects' };
-      }
-      try {
-        let cred;
-        try {
-          cred = await A.createUserWithEmailAndPassword(auth, email, pass);
-        } catch(ce) {
-          if (ce.code === 'auth/email-already-in-use') {
-            // Ancien compte Auth existe — impossible de changer son mdp côté client.
-            // On utilise un email versionné pour repartir proprement.
-            const vEmail = email.replace('@', '+' + Date.now().toString(36) + '@');
-            cred = await A.createUserWithEmailAndPassword(auth, vEmail, pass);
-            await updateDoc(doc(db,'anac_users',userDoc.id), { email: vEmail });
-          } else { throw ce; }
-        }
-        uid = cred.user.uid;
-        await updateDoc(doc(db,'anac_users',userDoc.id), {
-          uid,
-          pwHint: encHint(pass),
-          pendingPassword: null,
-          password: null
-        });
-      } catch(me) {
-        console.error('Reset migration error:', me);
-        return { ok:false, error:'Erreur de connexion. Contactez DADY.' };
-      }
-    }
-    // CAS 2 : compte déjà migré → connexion Auth normale
-    else if (uid) {
-      try {
-        const cred = await A.signInWithEmailAndPassword(auth, email, pass);
-        uid = cred.user.uid;
-      } catch(err) {
-        await logActivity('login_failed', uname, 'Mot de passe invalide');
-        return { ok:false, error:'Identifiants incorrects' };
-      }
-    }
-    // CAS 3 : ancien compte (champ password) → migration auto
-    else if (typeof user.password === 'string' && user.password !== null) {
-      if (user.password !== pass) {
-        await logActivity('login_failed', uname, 'Mot de passe invalide');
-        return { ok:false, error:'Identifiants incorrects' };
-      }
-      try {
-        let cred;
-        try {
-          cred = await A.createUserWithEmailAndPassword(auth, email, pass);
-        } catch(ce) {
-          if (ce.code === 'auth/email-already-in-use') {
-            cred = await A.signInWithEmailAndPassword(auth, email, pass);
-          } else { throw ce; }
-        }
-        uid = cred.user.uid;
-        await updateDoc(doc(db,'anac_users',userDoc.id), {
-          uid,
-          email,
-          pwHint: encHint(pass),
-          password: null,
-          migratedAt: new Date().toISOString()
-        });
-      } catch(me) {
-        console.error('Migration error:', me);
-        return { ok:false, error:'Erreur de migration. Contactez DADY.' };
-      }
-    }
-    else {
-      await logActivity('login_failed', uname, 'Compte non configuré');
-      return { ok:false, error:'Identifiants incorrects' };
-    }
-
-    const sid = newSessionId();
-    await updateDoc(doc(db,'anac_users',userDoc.id), {
-      currentSessionId: sid,
-      lastLoginAt: new Date().toISOString()
-    });
-
-    const perms = resolvePermissions(user.role || 'custom', user.permissions);
-    saveSession({
-      username: user.username,
-      role: user.role || 'custom',
-      permissions: perms,
-      sessionId: sid,
-      docId: userDoc.id,
-      uid,
-      // Identifiants techniques pour ré-authentifier les autres
-      // connexions Firebase des autres pages (reste dans ce navigateur,
-      // sessionStorage effacé à la fermeture). Le mot de passe réel
-      // est géré/chiffré par Firebase Auth ; ceci sert uniquement à
-      // garder toutes les pages authentifiées de façon cohérente.
-      _e: email,
-      _k: btoa(unescape(encodeURIComponent(pass)))
-    });
-
-    await logActivity('login_success', uname, `Rôle: ${user.role || 'custom'}`);
-    return { ok:true };
-
-  } catch(e) {
-    console.error('Auth error:', e);
-    return { ok:false, error:'Erreur de connexion. Réessayez.' };
+    await logActivity('login_failed', uname, 'Identifiants invalides');
+    return { ok:false, error:'Identifiants incorrects' };
   }
+
+  // Authentifié : chargement du profil (rôle/permissions).
+  let profile = null;
+  try { profile = await loadProfileByUid(cred.user.uid); } catch(e) {}
+
+  if (profile && profile.disabled) {
+    try { await A.signOut(auth); } catch(e) {}
+    await logActivity('login_failed', uname, 'Compte désactivé');
+    return { ok:false, error:'Compte désactivé' };
+  }
+
+  const isDady = uname.toUpperCase() === FALLBACK_USER;
+  const role   = profile ? (profile.role || 'custom') : (isDady ? 'admin' : 'custom');
+  const perms  = isDady
+    ? Object.keys(ALL_PERMISSIONS)
+    : resolvePermissions(role, profile && profile.permissions);
+
+  const sid = newSessionId();
+  if (profile && profile.id) {
+    try {
+      const db = await getDB();
+      const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+      await updateDoc(doc(db,'anac_users',profile.id), {
+        currentSessionId: sid, lastLoginAt: new Date().toISOString()
+      });
+    } catch(e) {}
+  }
+
+  saveSession({
+    username: profile ? profile.username : uname,
+    role, permissions: perms, sessionId: sid,
+    docId: profile ? profile.id : null,
+    uid: cred.user.uid,
+    isFallback: false
+  });
+
+  await logActivity('login_success', uname, `Rôle: ${role}`);
+  return { ok:true };
 }
 
 export async function logout() {
   const s = getSession();
   if (s) {
     await logActivity('logout', s.username, '');
-    if (!s.isFallback && s.docId) {
+    if (s.docId) {
       try {
         const db = await getDB();
         const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
@@ -425,12 +345,10 @@ export function showNoPermissionScreen() {
 
 // ─────────────────────────────────────────────────────────────────
 // AUTHENTIFICATION PARTAGÉE ENTRE PAGES
-// Chaque page a sa propre connexion Firebase (app-arch, ldm, vols…).
-// Firebase Auth est par-instance : il faut authentifier CHAQUE
-// instance. ensureAuthed(app) connecte l'instance donnée :
-//   • utilisateur connecté  → signInWithEmailAndPassword
-//   • mode public / DADY    → signInAnonymously
-// Idempotent : ne refait rien si déjà authentifié.
+// Chaque page a sa propre connexion Firebase. ensureAuthed(app)
+// connecte l'instance en réutilisant le jeton de l'app 'anac-auth'
+// si une session réelle existe, sinon en anonyme (mode public /
+// DADY dégradé). La règle métier exige seulement une session.
 // ─────────────────────────────────────────────────────────────────
 const _authedApps = new WeakSet();
 
@@ -447,7 +365,7 @@ export async function ensureAuthed(app) {
 
   if (auth.currentUser) { _authedApps.add(app); return true; }
 
-  // Mode public → connexion anonyme
+  // Mode public (carte) → connexion anonyme
   if (typeof window !== 'undefined' && window.ANAC_PUBLIC_MODE) {
     try {
       await A.signInAnonymously(auth);
@@ -457,27 +375,16 @@ export async function ensureAuthed(app) {
     } catch(e) { console.warn('Anon auth:', e && e.message); return false; }
   }
 
-  const s = getSession();
-  // Compte de secours DADY : pas de compte Firebase réel → anonyme
-  if (s && s.isFallback) {
-    try {
-      await A.signInAnonymously(auth);
-      await _waitAuth(A, auth);
-      _authedApps.add(app);
-      return true;
-    } catch(e) { console.warn('Fallback auth:', e && e.message); return false; }
-  }
-  // Utilisateur normal → ré-auth avec identifiants stockés
-  if (s && s._e && s._k) {
-    try {
-      const pass = decodeURIComponent(escape(atob(s._k)));
-      await A.signInWithEmailAndPassword(auth, s._e, pass);
-      await _waitAuth(A, auth);
-      _authedApps.add(app);
-      return true;
-    } catch(e) { console.warn('Reauth:', e && e.message); return false; }
-  }
-  return false;
+  // Anonyme : suffisant pour lire les données métier (la règle
+  // exige uniquement request.auth != null). Les opérations
+  // sensibles (comptes) passent par Cloud Functions qui vérifient
+  // le claim admin séparément.
+  try {
+    await A.signInAnonymously(auth);
+    await _waitAuth(A, auth);
+    _authedApps.add(app);
+    return true;
+  } catch(e) { console.warn('ensureAuthed anon:', e && e.message); return false; }
 }
 
 function _waitAuth(A, auth) {
@@ -488,7 +395,7 @@ function _waitAuth(A, auth) {
   });
 }
 
-// ── Gestion utilisateurs ─────────────────────────────────────────
+// ── Gestion utilisateurs (via Cloud Functions) ───────────────────
 export async function listUsers() {
   const db = await getDB();
   const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
@@ -496,100 +403,72 @@ export async function listUsers() {
   return snap.docs.map(d => ({ id:d.id, ...d.data() }));
 }
 
-export async function createUser({ username, password, role, permissions, createdBy }) {
-  const db = await getDB();
-  const { collection, addDoc, getDocs } =
-    await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+export async function createUser({ username, password, role, permissions }) {
   const uname = (username || '').trim();
   if (!uname) throw new Error('Identifiant requis');
   if (uname.toUpperCase() === FALLBACK_USER) throw new Error('Identifiant réservé');
   if (!password) throw new Error('Mot de passe requis');
   if (password.length < 6) throw new Error('Le mot de passe doit faire au moins 6 caractères');
-
-  const allSnap = await getDocs(collection(db,'anac_users'));
-  const exists = allSnap.docs.some(d => (d.data().username || '').toLowerCase() === uname.toLowerCase());
-  if (exists) throw new Error('Cet identifiant existe déjà');
-
-  const email = usernameToEmail(uname);
-  const auth = await getAuth();
-  const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-
-  let uid;
   try {
-    const cred = await A.createUserWithEmailAndPassword(auth, email, password);
-    uid = cred.user.uid;
-    // ⚠️ ÉCRIRE LE DOCUMENT AVANT signOut : tant que le compte vient
-    // d'être créé, auth.currentUser = ce nouvel utilisateur, donc
-    // l'écriture est AUTHENTIFIÉE et passe la règle Firestore stricte.
-    // (Avant : addDoc après signOut → écriture anonyme → obligeait
-    //  anac_users à être inscriptible par tout Internet.)
-    await addDoc(collection(db,'anac_users'), {
-      username: uname, email, uid, pwHint: encHint(password),
-      role: role || 'custom', permissions: permissions || [],
-      disabled: false, createdAt: new Date().toISOString(),
-      createdBy: createdBy || 'SYSTEM', currentSessionId: null
-    });
-    await A.signOut(auth);   // ne pas casser la session de l'admin
-    return;
-  } catch(ce) {
-    if (ce.code === 'auth/email-already-in-use') {
-      // Email déjà pris dans Auth — utiliser une variante versionnée
-      const vEmail = email.replace('@', '+' + Date.now().toString(36) + '@');
-      try {
-        const cred = await A.createUserWithEmailAndPassword(auth, vEmail, password);
-        uid = cred.user.uid;
-        // Idem : écrire AVANT signOut (écriture authentifiée).
-        await addDoc(collection(db,'anac_users'), {
-          username: uname, email: vEmail, uid, pwHint: encHint(password),
-          role: role || 'custom', permissions: permissions || [],
-          disabled: false, createdAt: new Date().toISOString(),
-          createdBy: createdBy || 'SYSTEM', currentSessionId: null
-        });
-        await A.signOut(auth);
-        return;
-      } catch(e2) {
-        throw new Error('Erreur création compte : ' + e2.message);
-      }
-    }
-    if (ce.code === 'auth/weak-password') throw new Error('Mot de passe trop faible (minimum 6 caractères)');
-    throw new Error('Erreur création compte : ' + ce.message);
+    const r = await callFn('adminCreateUser', { username:uname, password, role, permissions });
+    if (!r || !r.ok) throw new Error('Échec de la création');
+  } catch(e) {
+    throw new Error(_fnErr(e, 'Erreur création compte'));
   }
 }
 
 export async function updateUser(userId, fields) {
-  const db = await getDB();
-  const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-
+  fields = fields || {};
+  // Réinitialisation de mot de passe → Cloud Function dédiée.
   if (fields.password) {
-    // Le changement de mot de passe d'un autre utilisateur ne peut pas se
-    // faire côté client. On le stocke en attente : il sera appliqué (et le
-    // compte Auth recréé) lors de la prochaine connexion de l'utilisateur.
-    fields.pwHint = encHint(fields.password);
-    fields.pendingPassword = fields.password;
-    fields.uid = null;
-    delete fields.password;
+    try {
+      await callFn('adminSetPassword', { docId:userId, newPassword:fields.password });
+    } catch(e) {
+      throw new Error(_fnErr(e, 'Erreur réinitialisation mot de passe'));
+    }
+    const { password, ...rest } = fields;
+    if (Object.keys(rest).length === 0) return;
+    fields = rest;
   }
-
-  if (fields.role || fields.permissions || fields.disabled !== undefined) {
-    fields.currentSessionId = null;
+  if (fields.role !== undefined || fields.permissions !== undefined || fields.disabled !== undefined) {
+    try {
+      await callFn('adminUpdateUser', {
+        docId:userId,
+        role:fields.role, permissions:fields.permissions, disabled:fields.disabled
+      });
+    } catch(e) {
+      throw new Error(_fnErr(e, 'Erreur mise à jour du compte'));
+    }
   }
-  fields.updatedAt = new Date().toISOString();
-  await updateDoc(doc(db,'anac_users',userId), fields);
 }
 
 export async function deleteUser(userId) {
-  const db = await getDB();
-  const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-  await deleteDoc(doc(db,'anac_users',userId));
+  try {
+    await callFn('adminDeleteUser', { docId:userId });
+  } catch(e) {
+    throw new Error(_fnErr(e, 'Erreur suppression du compte'));
+  }
 }
 
-// Indice de mot de passe (réservé DADY)
-export function getPasswordHint(userObj) {
-  if (!userObj) return '';
-  if (userObj.pendingPassword) return userObj.pendingPassword;
-  if (userObj.pwHint) return decHint(userObj.pwHint);
-  if (userObj.password) return userObj.password;
-  return '';
+// Réinitialisation explicite (mot de passe oublié)
+export async function resetPassword(userId, newPassword) {
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error('Le nouveau mot de passe doit faire au moins 6 caractères');
+  }
+  try {
+    await callFn('adminSetPassword', { docId:userId, newPassword });
+  } catch(e) {
+    throw new Error(_fnErr(e, 'Erreur réinitialisation mot de passe'));
+  }
+}
+
+function _fnErr(e, fallback) {
+  const msg = (e && (e.message || (e.details && e.details.message))) || '';
+  if (/unauthenticated|permission-denied|droits|administration/i.test(msg)) {
+    return 'Action réservée à un administrateur connecté (compte réel requis). ' +
+           'En mode dégradé DADY : exécutez le bootstrap puis reconnectez-vous.';
+  }
+  return fallback + (msg ? ' : ' + msg : '');
 }
 
 // ── Journal d'activité ───────────────────────────────────────────
@@ -633,7 +512,7 @@ export const ACTION_LABELS = {
 window.ANAC_AUTH = {
   login, logout, getSession, currentUser, isLoggedIn, hasPerm,
   requireAuth, showNoPermissionScreen, startSessionWatcher, stopSessionWatcher,
-  listUsers, createUser, updateUser, deleteUser, getPasswordHint,
+  listUsers, createUser, updateUser, deleteUser, resetPassword, getPasswordHint,
   logActivity, getActivityLog, ensureAuthed,
   ALL_PERMISSIONS, ROLES, ACTION_LABELS, resolvePermissions,
   FALLBACK_USER
