@@ -2429,23 +2429,46 @@ const fbApp = initializeApp(firebaseConfig);
 const db    = getFirestore(fbApp);
 
 // ── Authentifier cette connexion (règles Firestore strictes) ──
-// Bloque les opérations Firestore tant que l'auth n'est pas prête.
+// Les règles exigent request.auth != null pour lire anac_users.
+// On établit ICI, de façon fiable, une session Firebase sur fbApp
+// AVANT toute lecture Firestore, et on attend le VRAI jeton (pas
+// juste un drapeau). Sans ça : "Missing or insufficient permissions".
 window._adminAuthReady = false;
+window._adminAuthOK    = false;
 (async function(){
   try{
-    let _t=0;
-    while(!(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) && _t<80){
-      await new Promise(r=>setTimeout(r,100)); _t++;
+    const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+    const auth = A.getAuth(fbApp);
+    try { await A.setPersistence(auth, A.browserSessionPersistence); } catch(e){}
+
+    // Si une session existe déjà, on la garde. Sinon connexion
+    // anonyme : suffit pour LIRE (les écritures de comptes passent
+    // par les Cloud Functions qui vérifient le claim admin).
+    if(!auth.currentUser){
+      try{
+        await A.signInAnonymously(auth);
+      }catch(e){ console.warn('Admin signInAnonymously:', e && e.message); }
     }
-    if(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed){
-      await window.ANAC_AUTH.ensureAuthed(fbApp);
+
+    // Attendre que auth.currentUser soit RÉELLEMENT présent (le SDK
+    // peut résoudre signInAnonymously avant d'exposer currentUser).
+    await new Promise((resolve)=>{
+      if(auth.currentUser) return resolve();
+      const unsub = A.onAuthStateChanged(auth,(u)=>{ if(u){ try{unsub();}catch(_){} resolve(); } });
+      setTimeout(()=>{ try{unsub();}catch(_){} resolve(); }, 8000);
+    });
+
+    if(auth.currentUser){
+      try{ await auth.currentUser.getIdToken(true); }catch(e){}
+      window._adminAuthOK = true;
     }
+    window._adminAuth = auth;
   }catch(e){ console.warn('Admin auth bootstrap:', e && e.message); }
   finally{ window._adminAuthReady = true; }
 })();
 async function _adminWaitAuth(){
   let _t=0;
-  while(!window._adminAuthReady && _t<80){
+  while(!window._adminAuthReady && _t<160){
     await new Promise(r=>setTimeout(r,100)); _t++;
   }
 }
@@ -3366,6 +3389,10 @@ async function loadUsers() {
     await _adminWaitAuth();
     const div = document.getElementById('usersList');
     if (!div) return;
+    if (!window._adminAuthOK) {
+        div.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:24px;font-size:13px;">Session Firebase non établie. Rechargez la page (Ctrl+Shift+R) ou reconnectez-vous (DADY).</div>';
+        return;
+    }
     div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;">Chargement...</div>';
     try {
         const snap  = await window._getDocs(window._collection(window._db,'anac_users'));
