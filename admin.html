@@ -5877,6 +5877,16 @@ window._secSwitchTab = function(name) {
 async function _secLoadUsers() {
   const list = document.getElementById('secUsersList');
   if (!list) return;
+  // Attendre que la session Firebase soit réellement établie AVANT
+  // de lire anac_users (sinon "Missing or insufficient permissions").
+  try { if (typeof _adminWaitAuth === 'function') await _adminWaitAuth(); } catch(e) {}
+  // Attendre aussi que l'app 'anac-auth' (utilisée par listUsers) ait
+  // une session : on patiente jusqu'à 8 s que ANAC_AUTH soit prêt.
+  let _w = 0;
+  while (_w < 80 && !(window.ANAC_AUTH && window.ANAC_AUTH.getSession && window.ANAC_AUTH.getSession())) {
+    await new Promise(r => setTimeout(r, 100)); _w++;
+  }
+  list.innerHTML = '<div style="text-align:center;color:#64748b;padding:30px;font-size:13px;">Chargement...</div>';
   try {
     const allUsers = await listUsers();
     // Filtrer DADY (compte de secours qui ne doit pas apparaître)
@@ -5915,7 +5925,13 @@ async function _secLoadUsers() {
     html += '</div>';
     list.innerHTML = html;
   } catch(e) {
-    list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur: ' + e.message + '</div>';
+    const msg = (e && e.message) || String(e);
+    const isPerm = /insufficient|permission|PERMISSION_DENIED/i.test(msg);
+    list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;font-size:13px;">'
+      + (isPerm
+          ? 'Session non encore active. Patientez 5 s puis recliquez sur « Sécurité &amp; Utilisateurs », ou déconnectez-vous et reconnectez-vous (DADY).'
+          : 'Erreur: ' + msg)
+      + '</div>';
   }
 }
 
