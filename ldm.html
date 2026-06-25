@@ -1316,6 +1316,103 @@ let autoOn      = false;
 let timer       = null;
 
 // ── ANTI-DUPLICATE ──
+// ─────────────────────────────────────────────────────────────
+//  DÉDOUBLONNAGE + ENRICHISSEMENT DEPUIS flight_numbers
+//  Règles demandées :
+//   • Un vol = (date + numéro de vol). Plusieurs emails pour le même
+//     vol → une seule ligne.
+//   • Si plusieurs emails du même vol : garder celui qui a des PAX ;
+//     sinon le plus récent.
+//   • Départ / arrivée (et compagnie/escale) déduits du numéro de vol
+//     via la liste flight_numbers (prioritaire sur ce que dit l'email).
+// ─────────────────────────────────────────────────────────────
+
+// Cache : numéro de vol normalisé → { company, from, to, stopover, type }
+let _flightNumMap = null;
+
+function _normFN(s) {
+  return (s || '').toUpperCase().replace(/[-\s.]/g, '');
+}
+
+async function _loadFlightNumMap() {
+  if (_flightNumMap) return _flightNumMap;
+  _flightNumMap = {};
+  try {
+    await _ldmWaitAuth();
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a => a.name === 'anac-auth') || getApps()[0];
+    const db  = getFirestore(app);
+    const snap = await getDocs(collection(db, 'flight_numbers'));
+    snap.forEach(d => {
+      const x = d.data();
+      const key = _normFN(x.number || x.flightNumber || '');
+      if (!key) return;
+      _flightNumMap[key] = {
+        company:  x.company  || '',
+        from:     (x.from     || '').toUpperCase(),
+        to:       (x.to       || '').toUpperCase(),
+        stopover: (x.stopover || '').toUpperCase(),
+        type:     x.type     || ''
+      };
+    });
+  } catch (e) { console.warn('Chargement flight_numbers (dédup):', e && e.message); }
+  return _flightNumMap;
+}
+
+// Applique : regroupement par (date+numéro), choix de la meilleure
+// version (PAX prioritaire), et enrichissement du trajet.
+async function dedupAndEnrich(list) {
+  const map = await _loadFlightNumMap();
+  const groups = new Map();   // clé "FN|date" → email choisi
+
+  for (const em of list) {
+    const p = em.parsed || {};
+    const fn = _normFN(p.flightNumber);
+    const dt = (p.date || '').trim();
+    if (!fn || !dt) {
+      // Pas de clé fiable : on garde tel quel sous une clé unique.
+      groups.set('NOKEY|' + Math.random(), em);
+      continue;
+    }
+    const key = fn + '|' + dt;
+    const prev = groups.get(key);
+    if (!prev) { groups.set(key, em); continue; }
+
+    // Doublon : choisir la meilleure version.
+    const pPrev = prev.parsed || {};
+    const paxNew  = Number(p.totalPax || 0)   > 0;
+    const paxPrev = Number(pPrev.totalPax || 0) > 0;
+
+    let keep;
+    if (paxNew && !paxPrev)      keep = em;     // le nouveau a les PAX
+    else if (!paxNew && paxPrev) keep = prev;   // l'ancien a les PAX
+    else {
+      // Les deux ont (ou n'ont pas) les PAX → garder le plus récent.
+      const tNew  = Number(em._ts   || 0);
+      const tPrev = Number(prev._ts || 0);
+      keep = (tNew >= tPrev) ? em : prev;
+    }
+    groups.set(key, keep);
+  }
+
+  // Enrichir chaque vol retenu avec le trajet de flight_numbers.
+  const result = [...groups.values()];
+  for (const em of result) {
+    const p = em.parsed || (em.parsed = {});
+    const info = map[_normFN(p.flightNumber)];
+    if (info) {
+      if (info.from)     p.from        = info.from;
+      if (info.to)       p.to          = info.to;
+      if (info.company)  p.company     = info.company;
+      if (info.stopover) p.stopover    = info.stopover;
+      if (info.type && !p.type) p.type = info.type;
+      p._routeFromList = true;   // marqueur : trajet déduit de la liste
+    }
+  }
+  return result;
+}
+
 // fingerprint = flightNumber|date|registration
 function makeFP(p) {
   return [
@@ -1426,54 +1523,12 @@ function saveImported() { /* Firebase est la source de vérité, localStorage ig
 
 // ── GOOGLE SIGN IN ──
 function signIn() {
-  if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-    toast('❌ Google Identity non chargé — rechargez la page','err');
-    return;
-  }
   const client = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
-    // 'consent' force Google à RÉ-AFFICHER l'écran de consentement à chaque
-    // connexion : c'est là que l'utilisateur doit COCHER la case
-    // « Consulter vos e-mails ». Sans ça, un ancien jeton sans le scope
-    // Gmail est réutilisé silencieusement → « Aucun email trouvé ».
-    prompt: 'consent',
     callback: (resp) => {
-      if (resp.error) {
-        console.error('OAuth error:', resp);
-        toast('❌ Erreur connexion: ' + (resp.error_description || resp.error), 'err');
-        setStatus('idle', 'Connexion Gmail refusée : ' + resp.error);
-        return;
-      }
+      if (resp.error) { toast('❌ Erreur connexion: '+resp.error,'err'); return; }
       accessToken = resp.access_token;
-
-      // ── VÉRIFICATION DU SCOPE RÉELLEMENT ACCORDÉ ──
-      // Le jeton peut être délivré SANS le scope Gmail si l'utilisateur
-      // n'a pas coché la case. On le détecte ici au lieu de découvrir
-      // l'échec plus tard sous la forme trompeuse « Aucun email trouvé ».
-      let scopeOK = true;
-      try {
-        if (google.accounts.oauth2.hasGrantedAllScopes) {
-          scopeOK = google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPES);
-        } else if (resp.scope) {
-          scopeOK = resp.scope.split(/\s+/).includes(SCOPES);
-        }
-      } catch (e) { console.warn('Scope check failed:', e); }
-
-      console.log('OAuth token reçu. Scopes accordés :', resp.scope || '(non communiqué)');
-
-      if (!scopeOK) {
-        accessToken = null;
-        document.getElementById('readBtn').disabled = true;
-        document.getElementById('authDot').className = 'dot err';
-        document.getElementById('authTxt').textContent = 'Permission Gmail refusée';
-        document.getElementById('authActions').innerHTML =
-          `<button class="btn btn-gold" onclick="signIn()">🔐 Reconnecter mon Gmail</button>`;
-        setStatus('idle', 'Permission « Consulter vos e-mails » NON accordée');
-        toast('⚠️ Vous devez COCHER la case « Consulter vos e-mails » sur l\'écran Google. Reconnectez-vous.', 'err');
-        return;
-      }
-
       onSignedIn();
     }
   });
@@ -1513,42 +1568,26 @@ async function readEmails() {
   setStatus('loading','Recherche des emails LDM/MVT...');
 
   try {
-    // Recherche élargie : emails récents ET anciens contenant LDM ou MVT,
+    // Recherche élargie : emails récents (30 j) contenant LDM ou MVT,
     // lus OU non lus. Le filtre isLDMorMVT() affine ensuite.
     // On lance plusieurs requêtes pour maximiser les résultats.
     const queries = [
-      'is:unread (LDM OR MVT)',
-      'in:inbox (LDM OR MVT)',
       'newer_than:30d (LDM OR MVT)',
-      'subject:(LDM OR MVT)',
-      '(LDM OR MVT)'              // filet large : pas de filtre de date
+      'newer_than:30d subject:(LDM OR MVT)',
+      'in:inbox (LDM OR MVT)',
+      'is:unread (LDM OR MVT)'
     ];
 
-    const seenIds   = new Set();
+    const seenIds = new Set();
     let allMessages = [];
-    let okCount     = 0;          // requêtes ayant abouti (réponse valide)
-    let lastApiErr  = null;       // dernière erreur API rencontrée
-
     for (const qstr of queries) {
       try {
         const query = encodeURIComponent(qstr);
-        const url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`;
-        const r = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const r = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
         const d = await r.json();
-
-        // ── DÉTECTION EXPLICITE DES ERREURS API ──
-        if (!r.ok || d.error) {
-          const err = d.error || { code: r.status, message: r.statusText, status: 'HTTP_' + r.status };
-          lastApiErr = err;
-          console.error('Gmail API ERREUR pour la requête «' + qstr + '» :',
-            JSON.stringify(d, null, 2));
-          continue;   // requête en échec : on n'incrémente PAS okCount
-        }
-
-        okCount++;
-        console.log('Gmail OK «' + qstr + '» →',
-          (d.messages ? d.messages.length : 0), 'message(s)');
-
         if (d.messages) {
           for (const m of d.messages) {
             if (!seenIds.has(m.id)) {
@@ -1557,35 +1596,7 @@ async function readEmails() {
             }
           }
         }
-      } catch(qe) {
-        lastApiErr = { code: 0, message: (qe && qe.message) || 'erreur réseau', status: 'NETWORK' };
-        console.warn('Query échouée (réseau):', qstr, qe && qe.message);
-      }
-    }
-
-    // Si AUCUNE requête n'a abouti → ce n'est PAS « aucun email »,
-    // c'est une vraie erreur (scope, API désactivée, jeton expiré…).
-    if (okCount === 0 && lastApiErr) {
-      const code = lastApiErr.code || '?';
-      const st   = lastApiErr.status || '';
-      const msg  = lastApiErr.message || 'erreur inconnue';
-      let conseil = '';
-      if (code === 403 && /scope|permission|insufficient/i.test(msg + ' ' + st)) {
-        conseil = ' → Reconnectez Gmail et COCHEZ la case « Consulter vos e-mails ».';
-      } else if (code === 403 && /disabled|accessNotConfigured|SERVICE_DISABLED/i.test(msg + ' ' + st)) {
-        conseil = ' → Activez l\'API Gmail dans Google Cloud Console (projet 906668222910).';
-      } else if (code === 401) {
-        conseil = ' → Jeton expiré : reconnectez votre Gmail.';
-      } else if (code === 400 && /API key|referer|referrer/i.test(msg)) {
-        conseil = ' → Restriction de référent de la clé API : vérifiez sgv-anac.com.';
-      }
-      emails = [];
-      renderEmails();
-      updateStats();
-      setStatus('idle', `Erreur Gmail ${code} : ${msg}${conseil}`);
-      toast(`❌ Gmail ${code} — ${st}.${conseil}`, 'err');
-      console.error('Échec total Gmail. Dernière erreur :', JSON.stringify(lastApiErr, null, 2));
-      return;
+      } catch(qe) { console.warn('Query failed:', qstr, qe && qe.message); }
     }
 
     const listData = { messages: allMessages };
@@ -1594,8 +1605,8 @@ async function readEmails() {
       emails = [];
       renderEmails();
       updateStats();
-      setStatus('active','Aucun email LDM/MVT trouvé (l\'API a répondu, 0 résultat)');
-      toast('📭 Aucun email LDM/MVT dans la boîte','warn');
+      setStatus('active','Aucun email LDM/MVT trouvé dans les 30 derniers jours');
+      toast('📭 Aucun email trouvé','warn');
       return;
     }
 
@@ -1611,6 +1622,18 @@ async function readEmails() {
       .filter(Boolean)
       .filter(em => isLDMorMVT(em))
       .map(em => parseLDM(em));
+
+    // ── Dédoublonnage (1 ligne par vol = date+numéro), choix de la
+    //    version avec PAX, et enrichissement du trajet depuis la
+    //    liste des numéros de vol. ──
+    const beforeCount = emails.length;
+    try {
+      emails = await dedupAndEnrich(emails);
+      const removed = beforeCount - emails.length;
+      if (removed > 0) {
+        console.log(`Dédoublonnage : ${removed} email(s) en double regroupé(s).`);
+      }
+    } catch(e) { console.warn('dedupAndEnrich:', e && e.message); }
 
     // Préparer les fingerprints
     emails.forEach(em => {
@@ -1649,16 +1672,8 @@ async function fetchEmail(id) {
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-    const d = await r.json();
-    if (!r.ok || d.error) {
-      console.error('fetchEmail(' + id + ') erreur :', JSON.stringify(d.error || r.status));
-      return null;
-    }
-    return d;
-  } catch(e) {
-    console.error('fetchEmail(' + id + ') réseau :', e && e.message);
-    return null;
-  }
+    return await r.json();
+  } catch { return null; }
 }
 
 function isLDMorMVT(em) {
@@ -1667,31 +1682,6 @@ function isLDMorMVT(em) {
   const text    = (subject + ' ' + body).toUpperCase();
   return text.includes('LDM') || text.includes('MVT');
 }
-
-// ── DIAGNOSTIC CONSOLE (F12) ──
-// À coller dans la console après « Connecter mon Gmail » :  gmailDiag()
-// Affiche la réponse BRUTE de l'API Gmail pour identifier l'erreur exacte.
-window.gmailDiag = async function(q) {
-  if (!accessToken) { console.error('❌ accessToken absent — connectez Gmail d\'abord.'); return; }
-  const query = encodeURIComponent(q || '(LDM OR MVT)');
-  try {
-    const r = await fetch(
-      'https://gmail.googleapis.com/gmail/v1/users/me/messages?q=' + query + '&maxResults=10',
-      { headers: { Authorization: 'Bearer ' + accessToken } }
-    );
-    const d = await r.json();
-    console.log('HTTP', r.status, r.ok ? '(OK)' : '(ÉCHEC)');
-    console.log(JSON.stringify(d, null, 2));
-    if (d.error) {
-      console.warn('→ Erreur :', d.error.code, d.error.status, '-', d.error.message);
-      if (d.error.code === 403) console.warn('→ Cause probable : scope Gmail non accordé OU API Gmail désactivée.');
-    } else {
-      console.log('→ ' + (d.messages ? d.messages.length : 0) + ' message(s) renvoyé(s) par Gmail.');
-    }
-    return d;
-  } catch(e) { console.error('Erreur réseau :', e); }
-};
-console.log('💡 Diagnostic disponible : tapez  gmailDiag()  dans la console après connexion Gmail.');
 
 function getHeader(em, name) {
   const h = em.payload && em.payload.headers;
@@ -1737,7 +1727,9 @@ function parseLDM(em) {
       }
   }
   const p = extractFields(text, dateReceived);
-  return { id: em.id, type, subject, from, date: dateReceived, rawText: text.trim(), parsed: p };
+  // _ts : date interne Gmail (ms) pour départager les doublons (plus récent).
+  const _ts = Number(em.internalDate || 0) || (Date.parse(dateHdr) || 0);
+  return { id: em.id, type, subject, from, date: dateReceived, rawText: text.trim(), parsed: p, _ts };
 }
 
 function extractFields(text, dateReceived) {
