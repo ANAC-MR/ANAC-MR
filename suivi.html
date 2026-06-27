@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi Hebdomadaire du Trafic — ANAC Mauritanie</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#07101F;--card:#0F1B2D;--card2:#0C1828;
+  --border:rgba(255,255,255,0.06);--gold:#D4AF37;
+  --text:#E2EAF4;--dim:#4E6A85;--dim2:#2A4060;
+  --green:#2DD4A0;--blue:#4A9EFF;--ma:#FF6B35;--red:#fc8181;
+  --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(212,175,55,0.06) 0%,transparent 55%);}
+header{position:sticky;top:0;z-index:300;background:rgba(7,16,31,0.96);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);padding:0 28px;height:54px;
+  display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-icon{font-size:20px;}
+.logo-name{font-size:14px;font-weight:700;color:var(--text);}
+.logo-sub{font-size:10px;color:var(--dim);}
+.wrap{max-width:1280px;margin:0 auto;padding:22px 22px 60px;position:relative;z-index:1;}
+
+/* Tabs */
+.tabs-row{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.tab-btn{padding:10px 20px;border:none;border-bottom:2px solid transparent;background:transparent;
+  color:var(--dim);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s;}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--gold);}
+.tab-btn:hover:not(.active){color:var(--text);}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;
+  background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px 18px;}
+.tb-group{display:flex;align-items:center;gap:8px;}
+.tb-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;}
+input[type=week],input[type=date],input[type=text],input[type=number],select{
+  background:#0a1626;border:1px solid var(--border);border-radius:8px;color:var(--text);
+  padding:8px 11px;font-size:13px;font-family:var(--font);outline:none;}
+input:focus,select:focus{border-color:var(--gold);}
+.btn{padding:9px 16px;border-radius:9px;border:1px solid var(--border);background:#0a1626;color:var(--text);
+  font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:7px;}
+.btn:hover{border-color:var(--gold);}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#9c7a18);color:#08111f;border:none;}
+.btn-gold:hover{filter:brightness(1.08);}
+.spacer{flex:1;}
+
+/* Report header */
+.rep-head{text-align:center;margin-bottom:14px;}
+.rep-title{font-size:18px;font-weight:800;color:var(--gold);letter-spacing:.02em;}
+.rep-sub{font-size:13px;color:var(--text);margin-top:6px;}
+.rep-week{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:3px;}
+
+/* Table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:var(--card2);}
+table{border-collapse:collapse;width:100%;min-width:980px;font-size:12.5px;}
+thead th{background:#0c1d33;color:var(--gold);font-weight:700;padding:11px 9px;text-align:center;
+  border:1px solid var(--border);position:sticky;top:0;font-size:11.5px;text-transform:uppercase;letter-spacing:.02em;}
+tbody td{padding:8px 9px;border:1px solid var(--border);text-align:center;color:var(--text);vertical-align:middle;}
+.day-cell{font-weight:700;color:var(--gold);background:rgba(212,175,55,0.04);white-space:nowrap;}
+.co-cell{font-weight:700;color:var(--blue);white-space:nowrap;}
+.fn-cell{font-family:var(--mono);font-weight:600;}
+.route-cell{font-family:var(--mono);color:#bcd2ea;}
+.type-cell{font-size:11.5px;color:#c7d6e8;text-align:left;}
+.cap-empty{color:var(--red);font-style:italic;font-size:11px;}
+.rate-cell{font-weight:700;font-family:var(--mono);}
+.rate-hi{color:var(--green);} .rate-mid{color:var(--gold);} .rate-lo{color:var(--red);}
+tbody tr:hover td{background:rgba(255,255,255,0.02);}
+.empty-row td{padding:40px;color:var(--dim);font-style:italic;}
+
+/* Params page */
+.panel{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px;}
+.panel h3{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;}
+.ac-list table{min-width:560px;}
+.ac-list td{text-align:left;}
+.del-btn{background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.3);
+  border-radius:7px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:var(--font);font-weight:600;}
+.del-btn:hover{background:rgba(239,68,68,0.22);color:#fff;}
+.toast{position:fixed;bottom:20px;right:20px;z-index:9999;padding:13px 20px;border-radius:11px;
+  font-size:13px;font-weight:600;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,.4);opacity:0;transform:translateX(110%);transition:all .3s;}
+.toast.show{opacity:1;transform:translateX(0);}
+.toast.ok{background:linear-gradient(135deg,#059669,#10b981);}
+.toast.err{background:linear-gradient(135deg,#dc2626,#ef4444);}
+.toast.warn{background:linear-gradient(135deg,#d97706,#f59e0b);}
+.loading{text-align:center;padding:40px;color:var(--dim);}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;}
+@keyframes sp{to{transform:rotate(360deg)}}
+.hidden{display:none;}
+.summary{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;}
+.sm-card{background:var(--card2);border:1px solid var(--border);border-radius:11px;padding:12px 18px;text-align:center;flex:1;min-width:120px;}
+.sm-v{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);}
+.sm-l{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+</style>
+</head>
+<body>
+<!-- ANAC_AUTH_GUARD_INJECTED -->
+<script type="module">
+  import { requireAuth } from './auth.js';
+  if (!requireAuth('view_flights')) { /* requireAuth gère redirection/refus */ }
+</script>
+
+<header>
+  <a href="index.html" class="logo">
+    <span class="logo-icon">✈️</span>
+    <div><div class="logo-name">ANAC Mauritanie</div><div class="logo-sub">Suivi Hebdomadaire du Trafic</div></div>
+  </a>
+  <button class="btn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="padding:7px 14px;">🚪 Déconnexion</button>
+</header>
+
+<div class="wrap">
+  <div class="tabs-row">
+    <button class="tab-btn active" id="tab-suivi" onclick="showTab('suivi')">📊 Suivi Hebdomadaire</button>
+    <button class="tab-btn" id="tab-params" onclick="showTab('params')">⚙️ Immatriculations</button>
+  </div>
+
+  <!-- ══════════ ONGLET SUIVI ══════════ -->
+  <div id="page-suivi">
+    <div class="toolbar">
+      <div class="tb-group">
+        <span class="tb-label">Semaine</span>
+        <input type="week" id="weekPicker">
+      </div>
+      <div class="tb-group">
+        <button class="btn" onclick="prevWeek()">← Préc.</button>
+        <button class="btn" onclick="thisWeek()">Aujourd'hui</button>
+        <button class="btn" onclick="nextWeek()">Suiv. →</button>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-gold" id="exportBtn" onclick="exportExcel()">⬇️ Télécharger Excel</button>
+    </div>
+
+    <div class="rep-head">
+      <div class="rep-title">SUIVI HEBDOMADAIRE DU TRAFIC AÉRIEN</div>
+      <div class="rep-sub">Aéroport Oumtounsy — Nouakchott</div>
+      <div class="rep-week" id="weekLabel">—</div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table id="suiviTable">
+        <thead>
+          <tr>
+            <th>Jour</th><th>Compagnie</th><th>N° de Vol / Horaire</th><th>Prove-Destination</th>
+            <th>Type d'Appareil</th><th>Capacité</th><th>Nbre de Passagers</th>
+            <th>Taux de remplissage</th><th>Observat.</th>
+          </tr>
+        </thead>
+        <tbody id="suiviBody">
+          <tr class="empty-row"><td colspan="9">Chargement…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <!-- ══════════ ONGLET PARAMÈTRES IMMATRICULATIONS ══════════ -->
+  <div id="page-params" class="hidden">
+    <div class="panel">
+      <h3>➕ Ajouter / Modifier une immatriculation</h3>
+      <div class="form-grid">
+        <div class="fg">
+          <label>Immatriculation</label>
+          <input type="text" id="acReg" placeholder="ex : 5T-CLJ" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="fg">
+          <label>Type d'appareil</label>
+          <input type="text" id="acType" placeholder="ex : Boeing 737 MAX 8">
+        </div>
+        <div class="fg">
+          <label>Capacité (sièges)</label>
+          <input type="number" id="acCap" placeholder="ex : 160" min="1">
+        </div>
+        <div class="fg">
+          <button class="btn btn-gold" onclick="saveAircraft()">💾 Enregistrer</button>
+        </div>
+      </div>
+      <input type="hidden" id="acEditId">
+    </div>
+
+    <div class="panel ac-list">
+      <h3>🛩️ Immatriculations enregistrées (<span id="acCount">0</span>)</h3>
+      <div id="acListWrap"><div class="loading">Chargement…</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const FB={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",
+  projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",
+  messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
+const app=getApps().find(a=>a.name==='suivi')||initializeApp(FB,'suivi');
+const db=getFirestore(app);
+
+// ── Authentification ──
+async function ensureAuth(){
+  let _t=0;
+  while(!(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) && _t<60){
+    await new Promise(r=>setTimeout(r,100)); _t++;
+  }
+  if(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed){
+    try{ await window.ANAC_AUTH.ensureAuthed(app); }catch(e){ console.warn('ensureAuthed:',e&&e.message); }
+  }
+}
+
+// ── État ──
+let _aircraft = {};   // REG normalisée → { reg, type, capacity }
+let _weekFlights = []; // vols de la semaine, enrichis
+const DAYS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+
+// ── Utilitaires ──
+function toast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+type;
+  setTimeout(()=>t.className='toast',3200);
+}
+function normReg(s){ return (s||'').toUpperCase().replace(/[\s.\-]/g,''); }
+function pad(n){ return String(n).padStart(2,'0'); }
+
+// ISO week helpers (semaine Lundi→Dimanche)
+function isoWeekId(d){
+  // renvoie "YYYY-Www" pour input[type=week]
+  const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const day=(dt.getUTCDay()+6)%7; // 0=lundi
+  dt.setUTCDate(dt.getUTCDate()-day+3); // jeudi de la semaine
+  const firstThu=new Date(Date.UTC(dt.getUTCFullYear(),0,4));
+  const fday=(firstThu.getUTCDay()+6)%7;
+  firstThu.setUTCDate(firstThu.getUTCDate()-fday+3);
+  const week=1+Math.round((dt-firstThu)/(7*24*3600*1000));
+  return dt.getUTCFullYear()+'-W'+pad(week);
+}
+function mondayOfWeekId(weekId){
+  // "YYYY-Www" → date du lundi (local)
+  const m=/^(\d{4})-W(\d{2})$/.exec(weekId);
+  if(!m) return null;
+  const year=+m[1], week=+m[2];
+  const jan4=new Date(year,0,4);
+  const jan4Day=(jan4.getDay()+6)%7;
+  const monday=new Date(jan4); monday.setDate(jan4.getDate()-jan4Day+(week-1)*7);
+  return monday;
+}
+function fmtDateLocal(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function fmtDMY(d){ return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
+
+// ── Chargement des immatriculations ──
+async function loadAircraft(){
+  _aircraft={};
+  try{
+    const snap=await getDocs(collection(db,'aircraft'));
+    snap.forEach(d=>{
+      const x=d.data();
+      const key=normReg(x.reg||x.registration||'');
+      if(!key) return;
+      _aircraft[key]={ id:d.id, reg:x.reg||x.registration||'', type:x.type||'', capacity:(x.capacity!=null?Number(x.capacity):null) };
+    });
+  }catch(e){ console.warn('loadAircraft:',e&&e.message); }
+}
+
+// ── Chargement des vols de la semaine ──
+async function loadWeek(weekId){
+  const body=document.getElementById('suiviBody');
+  body.innerHTML='<tr class="empty-row"><td colspan="9"><span class="spin"></span> Chargement des vols…</td></tr>';
+  const monday=mondayOfWeekId(weekId);
+  if(!monday){ body.innerHTML='<tr class="empty-row"><td colspan="9">Semaine invalide</td></tr>'; return; }
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+  const fromStr=fmtDateLocal(monday), toStr=fmtDateLocal(sunday);
+  document.getElementById('weekLabel').textContent='Du '+fmtDMY(monday)+' au '+fmtDMY(sunday);
+
+  let flights=[];
+  try{
+    // Requête par plage de dates (champ "date" en YYYY-MM-DD)
+    const q=query(collection(db,'flights'), where('date','>=',fromStr), where('date','<=',toStr));
+    const snap=await getDocs(q);
+    snap.forEach(d=>{
+      if(d.id.startsWith('cfg-')) return;
+      const x=d.data();
+      if(!x.date) return;
+      flights.push(x);
+    });
+  }catch(e){
+    console.warn('loadWeek query:',e&&e.message);
+    // Repli : tout charger puis filtrer (si index manquant)
+    try{
+      const snap=await getDocs(collection(db,'flights'));
+      snap.forEach(d=>{
+        if(d.id.startsWith('cfg-')) return;
+        const x=d.data();
+        if(x.date && x.date>=fromStr && x.date<=toStr) flights.push(x);
+      });
+    }catch(e2){ console.error(e2); }
+  }
+
+  // Enrichir + trier
+  flights=flights.map(f=>enrich(f)).sort(sortFlights);
+  _weekFlights=flights;
+  renderTable(flights);
+  renderSummary(flights);
+}
+
+function enrich(f){
+  const reg=normReg(f.registration||f.immat||'');
+  const ac=_aircraft[reg]||null;
+  const date=f.date||'';
+  const dObj=date?new Date(date+'T00:00:00'):null;
+  const dayIdx=dObj?((dObj.getDay()+6)%7):99;
+  // Prove-Destination : from-(escale)-to
+  let route='';
+  const from=(f.from||'').toUpperCase(), to=(f.to||'').toUpperCase();
+  const stop=(f.hasStopover&&f.stopover)?(f.stopover||'').toUpperCase():'';
+  if(from||to) route = stop ? `${from}-${stop}-${to}` : `${from}-${to}`;
+  // Type d'appareil affiché : "Type (IMMAT)"
+  const rawReg=(f.registration||f.immat||'').toUpperCase();
+  let typeDisp='';
+  if(ac&&ac.type) typeDisp = rawReg ? `${ac.type} (${rawReg})` : ac.type;
+  else if(rawReg) typeDisp = `(${rawReg})`;
+  const pax=(f.passengers!=null&&f.passengers!=='')?Number(f.passengers):null;
+  const cap=(ac&&ac.capacity!=null)?ac.capacity:null;
+  return {
+    date, dayIdx, dayName:DAYS[dayIdx]||'',
+    company:(f.company||'').toUpperCase(),
+    flightNumber:(f.flightNumber||'').toUpperCase(),
+    route, typeDisp,
+    capacity:cap, passengers:pax,
+    rate:(cap&&pax!=null&&cap>0)?(pax/cap):null,
+    obs:f.observation||f.obs||''
+  };
+}
+
+function sortFlights(a,b){
+  if(a.dayIdx!==b.dayIdx) return a.dayIdx-b.dayIdx;
+  if(a.company!==b.company) return a.company.localeCompare(b.company);
+  return a.flightNumber.localeCompare(b.flightNumber);
+}
+
+function rateClass(r){ if(r==null) return ''; if(r>=0.75) return 'rate-hi'; if(r>=0.5) return 'rate-mid'; return 'rate-lo'; }
+
+function renderTable(flights){
+  const body=document.getElementById('suiviBody');
+  if(!flights.length){
+    body.innerHTML='<tr class="empty-row"><td colspan="9">Aucun vol enregistré pour cette semaine.</td></tr>';
+    return;
+  }
+  let html='';
+  let lastDay=null, lastCo=null;
+  for(const f of flights){
+    const showDay = f.dayName!==lastDay;
+    const showCo  = showDay || f.company!==lastCo;
+    lastDay=f.dayName; lastCo=f.company;
+    const capCell = f.capacity!=null ? f.capacity : '<span class="cap-empty">—</span>';
+    const rateCell = f.rate!=null ? `<span class="rate-cell ${rateClass(f.rate)}">${(f.rate*100).toFixed(1)}%</span>` : '—';
+    const paxCell = f.passengers!=null ? f.passengers : '—';
+    html+=`<tr>
+      <td class="day-cell">${showDay?esc(f.dayName):''}</td>
+      <td class="co-cell">${showCo?esc(f.company):''}</td>
+      <td class="fn-cell">${esc(f.flightNumber)}</td>
+      <td class="route-cell">${esc(f.route||'—')}</td>
+      <td class="type-cell">${esc(f.typeDisp||'—')}</td>
+      <td>${capCell}</td>
+      <td>${paxCell}</td>
+      <td>${rateCell}</td>
+      <td>${esc(f.obs||'')}</td>
+    </tr>`;
+  }
+  body.innerHTML=html;
+}
+
+function renderSummary(flights){
+  const div=document.getElementById('summary');
+  const nbVols=flights.length;
+  const totalPax=flights.reduce((a,f)=>a+(f.passengers||0),0);
+  const withCap=flights.filter(f=>f.rate!=null);
+  const avgRate=withCap.length?(withCap.reduce((a,f)=>a+f.rate,0)/withCap.length):null;
+  const noCap=flights.filter(f=>f.capacity==null).length;
+  div.innerHTML=`
+    <div class="sm-card"><div class="sm-v">${nbVols}</div><div class="sm-l">Vols</div></div>
+    <div class="sm-card"><div class="sm-v">${totalPax}</div><div class="sm-l">Passagers</div></div>
+    <div class="sm-card"><div class="sm-v">${avgRate!=null?(avgRate*100).toFixed(1)+'%':'—'}</div><div class="sm-l">Taux moyen</div></div>
+    <div class="sm-card"><div class="sm-v">${noCap}</div><div class="sm-l">Immat. inconnues</div></div>`;
+}
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ════ EXPORT EXCEL (SheetJS) ════
+async function exportExcel(){
+  const btn=document.getElementById('exportBtn');
+  btn.disabled=true; const old=btn.innerHTML; btn.innerHTML='<span class="spin"></span> Export…';
+  try{
+    if(!window.XLSX){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.onload=res; s.onerror=rej; document.head.appendChild(s);
+      });
+    }
+    const weekId=document.getElementById('weekPicker').value;
+    const monday=mondayOfWeekId(weekId); const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+    const rows=[];
+    rows.push(['SUIVI HEBDOMADAIRE DU TRAFIC AERIEN (Aéroport Oumtounsy)']);
+    rows.push(['Semaine calendaire n° :','','','','Du :  '+fmtDMY(monday)+'   au :  '+fmtDMY(sunday)]);
+    rows.push(['Jour','Compagnie','N° de Vol / Horaire','Prove-Destination','Type d\'Appareil','Capacité','Nbre de Passagers','Taux de remplissage','Observat.']);
+    let lastDay=null,lastCo=null;
+    for(const f of _weekFlights){
+      const showDay=f.dayName!==lastDay; const showCo=showDay||f.company!==lastCo;
+      lastDay=f.dayName; lastCo=f.company;
+      rows.push([
+        showDay?f.dayName:'',
+        showCo?f.company:'',
+        f.flightNumber,
+        f.route||'',
+        f.typeDisp||'',
+        f.capacity!=null?f.capacity:'',
+        f.passengers!=null?f.passengers:'',
+        f.rate!=null?f.rate:'',
+        f.obs||''
+      ]);
+    }
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:10},{wch:14},{wch:18},{wch:20},{wch:30},{wch:9},{wch:16},{wch:18},{wch:12}];
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
+    // Format pourcentage colonne H (index 7)
+    for(let r=3;r<rows.length;r++){
+      const cell=ws[XLSX.utils.encode_cell({r,c:7})];
+      if(cell&&typeof cell.v==='number'){ cell.z='0.0%'; }
+    }
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Suivi');
+    const name='Suivi_Trafic_'+fmtDateLocal(monday)+'_au_'+fmtDateLocal(sunday)+'.xlsx';
+    XLSX.writeFile(wb,name);
+    toast('✅ Fichier Excel téléchargé','ok');
+  }catch(e){ console.error(e); toast('❌ Erreur export : '+(e.message||e),'err'); }
+  finally{ btn.disabled=false; btn.innerHTML=old; }
+}
+
+// ════ PAGE IMMATRICULATIONS ════
+async function renderAircraftList(){
+  const wrap=document.getElementById('acListWrap');
+  const list=Object.values(_aircraft).sort((a,b)=>(a.reg||'').localeCompare(b.reg||''));
+  document.getElementById('acCount').textContent=list.length;
+  if(!list.length){ wrap.innerHTML='<div class="loading">Aucune immatriculation enregistrée.</div>'; return; }
+  let html='<table><thead><tr><th>Immatriculation</th><th>Type d\'appareil</th><th>Capacité</th><th></th></tr></thead><tbody>';
+  for(const a of list){
+    html+=`<tr>
+      <td class="fn-cell">${esc(a.reg)}</td>
+      <td>${esc(a.type||'—')}</td>
+      <td>${a.capacity!=null?a.capacity:'<span class="cap-empty">—</span>'}</td>
+      <td><button class="del-btn" onclick="editAircraft('${a.id}')">✏️</button>
+          <button class="del-btn" onclick="delAircraft('${a.id}','${esc(a.reg)}')">🗑️</button></td>
+    </tr>`;
+  }
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+
+window.saveAircraft=async function(){
+  const reg=(document.getElementById('acReg').value||'').trim().toUpperCase();
+  const type=(document.getElementById('acType').value||'').trim();
+  const capRaw=(document.getElementById('acCap').value||'').trim();
+  const editId=document.getElementById('acEditId').value;
+  if(!reg){ toast('⚠️ Saisissez l\'immatriculation','warn'); return; }
+  const capacity = capRaw==='' ? null : Number(capRaw);
+  const data={ reg, type, capacity, updatedAt:new Date().toISOString() };
+  try{
+    // Doublon (même immat, autre doc)
+    const key=normReg(reg);
+    const existing=Object.values(_aircraft).find(a=>normReg(a.reg)===key && a.id!==editId);
+    if(existing){ toast('❌ Cette immatriculation existe déjà','err'); return; }
+    if(editId){
+      await updateDoc(doc(db,'aircraft',editId),data);
+      toast('✅ Immatriculation mise à jour','ok');
+    }else{
+      await addDoc(collection(db,'aircraft'),data);
+      toast('✅ Immatriculation enregistrée','ok');
+    }
+    document.getElementById('acReg').value='';
+    document.getElementById('acType').value='';
+    document.getElementById('acCap').value='';
+    document.getElementById('acEditId').value='';
+    await loadAircraft(); renderAircraftList();
+  }catch(e){ toast('❌ Erreur : '+(e.message||e),'err'); }
+};
+
+window.editAircraft=function(id){
+  const a=Object.values(_aircraft).find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('acReg').value=a.reg;
+  document.getElementById('acType').value=a.type||'';
+  document.getElementById('acCap').value=a.capacity!=null?a.capacity:'';
+  document.getElementById('acEditId').value=id;
+  document.getElementById('acReg').scrollIntoView({behavior:'smooth',block:'center'});
+};
+
+window.delAircraft=async function(id,reg){
+  if(!confirm('Supprimer l\'immatriculation '+reg+' ?')) return;
+  try{
+    await deleteDoc(doc(db,'aircraft',id));
+    toast('🗑️ Supprimée','ok');
+    await loadAircraft(); renderAircraftList();
+  }catch(e){ toast('❌ Erreur : '+(e.message||e),'err'); }
+};
+
+// ════ NAVIGATION ════
+window.showTab=function(tab){
+  document.getElementById('page-suivi').classList.toggle('hidden',tab!=='suivi');
+  document.getElementById('page-params').classList.toggle('hidden',tab!=='params');
+  document.getElementById('tab-suivi').classList.toggle('active',tab==='suivi');
+  document.getElementById('tab-params').classList.toggle('active',tab==='params');
+  if(tab==='params') renderAircraftList();
+};
+
+window.prevWeek=function(){ shiftWeek(-7); };
+window.nextWeek=function(){ shiftWeek(7); };
+window.thisWeek=function(){ const wp=document.getElementById('weekPicker'); wp.value=isoWeekId(new Date()); reloadWeek(); };
+function shiftWeek(days){
+  const wp=document.getElementById('weekPicker');
+  const monday=mondayOfWeekId(wp.value)||new Date();
+  monday.setDate(monday.getDate()+days);
+  wp.value=isoWeekId(monday);
+  reloadWeek();
+}
+async function reloadWeek(){ await loadWeek(document.getElementById('weekPicker').value); }
+window.exportExcel=exportExcel;
+
+document.getElementById('weekPicker').addEventListener('change',reloadWeek);
+
+// ════ INIT ════
+(async function(){
+  await ensureAuth();
+  await loadAircraft();
+  const wp=document.getElementById('weekPicker');
+  if(!wp.value) wp.value=isoWeekId(new Date());
+  await loadWeek(wp.value);
+})();
+</script>
+</body>
+</html>
