@@ -168,21 +168,21 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
       <div class="form-grid">
         <div class="fg" style="grid-column:1/-1;">
           <label>Immatriculation(s) — séparées par virgule, espace ou retour à la ligne</label>
-          <textarea id="acReg" rows="2" placeholder="ex : 5T-CLJ, 5T-CLE, 5T-CLH" oninput="this.value=this.value.toUpperCase()" style="background:#0a1626;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 11px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;"></textarea>
+          <textarea id="acReg" rows="2" oninput="this.value=this.value.toUpperCase()" style="background:#0a1626;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 11px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;"></textarea>
         </div>
         <div class="fg">
           <label>Type d'appareil</label>
-          <input type="text" id="acType" placeholder="ex : Boeing 737 MAX 8">
+          <input type="text" id="acType">
         </div>
         <div class="fg">
           <label>Capacité (sièges)</label>
-          <input type="number" id="acCap" placeholder="ex : 160" min="1">
+          <input type="number" id="acCap" min="1">
         </div>
         <div class="fg">
           <button class="btn btn-gold" onclick="saveAircraft()">💾 Enregistrer</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--dim);margin-top:8px;">💡 Astuce : vous pouvez coller plusieurs immatriculations d'un coup si elles ont le même type et la même capacité. En modification (✏️), une seule immatriculation est traitée.</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:8px;">💡 Pour un même type d'avion ayant plusieurs immatriculations, saisissez-les toutes dans le champ (ex : une par ligne ou séparées par des virgules) avec le même type et la même capacité — elles seront toutes enregistrées en une fois.</div>
       <input type="hidden" id="acEditId">
     </div>
 
@@ -197,7 +197,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
 
 <script type="module">
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where }
+import { getFirestore, collection, getDocs, getDoc, addDoc, doc, updateDoc, deleteDoc, query, where }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const FB={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",
@@ -270,6 +270,74 @@ async function loadAircraft(){
   }catch(e){ console.warn('loadAircraft:',e&&e.message); }
 }
 
+// ── Table ICAO → IATA (depuis flights/cfg-airports) ──
+let _icaoToIata = {};
+async function loadAirports(){
+  _icaoToIata={};
+  try{
+    const snap=await getDoc(doc(db,'flights','cfg-airports'));
+    if(snap.exists()){
+      const list=(snap.data().list)||[];
+      list.forEach(a=>{
+        const icao=(a.icao||'').toUpperCase(), iata=(a.iata||'').toUpperCase();
+        if(icao&&iata) _icaoToIata[icao]=iata;
+        if(iata) _icaoToIata[iata]=iata; // si déjà en IATA, on garde
+      });
+    }
+  }catch(e){ console.warn('loadAirports:',e&&e.message); }
+}
+function toIATA(code){
+  const c=(code||'').toUpperCase().trim();
+  if(!c) return '';
+  return _icaoToIata[c]||c; // si pas trouvé, on garde le code d'origine
+}
+
+// ── Horaires (collection schedules) : numéro de vol → horaire ──
+let _schedByVol = {};   // "AH4014" → [ {dateFrom,dateTo,routing,days,company} ]
+async function loadSchedules(){
+  _schedByVol={};
+  try{
+    const snap=await getDocs(collection(db,'schedules'));
+    snap.forEach(d=>{
+      const x=d.data();
+      const vol=normFN(x.vol||'');
+      if(!vol) return;
+      (_schedByVol[vol]=_schedByVol[vol]||[]).push({
+        dateFrom:x.dateFrom||'', dateTo:x.dateTo||'', routing:x.routing||'',
+        days:x.days||'', company:x.company||''
+      });
+    });
+  }catch(e){ console.warn('loadSchedules:',e&&e.message); }
+}
+function normFN(s){ return (s||'').toUpperCase().replace(/[-\s.]/g,''); }
+
+// Extrait l'heure de départ et d'arrivée depuis un routing.
+// Formats : "GQNO 1000 - 1500 LFPG +1"  ou  "GQNO 1000 - STOP 1200 1300 - 1500 LFPG +1"
+function parseRoutingTimes(routing){
+  if(!routing) return null;
+  const times=routing.match(/\b(\d{4})\b/g);
+  if(!times||!times.length) return null;
+  const dep=times[0];                 // 1er = heure départ
+  const arr=times[times.length-1];    // dernier = heure arrivée
+  const fmt=h=> h&&h.length===4 ? h.slice(0,2)+':'+h.slice(2) : h;
+  return { dep:fmt(dep), arr:fmt(arr) };
+}
+
+// Trouve l'horaire d'un vol pour une date donnée.
+function scheduleFor(flightNumber, dateStr){
+  const arr=_schedByVol[normFN(flightNumber)];
+  if(!arr||!arr.length) return null;
+  // Cherche un horaire dont la plage de dates couvre la date du vol
+  let match=arr.find(s=>{
+    if(!s.dateFrom&&!s.dateTo) return true;
+    const okFrom=!s.dateFrom||dateStr>=s.dateFrom;
+    const okTo  =!s.dateTo  ||dateStr<=s.dateTo;
+    return okFrom&&okTo;
+  });
+  if(!match) match=arr[0]; // sinon le premier dispo
+  return parseRoutingTimes(match.routing);
+}
+
 // ── Chargement des vols de la semaine ──
 async function loadWeek(weekId){
   const body=document.getElementById('suiviBody');
@@ -317,10 +385,10 @@ function enrich(f){
   const date=f.date||'';
   const dObj=date?new Date(date+'T00:00:00'):null;
   const dayIdx=dObj?((dObj.getDay()+6)%7):99;
-  // Prove-Destination : from-(escale)-to
+  // Prove-Destination en codes IATA
   let route='';
-  const from=(f.from||'').toUpperCase(), to=(f.to||'').toUpperCase();
-  const stop=(f.hasStopover&&f.stopover)?(f.stopover||'').toUpperCase():'';
+  const from=toIATA(f.from), to=toIATA(f.to);
+  const stop=(f.hasStopover&&f.stopover)?toIATA(f.stopover):'';
   if(from||to) route = stop ? `${from}-${stop}-${to}` : `${from}-${to}`;
   // Type d'appareil affiché : "Type (IMMAT)"
   const rawReg=(f.registration||f.immat||'').toUpperCase();
@@ -329,10 +397,18 @@ function enrich(f){
   else if(rawReg) typeDisp = `(${rawReg})`;
   const pax=(f.passengers!=null&&f.passengers!=='')?Number(f.passengers):null;
   const cap=(ac&&ac.capacity!=null)?ac.capacity:null;
+  // N° de vol + horaire (depuis la section Horaires & Vols)
+  const fnum=(f.flightNumber||'').toUpperCase();
+  const sched=scheduleFor(fnum, date);
+  let fnDisplay=fnum;
+  if(sched && (sched.dep||sched.arr)){
+    fnDisplay = `${fnum} (${sched.dep||'--:--'}→${sched.arr||'--:--'})`;
+  }
   return {
     date, dayIdx, dayName:DAYS[dayIdx]||'',
     company:(f.company||'').toUpperCase(),
-    flightNumber:(f.flightNumber||'').toUpperCase(),
+    flightNumber:fnDisplay,
+    flightNumberRaw:fnum,
     route, typeDisp,
     capacity:cap, passengers:pax,
     rate:(cap&&pax!=null&&cap>0)?(pax/cap):null,
@@ -375,7 +451,7 @@ function sortFlights(a,b){
   const am=isMAI(a.company)?0:1, bm=isMAI(b.company)?0:1;
   if(am!==bm) return am-bm;
   if(a.company!==b.company) return a.company.localeCompare(b.company);
-  return a.flightNumber.localeCompare(b.flightNumber);
+  return (a.flightNumberRaw||a.flightNumber).localeCompare(b.flightNumberRaw||b.flightNumber);
 }
 
 function rateClass(r){ if(r==null) return ''; if(r>=0.75) return 'rate-hi'; if(r>=0.5) return 'rate-mid'; return 'rate-lo'; }
@@ -483,7 +559,7 @@ async function exportExcel(){
         f.typeDisp||'',
         f.capacity!=null?f.capacity:'',
         f.passengers!=null?f.passengers:'',
-        f.rate!=null?f.rate:'',
+        '',                            // Taux : rempli par formule Excel
         f.obs||''
       ]);
       meta.push({day:f.dayName, company:f.company, showDay});
@@ -524,9 +600,22 @@ async function exportExcel(){
           // Reste de la ligne : couleur de la compagnie
           st.fill={fgColor:{rgb:'FF'+coColor}};
         }
-        // Taux en pourcentage
-        if(c===7 && typeof ws[ad].v==='number'){ ws[ad].z='0.0%'; }
-        ws[ad].s=st;
+        // Taux de remplissage = formule Excel =Passagers/Capacité (colonne H)
+        if(c===7){
+          const capCell='F'+(r+1);   // colonne F = Capacité
+          const paxCell='G'+(r+1);   // colonne G = Passagers
+          // Formule seulement si capacité ET passagers présents
+          const capVal=ws['F'+(r+1)]?ws['F'+(r+1)].v:'';
+          const paxVal=ws['G'+(r+1)]?ws['G'+(r+1)].v:'';
+          if(capVal!==''&&capVal!=null&&paxVal!==''&&paxVal!=null&&Number(capVal)>0){
+            ws[ad]={t:'n', f:`${paxCell}/${capCell}`, z:'0.0%'};
+          }else{
+            ws[ad]={t:'s', v:''};
+          }
+          ws[ad].s=st;
+        }else{
+          ws[ad].s=st;
+        }
       }
     }
 
@@ -650,7 +739,7 @@ document.getElementById('weekPicker').addEventListener('change',reloadWeek);
 // ════ INIT ════
 (async function(){
   await ensureAuth();
-  await loadAircraft();
+  await Promise.all([ loadAircraft(), loadAirports(), loadSchedules() ]);
   const wp=document.getElementById('weekPicker');
   if(!wp.value) wp.value=isoWeekId(new Date());
   await loadWeek(wp.value);
