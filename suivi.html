@@ -172,6 +172,10 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
           <textarea id="acReg" rows="2" oninput="this.value=this.value.toUpperCase()" style="background:#0a1626;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 11px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;"></textarea>
         </div>
         <div class="fg">
+          <label>Compagnie</label>
+          <select id="acCompany"><option value="">— Choisir —</option></select>
+        </div>
+        <div class="fg">
           <label>Type d'appareil</label>
           <input type="text" id="acType">
         </div>
@@ -260,9 +264,33 @@ async function loadAircraft(){
       const x=d.data();
       const key=normReg(x.reg||x.registration||'');
       if(!key) return;
-      _aircraft[key]={ id:d.id, reg:x.reg||x.registration||'', type:x.type||'', capacity:(x.capacity!=null?Number(x.capacity):null) };
+      _aircraft[key]={ id:d.id, reg:x.reg||x.registration||'', type:x.type||'', capacity:(x.capacity!=null?Number(x.capacity):null), company:x.company||'' };
     });
   }catch(e){ console.warn('loadAircraft:',e&&e.message); }
+}
+
+// ── Compagnies (pour le menu déroulant) ──
+let _airlines=[];
+async function loadAirlines(){
+  _airlines=[];
+  try{
+    const snap=await getDocs(collection(db,'airlines'));
+    snap.forEach(d=>{ const x=d.data(); if(x.name) _airlines.push(x.name); });
+    _airlines.sort((a,b)=>a.localeCompare(b));
+  }catch(e){ console.warn('loadAirlines:',e&&e.message); }
+  // Repli : si pas de collection airlines, déduire des couleurs connues
+  if(!_airlines.length){
+    _airlines=['Mauritania Airlines','Royal Air Maroc','Turkish Airlines','Binter',
+      'Air Algérie','ASKY','Air France','Tunisair','Air Sénégal'];
+  }
+  // Remplir le menu déroulant
+  const sel=document.getElementById('acCompany');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">— Choisir —</option>'+
+      _airlines.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if(cur) sel.value=cur;
+  }
 }
 
 // ── Table ICAO → IATA (depuis flights/cfg-airports) ──
@@ -661,12 +689,24 @@ async function exportExcel(){
 // ════ PAGE IMMATRICULATIONS ════
 async function renderAircraftList(){
   const wrap=document.getElementById('acListWrap');
-  const list=Object.values(_aircraft).sort((a,b)=>(a.reg||'').localeCompare(b.reg||''));
+  const list=Object.values(_aircraft);
   document.getElementById('acCount').textContent=list.length;
   if(!list.length){ wrap.innerHTML='<div class="loading">Aucune immatriculation enregistrée.</div>'; return; }
-  let html='<table><thead><tr><th>Immatriculation</th><th>Type d\'appareil</th><th>Capacité</th><th></th></tr></thead><tbody>';
+  // Trier par compagnie, puis par immatriculation
+  list.sort((a,b)=>{
+    const ca=(a.company||'zzz').toLowerCase(), cb=(b.company||'zzz').toLowerCase();
+    if(ca!==cb) return ca.localeCompare(cb);
+    return (a.reg||'').localeCompare(b.reg||'');
+  });
+  let html='<table><thead><tr><th>Compagnie</th><th>Immatriculation</th><th>Type d\'appareil</th><th>Capacité</th><th></th></tr></thead><tbody>';
+  let lastCo=null;
   for(const a of list){
+    const co=a.company||'(Sans compagnie)';
+    const showCo = co!==lastCo; lastCo=co;
+    const coColor=companyColor(a.company);
+    const coStyle=coColor?`style="background:#${coColor};color:#0a1626;font-weight:700;"`:'';
     html+=`<tr>
+      <td ${showCo?coStyle:''}>${showCo?esc(co):''}</td>
       <td class="fn-cell">${esc(a.reg)}</td>
       <td>${esc(a.type||'—')}</td>
       <td>${a.capacity!=null?a.capacity:'<span class="cap-empty">—</span>'}</td>
@@ -682,6 +722,7 @@ window.saveAircraft=async function(){
   const regRaw=(document.getElementById('acReg').value||'').trim().toUpperCase();
   const type=(document.getElementById('acType').value||'').trim();
   const capRaw=(document.getElementById('acCap').value||'').trim();
+  const company=(document.getElementById('acCompany').value||'').trim();
   const editId=document.getElementById('acEditId').value;
   if(!regRaw){ toast('⚠️ Saisissez au moins une immatriculation','warn'); return; }
   const capacity = capRaw==='' ? null : Number(capRaw);
@@ -698,7 +739,7 @@ window.saveAircraft=async function(){
       const reg=regs[0]; const key=normReg(reg);
       const existing=Object.values(_aircraft).find(a=>normReg(a.reg)===key && a.id!==editId);
       if(existing){ toast('❌ Cette immatriculation existe déjà','err'); return; }
-      await updateDoc(doc(db,'aircraft',editId),{ reg, type, capacity, updatedAt:new Date().toISOString() });
+      await updateDoc(doc(db,'aircraft',editId),{ reg, type, capacity, company, updatedAt:new Date().toISOString() });
       toast('✅ Immatriculation mise à jour','ok');
     }else{
       // ── AJOUT GROUPÉ ──
@@ -707,9 +748,9 @@ window.saveAircraft=async function(){
         const key=normReg(reg);
         const exists=Object.values(_aircraft).find(a=>normReg(a.reg)===key);
         if(exists){ skipped++; continue; }
-        await addDoc(collection(db,'aircraft'),{ reg, type, capacity, updatedAt:new Date().toISOString() });
+        await addDoc(collection(db,'aircraft'),{ reg, type, capacity, company, updatedAt:new Date().toISOString() });
         added++;
-        _aircraft[key]={id:'tmp',reg,type,capacity}; // éviter doublon dans la même boucle
+        _aircraft[key]={id:'tmp',reg,type,capacity,company}; // éviter doublon dans la même boucle
       }
       if(added && skipped) toast(`✅ ${added} ajoutée(s), ${skipped} déjà existante(s) ignorée(s)`,'ok');
       else if(added) toast(`✅ ${added} immatriculation(s) enregistrée(s)`,'ok');
@@ -718,6 +759,7 @@ window.saveAircraft=async function(){
     document.getElementById('acReg').value='';
     document.getElementById('acType').value='';
     document.getElementById('acCap').value='';
+    document.getElementById('acCompany').value='';
     document.getElementById('acEditId').value='';
     await loadAircraft(); renderAircraftList();
   }catch(e){ toast('❌ Erreur : '+(e.message||e),'err'); }
@@ -729,6 +771,7 @@ window.editAircraft=function(id){
   document.getElementById('acReg').value=a.reg;
   document.getElementById('acType').value=a.type||'';
   document.getElementById('acCap').value=a.capacity!=null?a.capacity:'';
+  document.getElementById('acCompany').value=a.company||'';
   document.getElementById('acEditId').value=id;
   document.getElementById('acReg').scrollIntoView({behavior:'smooth',block:'center'});
 };
@@ -769,7 +812,7 @@ document.getElementById('startPicker').addEventListener('change',reloadWeek);
 // ════ INIT ════
 (async function(){
   await ensureAuth();
-  await Promise.all([ loadAircraft(), loadAirports(), loadSchedules() ]);
+  await Promise.all([ loadAircraft(), loadAirports(), loadSchedules(), loadAirlines() ]);
   const sp=document.getElementById('startPicker');
   if(!sp.value) sp.value=fmtDateLocal(mondayOfToday());
   await loadWeek(sp.value);
