@@ -166,9 +166,9 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
     <div class="panel">
       <h3>➕ Ajouter / Modifier une immatriculation</h3>
       <div class="form-grid">
-        <div class="fg">
-          <label>Immatriculation</label>
-          <input type="text" id="acReg" placeholder="ex : 5T-CLJ" oninput="this.value=this.value.toUpperCase()">
+        <div class="fg" style="grid-column:1/-1;">
+          <label>Immatriculation(s) — séparées par virgule, espace ou retour à la ligne</label>
+          <textarea id="acReg" rows="2" placeholder="ex : 5T-CLJ, 5T-CLE, 5T-CLH" oninput="this.value=this.value.toUpperCase()" style="background:#0a1626;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 11px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;"></textarea>
         </div>
         <div class="fg">
           <label>Type d'appareil</label>
@@ -182,6 +182,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
           <button class="btn btn-gold" onclick="saveAircraft()">💾 Enregistrer</button>
         </div>
       </div>
+      <div style="font-size:11px;color:var(--dim);margin-top:8px;">💡 Astuce : vous pouvez coller plusieurs immatriculations d'un coup si elles ont le même type et la même capacité. En modification (✏️), une seule immatriculation est traitée.</div>
       <input type="hidden" id="acEditId">
     </div>
 
@@ -339,8 +340,40 @@ function enrich(f){
   };
 }
 
+// ── Couleurs (reprises EXACTEMENT du modèle Excel) ──
+// Jours
+const DAY_COLORS = {
+  'Lundi':'4472C4','Mardi':'548235','Mercredi':'C55A11','Jeudi':'BF9000',
+  'Vendredi':'7030A0','Samedi':'C00000','Dimanche':'158C8A'
+};
+const HEADER_TITLE_COLOR = '1F3864';
+const HEADER_COLS_COLOR  = '2E5496';
+// Compagnies → couleur de fond. On gère noms courts ET complets.
+const COMPANY_COLORS = {
+  'MAI':'FFE5CC','MAURITANIA AIRLINES':'FFE5CC','MAURITANIA AIR':'FFE5CC','MAURITANIA':'FFE5CC',
+  'RAM':'FFF7CC','ROYAL AIR MAROC':'FFF7CC',
+  'TURKISH':'D8ECF7','TURKISH AIRLINES':'D8ECF7','TK':'D8ECF7',
+  'BINTER':'DCE4F7',
+  'AIR ALGERIE':'E6DCF0','AIR ALGÉRIE':'E6DCF0','AH':'E6DCF0',
+  'ASKY':'FF99FF',
+  'AIR FRANCE':'E0F0D8','AF':'E0F0D8',
+  'TUNIS AIR':'D5EFE6','TUNISAIR':'D5EFE6','TU':'D5EFE6'
+};
+function companyColor(co){
+  const key=(co||'').trim().toUpperCase();
+  return COMPANY_COLORS[key] || null;
+}
+// Mauritania Airlines doit toujours apparaître en PREMIER dans chaque jour.
+function isMAI(co){
+  const k=(co||'').trim().toUpperCase();
+  return k==='MAI'||k.includes('MAURITANIA');
+}
+
 function sortFlights(a,b){
   if(a.dayIdx!==b.dayIdx) return a.dayIdx-b.dayIdx;
+  // MAI toujours en tête du jour
+  const am=isMAI(a.company)?0:1, bm=isMAI(b.company)?0:1;
+  if(am!==bm) return am-bm;
   if(a.company!==b.company) return a.company.localeCompare(b.company);
   return a.flightNumber.localeCompare(b.flightNumber);
 }
@@ -393,24 +426,36 @@ function renderSummary(flights){
 
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-// ════ EXPORT EXCEL (SheetJS) ════
+// ════ EXPORT EXCEL COLORÉ (xlsx-js-style) ════
 async function exportExcel(){
   const btn=document.getElementById('exportBtn');
   btn.disabled=true; const old=btn.innerHTML; btn.innerHTML='<span class="spin"></span> Export…';
   try{
-    if(!window.XLSX){
+    // xlsx-js-style = SheetJS + support des styles (couleurs de cellule).
+    if(!window.XLSX || !window.XLSX.__styleBuild){
       await new Promise((res,rej)=>{
         const s=document.createElement('script');
-        s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-        s.onload=res; s.onerror=rej; document.head.appendChild(s);
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx-js-style/1.2.0/xlsx.bundle.js';
+        s.onload=()=>{ if(window.XLSX) window.XLSX.__styleBuild=true; res(); }; s.onerror=rej;
+        document.head.appendChild(s);
       });
     }
+    const X=window.XLSX;
     const weekId=document.getElementById('weekPicker').value;
     const monday=mondayOfWeekId(weekId); const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+
+    // Styles réutilisables
+    const thin={style:'thin',color:{rgb:'FFBFBFBF'}};
+    const border={top:thin,bottom:thin,left:thin,right:thin};
+    const center={horizontal:'center',vertical:'center',wrapText:true};
+    const fontName='Arial';
+
     const rows=[];
-    rows.push(['SUIVI HEBDOMADAIRE DU TRAFIC AERIEN (Aéroport Oumtounsy)']);
-    rows.push(['Semaine calendaire n° :','','','','Du :  '+fmtDMY(monday)+'   au :  '+fmtDMY(sunday)]);
+    rows.push(['SUIVI HEBDOMADAIRE DU TRAFIC AERIEN (Aéroport Oumtounsy)','','','','','','','','']);
+    rows.push(['Semaine calendaire n° :','','','','Du :  '+fmtDMY(monday)+'   au :  '+fmtDMY(sunday),'','','','']);
     rows.push(['Jour','Compagnie','N° de Vol / Horaire','Prove-Destination','Type d\'Appareil','Capacité','Nbre de Passagers','Taux de remplissage','Observat.']);
+
+    const meta=[]; // par ligne de données : {day, company}
     let lastDay=null,lastCo=null;
     for(const f of _weekFlights){
       const showDay=f.dayName!==lastDay; const showCo=showDay||f.company!==lastCo;
@@ -426,19 +471,54 @@ async function exportExcel(){
         f.rate!=null?f.rate:'',
         f.obs||''
       ]);
+      meta.push({day:f.dayName, company:f.company, showDay});
     }
-    const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:10},{wch:14},{wch:18},{wch:20},{wch:30},{wch:9},{wch:16},{wch:18},{wch:12}];
-    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];
-    // Format pourcentage colonne H (index 7)
-    for(let r=3;r<rows.length;r++){
-      const cell=ws[XLSX.utils.encode_cell({r,c:7})];
-      if(cell&&typeof cell.v==='number'){ cell.z='0.0%'; }
+
+    const ws=X.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:11},{wch:16},{wch:18},{wch:22},{wch:30},{wch:9},{wch:16},{wch:18},{wch:12}];
+    ws['!merges']=[
+      {s:{r:0,c:0},e:{r:0,c:8}},              // titre fusionné
+      {s:{r:1,c:4},e:{r:1,c:8}}               // dates fusionnées
+    ];
+
+    // Titre (ligne 0)
+    ws['A1'].s={font:{name:fontName,bold:true,sz:13,color:{rgb:'FFFFFFFF'}},
+      fill:{fgColor:{rgb:'FF'+HEADER_TITLE_COLOR}},alignment:center,border};
+    // Ligne 2 (semaine)
+    for(let c=0;c<9;c++){ const ad=X.utils.encode_cell({r:1,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
+      ws[ad].s={font:{name:fontName,bold:true,sz:10},alignment:{vertical:'center'},border}; }
+    // En-têtes colonnes (ligne 3)
+    for(let c=0;c<9;c++){ const ad=X.utils.encode_cell({r:2,c});
+      ws[ad].s={font:{name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}},
+        fill:{fgColor:{rgb:'FF'+HEADER_COLS_COLOR}},alignment:center,border}; }
+
+    // Lignes de données
+    for(let i=0;i<meta.length;i++){
+      const r=3+i; const m=meta[i];
+      const dayColor=DAY_COLORS[m.day]?('FF'+DAY_COLORS[m.day]):null;
+      const coColor=companyColor(m.company);
+      for(let c=0;c<9;c++){
+        const ad=X.utils.encode_cell({r,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
+        const st={font:{name:fontName,sz:10},border,alignment:{vertical:'center',
+          horizontal:(c===4?'left':'center'),wrapText:(c===4)}};
+        if(c===0 && m.showDay && dayColor){
+          // Cellule "Jour" : couleur du jour, texte blanc gras
+          st.fill={fgColor:{rgb:dayColor}};
+          st.font={name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}};
+        }else if(c>=1 && coColor){
+          // Reste de la ligne : couleur de la compagnie
+          st.fill={fgColor:{rgb:'FF'+coColor}};
+        }
+        // Taux en pourcentage
+        if(c===7 && typeof ws[ad].v==='number'){ ws[ad].z='0.0%'; }
+        ws[ad].s=st;
+      }
     }
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,'Suivi');
+
+    const wb=X.utils.book_new();
+    X.utils.book_append_sheet(wb,ws,'Suivi');
     const name='Suivi_Trafic_'+fmtDateLocal(monday)+'_au_'+fmtDateLocal(sunday)+'.xlsx';
-    XLSX.writeFile(wb,name);
+    X.writeFile(wb,name);
     toast('✅ Fichier Excel téléchargé','ok');
   }catch(e){ console.error(e); toast('❌ Erreur export : '+(e.message||e),'err'); }
   finally{ btn.disabled=false; btn.innerHTML=old; }
@@ -465,24 +545,41 @@ async function renderAircraftList(){
 }
 
 window.saveAircraft=async function(){
-  const reg=(document.getElementById('acReg').value||'').trim().toUpperCase();
+  const regRaw=(document.getElementById('acReg').value||'').trim().toUpperCase();
   const type=(document.getElementById('acType').value||'').trim();
   const capRaw=(document.getElementById('acCap').value||'').trim();
   const editId=document.getElementById('acEditId').value;
-  if(!reg){ toast('⚠️ Saisissez l\'immatriculation','warn'); return; }
+  if(!regRaw){ toast('⚠️ Saisissez au moins une immatriculation','warn'); return; }
   const capacity = capRaw==='' ? null : Number(capRaw);
-  const data={ reg, type, capacity, updatedAt:new Date().toISOString() };
+
+  // Découper en plusieurs immatriculations (virgule, espace, point-virgule, retour ligne)
+  let regs=regRaw.split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean);
+  // Dédoublonner la saisie elle-même
+  const seen=new Set(); regs=regs.filter(r=>{const k=normReg(r); if(seen.has(k))return false; seen.add(k); return true;});
+
   try{
-    // Doublon (même immat, autre doc)
-    const key=normReg(reg);
-    const existing=Object.values(_aircraft).find(a=>normReg(a.reg)===key && a.id!==editId);
-    if(existing){ toast('❌ Cette immatriculation existe déjà','err'); return; }
+    // ── MODIFICATION : une seule immat ──
     if(editId){
-      await updateDoc(doc(db,'aircraft',editId),data);
+      if(regs.length>1){ toast('⚠️ En modification, une seule immatriculation à la fois','warn'); return; }
+      const reg=regs[0]; const key=normReg(reg);
+      const existing=Object.values(_aircraft).find(a=>normReg(a.reg)===key && a.id!==editId);
+      if(existing){ toast('❌ Cette immatriculation existe déjà','err'); return; }
+      await updateDoc(doc(db,'aircraft',editId),{ reg, type, capacity, updatedAt:new Date().toISOString() });
       toast('✅ Immatriculation mise à jour','ok');
     }else{
-      await addDoc(collection(db,'aircraft'),data);
-      toast('✅ Immatriculation enregistrée','ok');
+      // ── AJOUT GROUPÉ ──
+      let added=0, skipped=0;
+      for(const reg of regs){
+        const key=normReg(reg);
+        const exists=Object.values(_aircraft).find(a=>normReg(a.reg)===key);
+        if(exists){ skipped++; continue; }
+        await addDoc(collection(db,'aircraft'),{ reg, type, capacity, updatedAt:new Date().toISOString() });
+        added++;
+        _aircraft[key]={id:'tmp',reg,type,capacity}; // éviter doublon dans la même boucle
+      }
+      if(added && skipped) toast(`✅ ${added} ajoutée(s), ${skipped} déjà existante(s) ignorée(s)`,'ok');
+      else if(added) toast(`✅ ${added} immatriculation(s) enregistrée(s)`,'ok');
+      else toast('⚠️ Toutes ces immatriculations existent déjà','warn');
     }
     document.getElementById('acReg').value='';
     document.getElementById('acType').value='';
