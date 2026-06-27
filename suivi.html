@@ -433,12 +433,27 @@ async function exportExcel(){
   try{
     // xlsx-js-style = SheetJS + support des styles (couleurs de cellule).
     if(!window.XLSX || !window.XLSX.__styleBuild){
-      await new Promise((res,rej)=>{
-        const s=document.createElement('script');
-        s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx-js-style/1.2.0/xlsx.bundle.js';
-        s.onload=()=>{ if(window.XLSX) window.XLSX.__styleBuild=true; res(); }; s.onerror=rej;
-        document.head.appendChild(s);
-      });
+      const urls=[
+        'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js',
+        'https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/xlsx-js-style/1.2.0/xlsx.min.js'
+      ];
+      let loaded=false, lastErr=null;
+      for(const url of urls){
+        try{
+          await new Promise((res,rej)=>{
+            const s=document.createElement('script');
+            s.src=url; s.async=true;
+            s.onload=()=>res();
+            s.onerror=()=>rej(new Error('échec chargement '+url));
+            document.head.appendChild(s);
+          });
+          if(window.XLSX){ window.XLSX.__styleBuild=true; loaded=true; break; }
+        }catch(e){ lastErr=e; /* on tente le CDN suivant */ }
+      }
+      if(!loaded){
+        throw new Error('Impossible de charger la librairie Excel (vérifiez votre connexion ou désactivez le bloqueur de pub pour ce site).');
+      }
     }
     const X=window.XLSX;
     const weekId=document.getElementById('weekPicker').value;
