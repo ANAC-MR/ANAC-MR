@@ -125,17 +125,18 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
   <div id="page-suivi">
     <div class="toolbar">
       <div class="tb-group">
-        <span class="tb-label">Semaine</span>
-        <input type="week" id="weekPicker">
+        <span class="tb-label">Début de semaine</span>
+        <input type="date" id="startPicker">
       </div>
       <div class="tb-group">
-        <button class="btn" onclick="prevWeek()">← Préc.</button>
-        <button class="btn" onclick="thisWeek()">Aujourd'hui</button>
-        <button class="btn" onclick="nextWeek()">Suiv. →</button>
+        <button class="btn" onclick="prevWeek()">← 7 j</button>
+        <button class="btn" onclick="thisWeek()">Cette semaine</button>
+        <button class="btn" onclick="nextWeek()">7 j →</button>
       </div>
       <div class="spacer"></div>
       <button class="btn btn-gold" id="exportBtn" onclick="exportExcel()">⬇️ Télécharger Excel</button>
     </div>
+    <div style="font-size:11px;color:var(--dim);margin:-8px 0 14px 2px;">📅 Choisissez le jour de début : le tableau affiche les 7 jours qui suivent (ex : un mardi → le lundi suivant).</div>
 
     <div class="rep-head">
       <div class="rep-title">SUIVI HEBDOMADAIRE DU TRAFIC AÉRIEN</div>
@@ -221,6 +222,7 @@ async function ensureAuth(){
 let _aircraft = {};   // REG normalisée → { reg, type, capacity }
 let _weekFlights = []; // vols de la semaine, enrichis
 const DAYS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+let _dayOrder={};
 
 // ── Utilitaires ──
 function toast(msg,type='ok'){
@@ -231,30 +233,23 @@ function toast(msg,type='ok'){
 function normReg(s){ return (s||'').toUpperCase().replace(/[\s.\-]/g,''); }
 function pad(n){ return String(n).padStart(2,'0'); }
 
-// ISO week helpers (semaine Lundi→Dimanche)
-function isoWeekId(d){
-  // renvoie "YYYY-Www" pour input[type=week]
-  const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
-  const day=(dt.getUTCDay()+6)%7; // 0=lundi
-  dt.setUTCDate(dt.getUTCDate()-day+3); // jeudi de la semaine
-  const firstThu=new Date(Date.UTC(dt.getUTCFullYear(),0,4));
-  const fday=(firstThu.getUTCDay()+6)%7;
-  firstThu.setUTCDate(firstThu.getUTCDate()-fday+3);
-  const week=1+Math.round((dt-firstThu)/(7*24*3600*1000));
-  return dt.getUTCFullYear()+'-W'+pad(week);
-}
-function mondayOfWeekId(weekId){
-  // "YYYY-Www" → date du lundi (local)
-  const m=/^(\d{4})-W(\d{2})$/.exec(weekId);
+// ── Helpers période : début libre + 7 jours ──
+function parseDateInput(s){
+  // "YYYY-MM-DD" → Date locale
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');
   if(!m) return null;
-  const year=+m[1], week=+m[2];
-  const jan4=new Date(year,0,4);
-  const jan4Day=(jan4.getDay()+6)%7;
-  const monday=new Date(jan4); monday.setDate(jan4.getDate()-jan4Day+(week-1)*7);
-  return monday;
+  return new Date(+m[1], +m[2]-1, +m[3]);
 }
 function fmtDateLocal(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function fmtDMY(d){ return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
+// Nom du jour de la semaine pour une date donnée (Lundi=0…Dimanche=6)
+const JOUR_FR=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+function jourNom(d){ return JOUR_FR[(d.getDay()+6)%7]; }
+// Lundi de la semaine courante (pour le bouton "Cette semaine")
+function mondayOfToday(){
+  const d=new Date(); const off=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-off); d.setHours(0,0,0,0); return d;
+}
 
 // ── Chargement des immatriculations ──
 async function loadAircraft(){
@@ -338,19 +333,26 @@ function scheduleFor(flightNumber, dateStr){
   return parseRoutingTimes(match.routing);
 }
 
-// ── Chargement des vols de la semaine ──
-async function loadWeek(weekId){
+// ── Chargement des vols de la période (début libre + 7 jours) ──
+async function loadWeek(startStr){
   const body=document.getElementById('suiviBody');
   body.innerHTML='<tr class="empty-row"><td colspan="9"><span class="spin"></span> Chargement des vols…</td></tr>';
-  const monday=mondayOfWeekId(weekId);
-  if(!monday){ body.innerHTML='<tr class="empty-row"><td colspan="9">Semaine invalide</td></tr>'; return; }
-  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
-  const fromStr=fmtDateLocal(monday), toStr=fmtDateLocal(sunday);
-  document.getElementById('weekLabel').textContent='Du '+fmtDMY(monday)+' au '+fmtDMY(sunday);
+  const start=parseDateInput(startStr);
+  if(!start){ body.innerHTML='<tr class="empty-row"><td colspan="9">Date invalide</td></tr>'; return; }
+  const end=new Date(start); end.setDate(start.getDate()+6);
+  const fromStr=fmtDateLocal(start), toStr=fmtDateLocal(end);
+  document.getElementById('weekLabel').textContent='Du '+fmtDMY(start)+' au '+fmtDMY(end);
+
+  // Ordre d'affichage des jours : selon le jour de la date de début.
+  // ex : début mardi → Mardi, Mercredi, ..., Lundi.
+  _dayOrder={};
+  for(let i=0;i<7;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    _dayOrder[fmtDateLocal(d)]=i;           // date → rang dans la période
+  }
 
   let flights=[];
   try{
-    // Requête par plage de dates (champ "date" en YYYY-MM-DD)
     const q=query(collection(db,'flights'), where('date','>=',fromStr), where('date','<=',toStr));
     const snap=await getDocs(q);
     snap.forEach(d=>{
@@ -361,7 +363,6 @@ async function loadWeek(weekId){
     });
   }catch(e){
     console.warn('loadWeek query:',e&&e.message);
-    // Repli : tout charger puis filtrer (si index manquant)
     try{
       const snap=await getDocs(collection(db,'flights'));
       snap.forEach(d=>{
@@ -372,7 +373,6 @@ async function loadWeek(weekId){
     }catch(e2){ console.error(e2); }
   }
 
-  // Enrichir + trier
   flights=flights.map(f=>enrich(f)).sort(sortFlights);
   _weekFlights=flights;
   renderTable(flights);
@@ -384,7 +384,9 @@ function enrich(f){
   const ac=_aircraft[reg]||null;
   const date=f.date||'';
   const dObj=date?new Date(date+'T00:00:00'):null;
-  const dayIdx=dObj?((dObj.getDay()+6)%7):99;
+  // Rang du jour DANS la période choisie (et non lundi=0 figé)
+  const dayIdx=(_dayOrder[date]!=null)?_dayOrder[date]:99;
+  const dayName=dObj?jourNom(dObj):'';
   // Prove-Destination en codes IATA
   let route='';
   const from=toIATA(f.from), to=toIATA(f.to);
@@ -405,7 +407,7 @@ function enrich(f){
     fnDisplay = `${fnum} (${sched.dep||'--:--'}→${sched.arr||'--:--'})`;
   }
   return {
-    date, dayIdx, dayName:DAYS[dayIdx]||'',
+    date, dayIdx, dayName,
     company:(f.company||'').toUpperCase(),
     flightNumber:fnDisplay,
     flightNumberRaw:fnum,
@@ -459,9 +461,13 @@ function rateClass(r){ if(r==null) return ''; if(r>=0.75) return 'rate-hi'; if(r
 function renderTable(flights){
   const body=document.getElementById('suiviBody');
   if(!flights.length){
-    body.innerHTML='<tr class="empty-row"><td colspan="9">Aucun vol enregistré pour cette semaine.</td></tr>';
+    body.innerHTML='<tr class="empty-row"><td colspan="9">Aucun vol enregistré pour cette période.</td></tr>';
     return;
   }
+  // Compter le nombre de lignes par jour (pour le rowspan)
+  const dayCount={};
+  for(const f of flights){ dayCount[f.dayName]=(dayCount[f.dayName]||0)+1; }
+
   let html='';
   let lastDay=null, lastCo=null;
   for(const f of flights){
@@ -471,8 +477,12 @@ function renderTable(flights){
     const capCell = f.capacity!=null ? f.capacity : '<span class="cap-empty">—</span>';
     const rateCell = f.rate!=null ? `<span class="rate-cell ${rateClass(f.rate)}">${(f.rate*100).toFixed(1)}%</span>` : '—';
     const paxCell = f.passengers!=null ? f.passengers : '—';
+    // Cellule jour fusionnée : affichée une fois avec rowspan = nb de vols du jour
+    const dayTd = showDay
+      ? `<td class="day-cell" rowspan="${dayCount[f.dayName]}">${esc(f.dayName)}</td>`
+      : '';
     html+=`<tr>
-      <td class="day-cell">${showDay?esc(f.dayName):''}</td>
+      ${dayTd}
       <td class="co-cell">${showCo?esc(f.company):''}</td>
       <td class="fn-cell">${esc(f.flightNumber)}</td>
       <td class="route-cell">${esc(f.route||'—')}</td>
@@ -532,8 +542,9 @@ async function exportExcel(){
       }
     }
     const X=window.XLSX;
-    const weekId=document.getElementById('weekPicker').value;
-    const monday=mondayOfWeekId(weekId); const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+    const startStr=document.getElementById('startPicker').value;
+    const monday=parseDateInput(startStr)||mondayOfToday();
+    const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
 
     // Styles réutilisables
     const thin={style:'thin',color:{rgb:'FFBFBFBF'}};
@@ -592,23 +603,28 @@ async function exportExcel(){
         const ad=X.utils.encode_cell({r,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
         const st={font:{name:fontName,sz:10},border,alignment:{vertical:'center',
           horizontal:(c===4?'left':'center'),wrapText:(c===4)}};
-        if(c===0 && m.showDay && dayColor){
-          // Cellule "Jour" : couleur du jour, texte blanc gras
+        if(c===0 && dayColor){
+          // Colonne "Jour" : couleur du jour sur TOUTES les lignes du jour
+          // (la fusion affichera le nom une seule fois, centré)
           st.fill={fgColor:{rgb:dayColor}};
-          st.font={name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}};
+          st.font={name:fontName,bold:true,sz:11,color:{rgb:'FFFFFFFF'}};
+          st.alignment={vertical:'center',horizontal:'center',wrapText:true};
         }else if(c>=1 && coColor){
           // Reste de la ligne : couleur de la compagnie
           st.fill={fgColor:{rgb:'FF'+coColor}};
         }
-        // Taux de remplissage = formule Excel =Passagers/Capacité (colonne H)
+        // Taux de remplissage = formule Excel (colonne H).
+        // On met la formule dès qu'il y a des PASSAGERS, même si la
+        // capacité est vide : ainsi, si l'utilisateur tape une capacité
+        // dans Excel après coup, le taux se calcule tout seul.
+        // SI(capacité vide ou 0 → "" sinon passagers/capacité)
         if(c===7){
           const capCell='F'+(r+1);   // colonne F = Capacité
           const paxCell='G'+(r+1);   // colonne G = Passagers
-          // Formule seulement si capacité ET passagers présents
-          const capVal=ws['F'+(r+1)]?ws['F'+(r+1)].v:'';
           const paxVal=ws['G'+(r+1)]?ws['G'+(r+1)].v:'';
-          if(capVal!==''&&capVal!=null&&paxVal!==''&&paxVal!=null&&Number(capVal)>0){
-            ws[ad]={t:'n', f:`${paxCell}/${capCell}`, z:'0.0%'};
+          if(paxVal!==''&&paxVal!=null){
+            // Formule robuste : reste vide tant que capacité absente (évite #DIV/0!)
+            ws[ad]={t:'n', f:`IF(N(${capCell})>0,${paxCell}/${capCell},"")`, z:'0.0%'};
           }else{
             ws[ad]={t:'s', v:''};
           }
@@ -616,6 +632,20 @@ async function exportExcel(){
         }else{
           ws[ad].s=st;
         }
+      }
+    }
+
+    // ── Fusion verticale des cellules "Jour" (colonne A) ──
+    // Chaque jour occupe une grande cellule couvrant toutes ses lignes.
+    let gStart=null, gDay=null;
+    for(let i=0;i<=meta.length;i++){
+      const day=(i<meta.length)?meta[i].day:null;
+      if(day!==gDay){
+        if(gDay!==null && gStart!=null){
+          const rStart=3+gStart, rEnd=3+(i-1);
+          if(rEnd>rStart){ ws['!merges'].push({s:{r:rStart,c:0},e:{r:rEnd,c:0}}); }
+        }
+        gDay=day; gStart=i;
       }
     }
 
@@ -723,26 +753,26 @@ window.showTab=function(tab){
 
 window.prevWeek=function(){ shiftWeek(-7); };
 window.nextWeek=function(){ shiftWeek(7); };
-window.thisWeek=function(){ const wp=document.getElementById('weekPicker'); wp.value=isoWeekId(new Date()); reloadWeek(); };
+window.thisWeek=function(){ const sp=document.getElementById('startPicker'); sp.value=fmtDateLocal(mondayOfToday()); reloadWeek(); };
 function shiftWeek(days){
-  const wp=document.getElementById('weekPicker');
-  const monday=mondayOfWeekId(wp.value)||new Date();
-  monday.setDate(monday.getDate()+days);
-  wp.value=isoWeekId(monday);
+  const sp=document.getElementById('startPicker');
+  const d=parseDateInput(sp.value)||mondayOfToday();
+  d.setDate(d.getDate()+days);
+  sp.value=fmtDateLocal(d);
   reloadWeek();
 }
-async function reloadWeek(){ await loadWeek(document.getElementById('weekPicker').value); }
+async function reloadWeek(){ await loadWeek(document.getElementById('startPicker').value); }
 window.exportExcel=exportExcel;
 
-document.getElementById('weekPicker').addEventListener('change',reloadWeek);
+document.getElementById('startPicker').addEventListener('change',reloadWeek);
 
 // ════ INIT ════
 (async function(){
   await ensureAuth();
   await Promise.all([ loadAircraft(), loadAirports(), loadSchedules() ]);
-  const wp=document.getElementById('weekPicker');
-  if(!wp.value) wp.value=isoWeekId(new Date());
-  await loadWeek(wp.value);
+  const sp=document.getElementById('startPicker');
+  if(!sp.value) sp.value=fmtDateLocal(mondayOfToday());
+  await loadWeek(sp.value);
 })();
 </script>
 </body>
