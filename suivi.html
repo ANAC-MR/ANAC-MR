@@ -193,6 +193,24 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
 
     <div class="panel ac-list">
       <h3>🛩️ Immatriculations enregistrées (<span id="acCount">0</span>)</h3>
+      <div class="toolbar" style="margin-bottom:14px;">
+        <div class="tb-group">
+          <span class="tb-label">Compagnie</span>
+          <select id="fltCompany" onchange="renderAircraftList()"><option value="">Toutes</option></select>
+        </div>
+        <div class="tb-group">
+          <span class="tb-label">Capacité</span>
+          <select id="fltCapOp" onchange="renderAircraftList()">
+            <option value="">— </option>
+            <option value="gt">≥ (plus grand que)</option>
+            <option value="lt">≤ (plus petit que)</option>
+            <option value="eq">= (égal à)</option>
+          </select>
+          <input type="number" id="fltCapVal" min="0" style="width:90px;" placeholder="ex: 150" oninput="renderAircraftList()">
+        </div>
+        <div class="spacer"></div>
+        <button class="btn" onclick="resetFilters()">✖ Réinitialiser</button>
+      </div>
       <div id="acListWrap"><div class="loading">Chargement…</div></div>
     </div>
   </div>
@@ -687,11 +705,51 @@ async function exportExcel(){
 }
 
 // ════ PAGE IMMATRICULATIONS ════
+function _populateCompanyFilter(){
+  const sel=document.getElementById('fltCompany');
+  if(!sel) return;
+  const cur=sel.value;
+  const cos=[...new Set(Object.values(_aircraft).map(a=>a.company).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML='<option value="">Toutes</option>'+cos.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+
+window.resetFilters=function(){
+  document.getElementById('fltCompany').value='';
+  document.getElementById('fltCapOp').value='';
+  document.getElementById('fltCapVal').value='';
+  renderAircraftList();
+};
+
 async function renderAircraftList(){
   const wrap=document.getElementById('acListWrap');
-  const list=Object.values(_aircraft);
-  document.getElementById('acCount').textContent=list.length;
-  if(!list.length){ wrap.innerHTML='<div class="loading">Aucune immatriculation enregistrée.</div>'; return; }
+  _populateCompanyFilter();
+  let list=Object.values(_aircraft);
+  const total=list.length;
+
+  // ── Filtres ──
+  const fCo=(document.getElementById('fltCompany')||{}).value||'';
+  const fOp=(document.getElementById('fltCapOp')||{}).value||'';
+  const fVal=(document.getElementById('fltCapVal')||{}).value||'';
+  if(fCo) list=list.filter(a=>(a.company||'')===fCo);
+  if(fOp && fVal!=='' && !isNaN(Number(fVal))){
+    const v=Number(fVal);
+    list=list.filter(a=>{
+      if(a.capacity==null) return false; // sans capacité = exclu du filtre capacité
+      if(fOp==='gt') return a.capacity>=v;
+      if(fOp==='lt') return a.capacity<=v;
+      if(fOp==='eq') return a.capacity===v;
+      return true;
+    });
+  }
+
+  document.getElementById('acCount').textContent = (list.length===total)
+    ? total : `${list.length} / ${total}`;
+
+  if(!list.length){
+    wrap.innerHTML='<div class="loading">'+(total?'Aucune immatriculation ne correspond aux filtres.':'Aucune immatriculation enregistrée.')+'</div>';
+    return;
+  }
   // Trier par compagnie, puis par immatriculation
   list.sort((a,b)=>{
     const ca=(a.company||'zzz').toLowerCase(), cb=(b.company||'zzz').toLowerCase();
@@ -717,6 +775,7 @@ async function renderAircraftList(){
   html+='</tbody></table>';
   wrap.innerHTML=html;
 }
+window.renderAircraftList=renderAircraftList;
 
 window.saveAircraft=async function(){
   const regRaw=(document.getElementById('acReg').value||'').trim().toUpperCase();
