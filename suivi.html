@@ -210,6 +210,27 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
         <div class="spacer"></div>
         <button class="btn" onclick="resetFilters()">✖ Réinitialiser</button>
       </div>
+      <div id="bulkBar" class="hidden" style="background:#0c1d33;border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">✏️ Modifier la sélection (<span id="bulkCount">0</span> immatriculation(s))</div>
+        <div class="form-grid">
+          <div class="fg">
+            <label>Compagnie</label>
+            <select id="bulkCompany"><option value="">— Inchangé —</option></select>
+          </div>
+          <div class="fg">
+            <label>Type d'appareil</label>
+            <input type="text" id="bulkType" placeholder="— Inchangé —">
+          </div>
+          <div class="fg">
+            <label>Capacité</label>
+            <input type="number" id="bulkCap" min="1" placeholder="— Inchangé —">
+          </div>
+          <div class="fg">
+            <button class="btn btn-gold" onclick="applyBulkEdit()">✅ Appliquer à la sélection</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--dim);margin-top:8px;">💡 Laissez un champ vide pour ne pas le modifier. Seuls les champs remplis seront appliqués à toutes les immatriculations cochées.</div>
+      </div>
       <div id="acListWrap"><div class="loading">Chargement…</div></div>
     </div>
   </div>
@@ -753,7 +774,9 @@ async function renderAircraftList(){
     if(ca!==cb) return ca.localeCompare(cb);
     return (a.reg||'').localeCompare(b.reg||'');
   });
-  let html='<table><thead><tr><th>Compagnie</th><th>Immatriculation</th><th>Type d\'appareil</th><th>Capacité</th><th></th></tr></thead><tbody>';
+  let html='<table><thead><tr>'
+    +'<th style="width:34px;"><input type="checkbox" id="chkAll" onclick="toggleAllAircraft(this)"></th>'
+    +'<th>Compagnie</th><th>Immatriculation</th><th>Type d\'appareil</th><th>Capacité</th><th></th></tr></thead><tbody>';
   let lastCo=null;
   for(const a of list){
     const co=a.company||'(Sans compagnie)';
@@ -761,6 +784,7 @@ async function renderAircraftList(){
     const coColor=companyColor(a.company);
     const coStyle=coColor?`style="background:#${coColor};color:#0a1626;font-weight:700;"`:'';
     html+=`<tr>
+      <td style="text-align:center;"><input type="checkbox" class="ac-chk" value="${a.id}" onchange="updateBulkBar()"></td>
       <td ${showCo?coStyle:''}>${showCo?esc(co):''}</td>
       <td class="fn-cell">${esc(a.reg)}</td>
       <td>${esc(a.type||'—')}</td>
@@ -771,8 +795,51 @@ async function renderAircraftList(){
   }
   html+='</tbody></table>';
   wrap.innerHTML=html;
+  // Remplir le menu compagnie du panneau de modification groupée
+  const bulkSel=document.getElementById('bulkCompany');
+  if(bulkSel){
+    const cur=bulkSel.value;
+    bulkSel.innerHTML='<option value="">— Inchangé —</option>'+
+      _airlines.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if(cur) bulkSel.value=cur;
+  }
+  updateBulkBar();
 }
 window.renderAircraftList=renderAircraftList;
+
+// ── Sélection groupée ──
+window.toggleAllAircraft=function(master){
+  document.querySelectorAll('.ac-chk').forEach(c=>{ c.checked=master.checked; });
+  updateBulkBar();
+};
+window.updateBulkBar=function(){
+  const checked=document.querySelectorAll('.ac-chk:checked');
+  const bar=document.getElementById('bulkBar');
+  document.getElementById('bulkCount').textContent=checked.length;
+  bar.classList.toggle('hidden', checked.length===0);
+};
+window.applyBulkEdit=async function(){
+  const ids=[...document.querySelectorAll('.ac-chk:checked')].map(c=>c.value);
+  if(!ids.length){ toast('⚠️ Aucune immatriculation sélectionnée','warn'); return; }
+  const company=(document.getElementById('bulkCompany').value||'').trim();
+  const type=(document.getElementById('bulkType').value||'').trim();
+  const capRaw=(document.getElementById('bulkCap').value||'').trim();
+  const patch={};
+  if(company) patch.company=company;
+  if(type) patch.type=type;
+  if(capRaw!==''){ const n=Number(capRaw); if(!isNaN(n)&&n>0) patch.capacity=n; }
+  if(!Object.keys(patch).length){ toast('⚠️ Remplissez au moins un champ à modifier','warn'); return; }
+  patch.updatedAt=new Date().toISOString();
+  try{
+    let n=0;
+    for(const id of ids){ await updateDoc(doc(db,'aircraft',id),patch); n++; }
+    toast(`✅ ${n} immatriculation(s) modifiée(s)`,'ok');
+    document.getElementById('bulkCompany').value='';
+    document.getElementById('bulkType').value='';
+    document.getElementById('bulkCap').value='';
+    await loadAircraft(); renderAircraftList();
+  }catch(e){ toast('❌ Erreur : '+(e.message||e),'err'); }
+};
 
 window.saveAircraft=async function(){
   const regRaw=(document.getElementById('acReg').value||'').trim().toUpperCase();
@@ -780,8 +847,12 @@ window.saveAircraft=async function(){
   const capRaw=(document.getElementById('acCap').value||'').trim();
   const company=(document.getElementById('acCompany').value||'').trim();
   const editId=document.getElementById('acEditId').value;
+  // ── Tous les champs sont obligatoires (ajout ET modification) ──
   if(!regRaw){ toast('⚠️ Saisissez au moins une immatriculation','warn'); return; }
-  const capacity = capRaw==='' ? null : Number(capRaw);
+  if(!company){ toast('⚠️ La compagnie est obligatoire','warn'); return; }
+  if(!type){ toast('⚠️ Le type d\'appareil est obligatoire','warn'); return; }
+  if(capRaw===''||isNaN(Number(capRaw))||Number(capRaw)<=0){ toast('⚠️ La capacité est obligatoire (nombre > 0)','warn'); return; }
+  const capacity = Number(capRaw);
 
   // Découper en plusieurs immatriculations (virgule, espace, point-virgule, retour ligne)
   let regs=regRaw.split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean);
