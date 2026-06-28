@@ -370,6 +370,27 @@ async function loadSchedules(){
     });
   }catch(e){ console.warn('loadSchedules:',e&&e.message); }
 }
+
+// ── Numéros de vol enregistrés : numéro → { type, from, to, stopover, company } ──
+let _flightNumInfo = {};
+async function loadFlightNumbers(){
+  _flightNumInfo={};
+  try{
+    const snap=await getDocs(collection(db,'flight_numbers'));
+    snap.forEach(d=>{
+      const x=d.data();
+      const key=normFN(x.number||'');
+      if(!key) return;
+      _flightNumInfo[key]={
+        type:(x.type||'').toUpperCase(),       // DEP / ARR
+        from:(x.from||'').toUpperCase(),        // IATA
+        to:(x.to||'').toUpperCase(),
+        stopover:(x.stopover||'').toUpperCase(),
+        company:x.company||''
+      };
+    });
+  }catch(e){ console.warn('loadFlightNumbers:',e&&e.message); }
+}
 function normFN(s){ return (s||'').toUpperCase().replace(/[-\s.]/g,''); }
 
 // Extrait l'heure de départ et d'arrivée depuis un routing.
@@ -453,11 +474,26 @@ function enrich(f){
   // Rang du jour DANS la période choisie (et non lundi=0 figé)
   const dayIdx=(_dayOrder[date]!=null)?_dayOrder[date]:99;
   const dayName=dObj?jourNom(dObj):'';
-  // Prove-Destination en codes IATA
+
+  // ── Infos issues du NUMÉRO DE VOL enregistré (prioritaire) ──
+  const fnum=(f.flightNumber||'').toUpperCase();
+  const fnInfo=_flightNumInfo[normFN(fnum)]||null;
+
+  // Type DÉPART / ARRIVÉE : pris du numéro de vol enregistré (et non du LDM/MVT)
+  let flightType=(f.type||'').toUpperCase();    // valeur en base (peut être erronée)
+  if(fnInfo && fnInfo.type) flightType=fnInfo.type;  // on écrase par la valeur officielle
+
+  // Prove-Destination : du numéro de vol enregistré si dispo, sinon du vol
   let route='';
-  const from=toIATA(f.from), to=toIATA(f.to);
-  const stop=(f.hasStopover&&f.stopover)?toIATA(f.stopover):'';
-  if(from||to) route = stop ? `${from}-${stop}-${to}` : `${from}-${to}`;
+  if(fnInfo && (fnInfo.from||fnInfo.to)){
+    const ff=toIATA(fnInfo.from), tt=toIATA(fnInfo.to), ss=fnInfo.stopover?toIATA(fnInfo.stopover):'';
+    route = ss ? `${ff}-${ss}-${tt}` : `${ff}-${tt}`;
+  }else{
+    const from=toIATA(f.from), to=toIATA(f.to);
+    const stop=(f.hasStopover&&f.stopover)?toIATA(f.stopover):'';
+    if(from||to) route = stop ? `${from}-${stop}-${to}` : `${from}-${to}`;
+  }
+
   // Type d'appareil affiché : "Type (IMMAT)"
   const rawReg=(f.registration||f.immat||'').toUpperCase();
   let typeDisp='';
@@ -466,15 +502,17 @@ function enrich(f){
   const pax=(f.passengers!=null&&f.passengers!=='')?Number(f.passengers):null;
   const cap=(ac&&ac.capacity!=null)?ac.capacity:null;
   // N° de vol + horaire (depuis la section Horaires & Vols)
-  const fnum=(f.flightNumber||'').toUpperCase();
   const sched=scheduleFor(fnum, date);
   let fnDisplay=fnum;
   if(sched && (sched.dep||sched.arr)){
     fnDisplay = `${fnum} (${sched.dep||'--:--'}→${sched.arr||'--:--'})`;
   }
+  // Compagnie : du numéro de vol si dispo, sinon celle du vol
+  const company=((fnInfo&&fnInfo.company)?fnInfo.company:(f.company||'')).toUpperCase();
   return {
     date, dayIdx, dayName,
-    company:(f.company||'').toUpperCase(),
+    company,
+    flightType,
     flightNumber:fnDisplay,
     flightNumberRaw:fnum,
     route, typeDisp,
@@ -939,7 +977,7 @@ document.getElementById('startPicker').addEventListener('change',reloadWeek);
 // ════ INIT ════
 (async function(){
   await ensureAuth();
-  await Promise.all([ loadAircraft(), loadAirports(), loadSchedules(), loadAirlines() ]);
+  await Promise.all([ loadAircraft(), loadAirports(), loadSchedules(), loadAirlines(), loadFlightNumbers() ]);
   const sp=document.getElementById('startPicker');
   if(!sp.value) sp.value=fmtDateLocal(mondayOfToday());
   await loadWeek(sp.value);
