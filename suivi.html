@@ -284,6 +284,7 @@ function parseDateInput(s){
 }
 function fmtDateLocal(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function fmtDMY(d){ return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
+function fmtDM(d){ return pad(d.getDate())+'/'+pad(d.getMonth()+1); }
 // Nom du jour de la semaine pour une date donnée (Lundi=0…Dimanche=6)
 const JOUR_FR=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
 function jourNom(d){ return JOUR_FR[(d.getDay()+6)%7]; }
@@ -474,6 +475,7 @@ function enrich(f){
   // Rang du jour DANS la période choisie (et non lundi=0 figé)
   const dayIdx=(_dayOrder[date]!=null)?_dayOrder[date]:99;
   const dayName=dObj?jourNom(dObj):'';
+  const dayDate=dObj?fmtDM(dObj):'';
 
   // ── Infos issues du NUMÉRO DE VOL enregistré (prioritaire) ──
   const fnum=(f.flightNumber||'').toUpperCase();
@@ -510,7 +512,7 @@ function enrich(f){
   // Compagnie : du numéro de vol si dispo, sinon celle du vol
   const company=((fnInfo&&fnInfo.company)?fnInfo.company:(f.company||'')).toUpperCase();
   return {
-    date, dayIdx, dayName,
+    date, dayIdx, dayName, dayDate,
     company,
     flightType,
     flightNumber:fnDisplay,
@@ -583,7 +585,7 @@ function renderTable(flights){
     const paxCell = f.passengers!=null ? f.passengers : '—';
     // Cellule jour fusionnée : affichée une fois avec rowspan = nb de vols du jour
     const dayTd = showDay
-      ? `<td class="day-cell" rowspan="${dayCount[f.dayName]}">${esc(f.dayName)}</td>`
+      ? `<td class="day-cell" rowspan="${dayCount[f.dayName]}">${esc(f.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(f.dayDate)}</span></td>`
       : '';
     html+=`<tr class="${showDay?'day-start':''}">
       ${dayTd}
@@ -665,7 +667,7 @@ async function exportExcel(){
       const showDay=f.dayName!==lastDay; const showCo=showDay||f.company!==lastCo;
       lastDay=f.dayName; lastCo=f.company;
       rows.push([
-        showDay?f.dayName:'',
+        showDay?(f.dayName+' '+(f.dayDate||'')):'',
         showCo?f.company:'',
         f.flightNumber,
         f.route||'',
