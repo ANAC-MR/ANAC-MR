@@ -71,6 +71,8 @@ tbody td{padding:8px 9px;border:1px solid var(--border);text-align:center;color:
 .rate-hi{color:var(--green);} .rate-mid{color:var(--gold);} .rate-lo{color:var(--red);}
 tbody tr:hover td{background:rgba(255,255,255,0.02);}
 .empty-row td{padding:40px;color:var(--dim);font-style:italic;}
+/* Trait de séparation net entre les jours */
+tbody tr.day-start td{border-top:3px solid var(--gold);}
 
 /* Params page */
 .panel{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px;}
@@ -136,11 +138,8 @@ tbody tr:hover td{background:rgba(255,255,255,0.02);}
       <div class="spacer"></div>
       <button class="btn btn-gold" id="exportBtn" onclick="exportExcel()">⬇️ Télécharger Excel</button>
     </div>
-    <div style="font-size:11px;color:var(--dim);margin:-8px 0 14px 2px;">📅 Choisissez le jour de début : le tableau affiche les 7 jours qui suivent (ex : un mardi → le lundi suivant).</div>
-
     <div class="rep-head">
       <div class="rep-title">SUIVI HEBDOMADAIRE DU TRAFIC AÉRIEN</div>
-      <div class="rep-sub">Aéroport Oumtounsy — Nouakchott</div>
       <div class="rep-week" id="weekLabel">—</div>
     </div>
 
@@ -527,7 +526,7 @@ function renderTable(flights){
     const dayTd = showDay
       ? `<td class="day-cell" rowspan="${dayCount[f.dayName]}">${esc(f.dayName)}</td>`
       : '';
-    html+=`<tr>
+    html+=`<tr class="${showDay?'day-start':''}">
       ${dayTd}
       <td class="co-cell">${showCo?esc(f.company):''}</td>
       <td class="fn-cell">${esc(f.flightNumber)}</td>
@@ -548,12 +547,10 @@ function renderSummary(flights){
   const totalPax=flights.reduce((a,f)=>a+(f.passengers||0),0);
   const withCap=flights.filter(f=>f.rate!=null);
   const avgRate=withCap.length?(withCap.reduce((a,f)=>a+f.rate,0)/withCap.length):null;
-  const noCap=flights.filter(f=>f.capacity==null).length;
   div.innerHTML=`
     <div class="sm-card"><div class="sm-v">${nbVols}</div><div class="sm-l">Vols</div></div>
     <div class="sm-card"><div class="sm-v">${totalPax}</div><div class="sm-l">Passagers</div></div>
-    <div class="sm-card"><div class="sm-v">${avgRate!=null?(avgRate*100).toFixed(1)+'%':'—'}</div><div class="sm-l">Taux moyen</div></div>
-    <div class="sm-card"><div class="sm-v">${noCap}</div><div class="sm-l">Immat. inconnues</div></div>`;
+    <div class="sm-card"><div class="sm-v">${avgRate!=null?(avgRate*100).toFixed(1)+'%':'—'}</div><div class="sm-l">Taux moyen</div></div>`;
 }
 
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
