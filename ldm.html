@@ -1135,7 +1135,16 @@ async function importManualFlight(mi, force) {
         const app  = apps.find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
         const db   = getFirestore(app);
 
-        const type = toICAO(to) === 'GQNO' || to === 'NKC' || to === 'GQNO' ? 'ARR' : 'DEP';
+        // Type DÉPART/ARRIVÉE : priorité au numéro de vol enregistré.
+        // Repli (si numéro inconnu) : déduction par destination GQNO/NKC.
+        let type;
+        const _fnMap = await _loadFlightNumMap();
+        const _fnInfo = _fnMap[_normFN(fn)];
+        if (_fnInfo && _fnInfo.type) {
+            type = _fnInfo.type;
+        } else {
+            type = (toICAO(to) === 'GQNO' || to === 'NKC' || to === 'GQNO') ? 'ARR' : 'DEP';
+        }
         await addDoc(collection(db,'flights'), {
             flightNumber: fn, registration: rg,
             date: dt,
@@ -1402,11 +1411,12 @@ async function dedupAndEnrich(list) {
     const p = em.parsed || (em.parsed = {});
     const info = map[_normFN(p.flightNumber)];
     if (info) {
-      if (info.from)     p.from        = info.from;
-      if (info.to)       p.to          = info.to;
-      if (info.company)  p.company     = info.company;
-      if (info.stopover) p.stopover    = info.stopover;
-      if (info.type && !p.type) p.type = info.type;
+      // Le numéro de vol enregistré fait FOI : on écrase trajet + type + compagnie.
+      if (info.from)     p.from     = info.from;
+      if (info.to)       p.to       = info.to;
+      if (info.company)  p.company  = info.company;
+      if (info.stopover) p.stopover = info.stopover;
+      if (info.type)     p.type     = info.type;   // DEP/ARR officiel (écrase la déduction LDM/MVT)
       p._routeFromList = true;   // marqueur : trajet déduit de la liste
     }
   }
