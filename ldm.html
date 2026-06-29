@@ -1833,10 +1833,15 @@ function extractFields(text, dateReceived) {
       // ARR/TRANSIT: PAX qui descendent à NKC
       if (nkcData) { totalPax = nkcData.pax; totalBabies = nkcData.babies; foundPax = true; }
     } else if (p.type === 'DEP') {
-      // DEP: PAX qui partent vers la destination (pas NKC)
-      if (otherSts.length > 0 && stationPax[otherSts[0]]) {
-        totalPax = stationPax[otherSts[0]].pax;
-        totalBabies = stationPax[otherSts[0]].babies;
+      // DEP: PAX qui partent vers la/les destination(s) — hors NKC.
+      // Cas escale (ex L6 NKC-DSS-CKY) : additionner TOUTES les destinations.
+      if (otherSts.length > 0) {
+        otherSts.forEach(st => {
+          if (stationPax[st]) {
+            totalPax    += stationPax[st].pax;
+            totalBabies += stationPax[st].babies;
+          }
+        });
         foundPax = true;
       }
     }
