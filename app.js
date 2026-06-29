@@ -549,15 +549,16 @@ function validateForm() {
         isValid = false;
     }
 
-    // Validate flight number + date uniqueness (éviter doublon de vol)
+    // Validate flight number + date uniqueness (interdiction stricte des doublons)
+    // Bloque à l'ajout ET à la modification ; autorise si c'est le MÊME vol qu'on édite.
     const fNum = normFN(elements.fVol && elements.fVol.value ? elements.fVol.value : '');
     const fDate = elements.fDate ? elements.fDate.value.trim() : '';
-    if (fNum && fDate && !editingFlightId) {
+    if (fNum && fDate) {
         const dupVol = flights.find(f =>
-            normFN(f.flightNumber) === fNum && f.date === fDate
+            normFN(f.flightNumber) === fNum && f.date === fDate && f.id !== editingFlightId
         );
         if (dupVol) {
-            showFieldError(elements.fVol, 'Ce vol existe déjà pour cette date (doublon)');
+            showFieldError(elements.fVol, '⛔ Un vol avec ce numéro existe déjà pour cette date. Doublon interdit.');
             isValid = false;
         }
     }
@@ -1295,27 +1296,21 @@ window._pageSize    = 50;
 function render() {
     const filteredFlights = filterFlights();
 
-    // Détecter si plusieurs compagnies sont présentes dans le résultat filtré
-    const companiesInResults = new Set(filteredFlights.map(f => f.company).filter(Boolean));
-    const multiCompany = companiesInResults.size > 1;
-
-    // Tri : si plusieurs compagnies → compagnie D'ABORD puis date puis N° auth
-    //       sinon → date croissante puis N° auth croissant
     const getAuthNum = (auth) => {
         if (!auth) return 0;
         const m = auth.match(/(\d+)$/);
         return m ? parseInt(m[1]) : 0;
     };
 
+    // Tri TOUJOURS identique (avec ou sans filtre, toutes pages) :
+    //   1) date croissante  2) compagnie  3) N° d'autorisation croissant
     filteredFlights.sort((a, b) => {
-        if (multiCompany) {
-            const cA = (a.company || '').toLowerCase();
-            const cB = (b.company || '').toLowerCase();
-            if (cA !== cB) return cA < cB ? -1 : 1;
-        }
         const dA = a.date || '';
         const dB = b.date || '';
         if (dA !== dB) return dA < dB ? -1 : 1;
+        const cA = (a.company || '').toLowerCase();
+        const cB = (b.company || '').toLowerCase();
+        if (cA !== cB) return cA < cB ? -1 : 1;
         return getAuthNum(a.authorizationNumber) - getAuthNum(b.authorizationNumber);
     });
 
