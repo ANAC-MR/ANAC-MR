@@ -159,6 +159,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
     </div>
 
     <div class="summary" id="summary"></div>
+    <div id="companyRates" style="margin-top:18px;"></div>
   </div>
 
   <!-- ══════════ ONGLET PARAMÈTRES IMMATRICULATIONS ══════════ -->
@@ -612,6 +613,43 @@ function renderSummary(flights){
     <div class="sm-card"><div class="sm-v">${nbVols}</div><div class="sm-l">Vols</div></div>
     <div class="sm-card"><div class="sm-v">${totalPax}</div><div class="sm-l">Passagers</div></div>
     <div class="sm-card"><div class="sm-v">${avgRate!=null?(avgRate*100).toFixed(1)+'%':'—'}</div><div class="sm-l">Taux moyen</div></div>`;
+
+  // ── Taux moyen PAR COMPAGNIE ──
+  const byCo={};
+  flights.forEach(f=>{
+    const co=f.company||'(Sans compagnie)';
+    (byCo[co]=byCo[co]||{rates:[],vols:0,pax:0});
+    byCo[co].vols++;
+    byCo[co].pax+=(f.passengers||0);
+    if(f.rate!=null) byCo[co].rates.push(f.rate);
+  });
+  const cos=Object.keys(byCo).sort((a,b)=>{
+    // Mauritania Airlines en premier, puis ordre alphabétique
+    if(isMAI(a)&&!isMAI(b)) return -1;
+    if(!isMAI(a)&&isMAI(b)) return 1;
+    return a.localeCompare(b);
+  });
+  let rows='';
+  for(const co of cos){
+    const d=byCo[co];
+    const avg=d.rates.length?(d.rates.reduce((x,y)=>x+y,0)/d.rates.length):null;
+    const coColor=companyColor(co);
+    const dot=coColor?`<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#${coColor};margin-right:7px;vertical-align:middle;"></span>`:'';
+    const rateTxt=avg!=null?(avg*100).toFixed(1)+'%':'—';
+    const rateCls=avg==null?'':(avg>=0.75?'rate-hi':(avg>=0.5?'rate-mid':'rate-lo'));
+    rows+=`<tr>
+      <td style="text-align:left;">${dot}${esc(co)}</td>
+      <td>${d.vols}</td>
+      <td>${d.pax}</td>
+      <td class="rate-cell ${rateCls}">${rateTxt}</td>
+    </tr>`;
+  }
+  document.getElementById('companyRates').innerHTML = cos.length ? `
+    <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">📊 Taux moyen par compagnie</div>
+    <div class="tbl-wrap"><table style="min-width:auto;">
+      <thead><tr><th style="text-align:left;">Compagnie</th><th>Vols</th><th>Passagers</th><th>Taux moyen</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>` : '';
 }
 
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
