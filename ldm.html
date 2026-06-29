@@ -1830,8 +1830,20 @@ function extractFields(text, dateReceived) {
     const otherSts = Object.keys(stationPax).filter(s => s!=='NKC' && s!=='GQNO');
 
     if (p.type === 'ARR' || p.type === 'TRANSIT') {
-      // ARR/TRANSIT: PAX qui descendent à NKC
-      if (nkcData) { totalPax = nkcData.pax; totalBabies = nkcData.babies; foundPax = true; }
+      // ARR/TRANSIT vers NKC.
+      // Cas escale (ex L6 CKY-DSS-NKC) : additionner toutes les stations
+      // débarquées (escale DSS + NKC). Sinon, simplement la station NKC.
+      const allStationsWithPax = Object.keys(stationPax);
+      if (allStationsWithPax.length > 1) {
+        // Vol avec escale : on somme toutes les stations
+        allStationsWithPax.forEach(st => {
+          totalPax    += stationPax[st].pax;
+          totalBabies += stationPax[st].babies;
+        });
+        foundPax = true;
+      } else if (nkcData) {
+        totalPax = nkcData.pax; totalBabies = nkcData.babies; foundPax = true;
+      }
     } else if (p.type === 'DEP') {
       // DEP: PAX qui partent vers la/les destination(s) — hors NKC.
       // Cas escale (ex L6 NKC-DSS-CKY) : additionner TOUTES les destinations.
@@ -2073,15 +2085,21 @@ async function importFlight(i, force) {
 
   if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires','warn'); return; }
 
-  // Anti-duplicate check via Firebase (source de vérité)
-  const fp = `${fn}|${dt}|${rg}`;
-  if (!force && _fbImported.has(fp)) {
+  // Anti-doublon STRICT : même numéro de vol + même date = INTERDIT (non forçable).
+  // (l'immatriculation n'entre pas dans la clé : un vol = un numéro + une date)
+  const fpStrict = `${fn}|${dt}`;
+  const existsStrict = [..._fbImported].some(k => {
+    const parts = String(k).split('|');
+    return parts[0] === fn && parts[1] === dt;
+  });
+  if (existsStrict) {
     document.getElementById(`act-${i}`).innerHTML = `
-      <div class="dup-box">⚠️ Ce vol (${fn} du ${dt}) existe déjà dans Firebase.</div>
-      <button class="btn btn-outline btn-sm" onclick="importFlight(${i},true)">Forcer l\'import quand même</button>
+      <div class="dup-box" style="border-color:#ef4444;color:#fca5a5;">⛔ Doublon interdit : un vol ${fn} du ${dt} existe déjà dans le système.</div>
     `;
+    toast('⛔ Doublon interdit : ce vol existe déjà pour cette date','err');
     return;
   }
+  const fp = `${fn}|${dt}|${rg}`;
 
   const btn = document.querySelector(`#act-${i} .btn-green`);
   if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span>'; }
@@ -2094,18 +2112,29 @@ async function importFlight(i, force) {
     const db   = getFirestore(app);
 
     const authEl = document.getElementById('p'+i+'-auth');
+    // ── Trajet, type et compagnie pris du NUMÉRO DE VOL enregistré (source de vérité) ──
+    const _fnMap = await _loadFlightNumMap();
+    const _info  = _fnMap[_normFN(fn)];
+    let finalFrom = toICAO(fr), finalTo = toICAO(to), finalType = ty, finalStop = toICAO(sw)||'', finalCo = co;
+    if (_info) {
+      if (_info.from) finalFrom = toICAO(_info.from);
+      if (_info.to)   finalTo   = toICAO(_info.to);
+      if (_info.type) finalType = _info.type;
+      if (_info.stopover) finalStop = toICAO(_info.stopover);
+      if (_info.company) finalCo = _info.company;
+    }
     await addDoc(collection(db,'flights'), {
       flightNumber: fn, registration: rg,
       date: dt,
-      from: toICAO(fr),
-      to:   toICAO(to),
-      type: ty,
-      hasStopover: !!sw,
-      stopover: toICAO(sw) || '',
+      from: finalFrom,
+      to:   finalTo,
+      type: finalType,
+      hasStopover: !!finalStop,
+      stopover: finalStop,
       stopoverPax: spx,
       stopoverBabies: sbb,
       passengers: px, babies: bb,
-      company: co || detectCompany(fn),
+      company: finalCo || detectCompany(fn),
       authorizationNumber: authEl ? authEl.value.trim().toUpperCase() : '',
       source: 'LDM_EMAIL',
       createdAt: new Date().toISOString(),
