@@ -1340,7 +1340,19 @@ let timer       = null;
 let _flightNumMap = null;
 
 function _normFN(s) {
-  return (s || '').toUpperCase().replace(/[-\s.]/g, '');
+  // Comparaison : sans tirets/espaces/points ET sans zéros de tête numériques.
+  // KP14 = KP014 = KP0014 (toutes compagnies).
+  let v = (s || '').toUpperCase().replace(/[-\s.]/g, '');
+  v = v.replace(/^([A-Z]+)0*(\d.*)$/, '$1$2');
+  return v;
+}
+// Forme canonique d'affichage/stockage : numéro sur 4 chiffres (KP14 -> KP0014).
+function _canonFN(s) {
+  const raw = (s || '').toUpperCase().replace(/[-\s.]/g, '');
+  const m = raw.match(/^([A-Z]+)(\d+)([A-Z]*)$/);
+  if (!m) return raw;
+  const digits = (m[2].replace(/^0+/, '') || '0').padStart(4, '0');
+  return m[1] + digits + (m[3] || '');
 }
 
 async function _loadFlightNumMap() {
@@ -1450,7 +1462,7 @@ async function dedupAndEnrich(list) {
 // fingerprint = flightNumber|date|registration
 function makeFP(p) {
   return [
-    (p.flightNumber||'').toUpperCase().replace(/[-\s.]/g,''),
+    _normFN(p.flightNumber||''),
     (p.date||'').trim(),
     (p.registration||'').replace(/[\s.\-]/g,'').toUpperCase()
   ].join('|');
@@ -1482,13 +1494,13 @@ async function checkImportedFromFirebase() {
     if (doc.id.startsWith('cfg-')) return;
     // Fingerprint pour doublon
     const fp = [
-      (d.flightNumber||'').toUpperCase().replace(/[-\s.]/g,''),
+      _normFN(d.flightNumber||''),
       (d.date||'').trim(),
       (d.registration||'').replace(/[\s.\-]/g,'').toUpperCase()
     ].join('|');
     if (fp !== '||') _fbImported.add(fp);
     // Mémoriser authorizationNumber par N° vol (prend le plus récent)
-    const fn = (d.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'');
+    const fn = _normFN(d.flightNumber||'');
     if (fn && d.authorizationNumber) {
       _authByFlight[fn] = d.authorizationNumber;
     }
@@ -2114,10 +2126,11 @@ async function importFlight(i, force) {
 
   // Anti-doublon STRICT : même numéro de vol + même date = INTERDIT (non forçable).
   // (l'immatriculation n'entre pas dans la clé : un vol = un numéro + une date)
-  const fpStrict = `${fn}|${dt}`;
+  // Comparaison insensible aux zéros (KP14 = KP0014).
+  const fnNorm = _normFN(fn);
   const existsStrict = [..._fbImported].some(k => {
     const parts = String(k).split('|');
-    return parts[0] === fn && parts[1] === dt;
+    return parts[0] === fnNorm && parts[1] === dt;
   });
   if (existsStrict) {
     document.getElementById(`act-${i}`).innerHTML = `
@@ -2126,7 +2139,7 @@ async function importFlight(i, force) {
     toast('⛔ Doublon interdit : ce vol existe déjà pour cette date','err');
     return;
   }
-  const fp = `${fn}|${dt}|${rg}`;
+  const fp = `${fnNorm}|${dt}|${rg}`;
 
   const btn = document.querySelector(`#act-${i} .btn-green`);
   if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span>'; }
@@ -2151,7 +2164,7 @@ async function importFlight(i, force) {
       if (_info.company) finalCo = _info.company;
     }
     await addDoc(collection(db,'flights'), {
-      flightNumber: fn, registration: rg,
+      flightNumber: _canonFN(fn), registration: rg,
       date: dt,
       from: finalFrom,
       to:   finalTo,
