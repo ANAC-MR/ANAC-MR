@@ -9,7 +9,25 @@ const MONTHS = [
 // ── Normalisation numéro de vol — utilisée partout ──────────────
 // Retire tirets, espaces et points → "L6-301", "L6 301", "L6.301" → "L6301"
 function normFN(s) {
-    return (s || '').toString().toUpperCase().replace(/[-\s.]/g, '');
+    // Normalisation pour COMPARAISON : majuscules, sans tirets/espaces/points,
+    // ET sans zéros de tête dans la partie numérique.
+    // Ainsi KP14 = KP014 = KP0014 (toutes compagnies).
+    let v = (s || '').toString().toUpperCase().replace(/[-\s.]/g, '');
+    // Séparer préfixe lettres + chiffres : enlever les zéros de tête des chiffres
+    v = v.replace(/^([A-Z]+)0*(\d.*)$/, '$1$2');
+    return v;
+}
+
+// Forme canonique d'AFFICHAGE/STOCKAGE : préfixe lettres + numéro sur 4 chiffres.
+// Ex : KP14 -> KP0014 ; AF598 -> AF0598 ; L6116 -> L6116 (déjà 4 si on compte L+6116).
+function canonFN(s) {
+    const raw = (s || '').toString().toUpperCase().replace(/[-\s.]/g, '');
+    const m = raw.match(/^([A-Z]+)(\d+)([A-Z]*)$/);
+    if (!m) return raw;
+    const prefix = m[1];
+    const digits = m[2].replace(/^0+/, '') || '0';
+    const suffix = m[3] || '';
+    return prefix + digits.padStart(4, '0') + suffix;
 }
 
 const AIRLINES = [
@@ -597,7 +615,7 @@ function getFormData() {
         registration: (document.getElementById('fImmSelect') && document.getElementById('fImmSelect').value
             ? document.getElementById('fImmSelect').value
             : elements.fImm.value.trim().toUpperCase()),
-        flightNumber: normFN(document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value
+        flightNumber: canonFN(document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value
             ? document.getElementById('fVolSelect').value
             : elements.fVol.value.trim()),
         type:     elements.fType.value,
