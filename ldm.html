@@ -1350,7 +1350,11 @@ async function _loadFlightNumMap() {
     await _ldmWaitAuth();
     const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
     const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const app = getApps().find(a => a.name === 'anac-auth') || getApps()[0];
+    // Utiliser l'app 'ldm' AUTHENTIFIÉE (la même que l'import), pas 'anac-auth'.
+    const app = getApps().find(a => a.name === 'ldm') || initializeApp(FB, 'ldm');
+    if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) {
+      try { await window.ANAC_AUTH.ensureAuthed(app); } catch(e) {}
+    }
     const db  = getFirestore(app);
     const snap = await getDocs(collection(db, 'flight_numbers'));
     snap.forEach(d => {
@@ -1365,7 +1369,12 @@ async function _loadFlightNumMap() {
         type:     x.type     || ''
       };
     });
-  } catch (e) { console.warn('Chargement flight_numbers (dédup):', e && e.message); }
+    console.log('✅ flight_numbers chargés :', Object.keys(_flightNumMap).length, 'numéros');
+  } catch (e) {
+    console.warn('Chargement flight_numbers (dédup):', e && e.message);
+    _flightNumMap = null; // permettre une nouvelle tentative au prochain appel
+    return {};
+  }
   return _flightNumMap;
 }
 
