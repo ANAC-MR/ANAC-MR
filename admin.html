@@ -2429,46 +2429,23 @@ const fbApp = initializeApp(firebaseConfig);
 const db    = getFirestore(fbApp);
 
 // ── Authentifier cette connexion (règles Firestore strictes) ──
-// Les règles exigent request.auth != null pour lire anac_users.
-// On établit ICI, de façon fiable, une session Firebase sur fbApp
-// AVANT toute lecture Firestore, et on attend le VRAI jeton (pas
-// juste un drapeau). Sans ça : "Missing or insufficient permissions".
+// Bloque les opérations Firestore tant que l'auth n'est pas prête.
 window._adminAuthReady = false;
-window._adminAuthOK    = false;
 (async function(){
   try{
-    const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-    const auth = A.getAuth(fbApp);
-    try { await A.setPersistence(auth, A.browserSessionPersistence); } catch(e){}
-
-    // Si une session existe déjà, on la garde. Sinon connexion
-    // anonyme : suffit pour LIRE (les écritures de comptes passent
-    // par les Cloud Functions qui vérifient le claim admin).
-    if(!auth.currentUser){
-      try{
-        await A.signInAnonymously(auth);
-      }catch(e){ console.warn('Admin signInAnonymously:', e && e.message); }
+    let _t=0;
+    while(!(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) && _t<80){
+      await new Promise(r=>setTimeout(r,100)); _t++;
     }
-
-    // Attendre que auth.currentUser soit RÉELLEMENT présent (le SDK
-    // peut résoudre signInAnonymously avant d'exposer currentUser).
-    await new Promise((resolve)=>{
-      if(auth.currentUser) return resolve();
-      const unsub = A.onAuthStateChanged(auth,(u)=>{ if(u){ try{unsub();}catch(_){} resolve(); } });
-      setTimeout(()=>{ try{unsub();}catch(_){} resolve(); }, 8000);
-    });
-
-    if(auth.currentUser){
-      try{ await auth.currentUser.getIdToken(true); }catch(e){}
-      window._adminAuthOK = true;
+    if(window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed){
+      await window.ANAC_AUTH.ensureAuthed(fbApp);
     }
-    window._adminAuth = auth;
   }catch(e){ console.warn('Admin auth bootstrap:', e && e.message); }
   finally{ window._adminAuthReady = true; }
 })();
 async function _adminWaitAuth(){
   let _t=0;
-  while(!window._adminAuthReady && _t<160){
+  while(!window._adminAuthReady && _t<80){
     await new Promise(r=>setTimeout(r,100)); _t++;
   }
 }
@@ -2916,7 +2893,7 @@ function renderDestList() {
         const label = ap ? (ap.iata||ap.icao)+' — '+(ap.city||ap.name||code) : code;
         return '<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);color:#38bdf8;border-radius:7px;padding:4px 10px;margin:3px;font-size:12px;font-weight:700;">'
             + label
-            + '<span onclick="removeDest(\"'+code+'\")" style="cursor:pointer;opacity:.6;font-size:14px;line-height:1;">×</span>'
+            + ' <span onclick="removeDest(&quot;'+code+'&quot;)" style="cursor:pointer;opacity:.6;font-size:14px;line-height:1;font-weight:900;">×</span>'
             + '</span>';
     }).join('');
 }
@@ -3389,10 +3366,6 @@ async function loadUsers() {
     await _adminWaitAuth();
     const div = document.getElementById('usersList');
     if (!div) return;
-    if (!window._adminAuthOK) {
-        div.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:24px;font-size:13px;">Session Firebase non établie. Rechargez la page (Ctrl+Shift+R) ou reconnectez-vous (DADY).</div>';
-        return;
-    }
     div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;">Chargement...</div>';
     try {
         const snap  = await window._getDocs(window._collection(window._db,'anac_users'));
@@ -5877,16 +5850,6 @@ window._secSwitchTab = function(name) {
 async function _secLoadUsers() {
   const list = document.getElementById('secUsersList');
   if (!list) return;
-  // Attendre que la session Firebase soit réellement établie AVANT
-  // de lire anac_users (sinon "Missing or insufficient permissions").
-  try { if (typeof _adminWaitAuth === 'function') await _adminWaitAuth(); } catch(e) {}
-  // Attendre aussi que l'app 'anac-auth' (utilisée par listUsers) ait
-  // une session : on patiente jusqu'à 8 s que ANAC_AUTH soit prêt.
-  let _w = 0;
-  while (_w < 80 && !(window.ANAC_AUTH && window.ANAC_AUTH.getSession && window.ANAC_AUTH.getSession())) {
-    await new Promise(r => setTimeout(r, 100)); _w++;
-  }
-  list.innerHTML = '<div style="text-align:center;color:#64748b;padding:30px;font-size:13px;">Chargement...</div>';
   try {
     const allUsers = await listUsers();
     // Filtrer DADY (compte de secours qui ne doit pas apparaître)
@@ -5925,13 +5888,7 @@ async function _secLoadUsers() {
     html += '</div>';
     list.innerHTML = html;
   } catch(e) {
-    const msg = (e && e.message) || String(e);
-    const isPerm = /insufficient|permission|PERMISSION_DENIED/i.test(msg);
-    list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;font-size:13px;">'
-      + (isPerm
-          ? 'Session non encore active. Patientez 5 s puis recliquez sur « Sécurité &amp; Utilisateurs », ou déconnectez-vous et reconnectez-vous (DADY).'
-          : 'Erreur: ' + msg)
-      + '</div>';
+    list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur: ' + e.message + '</div>';
   }
 }
 
