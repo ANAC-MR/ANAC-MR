@@ -393,7 +393,7 @@ async function loadFlightNumbers(){
     });
   }catch(e){ console.warn('loadFlightNumbers:',e&&e.message); }
 }
-function normFN(s){ return (s||'').toUpperCase().replace(/[-\s.]/g,''); }
+function normFN(s){ let v=(s||'').toUpperCase().replace(/[-\s.]/g,''); return v.replace(/^([A-Z]+)0*(\d.*)$/,'$1$2'); }
 
 // Extrait l'heure de départ et d'arrivée depuis un routing.
 // Formats : "GQNO 1000 - 1500 LFPG +1"  ou  "GQNO 1000 - STOP 1200 1300 - 1500 LFPG +1"
