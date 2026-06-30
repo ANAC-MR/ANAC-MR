@@ -3660,7 +3660,9 @@ window.editFlightNum = async function(id) {
 
 window.saveFlightNum = async function() {
     const id      = document.getElementById('fnEditId').value;
-    const number  = (document.getElementById('fnNumber').value||'').trim().toUpperCase().replace(/[-\s]/g,'');
+    // Forme canonique 4 chiffres (KP14 -> KP0014) ; les zéros ne comptent pas.
+    const _canonFN = (s)=>{ const raw=(s||'').toUpperCase().replace(/[-\s.]/g,''); const m=raw.match(/^([A-Z]+)(\d+)([A-Z]*)$/); if(!m) return raw; const dg=(m[2].replace(/^0+/,'')||'0').padStart(4,'0'); return m[1]+dg+(m[3]||''); };
+    const number  = _canonFN(document.getElementById('fnNumber').value||'');
     const company = document.getElementById('fnCompany').value;
     const type    = document.getElementById('fnType').value;
     const from    = (document.getElementById('fnFrom').value||'').trim().toUpperCase();
