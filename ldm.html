@@ -1407,6 +1407,7 @@ async function dedupAndEnrich(list) {
 
   // Enrichir chaque vol retenu avec le trajet de flight_numbers.
   const result = [...groups.values()];
+  const _notFound = [];
   for (const em of result) {
     const p = em.parsed || (em.parsed = {});
     const info = map[_normFN(p.flightNumber)];
@@ -1418,7 +1419,14 @@ async function dedupAndEnrich(list) {
       if (info.stopover) p.stopover = info.stopover;
       if (info.type)     p.type     = info.type;   // DEP/ARR officiel (écrase la déduction LDM/MVT)
       p._routeFromList = true;   // marqueur : trajet déduit de la liste
+    } else {
+      p._routeFromList = false;
+      if (p.flightNumber) _notFound.push(p.flightNumber);
     }
+  }
+  if (_notFound.length) {
+    console.warn('⚠️ Numéros de vol ABSENTS de la liste (destination NON corrigée) : ' + [...new Set(_notFound)].join(', '));
+    console.warn('→ Ajoutez ces numéros dans Admin → Numéros de Vol pour que leur destination soit correcte.');
   }
   return result;
 }
