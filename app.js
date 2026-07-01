@@ -46,8 +46,15 @@ function canonFN(s) {
 // ─────────────────────────────────────────────────────────────
 function isMauritanianAirport(code) {
     // ICAO mauritanien commence par GQ. On accepte aussi IATA connus si besoin.
-    const c = (code || '').toUpperCase();
-    return c.startsWith('GQ');
+    const c = (code || '').toUpperCase().trim();
+    if (!c) return false;
+    if (c.startsWith('GQ')) return true;
+    // Si code IATA (ex NDB), convertir en ICAO via adminConfig.airports
+    if (adminConfig && adminConfig.airports) {
+        const ap = adminConfig.airports.find(a => a.iata === c || a.icao === c);
+        if (ap && ap.icao) return ap.icao.toUpperCase().startsWith('GQ');
+    }
+    return false;
 }
 function isMAIcompany(company) {
     const c = (company || '').toUpperCase();
@@ -1095,7 +1102,7 @@ function updateImmField(company) {
                 hintEl.className = 'field-hint imm-hint';
                 parent.appendChild(hintEl);
             }
-            hintEl.textContent = `Préfixe attendu: ${airlineData.immPrefix} (ex: ${airlineData.immPrefix}CLX)`;
+            hintEl.textContent = '';
         }
     }
 }
