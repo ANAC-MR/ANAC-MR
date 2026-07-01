@@ -1293,8 +1293,8 @@ document.addEventListener('keydown', e => {
     </div>
 
     <!-- LIGNE 3 : Passagers -->
-    <div class="fm-section-label">👥 Passagers</div>
-    <div class="fm-grid fm-grid-4">
+    <div class="fm-section-label" id="topPaxLabel">👥 Passagers</div>
+    <div class="fm-grid fm-grid-4" id="topPaxGrid">
       <div class="fm-field">
         <label>PAX (vol)</label>
         <div class="fm-counter">
@@ -1339,42 +1339,84 @@ document.addEventListener('keydown', e => {
           <label>Aéroport d'escale</label>
           <select id="fStopover" onchange="updateMidLegRow && updateMidLegRow()"><option value="">— Choisir —</option></select>
         </div>
-        <div class="fm-field">
-          <label>PAX Escale</label>
-          <div class="fm-counter">
-            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverPax',-1)">−</button>
-            <input type="number" id="fStopoverPax" min="0" value="0" oninput="updateTotals()">
-            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverPax',1)">+</button>
-          </div>
-        </div>
-        <div class="fm-field">
-          <label>Bébés Escale</label>
-          <div class="fm-counter">
-            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',-1)">−</button>
-            <input type="number" id="fStopoverBabies" min="0" value="0" oninput="updateTotals()">
-            <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',1)">+</button>
-          </div>
-        </div>
       </div>
-      <div class="fm-grid fm-grid-4" id="midLegRow" style="display:none;margin-top:10px;">
-        <div class="fm-field fm-field-col2">
-          <label style="color:#f59e0b;">Segment escale → arrivée <span style="font-weight:400;font-size:11px;">(saisie manuelle, fin d'année)</span></label>
-          <div style="font-size:12px;color:#94a3b8;padding:8px 0;" id="midLegLabel">—</div>
-        </div>
-        <div class="fm-field">
-          <label>PAX (milieu)</label>
-          <div class="fm-counter">
-            <button type="button" class="fm-cnt" onclick="stepCount('fMidLegPax',-1)">−</button>
-            <input type="number" id="fMidLegPax" min="0" value="0">
-            <button type="button" class="fm-cnt" onclick="stepCount('fMidLegPax',1)">+</button>
+
+      <!-- Décomposition claire des trajets (MAI à escale) -->
+      <div id="escaleLines" style="margin-top:14px;display:none;">
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">💡 Renseignez les passagers de chaque tronçon :</div>
+
+        <!-- Ligne 1 : vol principal (départ → arrivée) -->
+        <div class="escale-line" style="display:flex;align-items:center;gap:14px;padding:10px 12px;border-radius:10px;background:#eef2ff;border:1px solid #c7d2fe;margin-bottom:8px;">
+          <div style="min-width:150px;font-weight:800;color:#1e3a8a;" id="segMainLabel">— → —</div>
+          <div style="font-size:11px;color:#64748b;">Vol principal</div>
+          <div style="flex:1;"></div>
+          <div class="fm-field" style="min-width:130px;">
+            <label>PAX</label>
+            <div class="fm-counter">
+              <button type="button" class="fm-cnt" onclick="stepCount('fMainPax',-1);updateEscaleTotals()">−</button>
+              <input type="number" id="fMainPax" min="0" value="0" oninput="updateEscaleTotals()">
+              <button type="button" class="fm-cnt" onclick="stepCount('fMainPax',1);updateEscaleTotals()">+</button>
+            </div>
+          </div>
+          <div class="fm-field" style="min-width:110px;">
+            <label>Bébés</label>
+            <div class="fm-counter">
+              <button type="button" class="fm-cnt" onclick="stepCount('fMainBabies',-1);updateEscaleTotals()">−</button>
+              <input type="number" id="fMainBabies" min="0" value="0" oninput="updateEscaleTotals()">
+              <button type="button" class="fm-cnt" onclick="stepCount('fMainBabies',1);updateEscaleTotals()">+</button>
+            </div>
           </div>
         </div>
-        <div class="fm-field">
-          <label>Bébés (milieu)</label>
-          <div class="fm-counter">
-            <button type="button" class="fm-cnt" onclick="stepCount('fMidLegBabies',-1)">−</button>
-            <input type="number" id="fMidLegBabies" min="0" value="0">
-            <button type="button" class="fm-cnt" onclick="stepCount('fMidLegBabies',1)">+</button>
+
+        <!-- Ligne 2 : départ → escale -->
+        <div class="escale-line" style="display:flex;align-items:center;gap:14px;padding:10px 12px;border-radius:10px;background:#fff7e6;border:1px solid #fcd34d;margin-bottom:8px;">
+          <div style="min-width:150px;font-weight:800;color:#92400e;" id="segStopLabel">— → —</div>
+          <div style="font-size:11px;color:#a16207;">Départ → escale</div>
+          <div style="flex:1;"></div>
+          <div class="fm-field" style="min-width:130px;">
+            <label>PAX</label>
+            <div class="fm-counter">
+              <button type="button" class="fm-cnt" onclick="stepCount('fStopoverPax',-1);updateEscaleTotals()">−</button>
+              <input type="number" id="fStopoverPax" min="0" value="0" oninput="updateEscaleTotals()">
+              <button type="button" class="fm-cnt" onclick="stepCount('fStopoverPax',1);updateEscaleTotals()">+</button>
+            </div>
+          </div>
+          <div class="fm-field" style="min-width:110px;">
+            <label>Bébés</label>
+            <div class="fm-counter">
+              <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',-1);updateEscaleTotals()">−</button>
+              <input type="number" id="fStopoverBabies" min="0" value="0" oninput="updateEscaleTotals()">
+              <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',1);updateEscaleTotals()">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ligne 3 : escale → arrivée (saisie manuelle) — seulement escale mauritanienne -->
+        <div class="escale-line" id="midLegRow" style="display:none;align-items:center;gap:14px;padding:10px 12px;border-radius:10px;background:#f4c430;border:1px solid #b8860b;margin-bottom:8px;">
+          <div style="min-width:150px;font-weight:800;color:#3a2c00;" id="segMidLabel">— → —</div>
+          <div style="font-size:11px;color:#7a4f01;font-style:italic;">Escale → arrivée (saisie manuelle, fin d'année)</div>
+          <div style="flex:1;"></div>
+          <div class="fm-field" style="min-width:130px;">
+            <label style="color:#3a2c00;">PAX</label>
+            <div class="fm-counter">
+              <button type="button" class="fm-cnt" onclick="stepCount('fMidLegPax',-1);updateEscaleTotals()">−</button>
+              <input type="number" id="fMidLegPax" min="0" value="0" oninput="updateEscaleTotals()">
+              <button type="button" class="fm-cnt" onclick="stepCount('fMidLegPax',1);updateEscaleTotals()">+</button>
+            </div>
+          </div>
+          <div class="fm-field" style="min-width:110px;">
+            <label style="color:#3a2c00;">Bébés</label>
+            <div class="fm-counter">
+              <button type="button" class="fm-cnt" onclick="stepCount('fMidLegBabies',-1);updateEscaleTotals()">−</button>
+              <input type="number" id="fMidLegBabies" min="0" value="0" oninput="updateEscaleTotals()">
+              <button type="button" class="fm-cnt" onclick="stepCount('fMidLegBabies',1);updateEscaleTotals()">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
+          <div style="background:#0f1e3d;color:#D4AF37;border-radius:8px;padding:6px 14px;font-weight:800;">
+            TOTAL PAX : <span id="escTotalPax">0</span> &nbsp;|&nbsp; BÉBÉS : <span id="escTotalBab">0</span>
           </div>
         </div>
       </div>
