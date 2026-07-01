@@ -528,7 +528,8 @@ function enrich(f){
   const stopRaw = (fnInfo&&fnInfo.stopover) ? fnInfo.stopover : (f.stopover||'');
   const fromRaw = (fnInfo&&fnInfo.from) ? fnInfo.from : (f.from||'');
   const toRaw   = (fnInfo&&fnInfo.to)   ? fnInfo.to   : (f.to||'');
-  const hasStop = !!(f.hasStopover && (f.stopover||stopRaw));
+  // Escale : soit le vol l'a, soit son numéro de vol la définit (admin)
+  const hasStop = !!(stopRaw && suiviIsMAI(company));
   return {
     date, dayIdx, dayName, dayDate,
     company,
@@ -639,17 +640,19 @@ function renderTable(flights){
     const showCo  = showDay || f.company!==lastCo;
     lastDay=f.dayName; lastCo=f.company;
     const capCell = f.capacity!=null ? f.capacity : '<span class="cap-empty">—</span>';
-    const rateCell = f.rate!=null ? `<span class="rate-cell ${rateClass(f.rate)}">${(f.rate*100).toFixed(1)}%</span>` : '—';
+    // Total PAX (somme de toutes les lignes affichées)
+    const totalPax = lines.reduce((s,l)=>s+(Number(l.pax)||0),0);
+    // ── Ligne principale ──
+    const main = lines[0];
+    // Taux de remplissage : UNIQUEMENT sur la ligne principale (pas le total,
+    // pas les segments). Basé sur le PAX de la ligne principale.
+    const mainRate = (f.capacity && main.pax!=null && f.capacity>0) ? (main.pax/f.capacity) : null;
+    const rateCell = mainRate!=null ? `<span class="rate-cell ${rateClass(mainRate)}">${(mainRate*100).toFixed(1)}%</span>` : '—';
     // Cellule jour fusionnée : rowspan = nb total de lignes du jour
     const dayTd = showDay
       ? `<td class="day-cell" rowspan="${dayCount[f.dayName]}">${esc(f.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(f.dayDate)}</span></td>`
       : '';
 
-    // Total PAX (somme de toutes les lignes affichées)
-    const totalPax = lines.reduce((s,l)=>s+(Number(l.pax)||0),0);
-
-    // ── Ligne principale ──
-    const main = lines[0];
     const mainPaxCell = main.pax!=null ? main.pax : '—';
     const totalBadge = hasEscale
       ? ` <span style="display:inline-block;background:#0f1e3d;color:#D4AF37;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:6px;">Σ ${totalPax}</span>` : '';
