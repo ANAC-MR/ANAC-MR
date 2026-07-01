@@ -495,6 +495,26 @@
      MENU HAMBURGER UNIFIÉ ANAC - à insérer en haut de chaque page
      ═══════════════════════════════════════════════════════════════ -->
 <style>
+/* Fix menu Actions : au-dessus des autres lignes, jamais coupé */
+.actions-cell { position: relative; }
+.actions-wrapper { position: relative; }
+.actions-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10050 !important;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+  min-width: 160px;
+  display: none;
+  overflow: visible;
+}
+.actions-menu.active { display: block !important; }
+/* La ligne contenant un menu ouvert passe au-dessus des suivantes */
+tr:has(.actions-menu.active) { position: relative; z-index: 10040; }
+table, tbody, tr, td { overflow: visible; }
 .anac-menu-btn {
   position: fixed;
   top: 14px;
