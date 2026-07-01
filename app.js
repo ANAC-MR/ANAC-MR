@@ -94,24 +94,28 @@ function generateFlightLines(flight) {
     const midBab = Number(flight.midLegBabies || 0);
 
     const domesticStop = isMauritanianAirport(stop);
+    const isArr = (flight.type||'').toUpperCase() === 'ARR';
 
     if (domesticStop) {
-        // 3 lignes. Ordre :
-        //   1) VOL PRINCIPAL : départ → arrivée (PAX arrivée finale)
-        //   2) départ → escale             (PAX escale)
-        //   3) escale → arrivée            (VIDE, saisie manuelle en fin d'année)
+        // Escale mauritanienne → 3 lignes (même logique quel que soit le sens) :
+        //   1) principale : origine → destination
+        //   2) origine → escale
+        //   3) escale → destination
         return [
             { from: dep,  to: arr,  passengers: paxArr,  babies: babArr,  isMidLeg:false, isVirtual:false, isMain:true,  parent:flight },
             { from: dep,  to: stop, passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:true,  isMain:false, parent:flight },
             { from: stop, to: arr,  passengers: midPax,  babies: midBab,  isMidLeg:true,  isVirtual:true,  isMain:false, parent:flight }
         ];
     } else {
-        // Escale étrangère → 2 lignes. Ordre :
-        //   1) VOL PRINCIPAL : départ → arrivée finale (PAX arrivée)
-        //   2) départ → escale                          (PAX escale)
+        // Escale étrangère → 2 lignes. Le sens de la 2e ligne dépend du type :
+        //   • DÉPART : NKC → escale   (ex L6104 : NKC-CKY principale, NKC-DKR)
+        //   • ARRIVÉE : escale → NKC  (ex L6213 : ABJ-NKC principale, DSS-NKC)
+        const secLine = isArr
+            ? { from: stop, to: arr,  passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:true, isMain:false, parent:flight }
+            : { from: dep,  to: stop, passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:true, isMain:false, parent:flight };
         return [
-            { from: dep, to: arr,  passengers: paxArr,  babies: babArr,  isMidLeg:false, isVirtual:false, isMain:true,  parent:flight },
-            { from: dep, to: stop, passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:true,  isMain:false, parent:flight }
+            { from: dep, to: arr, passengers: paxArr, babies: babArr, isMidLeg:false, isVirtual:false, isMain:true, parent:flight },
+            secLine
         ];
     }
 }
@@ -1613,8 +1617,6 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals) {
     // On n'affiche QUE Trajet + PAX + Bébés. Les autres colonnes sont vides.
     // Fond jaune foncé UNIQUEMENT sur les cellules Trajet et PAX.
     if (isSub && !isMain) {
-        const midLegBadge = (line.isMidLeg && (!pax || pax === 0))
-            ? ' <span style="font-size:10px;color:#7a4f01;font-style:italic;font-weight:700;">(à saisir)</span>' : '';
         const yellow = 'background:#f4c430;';
         const routeCellY = `<td style="text-align:center;white-space:nowrap;${yellow}"><strong style="color:#3a2c00;">${escapeHtml(fromCode)}</strong> <span style="color:#7a4f01;font-weight:700;margin:0 4px;">→</span> <strong style="color:#3a2c00;">${escapeHtml(toCode)}</strong></td>`;
         row.innerHTML = `
@@ -1623,10 +1625,10 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals) {
             <td></td>
             <td></td>
             <td></td>
-            <td></td>
+            <td>${escapeHtml(flight.flightNumber)}</td>
             ${routeCellY}
-            <td></td>
-            <td style="font-weight:700;color:#3a2c00;${yellow}">${pax}${midLegBadge}</td>
+            <td><span class="type-badge ${typeClass}">${typeText}</span></td>
+            <td style="font-weight:700;color:#3a2c00;${yellow}">${pax}</td>
             <td style="font-weight:700;color:#3a2c00;">${bab}</td>
             <td class="actions-cell"></td>
         `;
