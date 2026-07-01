@@ -563,18 +563,23 @@ function suiviFlightLines(f){
   const paxArr=Math.max(0,(f._totalPax||0)-paxStop);
   const babArr=Math.max(0,(f._totalBab||0)-babStop);
   const midPax=f._midPax, midBab=f._midBab;
+  const isArr=(f.flightType||'').toUpperCase()==='ARR';
   if(isMauritanianAny(f._stop)){
-    // 3 lignes : principale (dep-arr), dep-stop, stop-arr (vide)
+    // Escale mauritanienne → 3 lignes : principale (dep-arr), dep-stop, stop-arr
     return [
       { routeTxt:`${dep}-${arr}`,  pax:paxArr,  babies:babArr,  isMain:true,  isMidLeg:false },
       { routeTxt:`${dep}-${stop}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false },
       { routeTxt:`${stop}-${arr}`, pax:midPax,  babies:midBab,  isMain:false, isMidLeg:true  }
     ];
   }
-  // Escale étrangère : 2 lignes
+  // Escale étrangère → 2 lignes. Sens de la 2e ligne selon le type :
+  //   DÉPART : NKC→escale (dep-stop) ; ARRIVÉE : escale→NKC (stop-arr)
+  const sec = isArr
+    ? { routeTxt:`${stop}-${arr}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false }
+    : { routeTxt:`${dep}-${stop}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false };
   return [
-    { routeTxt:`${dep}-${arr}`,  pax:paxArr,  babies:babArr,  isMain:true,  isMidLeg:false },
-    { routeTxt:`${dep}-${stop}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false }
+    { routeTxt:`${dep}-${arr}`, pax:paxArr, babies:babArr, isMain:true, isMidLeg:false },
+    sec
   ];
 }
 
@@ -668,19 +673,21 @@ function renderTable(flights){
       <td>${esc(f.obs||'')}</td>
     </tr>`;
 
-    // ── Sous-lignes d'escale (jaune foncé sur Trajet + PAX seulement) ──
+    // ── Sous-lignes d'escale (jaune foncé sur Trajet + PAX) ──
+    // On affiche aussi capacité, taux de remplissage et horaire pour chaque segment.
     for(let li=1; li<lines.length; li++){
       const l=lines[li];
-      const midBadge = (l.isMidLeg && (!l.pax || l.pax===0))
-        ? ' <span style="font-size:10px;color:#7a4f01;font-style:italic;font-weight:700;">(à saisir)</span>' : '';
+      const secRate = (f.capacity && l.pax!=null && f.capacity>0) ? (l.pax/f.capacity) : null;
+      const secRateCell = secRate!=null ? `<span class="rate-cell ${rateClass(secRate)}">${(secRate*100).toFixed(1)}%</span>` : '—';
+      const secCap = f.capacity!=null ? f.capacity : '<span class="cap-empty">—</span>';
       html+=`<tr>
         <td class="co-cell"></td>
-        <td class="fn-cell"></td>
+        <td class="fn-cell">${esc(f.flightNumber)}</td>
         <td class="route-cell" style="background:#f4c430;color:#3a2c00;font-weight:700;">${esc(l.routeTxt||'—')}</td>
-        <td class="type-cell"></td>
-        <td></td>
-        <td style="background:#f4c430;color:#3a2c00;font-weight:700;">${l.pax!=null?l.pax:'—'}${midBadge}</td>
-        <td></td>
+        <td class="type-cell">${esc(f.typeDisp||'—')}</td>
+        <td>${secCap}</td>
+        <td style="background:#f4c430;color:#3a2c00;font-weight:700;">${l.pax!=null?l.pax:'—'}</td>
+        <td>${secRateCell}</td>
         <td></td>
       </tr>`;
     }
@@ -806,16 +813,19 @@ async function exportExcel(){
         hasEscale?('Total PAX: '+totalPax):(f.obs||'')
       ]);
       meta.push({day:f.dayName, company:f.company, showDay, isSub:false, isMid:false});
-      // Sous-lignes escale
+      // Sous-lignes escale (avec n° vol, capacité, PAX ; le taux se calcule par formule)
       for(let li=1; li<lines.length; li++){
         const l=lines[li];
         rows.push([
-          '', '', '',
+          '',
+          '',
+          f.flightNumber,
           l.routeTxt||'',
-          '', '',
+          f.typeDisp||'',
+          f.capacity!=null?f.capacity:'',
           l.pax!=null?l.pax:'',
           '',
-          (l.isMidLeg && (!l.pax||l.pax===0))?'(à saisir)':''
+          ''
         ]);
         meta.push({day:f.dayName, company:f.company, showDay:false, isSub:true, isMid:l.isMidLeg});
       }
