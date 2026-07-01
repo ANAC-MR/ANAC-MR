@@ -30,6 +30,74 @@ function canonFN(s) {
     return prefix + digits.padStart(4, '0') + suffix;
 }
 
+// ─────────────────────────────────────────────────────────────
+//  LOGIQUE D'ESCALE (Mauritania Airlines / L6 uniquement)
+//  Un vol = un seul document ; on GÉNÈRE les lignes à l'affichage.
+//
+//  Règles :
+//   • Escale mauritanienne (ICAO commence par "GQ") → 3 lignes :
+//       1) départ → escale          (PAX escale, depuis LDM)
+//       2) escale → arrivée         (VIDE, saisie manuelle fin d'année)
+//       3) départ → arrivée         (PAX arrivée, depuis LDM)
+//   • Escale étrangère → 2 lignes :
+//       1) départ → escale          (PAX escale)
+//       2) départ → arrivée finale  (PAX arrivée)
+//   • Toute autre compagnie, ou vol sans escale → 1 seule ligne (le vol tel quel).
+// ─────────────────────────────────────────────────────────────
+function isMauritanianAirport(code) {
+    // ICAO mauritanien commence par GQ. On accepte aussi IATA connus si besoin.
+    const c = (code || '').toUpperCase();
+    return c.startsWith('GQ');
+}
+function isMAIcompany(company) {
+    const c = (company || '').toUpperCase();
+    return c.includes('MAURITANIA') || c === 'MAI' || c === 'L6';
+}
+// Renvoie un tableau de "lignes" à afficher pour un vol.
+// Chaque ligne : { from, to, passengers, babies, isMidLeg, isVirtual, parent }
+// isVirtual = true pour les lignes générées (autres que la ligne principale).
+function generateFlightLines(flight) {
+    const hasStop = flight.hasStopover && flight.stopover;
+    // Pas d'escale, ou pas MAI → une seule ligne (le vol tel quel)
+    if (!hasStop || !isMAIcompany(flight.company)) {
+        return [{
+            from: flight.from, to: flight.to,
+            passengers: flight.passengers, babies: flight.babies,
+            isMidLeg: false, isVirtual: false, parent: flight
+        }];
+    }
+    const dep = flight.from, stop = flight.stopover, arr = flight.to;
+    const paxStop = Number(flight.stopoverPax || 0);
+    const babStop = Number(flight.stopoverBabies || 0);
+    // PAX arrivée finale = total - escale (le total stocké inclut les deux)
+    const paxArr = Math.max(0, Number(flight.passengers || 0) - paxStop);
+    const babArr = Math.max(0, Number(flight.babies || 0) - babStop);
+    const midPax = Number(flight.midLegPax || 0);
+    const midBab = Number(flight.midLegBabies || 0);
+
+    const domesticStop = isMauritanianAirport(stop);
+
+    if (domesticStop) {
+        // 3 lignes
+        return [
+            { from: dep,  to: stop, passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:false, parent:flight },
+            { from: stop, to: arr,  passengers: midPax,  babies: midBab,  isMidLeg:true,  isVirtual:true,  parent:flight },
+            { from: dep,  to: arr,  passengers: paxArr,  babies: babArr,  isMidLeg:false, isVirtual:true,  parent:flight }
+        ];
+    } else {
+        // Escale étrangère → 2 lignes
+        return [
+            { from: dep, to: stop, passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:false, parent:flight },
+            { from: dep, to: arr,  passengers: paxArr,  babies: babArr,  isMidLeg:false, isVirtual:true,  parent:flight }
+        ];
+    }
+}
+if (typeof window !== 'undefined') {
+    window.generateFlightLines = generateFlightLines;
+    window.isMauritanianAirport = isMauritanianAirport;
+    window.isMAIcompany = isMAIcompany;
+}
+
 const AIRLINES = [
     "Mauritania Airlines",
     "Air Sénégal", 
@@ -440,8 +508,11 @@ function openModal(flightId = null) {
                 if (elements.fStopover) elements.fStopover.value = flight.stopover || '';
                 if (elements.fStopoverPax) elements.fStopoverPax.value = flight.stopoverPax || 0;
                 if (elements.fStopoverBabies) elements.fStopoverBabies.value = flight.stopoverBabies || 0;
+                const _mlp = document.getElementById('fMidLegPax'); if (_mlp) _mlp.value = flight.midLegPax || 0;
+                const _mlb = document.getElementById('fMidLegBabies'); if (_mlb) _mlb.value = flight.midLegBabies || 0;
                 const sg1 = document.getElementById('stopoverGroup');
                 if (sg1) sg1.style.display = hasStop ? '' : 'none';
+                if (typeof updateMidLegRow === 'function') updateMidLegRow();
                 
                 elements.fAuthNumber.focus();
             }
@@ -626,6 +697,9 @@ function getFormData() {
         stopover:       hasStop && elements.fStopover ? elements.fStopover.value : '',
         stopoverPax:    stopPax,
         stopoverBabies: stopBabies,
+        // Segment escale → arrivée (saisie manuelle fin d'année)
+        midLegPax:      hasStop && document.getElementById('fMidLegPax') ? (parseInt(document.getElementById('fMidLegPax').value)||0) : 0,
+        midLegBabies:   hasStop && document.getElementById('fMidLegBabies') ? (parseInt(document.getElementById('fMidLegBabies').value)||0) : 0,
         // PAX TOTAL = vol + escale
         passengers: volPax + stopPax,
         babies:     volBabies + stopBabies,
@@ -1438,21 +1512,63 @@ function renderTable(filteredFlights, offset) {
     }
 
     filteredFlights.forEach((flight, idx) => {
-        const row = createFlightRow(flight, offset + idx + 1);
-        elements.flightTableBody.appendChild(row);
+        const lines = (typeof generateFlightLines === 'function') ? generateFlightLines(flight) : [null];
+        if (lines.length <= 1) {
+            // Vol normal (pas d'escale MAI) → une seule ligne
+            const row = createFlightRow(flight, offset + idx + 1);
+            elements.flightTableBody.appendChild(row);
+        } else {
+            // Vol à escale → ligne principale + sous-lignes générées
+            lines.forEach((line, li) => {
+                const row = createFlightRow(flight, li === 0 ? (offset + idx + 1) : null, line, li, lines.length);
+                elements.flightTableBody.appendChild(row);
+            });
+        }
     });
 }
 
-function createFlightRow(flight, rowNum) {
+// createFlightRow(flight, rowNum, line, lineIdx, lineCount)
+//  - Sans 'line' : rendu normal du vol.
+//  - Avec 'line' : rendu d'une ligne d'escale (seuls trajet + PAX changent).
+function createFlightRow(flight, rowNum, line, lineIdx, lineCount) {
     const row = document.createElement('tr');
 
     const formattedDate = formatDateEU(flight.date);
     const typeText = flight.type === 'DEP' ? 'Départ' : 'Arrivée';
     const typeClass = flight.type === 'DEP' ? 'type-depart' : 'type-arrivee';
     const authNumber = flight.authorizationNumber || 'N/A';
-    const fromCode = flight.from || '–';
-    const toCode = flight.to || '–';
-    const numCell = rowNum != null ? `<td style="color:#94a3b8;font-weight:700;text-align:center;width:44px;">${rowNum}</td>` : '';
+
+    const isSub = !!line;                    // c'est une ligne d'escale ?
+    const isFirst = !isSub || lineIdx === 0; // 1ère ligne du groupe
+    const fromCode = line ? (line.from || '–') : (flight.from || '–');
+    const toCode   = line ? (line.to   || '–') : (flight.to   || '–');
+    const pax      = line ? line.passengers : flight.passengers;
+    const bab      = line ? line.babies     : flight.babies;
+    const numCell  = rowNum != null ? `<td style="color:#94a3b8;font-weight:700;text-align:center;width:44px;">${rowNum}</td>` : '<td></td>';
+
+    // Style visuel : sous-lignes d'escale légèrement en retrait / grisées
+    if (isSub && lineIdx > 0) row.style.background = 'rgba(212,175,55,0.04)';
+    const midLegBadge = (line && line.isMidLeg && (!pax || pax === 0))
+        ? ' <span style="font-size:10px;color:#f59e0b;font-style:italic;">(à saisir)</span>' : '';
+
+    if (isSub && lineIdx > 0) {
+        // Sous-ligne : on répète N°/auth/date/compagnie/immat/vol en gris,
+        // et on change SEULEMENT trajet + PAX + bébés. Pas de menu actions.
+        row.innerHTML = `
+            ${numCell}
+            <td style="color:#64748b;">${escapeHtml(authNumber)}</td>
+            <td style="color:#64748b;">${formattedDate}</td>
+            <td style="color:#64748b;">${escapeHtml(flight.company)}</td>
+            <td style="color:#64748b;">${escapeHtml(flight.registration)}</td>
+            <td style="color:#64748b;">${escapeHtml(flight.flightNumber)}</td>
+            <td style="text-align:center;white-space:nowrap;"><strong style="color:#0f1e3d;">${escapeHtml(fromCode)}</strong> <span style="color:#D4AF37;font-weight:700;margin:0 4px;">→</span> <strong style="color:#0f1e3d;">${escapeHtml(toCode)}</strong></td>
+            <td><span class="type-badge ${typeClass}">${typeText}</span></td>
+            <td>${pax}${midLegBadge}</td>
+            <td>${bab}</td>
+            <td class="actions-cell"></td>
+        `;
+        return row;
+    }
 
     row.innerHTML = `
         ${numCell}
@@ -1463,8 +1579,8 @@ function createFlightRow(flight, rowNum) {
         <td>${escapeHtml(flight.flightNumber)}</td>
         <td style="text-align:center;white-space:nowrap;"><strong style="color:#0f1e3d;">${escapeHtml(fromCode)}</strong> <span style="color:#D4AF37;font-weight:700;margin:0 4px;">→</span> <strong style="color:#0f1e3d;">${escapeHtml(toCode)}</strong></td>
         <td><span class="type-badge ${typeClass}">${typeText}</span></td>
-        <td>${flight.passengers}</td>
-        <td>${flight.babies}</td>
+        <td>${pax}${midLegBadge}</td>
+        <td>${bab}</td>
         <td class="actions-cell">
             <div class="actions-wrapper">
                 <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">
@@ -1483,7 +1599,7 @@ function createFlightRow(flight, rowNum) {
             </div>
         </td>
     `;
-    
+
     return row;
 }
 
@@ -1835,6 +1951,26 @@ window.toggleStopoverField = function() {
     const cb  = document.getElementById('hasStopover');
     const grp = document.getElementById('stopoverGroup');
     if (grp) grp.style.display = (cb && cb.checked) ? '' : 'none';
+    updateMidLegRow();
+};
+
+// Affiche la ligne "segment escale→arrivée" seulement si :
+//  - escale cochée ET escale mauritanienne (ICAO GQ...) ET compagnie MAI.
+window.updateMidLegRow = function updateMidLegRow() {
+    const row = document.getElementById('midLegRow');
+    if (!row) return;
+    const cb = document.getElementById('hasStopover');
+    const stopSel = document.getElementById('fStopover');
+    const comp = elements.fCompany ? elements.fCompany.value : '';
+    const stopCode = stopSel ? stopSel.value : '';
+    const show = cb && cb.checked && stopCode && isMauritanianAirport(stopCode) && isMAIcompany(comp);
+    row.style.display = show ? '' : 'none';
+    // Mettre à jour le libellé du segment
+    const lbl = document.getElementById('midLegLabel');
+    if (lbl && show) {
+        const arr = elements.fTo ? elements.fTo.value : '';
+        lbl.textContent = (stopCode || '?') + ' → ' + (arr || '?');
+    }
 };
 
 window.updateRouteByType = updateRouteByType;
