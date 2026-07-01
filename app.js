@@ -64,7 +64,18 @@ function isMAIcompany(company) {
 // Chaque ligne : { from, to, passengers, babies, isMidLeg, isVirtual, parent }
 // isVirtual = true pour les lignes générées (autres que la ligne principale).
 function generateFlightLines(flight) {
-    const hasStop = flight.hasStopover && flight.stopover;
+    // Escale du vol lui-même, sinon celle définie dans le numéro de vol (admin).
+    let stopCode = flight.hasStopover ? flight.stopover : '';
+    let fromCode = flight.from, toCode = flight.to;
+    if (!stopCode && window._flightNumCache) {
+        const info = window._flightNumCache[normFN(flight.flightNumber||'')];
+        if (info && info.stopover) {
+            stopCode = info.stopover;
+            if (info.from) fromCode = info.from;
+            if (info.to)   toCode = info.to;
+        }
+    }
+    const hasStop = !!stopCode;
     // Pas d'escale, ou pas MAI → une seule ligne (le vol tel quel)
     if (!hasStop || !isMAIcompany(flight.company)) {
         return [{
@@ -73,7 +84,7 @@ function generateFlightLines(flight) {
             isMidLeg: false, isVirtual: false, parent: flight
         }];
     }
-    const dep = flight.from, stop = flight.stopover, arr = flight.to;
+    const dep = fromCode, stop = stopCode, arr = toCode;
     const paxStop = Number(flight.stopoverPax || 0);
     const babStop = Number(flight.stopoverBabies || 0);
     // PAX arrivée finale = total - escale (le total stocké inclut les deux)
@@ -315,9 +326,10 @@ async function loadAdminConfig() {
         if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) {
             try { await window.ANAC_AUTH.ensureAuthed(fbApp); } catch(e) {}
         }
-        const [airlinesSnap, airportsSnap] = await Promise.all([
+        const [airlinesSnap, airportsSnap, fnSnap] = await Promise.all([
             getDoc(doc(db, 'flights', 'cfg-airlines')),
-            getDoc(doc(db, 'flights', 'cfg-airports'))
+            getDoc(doc(db, 'flights', 'cfg-airports')),
+            import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').then(m => m.getDocs(m.collection(db, 'flight_numbers')))
         ]);
         adminConfig = {};
         if (airlinesSnap.exists() && airlinesSnap.data().list) {
@@ -327,6 +339,23 @@ async function loadAdminConfig() {
         if (airportsSnap.exists() && airportsSnap.data().list) {
             adminConfig.airports = airportsSnap.data().list;
             console.log('Admin airports loaded:', adminConfig.airports.length);
+        }
+        // Cache global des numéros de vol (pour générer les escales des vols existants)
+        window._flightNumCache = {};
+        if (fnSnap) {
+            fnSnap.forEach(d => {
+                const x = d.data();
+                const key = normFN(x.number || x.flightNumber || '');
+                if (!key) return;
+                window._flightNumCache[key] = {
+                    from: (x.from||'').toUpperCase(),
+                    to: (x.to||'').toUpperCase(),
+                    stopover: (x.stopover||'').toUpperCase(),
+                    type: (x.type||'').toUpperCase(),
+                    company: x.company||''
+                };
+            });
+            console.log('flight_numbers cache:', Object.keys(window._flightNumCache).length);
         }
     } catch(e) {
         console.warn('Admin config not loaded:', e.message);
