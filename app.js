@@ -78,17 +78,22 @@ function generateFlightLines(flight) {
     const domesticStop = isMauritanianAirport(stop);
 
     if (domesticStop) {
-        // 3 lignes
+        // 3 lignes. Ordre :
+        //   1) VOL PRINCIPAL : départ → arrivée (PAX arrivée finale)
+        //   2) départ → escale             (PAX escale)
+        //   3) escale → arrivée            (VIDE, saisie manuelle en fin d'année)
         return [
-            { from: dep,  to: stop, passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:false, parent:flight },
-            { from: stop, to: arr,  passengers: midPax,  babies: midBab,  isMidLeg:true,  isVirtual:true,  parent:flight },
-            { from: dep,  to: arr,  passengers: paxArr,  babies: babArr,  isMidLeg:false, isVirtual:true,  parent:flight }
+            { from: dep,  to: arr,  passengers: paxArr,  babies: babArr,  isMidLeg:false, isVirtual:false, isMain:true,  parent:flight },
+            { from: dep,  to: stop, passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:true,  isMain:false, parent:flight },
+            { from: stop, to: arr,  passengers: midPax,  babies: midBab,  isMidLeg:true,  isVirtual:true,  isMain:false, parent:flight }
         ];
     } else {
-        // Escale étrangère → 2 lignes
+        // Escale étrangère → 2 lignes. Ordre :
+        //   1) VOL PRINCIPAL : départ → arrivée finale (PAX arrivée)
+        //   2) départ → escale                          (PAX escale)
         return [
-            { from: dep, to: stop, passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:false, parent:flight },
-            { from: dep, to: arr,  passengers: paxArr,  babies: babArr,  isMidLeg:false, isVirtual:true,  parent:flight }
+            { from: dep, to: arr,  passengers: paxArr,  babies: babArr,  isMidLeg:false, isVirtual:false, isMain:true,  parent:flight },
+            { from: dep, to: stop, passengers: paxStop, babies: babStop, isMidLeg:false, isVirtual:true,  isMain:false, parent:flight }
         ];
     }
 }
@@ -1523,19 +1528,24 @@ function renderTable(filteredFlights, offset) {
             const row = createFlightRow(flight, offset + idx + 1);
             elements.flightTableBody.appendChild(row);
         } else {
-            // Vol à escale → ligne principale + sous-lignes générées
+            // Vol à escale → ligne principale + sous-lignes générées.
+            // Total PAX = somme des PAX des lignes réelles (hors ligne principale
+            // qui est le vol direct = même total). Ici le total à afficher est le
+            // total du vol (flight.passengers) qui = escale + arrivée.
+            const totalPax = lines.reduce((s,l)=> s + (l.isMain?0:(Number(l.passengers)||0)), 0);
+            const totalBab = lines.reduce((s,l)=> s + (l.isMain?0:(Number(l.babies)||0)), 0);
             lines.forEach((line, li) => {
-                const row = createFlightRow(flight, li === 0 ? (offset + idx + 1) : null, line, li, lines.length);
+                const row = createFlightRow(flight, li === 0 ? (offset + idx + 1) : null, line, li, lines.length, {totalPax, totalBab});
                 elements.flightTableBody.appendChild(row);
             });
         }
     });
 }
 
-// createFlightRow(flight, rowNum, line, lineIdx, lineCount)
+// createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals)
 //  - Sans 'line' : rendu normal du vol.
-//  - Avec 'line' : rendu d'une ligne d'escale (seuls trajet + PAX changent).
-function createFlightRow(flight, rowNum, line, lineIdx, lineCount) {
+//  - Avec 'line' : rendu d'une ligne d'un vol à escale.
+function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals) {
     const row = document.createElement('tr');
 
     const formattedDate = formatDateEU(flight.date);
@@ -1543,36 +1553,70 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount) {
     const typeClass = flight.type === 'DEP' ? 'type-depart' : 'type-arrivee';
     const authNumber = flight.authorizationNumber || 'N/A';
 
-    const isSub = !!line;                    // c'est une ligne d'escale ?
-    const isFirst = !isSub || lineIdx === 0; // 1ère ligne du groupe
+    const isSub = !!line;                    // c'est une ligne d'un vol à escale ?
+    const isMain = !isSub || line.isMain;    // ligne principale (vol direct) ?
     const fromCode = line ? (line.from || '–') : (flight.from || '–');
     const toCode   = line ? (line.to   || '–') : (flight.to   || '–');
     const pax      = line ? line.passengers : flight.passengers;
     const bab      = line ? line.babies     : flight.babies;
     const numCell  = rowNum != null ? `<td style="color:#94a3b8;font-weight:700;text-align:center;width:44px;">${rowNum}</td>` : '<td></td>';
 
-    // Style visuel : sous-lignes d'escale légèrement en retrait / grisées
-    if (isSub && lineIdx > 0) row.style.background = 'rgba(212,175,55,0.04)';
-    const midLegBadge = (line && line.isMidLeg && (!pax || pax === 0))
-        ? ' <span style="font-size:10px;color:#f59e0b;font-style:italic;">(à saisir)</span>' : '';
+    const routeCell = `<td style="text-align:center;white-space:nowrap;"><strong style="color:#0f1e3d;">${escapeHtml(fromCode)}</strong> <span style="color:#D4AF37;font-weight:700;margin:0 4px;">→</span> <strong style="color:#0f1e3d;">${escapeHtml(toCode)}</strong></td>`;
 
-    if (isSub && lineIdx > 0) {
-        // Sous-ligne : on répète N°/auth/date/compagnie/immat/vol en gris,
-        // et on change SEULEMENT trajet + PAX + bébés. Pas de menu actions.
+    // ── Sous-ligne d'escale (pas la ligne principale) ──
+    // On n'affiche QUE Trajet + PAX + Bébés. Les autres colonnes sont vides.
+    // Fond jaune foncé bien visible.
+    if (isSub && !isMain) {
+        row.style.background = '#f4c430';  // jaune foncé (goldenrod)
+        row.style.borderLeft = '4px solid #b8860b';
+        const midLegBadge = (line.isMidLeg && (!pax || pax === 0))
+            ? ' <span style="font-size:10px;color:#7a4f01;font-style:italic;font-weight:700;">(à saisir)</span>' : '';
         row.innerHTML = `
-            ${numCell}
-            <td style="color:#64748b;">${escapeHtml(authNumber)}</td>
-            <td style="color:#64748b;">${formattedDate}</td>
-            <td style="color:#64748b;">${escapeHtml(flight.company)}</td>
-            <td style="color:#64748b;">${escapeHtml(flight.registration)}</td>
-            <td style="color:#64748b;">${escapeHtml(flight.flightNumber)}</td>
-            <td style="text-align:center;white-space:nowrap;"><strong style="color:#0f1e3d;">${escapeHtml(fromCode)}</strong> <span style="color:#D4AF37;font-weight:700;margin:0 4px;">→</span> <strong style="color:#0f1e3d;">${escapeHtml(toCode)}</strong></td>
-            <td><span class="type-badge ${typeClass}">${typeText}</span></td>
-            <td>${pax}${midLegBadge}</td>
-            <td>${bab}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            ${routeCell.replace('#0f1e3d','#3a2c00').replace('#0f1e3d','#3a2c00')}
+            <td></td>
+            <td style="font-weight:700;color:#3a2c00;">${pax}${midLegBadge}</td>
+            <td style="font-weight:700;color:#3a2c00;">${bab}</td>
             <td class="actions-cell"></td>
         `;
         return row;
+    }
+
+    // ── Ligne principale (vol normal OU 1ère ligne d'un vol à escale) ──
+    // Si c'est un vol à escale, on ajoute une case "TOTAL PAX" à droite.
+    let actionsCell;
+    if (isSub && totals) {
+        // Ligne principale d'un vol à escale : case Total au lieu du menu
+        actionsCell = `
+        <td class="actions-cell">
+            <div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;background:#0f1e3d;color:#D4AF37;border-radius:8px;padding:4px 10px;font-weight:700;">
+                <span style="font-size:9px;letter-spacing:.04em;opacity:.85;">TOTAL PAX</span>
+                <span style="font-size:15px;" id="tot-${flight.id}">${totals.totalPax}</span>
+            </div>
+            <div class="actions-wrapper" style="margin-left:6px;">
+                <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">⋯</button>
+                <div class="actions-menu" id="actions-${flight.id}">
+                    <button data-perm="edit_flight" onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item"><span class="action-icon">✏️</span><span>Modifier</span></button>
+                    <button data-perm="delete_flight" onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete"><span class="action-icon">🗑️</span><span>Supprimer</span></button>
+                </div>
+            </div>
+        </td>`;
+    } else {
+        actionsCell = `
+        <td class="actions-cell">
+            <div class="actions-wrapper">
+                <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">⋯</button>
+                <div class="actions-menu" id="actions-${flight.id}">
+                    <button data-perm="edit_flight" onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item"><span class="action-icon">✏️</span><span>Modifier</span></button>
+                    <button data-perm="delete_flight" onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete"><span class="action-icon">🗑️</span><span>Supprimer</span></button>
+                </div>
+            </div>
+        </td>`;
     }
 
     row.innerHTML = `
@@ -1582,27 +1626,11 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount) {
         <td>${escapeHtml(flight.company)}</td>
         <td><strong>${escapeHtml(flight.registration)}</strong></td>
         <td>${escapeHtml(flight.flightNumber)}</td>
-        <td style="text-align:center;white-space:nowrap;"><strong style="color:#0f1e3d;">${escapeHtml(fromCode)}</strong> <span style="color:#D4AF37;font-weight:700;margin:0 4px;">→</span> <strong style="color:#0f1e3d;">${escapeHtml(toCode)}</strong></td>
+        ${routeCell}
         <td><span class="type-badge ${typeClass}">${typeText}</span></td>
-        <td>${pax}${midLegBadge}</td>
+        <td>${pax}</td>
         <td>${bab}</td>
-        <td class="actions-cell">
-            <div class="actions-wrapper">
-                <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">
-                    ⋯
-                </button>
-                <div class="actions-menu" id="actions-${flight.id}">
-                    <button data-perm="edit_flight" onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item">
-                        <span class="action-icon">✏️</span>
-                        <span>Modifier</span>
-                    </button>
-                    <button data-perm="delete_flight" onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete">
-                        <span class="action-icon">🗑️</span>
-                        <span>Supprimer</span>
-                    </button>
-                </div>
-            </div>
-        </td>
+        ${actionsCell}
     `;
 
     return row;
