@@ -520,9 +520,15 @@ function openModal(flightId = null) {
                 if (elements.fStopoverBabies) elements.fStopoverBabies.value = flight.stopoverBabies || 0;
                 const _mlp = document.getElementById('fMidLegPax'); if (_mlp) _mlp.value = flight.midLegPax || 0;
                 const _mlb = document.getElementById('fMidLegBabies'); if (_mlb) _mlb.value = flight.midLegBabies || 0;
+                // PAX du vol principal (= total − escale) pour l'édition d'un vol MAI à escale
+                const _mainP = document.getElementById('fMainPax');
+                const _mainB = document.getElementById('fMainBabies');
+                if (_mainP) _mainP.value = Math.max(0,(Number(flight.passengers)||0)-(Number(flight.stopoverPax)||0));
+                if (_mainB) _mainB.value = Math.max(0,(Number(flight.babies)||0)-(Number(flight.stopoverBabies)||0));
                 const sg1 = document.getElementById('stopoverGroup');
                 if (sg1) sg1.style.display = hasStop ? '' : 'none';
                 if (typeof updateMidLegRow === 'function') updateMidLegRow();
+                if (typeof updateEscaleTotals === 'function') updateEscaleTotals();
                 
                 elements.fAuthNumber.focus();
             }
@@ -684,10 +690,14 @@ function clearValidationErrors() {
 
 function getFormData() {
     const hasStop     = !!(elements.hasStopover && elements.hasStopover.checked);
+    const comp        = elements.fCompany ? elements.fCompany.value : '';
+    const isMaiStop   = hasStop && isMAIcompany(comp) && document.getElementById('fMainPax');
     const stopPax     = hasStop ? (parseInt(elements.fStopoverPax   && elements.fStopoverPax.value)   || 0) : 0;
     const stopBabies  = hasStop ? (parseInt(elements.fStopoverBabies && elements.fStopoverBabies.value) || 0) : 0;
-    const volPax      = parseInt(elements.fPassengers.value) || 0;
-    const volBabies   = parseInt(elements.fBabies.value)     || 0;
+    // Pour un vol MAI à escale, le PAX du vol principal vient de fMainPax.
+    // Sinon (vol normal ou autre compagnie), on garde le champ PAX (VOL) du haut.
+    const mainPax     = isMaiStop ? (parseInt(document.getElementById('fMainPax').value)||0) : (parseInt(elements.fPassengers.value) || 0);
+    const mainBabies  = isMaiStop ? (parseInt(document.getElementById('fMainBabies').value)||0) : (parseInt(elements.fBabies.value) || 0);
 
     return {
         authorizationNumber: elements.fAuthNumber.value.trim().toUpperCase(),
@@ -710,9 +720,9 @@ function getFormData() {
         // Segment escale → arrivée (saisie manuelle fin d'année)
         midLegPax:      hasStop && document.getElementById('fMidLegPax') ? (parseInt(document.getElementById('fMidLegPax').value)||0) : 0,
         midLegBabies:   hasStop && document.getElementById('fMidLegBabies') ? (parseInt(document.getElementById('fMidLegBabies').value)||0) : 0,
-        // PAX TOTAL = vol + escale
-        passengers: volPax + stopPax,
-        babies:     volBabies + stopBabies,
+        // PAX TOTAL du vol = vol principal + escale (le milieu est interne, non compté)
+        passengers: mainPax + stopPax,
+        babies:     mainBabies + stopBabies,
         timestamp:  Date.now()
     };
 }
@@ -1987,30 +1997,69 @@ window.toggleStopoverField = function() {
     updateMidLegRow();
 };
 
-// Affiche la ligne "segment escale→arrivée" seulement si :
-//  - escale cochée ET escale mauritanienne (ICAO GQ...) ET compagnie MAI.
+// ICAO → IATA (via adminConfig.airports). Renvoie le code IATA ou le code tel quel.
+function icaoToIATA(code){
+    const c=(code||'').toUpperCase();
+    if(!c) return '';
+    if(adminConfig && adminConfig.airports){
+        const ap=adminConfig.airports.find(a=>a.icao===c || a.iata===c);
+        if(ap && ap.iata) return ap.iata.toUpperCase();
+    }
+    return c;
+}
+window.icaoToIATA = icaoToIATA;
+
+// Met à jour l'affichage des tronçons d'escale (labels IATA) + visibilité.
 window.updateMidLegRow = function updateMidLegRow() {
-    const row = document.getElementById('midLegRow');
-    if (!row) return;
+    const escaleLines = document.getElementById('escaleLines');
+    const midRow = document.getElementById('midLegRow');
+    if (!escaleLines) return;
     const cb = document.getElementById('hasStopover');
     const stopSel = document.getElementById('fStopover');
     const compEl = document.getElementById('fCompany');
+    const fromEl = document.getElementById('fFrom');
     const toEl = document.getElementById('fTo');
     const comp = compEl ? compEl.value : '';
     const stopCode = stopSel ? stopSel.value : '';
     const checked = cb && cb.checked;
-    const mauri = isMauritanianAirport(stopCode);
     const mai = isMAIcompany(comp);
-    const show = checked && stopCode && mauri && mai;
-    row.style.display = show ? '' : 'none';
-    // Diagnostic (visible en console F12)
-    console.log('[midLeg] coché=%s escale=%s mauritanienne=%s compagnie=%s MAI=%s → afficher=%s',
-        checked, stopCode, mauri, comp, mai, show);
-    const lbl = document.getElementById('midLegLabel');
-    if (lbl && show) {
-        const arr = toEl ? toEl.value : '';
-        lbl.textContent = (stopCode || '?') + ' → ' + (arr || '?');
-    }
+    const mauri = isMauritanianAirport(stopCode);
+
+    // La décomposition en tronçons ne concerne QUE MAI avec une escale choisie.
+    const showLines = checked && mai && stopCode;
+    escaleLines.style.display = showLines ? '' : 'none';
+    // Masquer la saisie PAX du haut quand la décomposition est affichée (évite doublon)
+    const topGrid = document.getElementById('topPaxGrid');
+    const topLbl = document.getElementById('topPaxLabel');
+    if (topGrid) topGrid.style.display = showLines ? 'none' : '';
+    if (topLbl) topLbl.style.display = showLines ? 'none' : '';
+    if (!showLines) { if(midRow) midRow.style.display='none'; return; }
+
+    const dep = icaoToIATA(fromEl ? fromEl.value : '');
+    const stop = icaoToIATA(stopCode);
+    const arr = icaoToIATA(toEl ? toEl.value : '');
+
+    const segMain = document.getElementById('segMainLabel');
+    const segStop = document.getElementById('segStopLabel');
+    const segMid  = document.getElementById('segMidLabel');
+    if (segMain) segMain.textContent = `${dep||'?'} → ${arr||'?'}`;
+    if (segStop) segStop.textContent = `${dep||'?'} → ${stop||'?'}`;
+    if (segMid)  segMid.textContent  = `${stop||'?'} → ${arr||'?'}`;
+
+    // Ligne du milieu (escale→arrivée) seulement si escale mauritanienne
+    if (midRow) midRow.style.display = mauri ? 'flex' : 'none';
+
+    updateEscaleTotals();
+};
+
+// Recalcule le total PAX/bébés (somme des tronçons visibles).
+window.updateEscaleTotals = function updateEscaleTotals() {
+    const g = id => { const el=document.getElementById(id); return el?(parseInt(el.value)||0):0; };
+    const midVisible = document.getElementById('midLegRow') && document.getElementById('midLegRow').style.display !== 'none';
+    const totPax = g('fMainPax') + g('fStopoverPax') + (midVisible ? g('fMidLegPax') : 0);
+    const totBab = g('fMainBabies') + g('fStopoverBabies') + (midVisible ? g('fMidLegBabies') : 0);
+    const tp=document.getElementById('escTotalPax'); if(tp) tp.textContent=totPax;
+    const tb=document.getElementById('escTotalBab'); if(tb) tb.textContent=totBab;
 };
 
 window.updateRouteByType = updateRouteByType;
