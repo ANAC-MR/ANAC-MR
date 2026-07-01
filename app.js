@@ -416,7 +416,12 @@ function attachEventListeners() {
         if (elements.fVol) elements.fVol.value = '';
         if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
         updateFlightNumberPrefix(addMode);
+        if (typeof updateMidLegRow === 'function') updateMidLegRow();
     });
+    // Mettre à jour la ligne "segment milieu" quand la destination change
+    if (elements.fTo) {
+        elements.fTo.addEventListener('change', () => { if (typeof updateMidLegRow === 'function') updateMidLegRow(); });
+    }
     // Auto-fill N° autorisation quand date change
     if (elements.fDate) {
         elements.fDate.addEventListener('change', () => {
@@ -1961,14 +1966,21 @@ window.updateMidLegRow = function updateMidLegRow() {
     if (!row) return;
     const cb = document.getElementById('hasStopover');
     const stopSel = document.getElementById('fStopover');
-    const comp = elements.fCompany ? elements.fCompany.value : '';
+    const compEl = document.getElementById('fCompany');
+    const toEl = document.getElementById('fTo');
+    const comp = compEl ? compEl.value : '';
     const stopCode = stopSel ? stopSel.value : '';
-    const show = cb && cb.checked && stopCode && isMauritanianAirport(stopCode) && isMAIcompany(comp);
+    const checked = cb && cb.checked;
+    const mauri = isMauritanianAirport(stopCode);
+    const mai = isMAIcompany(comp);
+    const show = checked && stopCode && mauri && mai;
     row.style.display = show ? '' : 'none';
-    // Mettre à jour le libellé du segment
+    // Diagnostic (visible en console F12)
+    console.log('[midLeg] coché=%s escale=%s mauritanienne=%s compagnie=%s MAI=%s → afficher=%s',
+        checked, stopCode, mauri, comp, mai, show);
     const lbl = document.getElementById('midLegLabel');
     if (lbl && show) {
-        const arr = elements.fTo ? elements.fTo.value : '';
+        const arr = toEl ? toEl.value : '';
         lbl.textContent = (stopCode || '?') + ' → ' + (arr || '?');
     }
 };
