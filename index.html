@@ -731,10 +731,6 @@
       <div class="icon">📨</div>
       <div class="label"><div class="main">LDM / MVT</div><div class="desc">MESSAGES DE VOL</div></div>
     </a>
-    <a href="suivi.html" class="anac-menu-item" data-nav="suivi-trafic">
-      <div class="icon">📈</div>
-      <div class="label"><div class="main">Suivi Hebdomadaire</div><div class="desc">TRAFIC AÉRIEN</div></div>
-    </a>
     <div class="anac-menu-divider"></div>
     <a href="admin.html" class="anac-menu-item" data-nav="admin">
       <div class="icon">⚙️</div>
@@ -792,7 +788,6 @@ document.addEventListener('keydown', e => {
     }
     else if (path.includes('vols') && nav === 'vols') isActive = true;
     else if (path.includes('ldm') && nav === 'ldm') isActive = true;
-    else if (path.includes('suivi') && nav === 'suivi-trafic') isActive = true;
     else if (path.includes('admin') && nav === 'admin') isActive = true;
     else if (path.includes('mauritanie-airlines') && nav === 'ma') isActive = true;
 
@@ -1338,7 +1333,7 @@ document.addEventListener('keydown', e => {
       <div class="fm-grid fm-grid-4">
         <div class="fm-field fm-field-col2">
           <label>Aéroport d'escale</label>
-          <select id="fStopover"><option value="">— Choisir —</option></select>
+          <select id="fStopover" onchange="updateMidLegRow && updateMidLegRow()"><option value="">— Choisir —</option></select>
         </div>
         <div class="fm-field">
           <label>PAX Escale</label>
@@ -1354,6 +1349,28 @@ document.addEventListener('keydown', e => {
             <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',-1)">−</button>
             <input type="number" id="fStopoverBabies" min="0" value="0" oninput="updateTotals()">
             <button type="button" class="fm-cnt" onclick="stepCount('fStopoverBabies',1)">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="fm-grid fm-grid-4" id="midLegRow" style="display:none;margin-top:10px;">
+        <div class="fm-field fm-field-col2">
+          <label style="color:#f59e0b;">Segment escale → arrivée <span style="font-weight:400;font-size:11px;">(saisie manuelle, fin d'année)</span></label>
+          <div style="font-size:12px;color:#94a3b8;padding:8px 0;" id="midLegLabel">—</div>
+        </div>
+        <div class="fm-field">
+          <label>PAX (milieu)</label>
+          <div class="fm-counter">
+            <button type="button" class="fm-cnt" onclick="stepCount('fMidLegPax',-1)">−</button>
+            <input type="number" id="fMidLegPax" min="0" value="0">
+            <button type="button" class="fm-cnt" onclick="stepCount('fMidLegPax',1)">+</button>
+          </div>
+        </div>
+        <div class="fm-field">
+          <label>Bébés (milieu)</label>
+          <div class="fm-counter">
+            <button type="button" class="fm-cnt" onclick="stepCount('fMidLegBabies',-1)">−</button>
+            <input type="number" id="fMidLegBabies" min="0" value="0">
+            <button type="button" class="fm-cnt" onclick="stepCount('fMidLegBabies',1)">+</button>
           </div>
         </div>
       </div>
