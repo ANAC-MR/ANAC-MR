@@ -512,6 +512,11 @@ function enrich(f){
   }
   // Compagnie : du numéro de vol si dispo, sinon celle du vol
   const company=((fnInfo&&fnInfo.company)?fnInfo.company:(f.company||'')).toUpperCase();
+  // ── Données brutes d'escale (pour générer les lignes MAI) ──
+  const stopRaw = (fnInfo&&fnInfo.stopover) ? fnInfo.stopover : (f.stopover||'');
+  const fromRaw = (fnInfo&&fnInfo.from) ? fnInfo.from : (f.from||'');
+  const toRaw   = (fnInfo&&fnInfo.to)   ? fnInfo.to   : (f.to||'');
+  const hasStop = !!(f.hasStopover && (f.stopover||stopRaw));
   return {
     date, dayIdx, dayName, dayDate,
     company,
@@ -520,9 +525,44 @@ function enrich(f){
     flightNumberRaw:fnum,
     route, typeDisp,
     capacity:cap, passengers:pax,
+    babies:(f.babies!=null?Number(f.babies):null),
     rate:(cap&&pax!=null&&cap>0)?(pax/cap):null,
-    obs:f.observation||f.obs||''
+    obs:f.observation||f.obs||'',
+    // Bruts escale
+    _hasStop:hasStop, _from:fromRaw, _stop:stopRaw, _to:toRaw,
+    _stopPax:Number(f.stopoverPax||0), _stopBab:Number(f.stopoverBabies||0),
+    _midPax:Number(f.midLegPax||0), _midBab:Number(f.midLegBabies||0),
+    _totalPax:(f.passengers!=null?Number(f.passengers):0),
+    _totalBab:(f.babies!=null?Number(f.babies):0)
   };
+}
+
+// ── Génération des lignes d'escale (MAI uniquement), pour l'affichage ──
+function isMauritanianICAO(code){ return (code||'').toUpperCase().startsWith('GQ'); }
+function suiviIsMAI(co){ const c=(co||'').toUpperCase(); return c.includes('MAURITANIA')||c==='MAI'||c==='L6'; }
+// Renvoie un tableau de lignes {routeTxt, pax, babies, isMain, isMidLeg} en IATA.
+function suiviFlightLines(f){
+  if(!f._hasStop || !suiviIsMAI(f.company) || !f._stop){
+    return [{ routeTxt:f.route, pax:f.passengers, babies:f.babies, isMain:true, isMidLeg:false }];
+  }
+  const dep=toIATA(f._from), stop=toIATA(f._stop), arr=toIATA(f._to);
+  const paxStop=f._stopPax, babStop=f._stopBab;
+  const paxArr=Math.max(0,(f._totalPax||0)-paxStop);
+  const babArr=Math.max(0,(f._totalBab||0)-babStop);
+  const midPax=f._midPax, midBab=f._midBab;
+  if(isMauritanianICAO(f._stop)){
+    // 3 lignes : principale (dep-arr), dep-stop, stop-arr (vide)
+    return [
+      { routeTxt:`${dep}-${arr}`,  pax:paxArr,  babies:babArr,  isMain:true,  isMidLeg:false },
+      { routeTxt:`${dep}-${stop}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false },
+      { routeTxt:`${stop}-${arr}`, pax:midPax,  babies:midBab,  isMain:false, isMidLeg:true  }
+    ];
+  }
+  // Escale étrangère : 2 lignes
+  return [
+    { routeTxt:`${dep}-${arr}`,  pax:paxArr,  babies:babArr,  isMain:true,  isMidLeg:false },
+    { routeTxt:`${dep}-${stop}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false }
+  ];
 }
 
 // ── Couleurs (reprises EXACTEMENT du modèle Excel) ──
@@ -571,34 +611,64 @@ function renderTable(flights){
     body.innerHTML='<tr class="empty-row"><td colspan="9">Aucun vol enregistré pour cette période.</td></tr>';
     return;
   }
-  // Compter le nombre de lignes par jour (pour le rowspan)
+  // Pré-générer les lignes de chaque vol (escales incluses)
+  const expanded=flights.map(f=>({ f, lines:suiviFlightLines(f) }));
+  // Compter le nombre TOTAL de lignes par jour (pour le rowspan de la cellule jour)
   const dayCount={};
-  for(const f of flights){ dayCount[f.dayName]=(dayCount[f.dayName]||0)+1; }
+  for(const e of expanded){ dayCount[e.f.dayName]=(dayCount[e.f.dayName]||0)+e.lines.length; }
 
   let html='';
   let lastDay=null, lastCo=null;
-  for(const f of flights){
+  for(const e of expanded){
+    const f=e.f;
+    const lines=e.lines;
+    const hasEscale = lines.length>1;
     const showDay = f.dayName!==lastDay;
     const showCo  = showDay || f.company!==lastCo;
     lastDay=f.dayName; lastCo=f.company;
     const capCell = f.capacity!=null ? f.capacity : '<span class="cap-empty">—</span>';
     const rateCell = f.rate!=null ? `<span class="rate-cell ${rateClass(f.rate)}">${(f.rate*100).toFixed(1)}%</span>` : '—';
-    const paxCell = f.passengers!=null ? f.passengers : '—';
-    // Cellule jour fusionnée : affichée une fois avec rowspan = nb de vols du jour
+    // Cellule jour fusionnée : rowspan = nb total de lignes du jour
     const dayTd = showDay
       ? `<td class="day-cell" rowspan="${dayCount[f.dayName]}">${esc(f.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(f.dayDate)}</span></td>`
       : '';
+
+    // Total PAX (somme de toutes les lignes affichées)
+    const totalPax = lines.reduce((s,l)=>s+(Number(l.pax)||0),0);
+
+    // ── Ligne principale ──
+    const main = lines[0];
+    const mainPaxCell = main.pax!=null ? main.pax : '—';
+    const totalBadge = hasEscale
+      ? ` <span style="display:inline-block;background:#0f1e3d;color:#D4AF37;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:6px;">Σ ${totalPax}</span>` : '';
     html+=`<tr class="${showDay?'day-start':''}">
       ${dayTd}
       <td class="co-cell">${showCo?esc(f.company):''}</td>
       <td class="fn-cell">${esc(f.flightNumber)}</td>
-      <td class="route-cell">${esc(f.route||'—')}</td>
+      <td class="route-cell">${esc(main.routeTxt||'—')}</td>
       <td class="type-cell">${esc(f.typeDisp||'—')}</td>
       <td>${capCell}</td>
-      <td>${paxCell}</td>
+      <td>${mainPaxCell}${totalBadge}</td>
       <td>${rateCell}</td>
       <td>${esc(f.obs||'')}</td>
     </tr>`;
+
+    // ── Sous-lignes d'escale (jaune foncé sur Trajet + PAX seulement) ──
+    for(let li=1; li<lines.length; li++){
+      const l=lines[li];
+      const midBadge = (l.isMidLeg && (!l.pax || l.pax===0))
+        ? ' <span style="font-size:10px;color:#7a4f01;font-style:italic;font-weight:700;">(à saisir)</span>' : '';
+      html+=`<tr>
+        <td class="co-cell"></td>
+        <td class="fn-cell"></td>
+        <td class="route-cell" style="background:#f4c430;color:#3a2c00;font-weight:700;">${esc(l.routeTxt||'—')}</td>
+        <td class="type-cell"></td>
+        <td></td>
+        <td style="background:#f4c430;color:#3a2c00;font-weight:700;">${l.pax!=null?l.pax:'—'}${midBadge}</td>
+        <td></td>
+        <td></td>
+      </tr>`;
+    }
   }
   body.innerHTML=html;
 }
@@ -699,23 +769,41 @@ async function exportExcel(){
     rows.push(['Semaine calendaire n° :','','','','Du :  '+fmtDMY(monday)+'   au :  '+fmtDMY(sunday),'','','','']);
     rows.push(['Jour','Compagnie','N° de Vol / Horaire','Prove-Destination','Type d\'Appareil','Capacité','Nbre de Passagers','Taux de remplissage','Observat.']);
 
-    const meta=[]; // par ligne de données : {day, company}
+    const meta=[]; // par ligne de données : {day, company, isSub, isMid}
     let lastDay=null,lastCo=null;
     for(const f of _weekFlights){
+      const lines=suiviFlightLines(f);
       const showDay=f.dayName!==lastDay; const showCo=showDay||f.company!==lastCo;
       lastDay=f.dayName; lastCo=f.company;
+      const totalPax=lines.reduce((s,l)=>s+(Number(l.pax)||0),0);
+      const hasEscale=lines.length>1;
+      // Ligne principale
+      const main=lines[0];
       rows.push([
         showDay?(f.dayName+' '+(f.dayDate||'')):'',
         showCo?f.company:'',
         f.flightNumber,
-        f.route||'',
+        main.routeTxt||'',
         f.typeDisp||'',
         f.capacity!=null?f.capacity:'',
-        f.passengers!=null?f.passengers:'',
+        main.pax!=null?main.pax:'',
         '',                            // Taux : rempli par formule Excel
-        f.obs||''
+        hasEscale?('Total PAX: '+totalPax):(f.obs||'')
       ]);
-      meta.push({day:f.dayName, company:f.company, showDay});
+      meta.push({day:f.dayName, company:f.company, showDay, isSub:false, isMid:false});
+      // Sous-lignes escale
+      for(let li=1; li<lines.length; li++){
+        const l=lines[li];
+        rows.push([
+          '', '', '',
+          l.routeTxt||'',
+          '', '',
+          l.pax!=null?l.pax:'',
+          '',
+          (l.isMidLeg && (!l.pax||l.pax===0))?'(à saisir)':''
+        ]);
+        meta.push({day:f.dayName, company:f.company, showDay:false, isSub:true, isMid:l.isMidLeg});
+      }
     }
 
     const ws=X.utils.aoa_to_sheet(rows);
@@ -754,6 +842,11 @@ async function exportExcel(){
         }else if(c>=1 && coColor){
           // Reste de la ligne : couleur de la compagnie
           st.fill={fgColor:{rgb:'FF'+coColor}};
+        }
+        // Sous-lignes d'escale : jaune foncé sur Trajet (c=3) et PAX (c=6)
+        if(m.isSub && (c===3 || c===6)){
+          st.fill={fgColor:{rgb:'FFF4C430'}};
+          st.font={name:fontName,sz:10,bold:true,color:{rgb:'FF3A2C00'}};
         }
         // Taux de remplissage = formule Excel (colonne H).
         // On met la formule dès qu'il y a des PASSAGERS, même si la
