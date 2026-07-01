@@ -1343,12 +1343,10 @@ document.addEventListener('keydown', e => {
 
       <!-- Décomposition claire des trajets (MAI à escale) -->
       <div id="escaleLines" style="margin-top:14px;display:none;">
-        <div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">💡 Renseignez les passagers de chaque tronçon :</div>
 
         <!-- Ligne 1 : vol principal (départ → arrivée) -->
         <div class="escale-line" style="display:flex;align-items:center;gap:14px;padding:10px 12px;border-radius:10px;background:#eef2ff;border:1px solid #c7d2fe;margin-bottom:8px;">
           <div style="min-width:150px;font-weight:800;color:#1e3a8a;" id="segMainLabel">— → —</div>
-          <div style="font-size:11px;color:#64748b;">Vol principal</div>
           <div style="flex:1;"></div>
           <div class="fm-field" style="min-width:130px;">
             <label>PAX</label>
@@ -1371,7 +1369,6 @@ document.addEventListener('keydown', e => {
         <!-- Ligne 2 : départ → escale -->
         <div class="escale-line" style="display:flex;align-items:center;gap:14px;padding:10px 12px;border-radius:10px;background:#fff7e6;border:1px solid #fcd34d;margin-bottom:8px;">
           <div style="min-width:150px;font-weight:800;color:#92400e;" id="segStopLabel">— → —</div>
-          <div style="font-size:11px;color:#a16207;">Départ → escale</div>
           <div style="flex:1;"></div>
           <div class="fm-field" style="min-width:130px;">
             <label>PAX</label>
@@ -1394,7 +1391,6 @@ document.addEventListener('keydown', e => {
         <!-- Ligne 3 : escale → arrivée (saisie manuelle) — seulement escale mauritanienne -->
         <div class="escale-line" id="midLegRow" style="display:none;align-items:center;gap:14px;padding:10px 12px;border-radius:10px;background:#f4c430;border:1px solid #b8860b;margin-bottom:8px;">
           <div style="min-width:150px;font-weight:800;color:#3a2c00;" id="segMidLabel">— → —</div>
-          <div style="font-size:11px;color:#7a4f01;font-style:italic;">Escale → arrivée (saisie manuelle, fin d'année)</div>
           <div style="flex:1;"></div>
           <div class="fm-field" style="min-width:130px;">
             <label style="color:#3a2c00;">PAX</label>
