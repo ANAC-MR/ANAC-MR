@@ -335,8 +335,9 @@ async function loadAirlines(){
 
 // ── Table ICAO → IATA (depuis flights/cfg-airports) ──
 let _icaoToIata = {};
+let _iataToIcao = {};
 async function loadAirports(){
-  _icaoToIata={};
+  _icaoToIata={}; _iataToIcao={};
   try{
     const snap=await getDoc(doc(db,'flights','cfg-airports'));
     if(snap.exists()){
@@ -345,6 +346,8 @@ async function loadAirports(){
         const icao=(a.icao||'').toUpperCase(), iata=(a.iata||'').toUpperCase();
         if(icao&&iata) _icaoToIata[icao]=iata;
         if(iata) _icaoToIata[iata]=iata; // si déjà en IATA, on garde
+        if(iata&&icao) _iataToIcao[iata]=icao;
+        if(icao) _iataToIcao[icao]=icao;
       });
     }
   }catch(e){ console.warn('loadAirports:',e&&e.message); }
@@ -353,6 +356,15 @@ function toIATA(code){
   const c=(code||'').toUpperCase().trim();
   if(!c) return '';
   return _icaoToIata[c]||c; // si pas trouvé, on garde le code d'origine
+}
+// Est-ce un aéroport mauritanien ? (ICAO commence par GQ). Robuste : accepte
+// un code IATA (ex NDB) qu'on convertit d'abord en ICAO (GQPP).
+function isMauritanianAny(code){
+  const c=(code||'').toUpperCase().trim();
+  if(!c) return false;
+  if(c.startsWith('GQ')) return true;
+  const icao=_iataToIcao[c]||'';
+  return icao.startsWith('GQ');
 }
 
 // ── Horaires (collection schedules) : numéro de vol → horaire ──
@@ -550,7 +562,7 @@ function suiviFlightLines(f){
   const paxArr=Math.max(0,(f._totalPax||0)-paxStop);
   const babArr=Math.max(0,(f._totalBab||0)-babStop);
   const midPax=f._midPax, midBab=f._midBab;
-  if(isMauritanianICAO(f._stop)){
+  if(isMauritanianAny(f._stop)){
     // 3 lignes : principale (dep-arr), dep-stop, stop-arr (vide)
     return [
       { routeTxt:`${dep}-${arr}`,  pax:paxArr,  babies:babArr,  isMain:true,  isMidLeg:false },
