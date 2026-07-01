@@ -1532,8 +1532,8 @@ function renderTable(filteredFlights, offset) {
             // Total PAX = somme des PAX des lignes réelles (hors ligne principale
             // qui est le vol direct = même total). Ici le total à afficher est le
             // total du vol (flight.passengers) qui = escale + arrivée.
-            const totalPax = lines.reduce((s,l)=> s + (l.isMain?0:(Number(l.passengers)||0)), 0);
-            const totalBab = lines.reduce((s,l)=> s + (l.isMain?0:(Number(l.babies)||0)), 0);
+            const totalPax = lines.reduce((s,l)=> s + (Number(l.passengers)||0), 0);
+            const totalBab = lines.reduce((s,l)=> s + (Number(l.babies)||0), 0);
             lines.forEach((line, li) => {
                 const row = createFlightRow(flight, li === 0 ? (offset + idx + 1) : null, line, li, lines.length, {totalPax, totalBab});
                 elements.flightTableBody.appendChild(row);
@@ -1565,12 +1565,12 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals) {
 
     // ── Sous-ligne d'escale (pas la ligne principale) ──
     // On n'affiche QUE Trajet + PAX + Bébés. Les autres colonnes sont vides.
-    // Fond jaune foncé bien visible.
+    // Fond jaune foncé UNIQUEMENT sur les cellules Trajet et PAX.
     if (isSub && !isMain) {
-        row.style.background = '#f4c430';  // jaune foncé (goldenrod)
-        row.style.borderLeft = '4px solid #b8860b';
         const midLegBadge = (line.isMidLeg && (!pax || pax === 0))
             ? ' <span style="font-size:10px;color:#7a4f01;font-style:italic;font-weight:700;">(à saisir)</span>' : '';
+        const yellow = 'background:#f4c430;';
+        const routeCellY = `<td style="text-align:center;white-space:nowrap;${yellow}"><strong style="color:#3a2c00;">${escapeHtml(fromCode)}</strong> <span style="color:#7a4f01;font-weight:700;margin:0 4px;">→</span> <strong style="color:#3a2c00;">${escapeHtml(toCode)}</strong></td>`;
         row.innerHTML = `
             <td></td>
             <td></td>
@@ -1578,9 +1578,9 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals) {
             <td></td>
             <td></td>
             <td></td>
-            ${routeCell.replace('#0f1e3d','#3a2c00').replace('#0f1e3d','#3a2c00')}
+            ${routeCellY}
             <td></td>
-            <td style="font-weight:700;color:#3a2c00;">${pax}${midLegBadge}</td>
+            <td style="font-weight:700;color:#3a2c00;${yellow}">${pax}${midLegBadge}</td>
             <td style="font-weight:700;color:#3a2c00;">${bab}</td>
             <td class="actions-cell"></td>
         `;
