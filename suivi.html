@@ -70,6 +70,12 @@ tbody td{padding:8px 9px;border:1px solid var(--border);text-align:center;color:
 .rate-cell{font-weight:700;font-family:var(--mono);}
 .rate-hi{color:var(--green);} .rate-mid{color:var(--gold);} .rate-lo{color:var(--red);}
 tbody tr:hover td{background:rgba(255,255,255,0.02);}
+/* ── Permission manage_aircraft absente : gestion des immatriculations masquée ── */
+body.no-manage-aircraft #acFormPanel,
+body.no-manage-aircraft #bulkBar,
+body.no-manage-aircraft .del-btn,
+body.no-manage-aircraft .ac-chk,
+body.no-manage-aircraft #chkAll { display:none !important; }
 .empty-row td{padding:40px;color:var(--dim);font-style:italic;}
 /* Trait de séparation net entre les jours */
 tbody tr.day-start td{border-top:3px solid var(--gold);}
@@ -106,7 +112,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
 <!-- ANAC_AUTH_GUARD_INJECTED -->
 <script type="module">
   import { requireAuth } from './auth.js';
-  if (!requireAuth('view_flights')) { /* requireAuth gère redirection/refus */ }
+  if (!requireAuth('access_suivi')) { /* requireAuth gère redirection/refus */ }
 </script>
 
 <header>
@@ -164,7 +170,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
 
   <!-- ══════════ ONGLET PARAMÈTRES IMMATRICULATIONS ══════════ -->
   <div id="page-params" class="hidden">
-    <div class="panel">
+    <div class="panel" id="acFormPanel">
       <h3>➕ Ajouter / Modifier une immatriculation</h3>
       <div class="form-grid">
         <div class="fg" style="grid-column:1/-1;">
@@ -1031,6 +1037,7 @@ window.updateBulkBar=function(){
   bar.classList.toggle('hidden', checked.length===0);
 };
 window.applyBulkEdit=async function(){
+  if(!(window.ANAC_AUTH&&window.ANAC_AUTH.hasPerm&&window.ANAC_AUTH.hasPerm('manage_aircraft'))){ toast('⛔ Permission requise : gestion des immatriculations','err'); return; }
   const ids=[...document.querySelectorAll('.ac-chk:checked')].map(c=>c.value);
   if(!ids.length){ toast('⚠️ Aucune immatriculation sélectionnée','warn'); return; }
   const company=(document.getElementById('bulkCompany').value||'').trim();
@@ -1054,6 +1061,7 @@ window.applyBulkEdit=async function(){
 };
 
 window.saveAircraft=async function(){
+  if(!(window.ANAC_AUTH&&window.ANAC_AUTH.hasPerm&&window.ANAC_AUTH.hasPerm('manage_aircraft'))){ toast('⛔ Permission requise : gestion des immatriculations','err'); return; }
   const regRaw=(document.getElementById('acReg').value||'').trim().toUpperCase();
   const type=(document.getElementById('acType').value||'').trim();
   const capRaw=(document.getElementById('acCap').value||'').trim();
@@ -1116,6 +1124,7 @@ window.editAircraft=function(id){
 };
 
 window.delAircraft=async function(id,reg){
+  if(!(window.ANAC_AUTH&&window.ANAC_AUTH.hasPerm&&window.ANAC_AUTH.hasPerm('manage_aircraft'))){ toast('⛔ Permission requise : gestion des immatriculations','err'); return; }
   if(!confirm('Supprimer l\'immatriculation '+reg+' ?')) return;
   try{
     await deleteDoc(doc(db,'aircraft',id));
@@ -1152,6 +1161,11 @@ document.getElementById('startPicker').addEventListener('change',reloadWeek);
 (async function(){
   await ensureAuth();
   await Promise.all([ loadAircraft(), loadAirports(), loadSchedules(), loadAirlines(), loadFlightNumbers() ]);
+  // ── Permission "manage_aircraft" : sans elle, la gestion des
+  //    immatriculations est en lecture seule (formulaire/boutons masqués). ──
+  if (!(window.ANAC_AUTH && window.ANAC_AUTH.hasPerm && window.ANAC_AUTH.hasPerm('manage_aircraft'))) {
+    document.body.classList.add('no-manage-aircraft');
+  }
   const sp=document.getElementById('startPicker');
   if(!sp.value) sp.value=fmtDateLocal(mondayOfToday());
   await loadWeek(sp.value);
