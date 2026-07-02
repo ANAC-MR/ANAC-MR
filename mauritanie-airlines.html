@@ -554,9 +554,13 @@ function cityName(code){
   return CITY_NAMES[upper] || upper;
 }
 
+// Codes IATA des aéroports mauritaniens (leurs ICAO commencent par GQ)
+const MR_IATA = ['NKC','NDB','OUZ','ATR','KFA','SEY','TIY','AJJ','KED','EMN','AEO','LEG','BGH','MOM','THT','TMD','OTL'];
 function isMauritanieAirport(code){
   if(!code) return false;
-  return code.toUpperCase().trim().startsWith('GQ');
+  const c = code.toUpperCase().trim();
+  if (c.startsWith('GQ')) return true;      // ICAO mauritanien
+  return MR_IATA.includes(c);               // IATA mauritanien (ex: NDB)
 }
 
 function isMauritanieAirlines(company){
@@ -566,30 +570,60 @@ function isMauritanieAirlines(company){
 }
 
 // ══════════════════════════════════════════════════════════════════
-// DÉCOMPOSITION DES VOLS EN SEGMENTS
-// Un vol NKC → LPA via NDB devient : NKC-NDB + NDB-LPA
+// DÉCOMPOSITION DES VOLS EN SEGMENTS (logique escale MAI officielle)
+//
+//  • Escale MAURITANIENNE (ICAO GQ…) → 3 segments :
+//      1) from → to        (PAX = total − escale)   [vol principal]
+//      2) from → escale    (PAX = escale)
+//      3) escale → to      (PAX = midLegPax, saisie manuelle fin d'année)
+//  • Escale ÉTRANGÈRE → 2 segments, le 2e selon le sens :
+//      DÉPART  : from → escale   (PAX = escale)
+//      ARRIVÉE : escale → to     (PAX = escale)
+//      + 1) from → to (PAX = total − escale)
+//  • L'escale vient du vol, sinon du numéro de vol enregistré (admin).
 // ══════════════════════════════════════════════════════════════════
+function _maNormFN(s){ let v=(s||'').toUpperCase().replace(/[-\s.]/g,''); return v.replace(/^([A-Z]+)0*(\d.*)$/,'$1$2'); }
 function getFlightSegments(flight){
-  const from = (flight.from || '').toUpperCase().trim();
-  const to   = (flight.to   || '').toUpperCase().trim();
-  const stopover = (flight.stopover || '').toUpperCase().trim();
-  const hasStopover = !!flight.hasStopover && !!stopover;
+  let from = (flight.from || '').toUpperCase().trim();
+  let to   = (flight.to   || '').toUpperCase().trim();
+  let stopover = (flight.hasStopover ? (flight.stopover || '') : '').toUpperCase().trim();
 
-  // PAX et vols principaux
-  const mainPax = (+flight.passengers || 0) - (+flight.stopoverPax || 0);
-  const stopPax = +flight.stopoverPax || 0;
+  // Escale de secours : depuis le numéro de vol enregistré (admin)
+  if (!stopover && window._maFN) {
+    const info = window._maFN[_maNormFN(flight.flightNumber||'')];
+    if (info && info.stopover) {
+      stopover = info.stopover;
+      if (info.from) from = info.from;
+      if (info.to)   to   = info.to;
+    }
+  }
+
   const totalPax = +flight.passengers || 0;
+  const stopPax  = +flight.stopoverPax || 0;
+  const mainPax  = Math.max(0, totalPax - stopPax);
+  const midPax   = +flight.midLegPax || 0;
 
-  if (!hasStopover) {
+  if (!stopover) {
     return [{ from, to, pax: totalPax, count: 1 }];
   }
 
-  // Avec escale : 2 segments
-  // from → stopover (PAX = totalPax)
-  // stopover → to (PAX = mainPax, les pax d'escale sont descendus à stopover)
+  const isArr = ((flight.type||'').toUpperCase() === 'ARR');
+
+  if (isMauritanieAirport(stopover)) {
+    // Escale mauritanienne → 3 segments
+    return [
+      { from,            to,           pax: mainPax, count: 1 },
+      { from,            to: stopover, pax: stopPax, count: 1 },
+      { from: stopover,  to,           pax: midPax,  count: 1 },
+    ];
+  }
+  // Escale étrangère → 2 segments (sens du 2e selon DEP/ARR)
+  const sec = isArr
+    ? { from: stopover, to,           pax: stopPax, count: 1 }
+    : { from,           to: stopover, pax: stopPax, count: 1 };
   return [
-    { from, to: stopover, pax: totalPax, count: 1 },
-    { from: stopover, to, pax: mainPax, count: 1 },
+    { from, to, pax: mainPax, count: 1 },
+    sec
   ];
 }
 
@@ -1086,6 +1120,23 @@ const coll = collection(db, 'flights');
       await window.ANAC_AUTH.ensureAuthed(app);
     }
   }catch(e){ console.warn('MA auth bootstrap:', e && e.message); }
+
+  // ── Charger les numéros de vol (escales définies dans l'admin) ──
+  //    Sert à décomposer les vols dont l'escale n'est pas stockée sur le vol.
+  try{
+    const fnSnap = await getDocs(collection(db,'flight_numbers'));
+    window._maFN = {};
+    const nf = s => { let v=(s||'').toUpperCase().replace(/[-\s.]/g,''); return v.replace(/^([A-Z]+)0*(\d.*)$/,'$1$2'); };
+    fnSnap.forEach(d=>{
+      const x=d.data(); const k=nf(x.number||'');
+      if(!k) return;
+      window._maFN[k] = {
+        from:(x.from||'').toUpperCase(), to:(x.to||'').toUpperCase(),
+        stopover:(x.stopover||'').toUpperCase(), type:(x.type||'').toUpperCase()
+      };
+    });
+    console.log('MA: flight_numbers chargés :', Object.keys(window._maFN).length);
+  }catch(e){ console.warn('MA flight_numbers:', e && e.message); window._maFN = {}; }
 
   onSnapshot(coll, snap => {
     allFlights = [];
