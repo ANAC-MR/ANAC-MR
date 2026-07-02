@@ -1289,6 +1289,18 @@ function toICAO(code) {
   // Conversion IATA → ICAO
   return IATA_TO_ICAO[c] || c;
 }
+// ICAO → IATA (inverse). Renvoie le code IATA si connu, sinon le code d'origine.
+let _ICAO_TO_IATA = null;
+function _toIataLDM(code){
+  if(!code) return '';
+  const c = code.trim().toUpperCase();
+  if(c.length<=3) return c; // déjà IATA (ou court)
+  if(!_ICAO_TO_IATA){
+    _ICAO_TO_IATA = {};
+    try{ Object.keys(IATA_TO_ICAO).forEach(iata=>{ _ICAO_TO_IATA[IATA_TO_ICAO[iata]] = iata; }); }catch(e){}
+  }
+  return _ICAO_TO_IATA[c] || c;
+}
 
 const FB = {
   apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
@@ -1447,6 +1459,17 @@ async function dedupAndEnrich(list) {
       if (info.stopover) p.stopover = info.stopover;
       if (info.type)     p.type     = info.type;   // DEP/ARR officiel (écrase la déduction LDM/MVT)
       p._routeFromList = true;   // marqueur : trajet déduit de la liste
+      // ── Répartition PAX escale (MAI) : le PAX de la ville d'escale vient du message ──
+      const _isMAI = (p.company||'').toUpperCase().includes('MAURITANIA') || (p.company||'').toUpperCase()==='L6';
+      if (_isMAI && info.stopover && p._stationPax) {
+        const stopIata = _toIataLDM(info.stopover);
+        const stopIcao = (info.stopover||'').toUpperCase();
+        // Chercher le PAX de la station d'escale (en IATA ou ICAO)
+        const sd = p._stationPax[stopIata] || p._stationPax[stopIcao] || null;
+        if (sd) { p.stopoverPax = sd.pax; p.stopoverBabies = sd.babies; }
+        else { p.stopoverPax = 0; p.stopoverBabies = 0; }
+        p.hasStopover = true;
+      }
     } else {
       p._routeFromList = false;
       if (p.flightNumber) _notFound.push(p.flightNumber);
@@ -1864,6 +1887,9 @@ function extractFields(text, dateReceived) {
       }
     });
 
+    // Conserver le détail PAX par station pour la décomposition en lignes d'escale
+    p._stationPax = stationPax;
+
     // Choisir la bonne station selon le type de vol
     const nkcData  = stationPax['NKC'] || stationPax['GQNO'] || null;
     const otherSts = Object.keys(stationPax).filter(s => s!=='NKC' && s!=='GQNO');
@@ -2077,6 +2103,7 @@ function renderEmails() {
             <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
 
           </div>
+          ${_escalePreviewHTML(p, i)}
           <div class="act-row" id="act-${i}">
             ${imp
               ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>'
@@ -2098,6 +2125,53 @@ function renderEmails() {
   });
 }
 
+// Génère l'aperçu des lignes d'escale (MAI) dans la carte d'import.
+function _escaleIsMAI(co){ const c=(co||'').toUpperCase(); return c.includes('MAURITANIA')||c==='MAI'||c==='L6'; }
+function _escaleIsMauritanian(code){
+  const c=(code||'').toUpperCase();
+  if(c.startsWith('GQ')) return true;
+  const icao=(toICAO(c)||'');
+  return icao.toUpperCase().startsWith('GQ');
+}
+function _escalePreviewHTML(p, i){
+  if(!p.stopover || !_escaleIsMAI(p.company)) return '';
+  const dep=_toIataLDM(p.from), stop=_toIataLDM(p.stopover), arr=_toIataLDM(p.to);
+  const isArr=(p.type||'').toUpperCase()==='ARR';
+  const paxStop=Number(p.stopoverPax||0), babStop=Number(p.stopoverBabies||0);
+  const total=Number(p.totalPax||p.paxAdults||0), totalBab=Number(p.paxBabies||0);
+  const paxArr=Math.max(0,total-paxStop), babArr=Math.max(0,totalBab-babStop);
+  const domestic=_escaleIsMauritanian(p.stopover);
+  let lines=[];
+  if(domestic){
+    lines=[
+      {r:dep+' \u2192 '+arr, px:paxArr, bb:babArr, k:'main'},
+      {r:dep+' \u2192 '+stop, px:paxStop, bb:babStop, k:'stop'},
+      {r:stop+' \u2192 '+arr, px:Number(p.midLegPax||0), bb:Number(p.midLegBabies||0), k:'mid'}
+    ];
+  }else{
+    const sec = isArr
+      ? {r:stop+' \u2192 '+arr, px:paxStop, bb:babStop, k:'stop'}
+      : {r:dep+' \u2192 '+stop, px:paxStop, bb:babStop, k:'stop'};
+    lines=[ {r:dep+' \u2192 '+arr, px:paxArr, bb:babArr, k:'main'}, sec ];
+  }
+  const rowsHtml = lines.map(function(l){
+    const bg = l.k==='main' ? '#eef2ff' : (l.k==='mid' ? '#f4c430' : '#fff7e6');
+    const col = l.k==='mid' ? '#3a2c00' : (l.k==='main' ? '#1e3a8a' : '#92400e');
+    return '<div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;background:'+bg+';margin-bottom:6px;">'
+      + '<div style="min-width:120px;font-weight:800;color:'+col+';">'+esc(l.r)+'</div>'
+      + '<div style="flex:1;"></div>'
+      + '<span style="font-size:11px;color:#64748b;">PAX</span>'
+      + '<span style="font-weight:800;color:'+col+';min-width:30px;text-align:right;">'+l.px+'</span>'
+      + '<span style="font-size:11px;color:#64748b;margin-left:8px;">B\u00e9b\u00e9s</span>'
+      + '<span style="font-weight:800;color:'+col+';min-width:24px;text-align:right;">'+l.bb+'</span>'
+      + '</div>';
+  }).join('');
+  const totalLines = lines.reduce(function(s,l){return s+l.px;},0);
+  return '<div style="margin:10px 0;padding:10px;border:1px dashed #c7d2fe;border-radius:10px;background:#fafbff;">'
+    + '<div style="font-size:12px;font-weight:700;color:#4f46e5;margin-bottom:8px;">\u2708 D\u00e9composition escale ('+(domestic?'3 lignes':'2 lignes')+') \u2014 Total PAX : '+totalLines+'</div>'
+    + rowsHtml + '</div>';
+}
+
 function toggleCard(i) {
   const b = document.getElementById(`bdy-${i}`);
   const a = document.getElementById(`arr-${i}`);
@@ -2116,9 +2190,13 @@ async function importFlight(i, force) {
   const to  = document.getElementById(`p${i}-to`).value.trim().toUpperCase();
   const ty  = document.getElementById(`p${i}-ty`) ? document.getElementById(`p${i}-ty`).value : 'DEP';
   const co  = document.getElementById(`p${i}-co`) ? document.getElementById(`p${i}-co`).value.trim() : '';
-  const sw  = document.getElementById(`p${i}-sw`) ? document.getElementById(`p${i}-sw`).value.trim().toUpperCase() : '';
-  const spx = document.getElementById(`p${i}-spx`) ? parseInt(document.getElementById(`p${i}-spx`).value)||0 : 0;
-  const sbb = document.getElementById(`p${i}-sbb`) ? parseInt(document.getElementById(`p${i}-sbb`).value)||0 : 0;
+  // Escale : lue depuis l'objet parsé (calculée à l'analyse du message + numéro de vol)
+  const _pEsc = (emails[i] && emails[i].parsed) ? emails[i].parsed : {};
+  const sw  = document.getElementById(`p${i}-sw`) ? document.getElementById(`p${i}-sw`).value.trim().toUpperCase() : (_pEsc.stopover||'');
+  const spx = document.getElementById(`p${i}-spx`) ? parseInt(document.getElementById(`p${i}-spx`).value)||0 : Number(_pEsc.stopoverPax||0);
+  const sbb = document.getElementById(`p${i}-sbb`) ? parseInt(document.getElementById(`p${i}-sbb`).value)||0 : Number(_pEsc.stopoverBabies||0);
+  const mlp = Number(_pEsc.midLegPax||0);
+  const mlb = Number(_pEsc.midLegBabies||0);
   const px  = parseInt(document.getElementById(`p${i}-px`).value) || 0;
   const bb  = parseInt(document.getElementById(`p${i}-bb`).value) || 0;
 
@@ -2173,6 +2251,8 @@ async function importFlight(i, force) {
       stopover: finalStop,
       stopoverPax: spx,
       stopoverBabies: sbb,
+      midLegPax: mlp,
+      midLegBabies: mlb,
       passengers: px, babies: bb,
       company: finalCo || detectCompany(fn),
       authorizationNumber: authEl ? authEl.value.trim().toUpperCase() : '',
