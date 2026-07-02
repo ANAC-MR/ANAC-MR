@@ -511,7 +511,7 @@ const CITY_NAMES = {
   'GMME':'Rabat','RBA':'Rabat','GMMX':'Marrakech','RAK':'Marrakech',
   'DAAG':'Alger','ALG':'Alger','DAOO':'Oran','ORN':'Oran',
   'DTTA':'Tunis','TUN':'Tunis',
-  'GOBD':'Dakar','DKR':'Dakar','GOOY':'Dakar',
+  'GOBD':'Dakar','DKR':'Dakar','GOOY':'Dakar','DSS':'Dakar',
   'GABS':'Bamako','BKO':'Bamako','GUCY':'Conakry','CKY':'Conakry',
   'DIAP':'Abidjan','ABJ':'Abidjan','DGAA':'Accra','ACC':'Accra',
   'DNMM':'Lagos','LOS':'Lagos','DRRN':'Niamey','NIM':'Niamey',
@@ -607,8 +607,6 @@ function getFlightSegments(flight){
     return [{ from, to, pax: totalPax, count: 1 }];
   }
 
-  const isArr = ((flight.type||'').toUpperCase() === 'ARR');
-
   if (isMauritanieAirport(stopover)) {
     // Escale mauritanienne → 3 segments
     return [
@@ -617,8 +615,12 @@ function getFlightSegments(flight){
       { from: stopover,  to,           pax: midPax,  count: 1 },
     ];
   }
-  // Escale étrangère → 2 segments (sens du 2e selon DEP/ARR)
-  const sec = isArr
+  // Escale étrangère → 2 segments. Le sens du 2e segment est déduit des
+  // DONNÉES (fiable) : si l'arrivée est en Mauritanie (NKC) → escale→NKC ;
+  // sinon (départ de NKC) → NKC→escale. On n'utilise pas le champ type
+  // stocké, qui peut être erroné sur d'anciens vols.
+  const arrivesInMR = isMauritanieAirport(to);
+  const sec = arrivesInMR
     ? { from: stopover, to,           pax: stopPax, count: 1 }
     : { from,           to: stopover, pax: stopPax, count: 1 };
   return [
@@ -653,11 +655,12 @@ function buildCrossTable(flights, year){
       const isDom = isMauritanieAirport(seg.from) && isMauritanieAirport(seg.to);
       const bucket = isDom ? domestic : international;
 
-      const key = seg.from + '|' + seg.to;
+      // Clé par VILLE (et non par code) : fusionne GQNO/NKC, GQPP/NDB, etc.
+      const cityA = cityName(seg.from);
+      const cityB = cityName(seg.to);
+      const key = cityA + '|' + cityB;
       if (!bucket[key]) {
         // Nom de la paire : on range alphabétiquement pour grouper ARR+DEP
-        const cityA = cityName(seg.from);
-        const cityB = cityName(seg.to);
         const [c1, c2] = [cityA, cityB].sort((a,b) => a.localeCompare(b, 'fr'));
         bucket[key] = {
           from: seg.from,
