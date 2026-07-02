@@ -496,6 +496,10 @@
      ═══════════════════════════════════════════════════════════════ -->
 <style>
 /* Fix menu Actions : au-dessus des autres lignes, jamais coupé */
+/* ── Polish tableau des vols : survol doux qui respecte les couleurs par vol ── */
+#flightTableBody tr { transition: filter .15s ease; }
+#flightTableBody tr:hover { filter: brightness(0.965); }
+#flightTableBody td { vertical-align: middle; }
 .actions-cell { position: relative; }
 .actions-wrapper { position: relative; }
 .actions-menu {
