@@ -1894,25 +1894,30 @@ function extractFields(text, dateReceived) {
     const nkcData  = stationPax['NKC'] || stationPax['GQNO'] || null;
     const otherSts = Object.keys(stationPax).filter(s => s!=='NKC' && s!=='GQNO');
 
+    // La logique d'escale (additionner plusieurs villes) ne concerne QUE la MAI.
+    // Détection MAI via le préfixe du numéro de vol (L6 / 6Q) ou la compagnie.
+    const _fnUp = (p.flightNumber||'').toUpperCase();
+    const _isMAIflight = /^(L6|6Q)/.test(_fnUp)
+      || (p.company||'').toUpperCase().includes('MAURITANIA')
+      || (p.company||'').toUpperCase()==='L6';
+
     if (p.type === 'ARR' || p.type === 'TRANSIT') {
-      // ARR/TRANSIT vers NKC.
-      // Cas escale (ex L6 CKY-DSS-NKC) : additionner toutes les stations
-      // débarquées (escale DSS + NKC). Sinon, simplement la station NKC.
-      const allStationsWithPax = Object.keys(stationPax);
-      if (allStationsWithPax.length > 1) {
-        // Vol avec escale : on somme toutes les stations
-        allStationsWithPax.forEach(st => {
+      // ARRIVÉE vers NKC.
+      if (_isMAIflight && Object.keys(stationPax).length > 1) {
+        // MAI avec escale : additionner toutes les stations débarquées.
+        Object.keys(stationPax).forEach(st => {
           totalPax    += stationPax[st].pax;
           totalBabies += stationPax[st].babies;
         });
         foundPax = true;
       } else if (nkcData) {
+        // Autres compagnies (ou MAI sans escale) : SEULEMENT la ligne NKC.
         totalPax = nkcData.pax; totalBabies = nkcData.babies; foundPax = true;
       }
     } else if (p.type === 'DEP') {
-      // DEP: PAX qui partent vers la/les destination(s) — hors NKC.
-      // Cas escale (ex L6 NKC-DSS-CKY) : additionner TOUTES les destinations.
-      if (otherSts.length > 0) {
+      // DÉPART depuis le hub.
+      if (_isMAIflight && otherSts.length > 1) {
+        // MAI avec escale : additionner toutes les destinations (hors NKC).
         otherSts.forEach(st => {
           if (stationPax[st]) {
             totalPax    += stationPax[st].pax;
@@ -1920,13 +1925,25 @@ function extractFields(text, dateReceived) {
           }
         });
         foundPax = true;
+      } else if (otherSts.length > 0 && stationPax[otherSts[0]]) {
+        // Autres compagnies : SEULEMENT la 1ère destination (pas d'escale ailleurs).
+        totalPax = stationPax[otherSts[0]].pax;
+        totalBabies = stationPax[otherSts[0]].babies;
+        foundPax = true;
       }
     }
 
-    // Fallback: si pas trouvé, prendre toutes les lignes
+    // Fallback: si pas trouvé.
     if (!foundPax) {
-      Object.values(stationPax).forEach(d => { totalPax += d.pax; totalBabies += d.babies; });
-      foundPax = Object.keys(stationPax).length > 0;
+      if (_isMAIflight) {
+        // MAI : on peut sommer toutes les lignes
+        Object.values(stationPax).forEach(d => { totalPax += d.pax; totalBabies += d.babies; });
+        foundPax = Object.keys(stationPax).length > 0;
+      } else {
+        // Autres compagnies : une seule ligne (NKC si arrivée, sinon 1ère station)
+        const one = nkcData || (otherSts.length ? stationPax[otherSts[0]] : (Object.keys(stationPax).length ? stationPax[Object.keys(stationPax)[0]] : null));
+        if (one) { totalPax = one.pax; totalBabies = one.babies; foundPax = true; }
+      }
     }
 
     // Fallback 2: PAX/N format
@@ -2061,12 +2078,15 @@ function extractFields(text, dateReceived) {
 // ── RENDER ──
 function renderEmails() {
   const list = document.getElementById('emailList');
-  document.getElementById('eCount').textContent = emails.length;
-  if (!emails.length) {
-    list.innerHTML = '<div class="empty"><div class="ico">📭</div><h3>Aucun email LDM/MVT trouvé</h3><p>Aucun message LDM ou MVT dans votre Gmail des 30 derniers jours</p></div>';
+  // Ne pas afficher les vols déjà importés (doublons) : on garde l'index d'origine.
+  const visibleCount = emails.filter(em => !em._imported).length;
+  document.getElementById('eCount').textContent = visibleCount;
+  if (!emails.length || visibleCount === 0) {
+    list.innerHTML = '<div class="empty"><div class="ico">📭</div><h3>Aucun email LDM/MVT à importer</h3><p>Aucun nouveau message LDM ou MVT (les vols déjà importés sont masqués)</p></div>';
     return;
   }
   list.innerHTML = emails.map((em, i) => {
+    if (em._imported) return '';   // masquer les doublons déjà importés
     const p   = em.parsed || {};
     const imp = em._imported;
     return `
@@ -2265,20 +2285,11 @@ async function importFlight(i, force) {
     _fbImported.add(fp);
     emails[i]._imported = true;
 
-    // Update UI
-    const card = document.getElementById(`card-${i}`);
-    card.classList.add('imported');
-    document.getElementById(`act-${i}`).innerHTML =
-      '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Importé avec succès dans le système</span>';
-    const hdr = card.querySelector('.email-hdr');
-    if (!hdr.querySelector('.st-ok')) {
-      const badge = document.createElement('span');
-      badge.className='st-badge st-ok'; badge.textContent='✓ Importé';
-      hdr.insertBefore(badge, document.getElementById(`arr-${i}`));
-    }
-
     updateStats();
+    // Masquer le vol importé de la liste (re-render)
+    renderEmails();
     toast(`✅ Vol ${fn} importé avec succès`,'ok');
+    return;
 
   } catch(e) {
     console.error(e);
