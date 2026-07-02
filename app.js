@@ -375,6 +375,9 @@ function populateSelects() {
         option.textContent = month;
         elements.monthSelect.appendChild(option);
     });
+    // ── Par défaut : la page d'accueil s'ouvre sur le MOIS COURANT ──
+    elements.monthSelect.value = String(new Date().getMonth());
+    if (elements.yearSelect) elements.yearSelect.value = String(new Date().getFullYear());
     
     // Use admin config airlines if available, else fallback to AIRLINES constant
     const airlinesList = (adminConfig && adminConfig.airlines && adminConfig.airlines.length)
@@ -694,15 +697,16 @@ function validateForm() {
         isValid = false;
     }
 
-    // Validate flight number + date uniqueness (éviter doublon de vol)
+    // Validate flight number + date uniqueness (interdiction stricte des doublons)
+    // Bloque à l'ajout ET à la modification ; autorise si c'est le MÊME vol qu'on édite.
     const fNum = normFN(elements.fVol && elements.fVol.value ? elements.fVol.value : '');
     const fDate = elements.fDate ? elements.fDate.value.trim() : '';
-    if (fNum && fDate && !editingFlightId) {
+    if (fNum && fDate) {
         const dupVol = flights.find(f =>
-            normFN(f.flightNumber) === fNum && f.date === fDate
+            normFN(f.flightNumber) === fNum && f.date === fDate && f.id !== editingFlightId
         );
         if (dupVol) {
-            showFieldError(elements.fVol, 'Ce vol existe déjà pour cette date (doublon)');
+            showFieldError(elements.fVol, '⛔ Un vol avec ce numéro existe déjà pour cette date. Doublon interdit.');
             isValid = false;
         }
     }
@@ -1446,27 +1450,21 @@ window._pageSize    = 50;
 function render() {
     const filteredFlights = filterFlights();
 
-    // Détecter si plusieurs compagnies sont présentes dans le résultat filtré
-    const companiesInResults = new Set(filteredFlights.map(f => f.company).filter(Boolean));
-    const multiCompany = companiesInResults.size > 1;
-
-    // Tri : si plusieurs compagnies → compagnie D'ABORD puis date puis N° auth
-    //       sinon → date croissante puis N° auth croissant
     const getAuthNum = (auth) => {
         if (!auth) return 0;
         const m = auth.match(/(\d+)$/);
         return m ? parseInt(m[1]) : 0;
     };
 
+    // Tri TOUJOURS identique (avec ou sans filtre, toutes pages) :
+    //   1) date croissante  2) compagnie  3) N° d'autorisation croissant
     filteredFlights.sort((a, b) => {
-        if (multiCompany) {
-            const cA = (a.company || '').toLowerCase();
-            const cB = (b.company || '').toLowerCase();
-            if (cA !== cB) return cA < cB ? -1 : 1;
-        }
         const dA = a.date || '';
         const dB = b.date || '';
         if (dA !== dB) return dA < dB ? -1 : 1;
+        const cA = (a.company || '').toLowerCase();
+        const cB = (b.company || '').toLowerCase();
+        if (cA !== cB) return cA < cB ? -1 : 1;
         return getAuthNum(a.authorizationNumber) - getAuthNum(b.authorizationNumber);
     });
 
@@ -1573,30 +1571,34 @@ function renderTable(filteredFlights, offset) {
 
     filteredFlights.forEach((flight, idx) => {
         const lines = (typeof generateFlightLines === 'function') ? generateFlightLines(flight) : [null];
+        // Couleur alternée PAR VOL : le vol et ses lignes d'escale partagent la même teinte.
+        const parity = idx % 2;   // 0 = blanc, 1 = bleu très clair
         if (lines.length <= 1) {
-            // Vol normal (pas d'escale MAI) → une seule ligne
-            const row = createFlightRow(flight, offset + idx + 1);
+            const row = createFlightRow(flight, offset + idx + 1, null, 0, 1, null, parity, true);
             elements.flightTableBody.appendChild(row);
         } else {
-            // Vol à escale → ligne principale + sous-lignes générées.
-            // Total PAX = somme des PAX des lignes réelles (hors ligne principale
-            // qui est le vol direct = même total). Ici le total à afficher est le
-            // total du vol (flight.passengers) qui = escale + arrivée.
             const totalPax = lines.reduce((s,l)=> s + (Number(l.passengers)||0), 0);
             const totalBab = lines.reduce((s,l)=> s + (Number(l.babies)||0), 0);
             lines.forEach((line, li) => {
-                const row = createFlightRow(flight, li === 0 ? (offset + idx + 1) : null, line, li, lines.length, {totalPax, totalBab});
+                const row = createFlightRow(flight, li === 0 ? (offset + idx + 1) : null, line, li, lines.length, {totalPax, totalBab}, parity, li === 0);
                 elements.flightTableBody.appendChild(row);
             });
         }
     });
 }
 
-// createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals)
+// createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals, parity, isGroupStart)
 //  - Sans 'line' : rendu normal du vol.
 //  - Avec 'line' : rendu d'une ligne d'un vol à escale.
-function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals) {
+//  - parity : 0/1 → couleur alternée par vol (groupe entier).
+//  - isGroupStart : 1ère ligne du vol → trait de séparation supérieur.
+function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals, parity, isGroupStart) {
     const row = document.createElement('tr');
+
+    // ── Couleur alternée par vol (X, Y, X, Y…) ──
+    const groupBg = parity === 1 ? '#edf3fb' : '#ffffff';
+    row.style.background = groupBg;
+    if (isGroupStart) row.style.borderTop = '2px solid #d7e2f0';
 
     const formattedDate = formatDateEU(flight.date);
     const typeText = flight.type === 'DEP' ? 'Départ' : 'Arrivée';
