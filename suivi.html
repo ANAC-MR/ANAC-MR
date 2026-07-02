@@ -698,13 +698,24 @@ function renderTable(flights){
 function renderSummary(flights){
   const div=document.getElementById('summary');
   const nbVols=flights.length;
-  // PASSAGERS = somme de TOUTES les lignes affichées (principale + segments d'escale)
+  // Collecte des taux de TOUTES les lignes affichées (principale + segments).
+  // Une ligne compte si capacité connue et > 0.
+  function lineRates(f){
+    const cap=f.capacity;
+    if(!cap||cap<=0) return [];
+    return suiviFlightLines(f)
+      .filter(l=>l.pax!=null)
+      .map(l=>(Number(l.pax)||0)/cap);
+  }
+  // PASSAGERS = somme de TOUTES les lignes affichées
   const totalPax=flights.reduce((a,f)=>{
     const lines=suiviFlightLines(f);
     return a + lines.reduce((s,l)=>s+(Number(l.pax)||0),0);
   },0);
-  const withCap=flights.filter(f=>f.rate!=null);
-  const avgRate=withCap.length?(withCap.reduce((a,f)=>a+f.rate,0)/withCap.length):null;
+  // TAUX MOYEN = moyenne des taux de toutes les lignes affichées
+  const allRates=[];
+  flights.forEach(f=>{ lineRates(f).forEach(r=>allRates.push(r)); });
+  const avgRate=allRates.length?(allRates.reduce((a,r)=>a+r,0)/allRates.length):null;
   div.innerHTML=`
     <div class="sm-card"><div class="sm-v">${nbVols}</div><div class="sm-l">Vols</div></div>
     <div class="sm-card"><div class="sm-v">${totalPax}</div><div class="sm-l">Passagers</div></div>
@@ -718,7 +729,7 @@ function renderSummary(flights){
     byCo[co].vols++;
     const lines=suiviFlightLines(f);
     byCo[co].pax+=lines.reduce((s,l)=>s+(Number(l.pax)||0),0);
-    if(f.rate!=null) byCo[co].rates.push(f.rate);
+    lineRates(f).forEach(r=>byCo[co].rates.push(r));
   });
   const cos=Object.keys(byCo).sort((a,b)=>{
     // Mauritania Airlines en premier, puis ordre alphabétique
