@@ -66,6 +66,8 @@ export const ALL_PERMISSIONS = {
   'view_map':           { label:'Voir la carte des vols',          group:'Carte' },
   'export_map':         { label:'Exporter la carte',               group:'Carte' },
   'access_ldm':         { label:'Accéder à la page LDM/MVT',       group:'LDM/MVT' },
+  'access_suivi':       { label:'Accéder au Suivi Hebdomadaire',   group:'Suivi Hebdomadaire' },
+  'manage_aircraft':    { label:'Gérer les immatriculations (Suivi)', group:'Suivi Hebdomadaire' },
   'access_ma':          { label:'Accéder à la page Mauritanie Airlines', group:'Mauritanie Airlines' },
   'access_admin':       { label:"Accéder à la page d'administration", group:'Administration' },
 };
@@ -78,17 +80,17 @@ export const ROLES = {
   },
   'operator': {
     label: 'Opérateur',
-    desc: 'Vols + LDM/MVT + Admin',
+    desc: 'Vols + LDM/MVT + Suivi + Admin',
     permissions: [
       'view_flights','add_flight','edit_flight','export_flights','view_charts','view_facturation',
-      'view_map','export_map','access_ldm','access_ma','access_admin'
+      'view_map','export_map','access_ldm','access_suivi','manage_aircraft','access_ma','access_admin'
     ]
   },
   'reader': {
     label: 'Lecteur',
     desc: 'Consultation seule (aucune modification)',
     permissions: [
-      'view_flights','view_charts','view_facturation','view_map','access_ldm','access_ma'
+      'view_flights','view_charts','view_facturation','view_map','access_ldm','access_suivi','access_ma'
     ]
   },
   'custom': {
@@ -186,12 +188,30 @@ export function isLoggedIn() { return !!getSession(); }
 export function currentUser() { return getSession(); }
 
 // ── Permissions ──────────────────────────────────────────────────
+// Alias hérités : l'ancien panneau admin stockait des clés courtes
+// ('ldm', 'admin', …). On accepte les deux écritures pour compatibilité.
+const PERM_ALIASES = {
+  'access_ldm':       'ldm',
+  'access_admin':     'admin',
+  'view_facturation': 'facturation',
+  'access_suivi':     'suivi',
+  'manage_aircraft':  'aircraft'
+};
 export function hasPerm(perm) {
   const s = getSession();
   if (!s) return false;
   if (s.username === FALLBACK_USER) return true;
   if (s.role === 'admin') return true;
-  return Array.isArray(s.permissions) && s.permissions.includes(perm);
+  // Rôles standards : résolus dynamiquement depuis ROLES (les sessions déjà
+  // ouvertes bénéficient ainsi des nouvelles permissions sans reconnexion).
+  if (s.role && s.role !== 'custom' && ROLES[s.role]) {
+    const rolePerms = resolvePermissions(s.role, null);
+    if (rolePerms.includes(perm)) return true;
+  }
+  if (!Array.isArray(s.permissions)) return false;
+  if (s.permissions.includes(perm)) return true;
+  const alias = PERM_ALIASES[perm];
+  return alias ? s.permissions.includes(alias) : false;
 }
 export function resolvePermissions(role, customPerms) {
   const r = ROLES[role];
