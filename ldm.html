@@ -1495,7 +1495,11 @@ function makeFP(p) {
 const _fbImported = new Set();
 
 // Cache: N° vol → authorizationNumber (dernier connu dans Firebase)
+// ⚠️ Conservé pour compat mais N'EST PLUS ALIMENTÉ : réutiliser le numéro
+//    d'un autre vol créait des doublons d'autorisation.
 const _authByFlight = {};
+// Numéros d'autorisation déjà utilisés : "SNA26-XXXX" → {fn, date}
+const _fbAuthUsed = {};
 // Cache: "vol__date" → authorizationNumber (depuis programme_vols, prioritaire)
 const _authByFlightDate = {};
 
@@ -1511,6 +1515,7 @@ async function checkImportedFromFirebase() {
   const snap = await getDocs(collection(db, 'flights'));
   _fbImported.clear();
   Object.keys(_authByFlight).forEach(k => delete _authByFlight[k]);
+  Object.keys(_fbAuthUsed).forEach(k => delete _fbAuthUsed[k]);
 
   snap.forEach(doc => {
     const d = doc.data();
@@ -1522,10 +1527,11 @@ async function checkImportedFromFirebase() {
       (d.registration||'').replace(/[\s.\-]/g,'').toUpperCase()
     ].join('|');
     if (fp !== '||') _fbImported.add(fp);
-    // Mémoriser authorizationNumber par N° vol (prend le plus récent)
+    // ── Numéros d'autorisation DÉJÀ UTILISÉS (unicité stricte à l'import) ──
     const fn = _normFN(d.flightNumber||'');
-    if (fn && d.authorizationNumber) {
-      _authByFlight[fn] = d.authorizationNumber;
+    if (d.authorizationNumber) {
+      _fbAuthUsed[String(d.authorizationNumber).trim().toUpperCase()] =
+        { fn: d.flightNumber||'', date: d.date||'' };
     }
     // ── Mémoriser la route (from/to) et le type (DEP/ARR) par N° vol ──
     if (fn && d.from && d.to) {
@@ -2250,6 +2256,15 @@ async function importFlight(i, force) {
     const db   = getFirestore(app);
 
     const authEl = document.getElementById('p'+i+'-auth');
+    // ── Unicité du numéro d'autorisation : refuser si déjà utilisé ──
+    const _authVal = authEl ? authEl.value.trim().toUpperCase() : '';
+    if (_authVal && _fbAuthUsed[_authVal]) {
+      const c = _fbAuthUsed[_authVal];
+      document.getElementById(`act-${i}`).innerHTML = `
+        <div class="dup-box" style="border-color:#ef4444;color:#fca5a5;">⛔ Le numéro d'autorisation ${_authVal} est déjà utilisé par le vol ${esc(c.fn)} du ${esc(c.date)}. Saisissez le bon numéro avant d'importer.</div>`;
+      toast('⛔ Numéro d\'autorisation déjà utilisé par un autre vol','err');
+      return;
+    }
     // ── Trajet, type et compagnie pris du NUMÉRO DE VOL enregistré (source de vérité) ──
     const _fnMap = await _loadFlightNumMap();
     const _info  = _fnMap[_normFN(fn)];
@@ -2283,6 +2298,7 @@ async function importFlight(i, force) {
 
     // Mettre à jour le cache mémoire Firebase
     _fbImported.add(fp);
+    if (_authVal) _fbAuthUsed[_authVal] = { fn: fn, date: dt };
     emails[i]._imported = true;
 
     updateStats();
@@ -2497,25 +2513,12 @@ async function lookupAuthNumber(i) {
       }
     }
 
-    // ③ Priorité 3: flights Firebase — recherche approchée (±7 jours)
-    const q2 = query(collection(db,'flights'), where('flightNumber','==',fn));
-    const snap2 = await getDocs(q2);
-    let best = null, bestDiff = Infinity;
-    snap2.forEach(doc => {
-      const d = doc.data();
-      if (!d.authorizationNumber) return;
-      const diff = dt ? Math.abs(new Date(d.date) - new Date(dt)) / 86400000 : 999;
-      if (diff < bestDiff) { bestDiff = diff; best = d; }
-    });
-
-    if (best && bestDiff <= 7) {
-      authEl.value = best.authorizationNumber;
-      badge.className = 'auth-badge approx';
-      badge.textContent = '~ ' + best.date;
-    } else {
-      badge.className = 'auth-badge notfound';
-      badge.textContent = 'Non trouvé';
-    }
+    // ③ SUPPRIMÉ : la « recherche approchée (±7 jours) » copiait le numéro
+    //    d'autorisation d'un AUTRE vol (même numéro, date proche), créant des
+    //    doublons d'autorisation. Un numéro appartient à un seul vol :
+    //    s'il n'est pas trouvé pour ce vol et cette date exacts, on laisse vide.
+    badge.className = 'auth-badge notfound';
+    badge.textContent = 'Non trouvé';
   } catch(e) {
     badge.className = 'auth-badge notfound';
     badge.textContent = 'Erreur';
