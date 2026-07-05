@@ -551,14 +551,37 @@ function openModal(flightId = null) {
                 elements.fCompany.value = flight.company;
                 elements.fImm.value = flight.registration;
                 elements.fVol.value = flight.flightNumber;
+
+                // Synchroniser les selects dynamiques (immatriculation + n° vol)
+                // avec la compagnie du vol — sinon ils gardent l'état précédent
+                // et l'immatriculation paraît « réinitialisée ».
+                updateFlightNumberPrefix(false);
+
                 if (window.selectType) window.selectType(flight.type || 'DEP'); else { const fi=document.getElementById('fType'); if(fi) fi.value=flight.type; }
+                // ⚠️ selectType/updateRouteByType reconstruisent De/À avec les
+                //    valeurs par défaut : on repose ICI le trajet réel du vol.
                 if (flight.from) elements.fFrom.value = flight.from;
                 if (flight.to) elements.fTo.value = flight.to;
                 elements.fPassengers.value = flight.passengers;
                 elements.fBabies.value = flight.babies;
-                const hasStop = !!(flight.stopover);
+
+                // ── Escale : celle du vol, sinon celle du numéro de vol (admin) ──
+                let stopCode = flight.stopover || '';
+                if (!stopCode && window._flightNumCache && isMAIcompany(flight.company)) {
+                    const info = window._flightNumCache[normFN(flight.flightNumber || '')];
+                    if (info && info.stopover) {
+                        // flight_numbers stocke l'IATA (NDB) ; le select attend l'ICAO (GQPP)
+                        let sc = info.stopover;
+                        if (adminConfig && adminConfig.airports) {
+                            const ap = adminConfig.airports.find(a => a.iata === sc || a.icao === sc);
+                            if (ap && ap.icao) sc = ap.icao;
+                        }
+                        stopCode = sc;
+                    }
+                }
+                const hasStop = !!stopCode;
                 if (elements.hasStopover) elements.hasStopover.checked = hasStop;
-                if (elements.fStopover) elements.fStopover.value = flight.stopover || '';
+                if (elements.fStopover) elements.fStopover.value = stopCode;
                 if (elements.fStopoverPax) elements.fStopoverPax.value = flight.stopoverPax || 0;
                 if (elements.fStopoverBabies) elements.fStopoverBabies.value = flight.stopoverBabies || 0;
                 const _mlp = document.getElementById('fMidLegPax'); if (_mlp) _mlp.value = flight.midLegPax || 0;
@@ -692,9 +715,15 @@ function validateForm() {
     
     // Validate authorization number uniqueness
     const authNumber = elements.fAuthNumber.value.trim();
-    if (authNumber && !isAuthNumberUnique(authNumber, editingFlightId)) {
-        showFieldError(elements.fAuthNumber, 'Ce numéro d\'autorisation existe déjà');
-        isValid = false;
+    if (authNumber) {
+        const conflict = flights.find(f =>
+            f.authorizationNumber === authNumber && f.id !== editingFlightId
+        );
+        if (conflict) {
+            showFieldError(elements.fAuthNumber,
+                `Ce numéro d'autorisation existe déjà (vol ${conflict.flightNumber || '?'} du ${formatDateEU(conflict.date) || '?'})`);
+            isValid = false;
+        }
     }
 
     // Validate flight number + date uniqueness (interdiction stricte des doublons)
@@ -817,6 +846,16 @@ async function updateVolField(company, forceEmpty = false) {
                 if (editingFlightId && fVol.value === v.number) opt.selected = true;
                 sel.appendChild(opt);
             });
+            // Numéro du vol édité absent de la liste : l'ajouter pour qu'il
+            // s'affiche et se sauvegarde tel quel.
+            if (!forceEmpty && editingFlightId && fVol.value &&
+                ![...sel.options].some(o => o.value === fVol.value)) {
+                const opt = document.createElement('option');
+                opt.value = fVol.value;
+                opt.textContent = fVol.value;
+                opt.selected = true;
+                sel.appendChild(opt);
+            }
             parent.insertBefore(sel, fVol.nextSibling);
             sel.addEventListener('change', () => {
                 fVol.value = sel.value;
@@ -1118,6 +1157,15 @@ function updateImmField(company) {
             if (fImm.value === imm) opt.selected = true;
             sel.appendChild(opt);
         });
+        // Immatriculation actuelle absente de la liste (ex: variante avec tiret
+        // 5T-CLJ vs 5TCLJ) : l'ajouter pour qu'elle s'affiche et se sauvegarde.
+        if (fImm.value && ![...sel.options].some(o => o.value === fImm.value)) {
+            const opt = document.createElement('option');
+            opt.value = fImm.value;
+            opt.textContent = fImm.value;
+            opt.selected = true;
+            sel.appendChild(opt);
+        }
         
         parent.insertBefore(sel, fImm.nextSibling);
         
