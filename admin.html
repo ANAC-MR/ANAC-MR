@@ -3429,7 +3429,7 @@ window.togglePerm = function(key) {
 
 window.savePermissions = async function() {
     const id   = document.getElementById('permUserId').value;
-    const perms = ALL_PERMISSIONS.filter(p => document.getElementById('perm-'+p.key)?.classList.contains('active')).map(p=>p.key);
+    const perms = ALL_PERMISSIONS.filter(p => { var _e=document.getElementById('perm-'+p.key); return _e&&_e.classList.contains('active'); }).map(p=>p.key);
     try {
         await window._updateDoc(window._doc(window._db,'anac_users',id), { permissions: perms });
         showNotif('✅ Permissions mises à jour','success');
@@ -5539,8 +5539,8 @@ window._schedFilterDay = function(btn) {
 window._schedRender = function() {
     const tbody = document.getElementById('schedBody');
     if (!tbody) return;
-    const co = (document.getElementById('schedCompanyFilter')?.value||'').toUpperCase();
-    const q  = (document.getElementById('schedSearch')?.value||'').toUpperCase();
+    const co = ((function(){var _e=document.getElementById('schedCompanyFilter');return _e?_e.value:'';})()||'').toUpperCase();
+    const q  = ((function(){var _e=document.getElementById('schedSearch');return _e?_e.value:'';})()||'').toUpperCase();
 
     let list = _schedules;
     if (co) list = list.filter(s => (s.company||'').toUpperCase() === co);
