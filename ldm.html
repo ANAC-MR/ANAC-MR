@@ -1493,6 +1493,64 @@ function makeFP(p) {
 
 // Cache en mémoire des vols confirmés présents dans Firebase
 const _fbImported = new Set();
+// Emails IGNORÉS manuellement (masqués sans import). Persistés dans Firestore
+// (doc ldm_config/ignored, champ ids[]). N'affecte QUE l'affichage.
+const _ignored = new Set();
+let _ignoredLoaded = false;
+
+// Charge la liste des emails ignorés depuis Firestore (best-effort).
+async function loadIgnored() {
+  try {
+    await _ldmWaitAuth();
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) { try { await window.ANAC_AUTH.ensureAuthed(app); } catch(e){} }
+    const db  = getFirestore(app);
+    const snap = await getDoc(doc(db, 'ldm_config', 'ignored'));
+    _ignored.clear();
+    if (snap.exists() && Array.isArray(snap.data().ids)) {
+      snap.data().ids.forEach(id => _ignored.add(id));
+    }
+    _ignoredLoaded = true;
+    console.log('LDM: emails ignorés chargés :', _ignored.size);
+  } catch(e) { console.warn('loadIgnored (non bloquant):', e && e.message); }
+}
+
+// Persiste la liste des ignorés dans Firestore.
+async function saveIgnored() {
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) { try { await window.ANAC_AUTH.ensureAuthed(app); } catch(e){} }
+    const db  = getFirestore(app);
+    await setDoc(doc(db, 'ldm_config', 'ignored'), { ids: [..._ignored], updatedAt: new Date().toISOString() });
+  } catch(e) { console.warn('saveIgnored:', e && e.message); }
+}
+
+// Ignorer un email (le masquer sans importer).
+window.ignoreEmail = async function(i) {
+  const em = emails[i];
+  if (!em) return;
+  _ignored.add(em.id);
+  em._ignored = true;
+  renderEmails();
+  updateStats();
+  saveIgnored();
+  toast('📭 Email masqué (ignoré)','ok');
+};
+
+// Réafficher tous les emails ignorés (annuler tous les masquages).
+window.restoreIgnored = async function() {
+  if (!_ignored.size) { toast('Aucun email ignoré','warn'); return; }
+  _ignored.clear();
+  emails.forEach(e => { e._ignored = false; });
+  renderEmails();
+  updateStats();
+  saveIgnored();
+  toast('↩️ Emails ignorés réaffichés','ok');
+};
 
 // Cache: N° vol → authorizationNumber (dernier connu dans Firebase)
 // ⚠️ Conservé pour compat mais N'EST PLUS ALIMENTÉ : réutiliser le numéro
@@ -1732,6 +1790,8 @@ async function readEmails() {
     } catch(e) {
       console.warn('checkImportedFromFirebase failed:', e);
     }
+    // Charger la liste des emails ignorés manuellement (masqués)
+    try { await loadIgnored(); } catch(e) { /* non bloquant */ }
     const dups = emails.filter(e=>e._imported).length;
     setStatus('active',`${emails.length} email(s) — ${dups} déjà dans le système`);
 
@@ -2084,15 +2144,17 @@ function extractFields(text, dateReceived) {
 // ── RENDER ──
 function renderEmails() {
   const list = document.getElementById('emailList');
-  // Ne pas afficher les vols déjà importés (doublons) : on garde l'index d'origine.
-  const visibleCount = emails.filter(em => !em._imported).length;
+  // Masquer : vols déjà importés (doublons) ET emails ignorés manuellement.
+  emails.forEach(em => { if (_ignored.has(em.id)) em._ignored = true; });
+  const visibleCount = emails.filter(em => !em._imported && !em._ignored).length;
   document.getElementById('eCount').textContent = visibleCount;
   if (!emails.length || visibleCount === 0) {
-    list.innerHTML = '<div class="empty"><div class="ico">📭</div><h3>Aucun email LDM/MVT à importer</h3><p>Aucun nouveau message LDM ou MVT (les vols déjà importés sont masqués)</p></div>';
+    const extra = _ignored.size ? ` · <a href="#" onclick="restoreIgnored();return false;" style="color:var(--gold);">Réafficher ${_ignored.size} ignoré(s)</a>` : '';
+    list.innerHTML = '<div class="empty"><div class="ico">📭</div><h3>Aucun email LDM/MVT à importer</h3><p>Aucun nouveau message (les vols importés et ignorés sont masqués)'+extra+'</p></div>';
     return;
   }
   list.innerHTML = emails.map((em, i) => {
-    if (em._imported) return '';   // masquer les doublons déjà importés
+    if (em._imported || em._ignored) return '';   // masquer importés + ignorés
     const p   = em.parsed || {};
     const imp = em._imported;
     return `
@@ -2105,6 +2167,8 @@ function renderEmails() {
         </div>
         <div class="email-date2">${em.date||'–'}</div>
         ${imp ? '<span class="st-badge st-ok">✓ Importé</span>' : ''}
+        <button onclick="event.stopPropagation(); ignoreEmail(${i});" title="Masquer cet email sans l'importer"
+          style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;margin-left:6px;">📭 Ignorer</button>
         <span style="color:var(--dim);font-size:16px;margin-left:4px;" id="arr-${i}">▼</span>
       </div>
       <div class="email-body" id="bdy-${i}" style="display:none;">
