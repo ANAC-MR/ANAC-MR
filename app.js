@@ -1601,7 +1601,7 @@ window._goPrevPage = function() {
     if (window._currentPage > 1) {
         window._currentPage--;
         render();
-        window.scrollTo({top: document.querySelector('.flights-table')?.getBoundingClientRect().top + window.scrollY - 80 || 0, behavior:'smooth'});
+        var _ft=document.querySelector('.flights-table'); window.scrollTo({top: _ft ? (_ft.getBoundingClientRect().top + window.scrollY - 80) : 0, behavior:'smooth'});
     }
 };
 window._goNextPage = function() {
@@ -1610,7 +1610,7 @@ window._goNextPage = function() {
     if (window._currentPage < totalPages) {
         window._currentPage++;
         render();
-        window.scrollTo({top: document.querySelector('.flights-table')?.getBoundingClientRect().top + window.scrollY - 80 || 0, behavior:'smooth'});
+        var _ft=document.querySelector('.flights-table'); window.scrollTo({top: _ft ? (_ft.getBoundingClientRect().top + window.scrollY - 80) : 0, behavior:'smooth'});
     }
 };
 
