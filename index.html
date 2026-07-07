@@ -1658,7 +1658,7 @@ window.exportSuiviExcel=exportSuiviExcel;
 
 window.doExport=function(){
     // Colonnes cochées
-    const selected=EXPORT_COLS.filter(col=>document.getElementById('excol_'+col.key)?.checked);
+    const selected=EXPORT_COLS.filter(col=>(function(){var _e=document.getElementById('excol_'+col.key);return _e?_e.checked:undefined;})());
     if(!selected.length){alert('Cochez au moins une colonne.');return;}
 
     // Utiliser la LISTE FILTRÉE COMPLÈTE (pas le DOM paginé)
@@ -1711,7 +1711,7 @@ window.doExport=function(){
     ws['!cols'] = selected.map(c => ({ wch: widths[c.key] || 14 }));
 
     // Nom de fichier
-    const co = document.getElementById('companySelect')?.value || 'ALL';
+    const co = (function(){var _e=document.getElementById('companySelect');return _e?_e.value:undefined;})() || 'ALL';
     const parts = ['ANAC-Vols'];
     if (co !== 'ALL') parts.push(co.replace(/\s+/g,'_').slice(0,15));
     parts.push('(' + rows.length + 'vols)');
@@ -2323,8 +2323,8 @@ async function _doExportPDF(JsPDF, hiResImages) {
     // ══════════════════════════════════════════════════════════
     // COMPARAISON ENTRE 2 COMPAGNIES (si sélectionnées)
     // ══════════════════════════════════════════════════════════
-    const cmpA = document.getElementById('cmpA')?.value;
-    const cmpB = document.getElementById('cmpB')?.value;
+    const cmpA = (function(){var _e=document.getElementById('cmpA');return _e?_e.value:undefined;})();
+    const cmpB = (function(){var _e=document.getElementById('cmpB');return _e?_e.value:undefined;})();
 
     if (cmpA && cmpB && cmpA !== cmpB) {
         // Nouvelle page si pas assez de place
@@ -2341,10 +2341,10 @@ async function _doExportPDF(JsPDF, hiResImages) {
 
         // Calculer les stats
         const all = getFlights();
-        const cmpYear  = document.getElementById('cmpYear')?.value  || 'ALL';
-        const cmpMonth = document.getElementById('cmpMonth')?.value || 'ALL';
-        const cmpDeb = document.getElementById('cmpDateDeb')?.value || '';
-        const cmpFin = document.getElementById('cmpDateFin')?.value || '';
+        const cmpYear  = (function(){var _e=document.getElementById('cmpYear');return _e?_e.value:undefined;})()  || 'ALL';
+        const cmpMonth = (function(){var _e=document.getElementById('cmpMonth');return _e?_e.value:undefined;})() || 'ALL';
+        const cmpDeb = (function(){var _e=document.getElementById('cmpDateDeb');return _e?_e.value:undefined;})() || '';
+        const cmpFin = (function(){var _e=document.getElementById('cmpDateFin');return _e?_e.value:undefined;})() || '';
         const filter = f => {
             if (!f.date) return false;
             const d = new Date(f.date);
@@ -2461,7 +2461,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
     // ══════════════════════════════════════════════════════════
     // COMPAGNIES SUR LE MÊME TRAJET
     // ══════════════════════════════════════════════════════════
-    const routeSel = document.getElementById('routeFilter')?.value;
+    const routeSel = (function(){var _e=document.getElementById('routeFilter');return _e?_e.value:undefined;})();
 
     if (routeSel) {
         if (yPos > pageH - 60) { pdf.addPage(); drawHeader(pdf.internal.getNumberOfPages()); yPos = 30; }
@@ -2477,10 +2477,10 @@ async function _doExportPDF(JsPDF, hiResImages) {
 
         // Récupérer les données
         const all = getFlights();
-        const rYear  = document.getElementById('routeYear')?.value  || 'ALL';
-        const rMonth = document.getElementById('routeMonth')?.value || 'ALL';
-        const rDeb   = document.getElementById('routeDateDeb')?.value || '';
-        const rFin   = document.getElementById('routeDateFin')?.value || '';
+        const rYear  = (function(){var _e=document.getElementById('routeYear');return _e?_e.value:undefined;})()  || 'ALL';
+        const rMonth = (function(){var _e=document.getElementById('routeMonth');return _e?_e.value:undefined;})() || 'ALL';
+        const rDeb   = (function(){var _e=document.getElementById('routeDateDeb');return _e?_e.value:undefined;})() || '';
+        const rFin   = (function(){var _e=document.getElementById('routeDateFin');return _e?_e.value:undefined;})() || '';
         const rFilter = f => {
             if (!f.date) return false;
             const d = new Date(f.date);
@@ -2651,7 +2651,7 @@ function exportExcel(){
 
     // Créer le workbook
     const wb=XLSX.utils.book_new();
-    const wsData=[COLS.map(c=>c.label), ...rows.map(r=>COLS.map(c=>r[c.key]??''))];
+    const wsData=[COLS.map(c=>c.label), ...rows.map(r=>COLS.map(c=>{ var _v=r[c.key]; return (_v===null||_v===undefined)?'':_v; }))];
     const ws=XLSX.utils.aoa_to_sheet(wsData);
 
     // Largeurs colonnes
@@ -2698,7 +2698,7 @@ function applySaison(s) {
     document.getElementById('searchTo').value   = saison.fin;
     // Reset autres filtres de type
     document.querySelectorAll('.btn-primary[data-type]').forEach(b => b.classList.remove('btn-active'));
-    document.querySelector('.btn-primary[data-type="ALL"]')?.classList.add('btn-active');
+    (function(){var _e=document.querySelector('.btn-primary[data-type="ALL"]');if(_e)_e.classList.add('btn-active');})();
     // Highlight bouton actif
     ['btnSaisonEte','btnSaisonHiver'].forEach(id => {
         const btn = document.getElementById(id);
@@ -2707,13 +2707,13 @@ function applySaison(s) {
     const activeBtn = document.getElementById(s === 'ete' ? 'btnSaisonEte' : 'btnSaisonHiver');
     if (activeBtn) activeBtn.style.outline = '2px solid currentColor';
     // Déclencher la recherche
-    if (typeof window.app?.updateFlightsData === 'function') {
+    if (window.app && typeof window.app.updateFlightsData === 'function') {
         // re-filter via app
     }
     // Trigger input events so app.js picks up the change
     ['searchFrom','searchTo'].forEach(id => {
-        document.getElementById(id)?.dispatchEvent(new Event('change', {bubbles:true}));
-        document.getElementById(id)?.dispatchEvent(new Event('input', {bubbles:true}));
+        (function(){var _e=document.getElementById(id);return _e?_e.dispatchEvent:undefined;})()(new Event('change', {bubbles:true}));
+        (function(){var _e=document.getElementById(id);return _e?_e.dispatchEvent:undefined;})()(new Event('input', {bubbles:true}));
     });
 }
 window.applySaison = applySaison;
@@ -2888,11 +2888,11 @@ function renderDestCards(flt){
 
 window.showDestDetail=function(city,cardEl){
     document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('dc-active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';});
-    const info=window._destData?.[city];
+    const info=window._destData?window._destData[city]:undefined;
     if(!info)return;
     cardEl.classList.add('dc-active');cardEl.style.borderColor='#4A9EFF55';cardEl.style.background='rgba(74,158,255,.08)';
     const sorted=Object.entries(info.companies).sort((a,b)=>b[1].vols-a[1].vols);
-    const maxV=sorted[0]?.[1].vols||1,total=sorted.reduce((s,[,v])=>s+v.vols,0);
+    const maxV=(sorted[0]&&sorted[0][1])?sorted[0][1].vols||1:1,total=sorted.reduce((s,[,v])=>s+v.vols,0);
     const detail=document.getElementById('destDetail');
     detail.style.display='';
     detail.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -2986,7 +2986,7 @@ function _autoDetectSaison() {
 window.refreshChartsFromApp = function(flightsData) {
     window.appFlights = flightsData;
     _autoDetectSaison();
-    if (document.getElementById('tab-rapports')?.classList.contains('active')) refreshCharts();
+    if ((function(){var _e=document.getElementById('tab-rapports');return _e&&_e.classList.contains('active');})()) refreshCharts();
     else { populateCmpSelects(flightsData); populateRouteSelect(flightsData); }
 };
 
@@ -4023,8 +4023,8 @@ window._hasPerm = function(perm) {
     else if (id === 'company' && $('_fCo')) { _set('companySelect', $('_fCo').value); }
     else if (id === 'from' && $('_fFr'))    { _set('fromSelect', $('_fFr').value); }
     else if (id === 'to' && $('_fTo'))      { _set('toSelect', $('_fTo').value); }
-    else if (id === 'imm' && $('_fIm'))     { _set('searchImm', $('_fIm').value.trim()); document.querySelector('.chip-edit')?.remove(); }
-    else if (id === 'vol' && $('_fVn'))     { _set('searchVol', $('_fVn').value.trim()); document.querySelector('.chip-edit')?.remove(); }
+    else if (id === 'imm' && $('_fIm'))     { _set('searchImm', $('_fIm').value.trim()); (function(){var _e=document.querySelector('.chip-edit');if(_e)_e.remove();})(); }
+    else if (id === 'vol' && $('_fVn'))     { _set('searchVol', $('_fVn').value.trim()); (function(){var _e=document.querySelector('.chip-edit');if(_e)_e.remove();})(); }
     _syncBothWays(id);
     _renderChips();
   };
