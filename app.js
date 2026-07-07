@@ -275,19 +275,15 @@ const elements = {
 // ============================================
 async function initializeApp() {
     if (isInitialized) return;
-    try {
-        await loadAdminConfig();
-        populateSelects();
-        attachEventListeners();
-        setupRealtimeListener();
-        // Appliquer les restrictions UI selon permissions
-        setTimeout(applyPermissionsUI, 300);
-        isInitialized = true;
-        showNotification('Application initialisée avec succès', 'success');
-    } catch (error) {
-        console.error('Error initializing app:', error);
-        showNotification('Erreur lors de l\'initialisation', 'error');
-    }
+    // Chaque étape est isolée : l'échec de l'une n'empêche pas les autres.
+    // En particulier, l'affichage des vols et les filtres doivent TOUJOURS
+    // fonctionner, même si la config admin ne se charge pas.
+    try { await loadAdminConfig(); } catch (e) { console.warn('loadAdminConfig:', e && e.message); }
+    try { populateSelects(); }        catch (e) { console.warn('populateSelects:', e && e.message); }
+    try { attachEventListeners(); }   catch (e) { console.warn('attachEventListeners:', e && e.message); }
+    try { setupRealtimeListener(); }  catch (e) { console.error('setupRealtimeListener:', e && e.message); }
+    try { setTimeout(applyPermissionsUI, 300); } catch (e) {}
+    isInitialized = true;
 }
 
 function applyPermissionsUI() {
@@ -330,10 +326,10 @@ async function loadAdminConfig() {
         if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) {
             try { await window.ANAC_AUTH.ensureAuthed(fbApp); } catch(e) {}
         }
-        const [airlinesSnap, airportsSnap, fnSnap] = await Promise.all([
+        // ── Config essentielle (airlines + airports) : bloquante mais isolée ──
+        const [airlinesSnap, airportsSnap] = await Promise.all([
             getDoc(doc(db, 'flights', 'cfg-airlines')),
-            getDoc(doc(db, 'flights', 'cfg-airports')),
-            import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js').then(m => m.getDocs(m.collection(db, 'flight_numbers')))
+            getDoc(doc(db, 'flights', 'cfg-airports'))
         ]);
         adminConfig = {};
         if (airlinesSnap.exists() && airlinesSnap.data().list) {
@@ -344,14 +340,30 @@ async function loadAdminConfig() {
             adminConfig.airports = airportsSnap.data().list;
             console.log('Admin airports loaded:', adminConfig.airports.length);
         }
-        // Cache global des numéros de vol (pour générer les escales des vols existants)
-        window._flightNumCache = {};
-        if (fnSnap) {
-            fnSnap.forEach(d => {
+        // ── Cache des numéros de vol : NON bloquant (best-effort, en arrière-plan) ──
+        //    Sert seulement à décomposer les escales des anciens vols. Une erreur
+        //    ici (auth pas prête, permissions) NE DOIT PAS bloquer la page.
+        window._flightNumCache = window._flightNumCache || {};
+        loadFlightNumCache(db).catch(e => console.warn('flight_numbers cache (non bloquant):', e && e.message));
+    } catch(e) {
+        console.warn('Admin config not loaded:', e.message);
+        adminConfig = null;
+    }
+}
+
+// Charge le cache des numéros de vol en arrière-plan, avec réessais.
+// N'interrompt jamais l'affichage de la page d'accueil.
+async function loadFlightNumCache(db) {
+    const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    for (let attempt = 1; attempt <= 4; attempt++) {
+        try {
+            const snap = await getDocs(collection(db, 'flight_numbers'));
+            const cache = {};
+            snap.forEach(d => {
                 const x = d.data();
                 const key = normFN(x.number || x.flightNumber || '');
                 if (!key) return;
-                window._flightNumCache[key] = {
+                cache[key] = {
                     from: (x.from||'').toUpperCase(),
                     to: (x.to||'').toUpperCase(),
                     stopover: (x.stopover||'').toUpperCase(),
@@ -359,11 +371,15 @@ async function loadAdminConfig() {
                     company: x.company||''
                 };
             });
-            console.log('flight_numbers cache:', Object.keys(window._flightNumCache).length);
+            window._flightNumCache = cache;
+            console.log('flight_numbers cache:', Object.keys(cache).length, '(tentative '+attempt+')');
+            // Re-render pour décomposer les escales une fois le cache prêt
+            if (typeof render === 'function' && flights && flights.length) render();
+            return;
+        } catch(e) {
+            console.warn('flight_numbers cache tentative '+attempt+' :', e && e.message);
+            await new Promise(r => setTimeout(r, 700));
         }
-    } catch(e) {
-        console.warn('Admin config not loaded:', e.message);
-        adminConfig = null;
     }
 }
 
