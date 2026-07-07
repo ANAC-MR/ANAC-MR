@@ -1837,7 +1837,7 @@ function extractFields(text, dateReceived) {
 
     // 2. ROUTE via lignes -XYZ
     const routeLines = lines.filter(l => /^-[A-Z]{2,4}[./]/.test(l));
-    const stations   = routeLines.map(l => l.match(/^-([A-Z]{2,4})/)?.[1]).filter(Boolean);
+    const stations   = routeLines.map(l => { const m=l.match(/^-([A-Z]{2,4})/); return m?m[1]:undefined; }).filter(Boolean);
     const siStations = [];
     const siAllRx = /SI\s+([A-Z]{2,4})\s+BAG/gi; let siAll;
     while ((siAll = siAllRx.exec(text)) !== null) siStations.push(siAll[1]);
