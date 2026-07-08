@@ -1229,13 +1229,7 @@ function validateAuthNumber(authNumber) {
     return pattern.test(authNumber);
 }
 
-function isAuthNumberUnique(authNumber, excludeFlightId = null) {
-    // Check if authorization number already exists
-    const existingFlight = flights.find(flight => 
-        flight.authorizationNumber === authNumber && flight.id !== excludeFlightId
-    );
-    return !existingFlight;
-}
+
 
 // ============================================
 // FLIGHT OPERATIONS
@@ -1267,16 +1261,12 @@ async function addFlight(flightData) {
 }
 
 async function updateFlight(flightId, flightData) {
-    console.log('updateFlight called with:');
-    console.log('- flightId:', flightId, 'Type:', typeof flightId);
-    console.log('- flightData:', flightData);
     
     try {
         elements.flightForm.classList.add('loading');
         
         // Ensure flightId is a string
         const validFlightId = String(flightId);
-        console.log('- validFlightId:', validFlightId);
         
         // Update in Firebase through firebase.js
         if (window.dbService && window.dbService.updateFlight) {
@@ -1308,14 +1298,12 @@ async function deleteFlight(flightId) {
         showNotification('Accès refusé — permission insuffisante pour supprimer un vol', 'error');
         return false;
     }
-    console.log('Delete flight called with ID:', flightId);
     
     // Si _hasPerm est actif, l'authentification est déjà validée — pas besoin du mot de passe
     const doDelete = async () => {
         try {
             const flight = flights.find(f => f.id === flightId);
             if (!flight) {
-                console.log('Flight not found:', flightId);
                 return false;
             }
 
@@ -1355,7 +1343,6 @@ async function deleteFlight(flightId) {
     let success;
     success = await doDelete();
 
-    console.log('Delete operation result:', success);
     return success;
 }
 
@@ -1892,17 +1879,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
+
 
 /**
  * Format date to EU standard (dd/mm/yyyy)
@@ -1922,120 +1899,11 @@ function formatDateEU(dateString) {
     return `${day}/${month}/${year}`;
 }
 
-/**
- * Check if user is authenticated for this session
- * @returns {boolean} True if authenticated
- */
-function checkAuthentication() {
-    if (isAuthenticated) {
-        return true;
-    }
-    
-    // Check sessionStorage for existing authentication
-    const sessionAuth = sessionStorage.getItem('isAuthenticated');
-    if (sessionAuth === 'true') {
-        isAuthenticated = true;
-        return true;
-    }
-    
-    return false;
-}
 
-/**
- * Prompt for password and authenticate
- * @returns {Promise<boolean>} True if authentication successful
- */
-async function authenticate() {
-    if (checkAuthentication()) {
-        return true;
-    }
-    
-    return new Promise((resolve) => {
-        // Create modal for password input
-        const modal = document.createElement('div');
-        modal.className = 'modal active auth-modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h2>Authentification requise</h2>
-                <p>Veuillez entrer le mot de passe pour continuer:</p>
-                <form id="authForm">
-                    <div class="form-group">
-                        <label for="passwordInput">Mot de passe</label>
-                        <input type="password" id="passwordInput" class="password-input" required autocomplete="current-password">
-                    </div>
-                    <div class="modal-buttons">
-                        <button type="submit" class="btn-success">Valider</button>
-                        <button type="button" class="btn-secondary" id="cancelAuth">Annuler</button>
-                    </div>
-                </form>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        const passwordInput = document.getElementById('passwordInput');
-        const authForm = document.getElementById('authForm');
-        const cancelBtn = document.getElementById('cancelAuth');
-        
-        const cleanup = () => {
-            modal.remove();
-            passwordInput.value = '';
-        };
-        
-        const handleSubmit = (e) => {
-            e.preventDefault();
-            const password = passwordInput.value;
-            
-            if (password === ADMIN_PASSWORD) {
-                isAuthenticated = true;
-                sessionStorage.setItem('isAuthenticated', 'true');
-                cleanup();
-                resolve(true);
-            } else {
-                passwordInput.classList.add('error');
-                showNotification('Mot de passe incorrect', 'error');
-                passwordInput.value = '';
-                passwordInput.focus();
-            }
-        };
-        
-        const handleCancel = () => {
-            cleanup();
-            resolve(false);
-        };
-        
-        authForm.addEventListener('submit', handleSubmit);
-        cancelBtn.addEventListener('click', handleCancel);
-        
-        // Focus on password input
-        setTimeout(() => passwordInput.focus(), 100);
-        
-        // Close on escape key
-        const handleEscape = (e) => {
-            if (e.key === 'Escape') {
-                document.removeEventListener('keydown', handleEscape);
-                handleCancel();
-            }
-        };
-        document.addEventListener('keydown', handleEscape);
-    });
-}
 
-/**
- * Require authentication before executing an action
- * @param {Function} action - Function to execute if authenticated
- * @returns {Promise<boolean>} True if action was executed
- */
-async function requireAuthentication(action) {
-    const auth = await authenticate();
-    if (auth) {
-        await action();
-        return true;
-    } else {
-        showNotification('Action annulée', 'warning');
-        return false;
-    }
-}
+
+
+
 
 // ============================================
 // ACTIONS MENU FUNCTIONS
@@ -2319,7 +2187,6 @@ async function _syncArchiveFromFlight(flightData) {
         };
 
         await Promise.all(snap.docs.map(d => updateDoc(doc(db,'ldm_archive',d.id), updates)));
-        console.log('Archive synced for', fn, dt);
     } catch(e) {
         console.warn('_syncArchiveFromFlight error:', e.message);
     }
