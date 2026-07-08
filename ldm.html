@@ -1652,7 +1652,6 @@ async function checkImportedFromFirebase() {
 
 // Compatibilité: getImported retourne maintenant le cache Firebase
 function getImported() { return _fbImported; }
-function saveImported() { /* Firebase est la source de vérité, localStorage ignoré */ }
 
 // ── GOOGLE SIGN IN ──
 function signIn() {
@@ -2619,16 +2618,6 @@ let _archivesCache = [];
 
 // ── Générer le texte LDM au format IATA depuis les données d'un vol ──
 // ── Helpers format ──
-function _pad2(n){ return String(n).padStart(2,'0'); }
-function _fmtDate(dt){
-  // Retourne YYMMDD depuis YYYY-MM-DD
-  if(!dt) return '000000';
-  const d = new Date(dt+'T12:00:00Z');
-  const yy = String(d.getUTCFullYear()).slice(-2);
-  const mm = _pad2(d.getUTCMonth()+1);
-  const dd = _pad2(d.getUTCDate());
-  return yy+mm+dd;
-}
 
 // ── Générer LDM simplifié pour vols déjà dans le système ──
 function generateLDMText(flight, authNumber) {
