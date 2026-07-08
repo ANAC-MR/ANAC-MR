@@ -2762,14 +2762,6 @@ function renderAirports() {
 // ────────────────────────────────────────
 const PRESET_COLORS = ['#006B3F','#C8102E','#2B5A8E','#D4AF37','#FF7F00','#8B00FF','#00B67A','#E63946','#003087','#F77F00'];
 
-function buildColorSwatches(currentColor) {
-    const el = document.getElementById('colorSwatches');
-    el.innerHTML = PRESET_COLORS.map(c => `
-        <div class="color-swatch ${c===currentColor?'selected':''}" style="background:${c}" 
-             onclick="selectColor('${c}')" title="${c}"></div>
-    `).join('');
-}
-
 window.selectColor = function(color) {
     selectedColor = color;
     document.getElementById('airlineColorPicker').value = color;
@@ -5613,15 +5605,6 @@ function _schedFmtDate(d) {
     const [y,m,day] = d.split('-');
     const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
     return `${parseInt(day)}-${MOIS[parseInt(m)-1]}-${y}`;
-}
-
-function _schedDaysDisplay(days) {
-    const LABELS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-    const active = [];
-    for (let i = 0; i < 7; i++) {
-        if (days[i] && days[i] !== '-') active.push(LABELS[i]);
-    }
-    return active.length ? active.join(' ') : days;
 }
 
 function _schedDaysHtml(days) {
