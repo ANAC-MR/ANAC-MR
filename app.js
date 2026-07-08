@@ -283,6 +283,9 @@ async function initializeApp() {
     try { attachEventListeners(); }   catch (e) { console.warn('attachEventListeners:', e && e.message); }
     try { setupRealtimeListener(); }  catch (e) { console.error('setupRealtimeListener:', e && e.message); }
     try { setTimeout(applyPermissionsUI, 300); } catch (e) {}
+    // Re-render une fois la config prête (au cas où le 1er affichage a précédé
+    // le chargement des aéroports → codes IATA appliqués).
+    try { setTimeout(function(){ if(typeof render==='function' && flights && flights.length) render(); }, 400); } catch(e) {}
     isInitialized = true;
 }
 
@@ -1671,8 +1674,12 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals, parit
 
     const isSub = !!line;                    // c'est une ligne d'un vol à escale ?
     const isMain = !isSub || line.isMain;    // ligne principale (vol direct) ?
-    const fromCode = line ? (line.from || '–') : (flight.from || '–');
-    const toCode   = line ? (line.to   || '–') : (flight.to   || '–');
+    // Affichage du trajet en codes IATA (NKC, OUZ…) au lieu d'ICAO (GQNO…).
+    // Le stockage reste en ICAO ; seule la présentation change.
+    const _rawFrom = line ? (line.from || '') : (flight.from || '');
+    const _rawTo   = line ? (line.to   || '') : (flight.to   || '');
+    const fromCode = icaoToIATA(_rawFrom) || '–';
+    const toCode   = icaoToIATA(_rawTo)   || '–';
     const pax      = line ? line.passengers : flight.passengers;
     const bab      = line ? line.babies     : flight.babies;
     const numCell  = rowNum != null ? `<td style="color:#94a3b8;font-weight:700;text-align:center;width:44px;">${rowNum}</td>` : '<td></td>';
@@ -1774,58 +1781,28 @@ function setupRealtimeListener() {
 }
 
 function updateFlightsData(newFlights) {
-    // ── Détection & nettoyage des doublons ───────────────────────
-    // Un vol fantôme qui réapparaît après suppression = doublon en
-    // base (deux documents Firestore pour le même vol). On garde le
-    // plus ancien et on supprime les copies en trop.
+    // ── Masquage LÉGER des doublons (sans suppression Firestore) ──
+    // On masque les copies exactes à l'affichage, mais on NE SUPPRIME PLUS
+    // automatiquement en base : les suppressions re-déclenchaient le listener
+    // temps réel → boucle de re-renders → lenteur et scintillement.
     try {
-        const seen = new Map();
-        const dupes = [];
+        const seen = new Set();
+        const filtered = [];
         for (const f of newFlights) {
-            // Clé d'unicité : N° autorisation + date + N° vol + trajet
             const key = [
                 (f.authorizationNumber || '').trim().toUpperCase(),
                 (f.date || '').trim(),
                 (f.flightNumber || '').trim().toUpperCase(),
-                (f.departure || f.from || '').trim().toUpperCase(),
-                (f.arrival || f.to || '').trim().toUpperCase()
+                (f.from || '').trim().toUpperCase(),
+                (f.to || '').trim().toUpperCase()
             ].join('|');
-            if (key === '||||') continue; // vol vide, ignorer
-            if (seen.has(key)) {
-                // Garder celui créé en premier, supprimer l'autre
-                const prev = seen.get(key);
-                const prevTime = prev.createdAt || prev.timestamp || '';
-                const curTime  = f.createdAt || f.timestamp || '';
-                const toRemove = (curTime && prevTime && curTime > prevTime) ? f : prev;
-                const toKeep   = (toRemove === f) ? prev : f;
-                seen.set(key, toKeep);
-                if (toRemove.id && !dupes.find(d => d.id === toRemove.id)) {
-                    dupes.push(toRemove);
-                }
-            } else {
-                seen.set(key, f);
-            }
+            if (key === '||||') { filtered.push(f); continue; }
+            if (seen.has(key)) continue;   // doublon exact → masqué de l'affichage
+            seen.add(key);
+            filtered.push(f);
         }
-        if (dupes.length > 0) {
-            console.warn('Doublons détectés:', dupes.length, '— nettoyage automatique');
-            // Retirer les doublons de la liste affichée immédiatement
-            const dupeIds = new Set(dupes.map(d => d.id));
-            newFlights = newFlights.filter(f => !dupeIds.has(f.id));
-            // Supprimer de Firestore en arrière-plan (sans bloquer l'affichage)
-            (async () => {
-                for (const d of dupes) {
-                    try {
-                        if (window.dbService && window.dbService.deleteFlight) {
-                            await window.dbService.deleteFlight(d.id);
-                            console.log('Doublon supprimé:', d.id, d.authorizationNumber || d.flightNumber);
-                        }
-                    } catch (e) { console.warn('Échec suppression doublon', d.id, e && e.message); }
-                }
-            })();
-        }
-    } catch (e) {
-        console.warn('Dédup:', e && e.message);
-    }
+        newFlights = filtered;
+    } catch (e) { console.warn('Dédup légère:', e && e.message); }
 
     flights = newFlights;
     // Peupler le select année avec les années disponibles
@@ -2102,14 +2079,24 @@ window.toggleStopoverField = function() {
 };
 
 // ICAO → IATA (via adminConfig.airports). Renvoie le code IATA ou le code tel quel.
+let _iataWarned = false;
 function icaoToIATA(code){
-    const c=(code||'').toUpperCase();
+    const c=(code||'').toUpperCase().trim();
     if(!c) return '';
-    if(adminConfig && adminConfig.airports){
-        const ap=adminConfig.airports.find(a=>a.icao===c || a.iata===c);
-        if(ap && ap.iata) return ap.iata.toUpperCase();
+    if(adminConfig && adminConfig.airports && adminConfig.airports.length){
+        const ap=adminConfig.airports.find(a=>
+            (a.icao||'').toUpperCase().trim()===c ||
+            (a.iata||'').toUpperCase().trim()===c
+        );
+        if(ap && ap.iata) return ap.iata.toUpperCase().trim();
+        if(ap) return c;
+    } else if(!_iataWarned){
+        _iataWarned = true;
+        console.warn('icaoToIATA: table aeroports non chargee au moment de l affichage');
     }
-    return c;
+    // Repli : codes mauritaniens courants, au cas ou l'admin est incomplet
+    var FALLBACK = {GQNO:'NKC',GQNN:'NKC',GQPP:'NDB',GQPZ:'OUZ',GQPA:'ATR',GQNF:'KFA'};
+    return FALLBACK[c] || c;
 }
 window.icaoToIATA = icaoToIATA;
 
