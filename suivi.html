@@ -556,8 +556,7 @@ function enrich(f){
   };
 }
 
-// ── Génération des lignes d'escale (MAI uniquement), pour l'affichage ──
-function isMauritanianICAO(code){ return (code||'').toUpperCase().startsWith('GQ'); }
+
 function suiviIsMAI(co){ const c=(co||'').toUpperCase(); return c.includes('MAURITANIA')||c==='MAI'||c==='L6'; }
 // Renvoie un tableau de lignes {routeTxt, pax, babies, isMain, isMidLeg} en IATA.
 function suiviFlightLines(f){
