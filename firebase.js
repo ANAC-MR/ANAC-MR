@@ -75,12 +75,9 @@ async function initializeFirebase() {
             },
             
             async deleteFlight(flightId) {
-                console.log('deleteFlight called, isInitialized:', isInitialized);
                 if (isInitialized) {
-                    console.log('Using Firebase delete');
                     return await deleteFlightFromFirestore(flightId);
                 } else {
-                    console.log('Using mock service delete');
                     if (mockDbService) {
                         return await mockDbService.deleteFlight(flightId);
                     } else {
@@ -242,7 +239,6 @@ async function addFlightToFirestore(flightData) {
         };
         
         const docRef = await addDoc(flightsCollection, flightWithMetadata);
-        console.log('Flight added with ID:', docRef.id);
         
         return {
             id: docRef.id,
@@ -270,8 +266,6 @@ async function updateFlightInFirestore(flightId, flightData) {
     }
     
     try {
-        console.log('Updating flight with ID:', flightId);
-        console.log('Update data:', flightData);
         
         const flightRef = doc(db, 'flights', flightId);
         const updateData = {
@@ -280,7 +274,6 @@ async function updateFlightInFirestore(flightId, flightData) {
         };
         
         await updateDoc(flightRef, updateData);
-        console.log('Flight updated successfully with ID:', flightId);
         
         return true;
     } catch (error) {
@@ -296,7 +289,6 @@ async function updateFlightInFirestore(flightId, flightData) {
  * Delete a flight from Firestore
  */
 async function deleteFlightFromFirestore(flightId) {
-    console.log('deleteFlightFromFirestore called with ID:', flightId, 'type:', typeof flightId);
     if (!isInitialized) {
         throw new Error('Firebase not initialized');
     }
@@ -306,7 +298,6 @@ async function deleteFlightFromFirestore(flightId) {
 
     try {
         const flightRef = doc(db, 'flights', flightId.trim());
-        console.log('Attempting to delete document path:', 'flights/' + flightId.trim());
         await deleteDoc(flightRef);
         console.log('✅ Flight successfully deleted from Firebase:', flightId);
         return true;
@@ -351,36 +342,6 @@ async function getAllFlights() {
 /**
  * Get flights filtered by date range
  */
-async function getFlightsByDateRange(startDate, endDate) {
-    if (!isInitialized) {
-        throw new Error('Firebase not initialized');
-    }
-    
-    try {
-        const q = query(
-            flightsCollection,
-            where('date', '>=', startDate),
-            where('date', '<=', endDate),
-            orderBy('date', 'desc')
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const flights = [];
-        
-        querySnapshot.forEach((doc) => {
-            flights.push({
-                ...doc.data(),
-                id: doc.id            // ID Firestore réel — prioritaire sur tout champ "id" interne hérité
-            });
-        });
-        
-        return flights;
-    } catch (error) {
-        console.error('Error getting flights by date range:', error);
-        throw error;
-    }
-}
-
 // ============================================
 // REAL-TIME LISTENERS
 // ============================================
