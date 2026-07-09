@@ -1266,7 +1266,7 @@ document.addEventListener('keydown', e => {
     <div class="fm-grid fm-grid-4">
       <div class="fm-field">
         <label>N° autorisation</label>
-        <input type="text" id="fAuthNumber" placeholder="" required maxlength="10">
+        <input type="text" id="fAuthNumber" required maxlength="10">
         <small class="field-hint">Format : SNA26-XXXX</small>
       </div>
       <div class="fm-field">
@@ -1275,11 +1275,11 @@ document.addEventListener('keydown', e => {
       </div>
       <div class="fm-field">
         <label>Immatriculation</label>
-        <input type="text" id="fImm" placeholder="" required>
+        <input type="text" id="fImm" required>
       </div>
       <div class="fm-field">
         <label>N° Vol</label>
-        <input type="text" id="fVol" placeholder="" required>
+        <input type="text" id="fVol" required>
       </div>
     </div>
 
@@ -3958,10 +3958,10 @@ window._hasPerm = function(perm) {
       html = `<label>Aéroport d'arrivée</label><select id="_fTo" data-autoapply="to">${$('toSelect').innerHTML}</select>`;
     }
     else if (id === 'imm') {
-      html = `<label>Immatriculation</label><input type="text" id="_fIm" value="${$('searchImm').value}" placeholder="">`;
+      html = `<label>Immatriculation</label><input type="text" id="_fIm" value="${$('searchImm').value}">`;
     }
     else if (id === 'vol') {
-      html = `<label>N° Vol</label><input type="text" id="_fVn" value="${$('searchVol').value}" placeholder="">`;
+      html = `<label>N° Vol</label><input type="text" id="_fVn" value="${$('searchVol').value}">`;
     }
 
     // Bouton Appliquer uniquement pour les champs texte (immat, vol)
