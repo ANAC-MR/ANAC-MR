@@ -39,6 +39,7 @@ async function initializeFirebase() {
 
         // Initialize Firebase app
         app = initializeApp(firebaseConfig);
+        window._fbApp = app;   // exposé pour la ré-authentification du listener
         db = getFirestore(app);
         window.db = db; // Exposé globalement pour autoFill etc.
         flightsCollection = collection(db, 'flights');
@@ -351,6 +352,7 @@ let unsubscribeFromFlights = null;
 /**
  * Start real-time listener for flights
  */
+let _rtRetries = 0;
 function startRealtimeListener() {
     if (!isInitialized || unsubscribeFromFlights) {
         return;
@@ -360,6 +362,7 @@ function startRealtimeListener() {
         const q = query(flightsCollection, orderBy('timestamp', 'desc'));
         
         unsubscribeFromFlights = onSnapshot(q, (snapshot) => {
+            _rtRetries = 0;   // connexion OK → réinitialiser le compteur
             const flights = [];
             
             snapshot.forEach((doc) => {
@@ -374,14 +377,36 @@ function startRealtimeListener() {
                 window.app.updateFlightsData(flights);
             }
         }, (error) => {
-            console.error('Error in real-time listener:', error);
-            showNotification('Erreur de synchronisation des données', 'error');
+            // ── Échec (souvent : auth pas encore prête sur connexion lente) ──
+            // On NE laisse PLUS le listener mourir : nettoyage puis réessai
+            // automatique, jusqu'à 10 tentatives espacées de 2,5 s.
+            console.warn('Listener temps réel en erreur:', error && error.code || error);
+            try { if (unsubscribeFromFlights) unsubscribeFromFlights(); } catch(e) {}
+            unsubscribeFromFlights = null;
+            _rtRetries++;
+            if (_rtRetries <= 10) {
+                setTimeout(async () => {
+                    // Attendre/forcer l'authentification avant de réessayer
+                    try {
+                        if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed && window._fbApp) {
+                            await window.ANAC_AUTH.ensureAuthed(window._fbApp);
+                        }
+                    } catch(e) {}
+                    console.log('Reconnexion du listener temps réel (tentative ' + _rtRetries + ')…');
+                    startRealtimeListener();
+                }, 2500);
+            } else {
+                showNotification('Erreur de synchronisation des données — actualisez la page', 'error');
+            }
         });
         
         console.log('Real-time listener started');
         _hideQuotaBanner();
     } catch (error) {
         console.error('Error starting real-time listener:', error);
+        // Réessai aussi en cas d'échec immédiat de l'abonnement
+        _rtRetries++;
+        if (_rtRetries <= 10) setTimeout(startRealtimeListener, 2500);
     }
 }
 
