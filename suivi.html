@@ -202,7 +202,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
       <div class="toolbar" style="margin-bottom:14px;">
         <div class="tb-group">
           <span class="tb-label">🔍 Recherche</span>
-          <input type="text" id="fltSearch" style="width:150px;text-transform:uppercase;" placeholder="ex: 5T-CLE"
+          <input type="text" id="fltSearch" style="width:150px;text-transform:uppercase;"
                  oninput="this.value=this.value.toUpperCase(); renderAircraftList();">
         </div>
         <div class="tb-group">
@@ -217,7 +217,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
             <option value="lt">≤ (plus petit que)</option>
             <option value="eq">= (égal à)</option>
           </select>
-          <input type="number" id="fltCapVal" min="0" style="width:90px;" placeholder="ex: 150" oninput="renderAircraftList()">
+          <input type="number" id="fltCapVal" min="0" style="width:90px;" oninput="renderAircraftList()">
         </div>
         <div class="spacer"></div>
         <button class="btn" onclick="resetFilters()">✖ Réinitialiser</button>
@@ -231,11 +231,11 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
           </div>
           <div class="fg">
             <label>Type d'appareil</label>
-            <input type="text" id="bulkType" placeholder="— Inchangé —">
+            <input type="text" id="bulkType">
           </div>
           <div class="fg">
             <label>Capacité</label>
-            <input type="number" id="bulkCap" min="1" placeholder="— Inchangé —">
+            <input type="number" id="bulkCap" min="1">
           </div>
           <div class="fg">
             <button class="btn btn-gold" onclick="applyBulkEdit()">✅ Appliquer à la sélection</button>
