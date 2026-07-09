@@ -201,6 +201,11 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
       <h3>🛩️ Immatriculations enregistrées (<span id="acCount">0</span>)</h3>
       <div class="toolbar" style="margin-bottom:14px;">
         <div class="tb-group">
+          <span class="tb-label">🔍 Recherche</span>
+          <input type="text" id="fltSearch" style="width:150px;text-transform:uppercase;" placeholder="ex: 5T-CLE"
+                 oninput="this.value=this.value.toUpperCase(); renderAircraftList();">
+        </div>
+        <div class="tb-group">
           <span class="tb-label">Compagnie</span>
           <select id="fltCompany" onchange="renderAircraftList()"><option value="">Toutes</option></select>
         </div>
@@ -953,6 +958,7 @@ window.resetFilters=function(){
   document.getElementById('fltCompany').value='';
   document.getElementById('fltCapOp').value='';
   document.getElementById('fltCapVal').value='';
+  const fs=document.getElementById('fltSearch'); if(fs) fs.value='';
   renderAircraftList();
 };
 
@@ -966,7 +972,14 @@ async function renderAircraftList(){
   const fCo=(document.getElementById('fltCompany')||{}).value||'';
   const fOp=(document.getElementById('fltCapOp')||{}).value||'';
   const fVal=(document.getElementById('fltCapVal')||{}).value||'';
+  const fSearch=((document.getElementById('fltSearch')||{}).value||'').trim().toUpperCase();
   if(fCo) list=list.filter(a=>(a.company||'')===fCo);
+  // Recherche par immatriculation : ignore tirets/espaces/points
+  // (5T-CLE, 5TCLE et 5T CLE trouvent la même immatriculation)
+  if(fSearch){
+    const q=normReg(fSearch);
+    list=list.filter(a=>normReg(a.reg||'').includes(q));
+  }
   if(fOp && fVal!=='' && !isNaN(Number(fVal))){
     const v=Number(fVal);
     list=list.filter(a=>{
