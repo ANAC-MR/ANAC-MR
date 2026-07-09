@@ -1320,11 +1320,11 @@ document.addEventListener('keydown', e => {
         <form id="loginForm">
             <div class="login-field">
                 <label>Identifiant</label>
-                <input type="text" id="loginUser" placeholder="" autocomplete="username" required>
+                <input type="text" id="loginUser" autocomplete="username" required>
             </div>
             <div class="login-field">
                 <label>Mot de passe</label>
-                <input type="password" id="loginPass" placeholder="" autocomplete="current-password" required>
+                <input type="password" id="loginPass" autocomplete="current-password" required>
                 <span class="login-error" id="loginError">Identifiants incorrects. Réessayez.</span>
             </div>
             <button type="submit" class="btn-login">Connexion</button>
@@ -1514,7 +1514,7 @@ document.addEventListener('keydown', e => {
                     <div class="form-grid" style="margin-bottom:24px;">
                         <div class="field-group">
                             <label>Préfixe (texte fixe)</label>
-                            <input type="text" id="fmtPrefix" placeholder="" maxlength="8"
+                            <input type="text" id="fmtPrefix" maxlength="8"
                                    oninput="this.value=this.value.toUpperCase(); updateFormatPreview()">
                             <span class="hint">Partie fixe au début (lettres, chiffres)</span>
                         </div>
@@ -1538,7 +1538,7 @@ document.addEventListener('keydown', e => {
                         </div>
                         <div class="field-group">
                             <label>Suffixe (optionnel)</label>
-                            <input type="text" id="fmtSuffix" placeholder="" maxlength="6"
+                            <input type="text" id="fmtSuffix" maxlength="6"
                                    oninput="this.value=this.value.toUpperCase(); updateFormatPreview()">
                         </div>
                     </div>
@@ -1588,7 +1588,7 @@ document.addEventListener('keydown', e => {
                 <div class="card" style="margin-bottom:16px;">
                     <div class="card-title">🔍 Recherche par N° Autorisation</div>
                     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                        <input type="text" id="authSearchInput" placeholder=""
+                        <input type="text" id="authSearchInput"
                             style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:10px 16px;color:#fff;font-size:14px;font-weight:600;width:260px;text-transform:uppercase;"
                             oninput="this.value=this.value.toUpperCase()" onkeyup="if(event.key==='Enter')searchByAuth()">
                         <button class="btn-primary" onclick="searchByAuth()" style="padding:10px 22px;">🔍 Rechercher</button>
@@ -1618,7 +1618,7 @@ document.addEventListener('keydown', e => {
                                 style="background:#1a2d45;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:6px 10px;color:#e2e8f0;font-size:12px;min-width:180px;">
                                 <option value="" style="background:#1a2d45;color:#e2e8f0;">Toutes les compagnies</option>
                             </select>
-                            <input type="text" id="fnSearch" placeholder="Rechercher" oninput="filterFlightNums()"
+                            <input type="text" id="fnSearch" oninput="filterFlightNums()"
                                 style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:6px 12px;color:#fff;font-size:12px;width:160px;">
                         </div>
                     </div>
@@ -1818,7 +1818,7 @@ document.addEventListener('keydown', e => {
                         style="background:#1a2d45;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;min-width:200px;">
                         <option value="" style="background:#1a2d45;color:#e2e8f0;">Toutes les compagnies</option>
                     </select>
-                    <input type="text" id="schedSearch" placeholder="Rechercher"
+                    <input type="text" id="schedSearch"
                         oninput="_schedRender()"
                         style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;width:220px;">
                     <span id="schedCount" style="font-size:12px;color:#64748b;"></span>
@@ -1874,7 +1874,7 @@ document.addEventListener('keydown', e => {
         <div class="form-grid">
             <div class="field-group form-full">
                 <label>Numéro de vol *</label>
-                <input type="text" id="fnNumber" placeholder="" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+                <input type="text" id="fnNumber" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="field-group">
                 <label>Compagnie *</label>
@@ -1934,15 +1934,15 @@ document.addEventListener('keydown', e => {
         <div class="form-grid">
             <div class="field-group form-full">
                 <label>Identifiant *</label>
-                <input type="text" id="newUname" autocomplete="off" placeholder="" style="text-transform:uppercase;" onfocus="this.removeAttribute('readonly')" readonly>
+                <input type="text" id="newUname" autocomplete="off" style="text-transform:uppercase;" onfocus="this.removeAttribute('readonly')" readonly>
             </div>
             <div class="field-group form-full">
                 <label>Mot de passe *</label>
-                <input type="password" id="newUpass" autocomplete="off" placeholder="" onfocus="this.removeAttribute('readonly')" readonly>
+                <input type="password" id="newUpass" autocomplete="off" onfocus="this.removeAttribute('readonly')" readonly>
             </div>
             <div class="field-group form-full">
                 <label>Confirmer *</label>
-                <input type="password" id="newUpass2" autocomplete="off" placeholder="" onfocus="this.removeAttribute('readonly')" readonly>
+                <input type="password" id="newUpass2" autocomplete="off" onfocus="this.removeAttribute('readonly')" readonly>
             </div>
         </div>
         <div class="modal-footer">
@@ -1984,13 +1984,13 @@ document.addEventListener('keydown', e => {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
             <div>
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">N° AUTORISATION *</label>
-                <input id="addVolProgAuth" type="text" placeholder=""
+                <input id="addVolProgAuth" type="text"
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;text-transform:uppercase;"
                     oninput="this.value=this.value.toUpperCase()">
             </div>
             <div>
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">N° VOL</label>
-                <input id="addVolProgFlight" type="text" placeholder=""
+                <input id="addVolProgFlight" type="text"
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;text-transform:uppercase;"
                     oninput="this.value=this.value.toUpperCase()">
             </div>
@@ -2001,7 +2001,7 @@ document.addEventListener('keydown', e => {
             </div>
             <div>
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">DÉCISION</label>
-                <input id="addVolProgDecision" type="text" placeholder=""
+                <input id="addVolProgDecision" type="text"
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;box-sizing:border-box;text-transform:uppercase;"
                     oninput="this.value=this.value.toUpperCase()">
             </div>
@@ -2044,13 +2044,13 @@ document.addEventListener('keydown', e => {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div>
                         <label style="font-size:12px;color:#64748b;">Premier N° auth</label>
-                        <input type="text" id="impAuthFirst" placeholder="" maxlength="20"
+                        <input type="text" id="impAuthFirst" maxlength="20"
                             oninput="this.value=this.value.toUpperCase();previewAuthRange()"
                             style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;margin-top:4px;">
                     </div>
                     <div>
                         <label style="font-size:12px;color:#64748b;">Dernier N° auth</label>
-                        <input type="text" id="impAuthLast" placeholder="" maxlength="20"
+                        <input type="text" id="impAuthLast" maxlength="20"
                             oninput="this.value=this.value.toUpperCase();previewAuthRange()"
                             style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;margin-top:4px;">
                     </div>
@@ -2062,13 +2062,13 @@ document.addEventListener('keydown', e => {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div>
                         <label style="font-size:12px;color:#64748b;">Premier N° auth (plage 2)</label>
-                        <input type="text" id="impAuthFirst2" placeholder="" maxlength="20"
+                        <input type="text" id="impAuthFirst2" maxlength="20"
                             oninput="this.value=this.value.toUpperCase();previewAuthRange()"
                             style="background:var(--input-bg);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;margin-top:4px;">
                     </div>
                     <div>
                         <label style="font-size:12px;color:#64748b;">Dernier N° auth (plage 2)</label>
-                        <input type="text" id="impAuthLast2" placeholder="" maxlength="20"
+                        <input type="text" id="impAuthLast2" maxlength="20"
                             oninput="this.value=this.value.toUpperCase();previewAuthRange()"
                             style="background:var(--input-bg);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;font-family:'JetBrains Mono',monospace;margin-top:4px;">
                     </div>
@@ -2105,22 +2105,22 @@ document.addEventListener('keydown', e => {
             <!-- Infos de base -->
             <div class="field-group form-full">
                 <label>Nom de la compagnie *</label>
-                <input type="text" id="airlineName" placeholder="" required>
+                <input type="text" id="airlineName" required>
             </div>
             <div class="field-group">
                 <label>Préfixe de vol (2-3 lettres) *</label>
-                <input type="text" id="airlinePrefix" placeholder="" maxlength="3"
+                <input type="text" id="airlinePrefix" maxlength="3"
                        oninput="this.value=this.value.toUpperCase()">
                 <span class="hint">Code utilisé pour les numéros de vol</span>
             </div>
             <div class="field-group">
                 <label>Code IATA (2 lettres)</label>
-                <input type="text" id="airlineIATA" placeholder="" maxlength="2"
+                <input type="text" id="airlineIATA" maxlength="2"
                        oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="field-group form-full">
                 <label>Pays d'origine</label>
-                <input type="text" id="airlineCountry" placeholder="">
+                <input type="text" id="airlineCountry">
             </div>
 
             <!-- Aéroport Hub -->
@@ -2148,7 +2148,7 @@ document.addEventListener('keydown', e => {
             <!-- Immatriculations -->
             <div class="field-group form-full" style="border-top:1px solid var(--border); padding-top:18px; margin-top:4px;">
                 <label>Préfixe immatriculation <span class="immat-count" id="immatPrefixHint"></span></label>
-                <input type="text" id="airlineImmPrefix" placeholder="" maxlength="5"
+                <input type="text" id="airlineImmPrefix" maxlength="5"
                        oninput="this.value=this.value.toUpperCase(); updateImmPrefixHint()">
                 <span class="hint">Les immatriculations de cette compagnie commencent par ce préfixe</span>
             </div>
@@ -2164,7 +2164,7 @@ document.addEventListener('keydown', e => {
                 </div>
                 <div class="immat-list" id="immatList"></div>
                 <div class="immat-add-row">
-                    <input type="text" id="immatInput" placeholder="" maxlength="8"
+                    <input type="text" id="immatInput" maxlength="8"
                            oninput="this.value=this.value.toUpperCase()"
                            onkeydown="if(event.key==='Enter'){event.preventDefault();addImmat();}">
                     <button type="button" class="btn-primary" onclick="addImmat()" style="white-space:nowrap;">+ Ajouter</button>
@@ -2191,7 +2191,7 @@ document.addEventListener('keydown', e => {
                 <div id="progImportStatus" style="font-size:12px;color:#718096;margin:4px 0;min-height:16px;"></div>
                 <div class="immat-list" id="volList"></div>
                 <div class="immat-add-row">
-                    <input type="text" id="volInput" placeholder="" maxlength="10"
+                    <input type="text" id="volInput" maxlength="10"
                            oninput="this.value=this.value.toUpperCase()"
                            onkeydown="if(event.key==='Enter'){event.preventDefault();addVol();}">
                     <button type="button" class="btn-primary" onclick="addVol()" style="white-space:nowrap;">+ Ajouter</button>
@@ -2216,25 +2216,25 @@ document.addEventListener('keydown', e => {
         <div class="form-grid">
             <div class="field-group">
                 <label>Code ICAO (4 lettres) *</label>
-                <input type="text" id="airportICAO" placeholder="" maxlength="4"
+                <input type="text" id="airportICAO" maxlength="4"
                        oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="field-group">
                 <label>Code IATA (3 lettres)</label>
-                <input type="text" id="airportIATA" placeholder="" maxlength="3"
+                <input type="text" id="airportIATA" maxlength="3"
                        oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="field-group form-full">
                 <label>Nom de l'aéroport *</label>
-                <input type="text" id="airportName" placeholder="">
+                <input type="text" id="airportName">
             </div>
             <div class="field-group">
                 <label>Ville</label>
-                <input type="text" id="airportCity" placeholder="">
+                <input type="text" id="airportCity">
             </div>
             <div class="field-group">
                 <label>Pays</label>
-                <input type="text" id="airportCountry" placeholder="">
+                <input type="text" id="airportCountry">
             </div>
         </div>
         <div class="modal-footer">
@@ -2276,7 +2276,7 @@ document.addEventListener('keydown', e => {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px;">
             <div>
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">N° VOL *</label>
-                <input id="schedFVol" type="text" placeholder=""
+                <input id="schedFVol" type="text"
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;text-transform:uppercase;"
                     oninput="this.value=this.value.toUpperCase()">
             </div>
@@ -2304,7 +2304,7 @@ document.addEventListener('keydown', e => {
                 <div style="font-size:11px;color:#64748b;margin-top:4px;">
                     Code généré : <span id="schedDayCode" style="color:#D4AF37;font-family:monospace;">-------</span>
                     &nbsp;·&nbsp;
-                    <input id="schedFDays" placeholder=""
+                    <input id="schedFDays"
                         style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;width:160px;"
                         oninput="_schedDaysFromText(this.value)">
                 </div>
@@ -2319,7 +2319,7 @@ document.addEventListener('keydown', e => {
                             style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;margin-bottom:6px;">
                             <option value="">— Ville de départ —</option>
                         </select>
-                        <input id="schedFHDep" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
+                        <input id="schedFHDep" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
                             style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#D4AF37;font-size:13px;font-family:monospace;">
                     </div>
                     <div style="text-align:center;color:#D4AF37;font-size:22px;padding-top:22px;">✈</div>
@@ -2330,7 +2330,7 @@ document.addEventListener('keydown', e => {
                             <option value="">— Ville d'arrivée —</option>
                         </select>
                         <div style="display:flex;gap:6px;align-items:center;">
-                            <input id="schedFHArr" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
+                            <input id="schedFHArr" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
                                 style="flex:1;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#60a5fa;font-size:13px;font-family:monospace;">
                             <select id="schedFDayOffset" onchange="_buildRouting()"
                                 title="Décalage horaire par rapport à Nouakchott (UTC+0)"
@@ -2360,9 +2360,9 @@ document.addEventListener('keydown', e => {
                                 style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:7px 9px;color:#e2e8f0;font-size:13px;">
                                 <option value="">— Ville d'escale —</option>
                             </select>
-                            <input id="schedFHStop1" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
+                            <input id="schedFHStop1" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
                                 style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:7px 8px;color:#D4AF37;font-size:12px;font-family:monospace;">
-                            <input id="schedFHStop2" type="text" placeholder="HH:MM" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
+                            <input id="schedFHStop2" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
                                 style="background:#0f172a;border:1px solid rgba(255,255,255,0.12);border-radius:7px;padding:7px 8px;color:#60a5fa;font-size:12px;font-family:monospace;">
                         </div>
                         <div style="font-size:10px;color:#475569;margin-top:4px;">Heure arrivée escale &nbsp;·&nbsp; Heure départ escale</div>
@@ -2385,7 +2385,7 @@ document.addEventListener('keydown', e => {
             </div>
             <div style="grid-column:1/-1;">
                 <label style="font-size:11px;color:#64748b;display:block;margin-bottom:4px;">NOTES (optionnel)</label>
-                <input id="schedFNotes" type="text" placeholder=""
+                <input id="schedFNotes" type="text"
                     style="width:100%;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:13px;">
             </div>
         </div>
@@ -5913,11 +5913,11 @@ window._secEditUser = function(userId) {
   const passTog = document.getElementById('secUserPassToggle');
   if (_isDadyUser()) {
     passInp.value = getPasswordHint(u) || '';
-    passInp.placeholder = 'Laisser vide = ne pas changer';
+    passInp.placeholder = '';
     if (passTog) passTog.style.display = '';
   } else {
     passInp.value = '';
-    passInp.placeholder = 'Laisser vide = ne pas changer';
+    passInp.placeholder = '';
     if (passTog) passTog.style.display = 'none';
   }
   passInp.type = 'password';
