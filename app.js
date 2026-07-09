@@ -351,6 +351,22 @@ async function loadAdminConfig() {
     } catch(e) {
         console.warn('Admin config not loaded:', e.message);
         adminConfig = null;
+        // ── Réessai en arrière-plan (mobile/connexion lente : l'auth peut ne
+        //    pas être prête au 1er essai). Jusqu'à 3 tentatives espacées de 2 s,
+        //    puis re-render + re-remplissage des filtres si succès. ──
+        window._cfgRetries = (window._cfgRetries || 0) + 1;
+        if (window._cfgRetries <= 3) {
+            setTimeout(async function() {
+                try {
+                    await loadAdminConfig();
+                    if (adminConfig) {
+                        console.log('Config admin chargée au réessai', window._cfgRetries);
+                        // NB : ne pas rappeler populateSelects() (dupliquerait les options).
+                        if (typeof render === 'function' && flights && flights.length) render();
+                    }
+                } catch(e2) {}
+            }, 2000);
+        }
     }
 }
 
@@ -579,8 +595,10 @@ function openModal(flightId = null) {
                 if (window.selectType) window.selectType(flight.type || 'DEP'); else { const fi=document.getElementById('fType'); if(fi) fi.value=flight.type; }
                 // ⚠️ selectType/updateRouteByType reconstruisent De/À avec les
                 //    valeurs par défaut : on repose ICI le trajet réel du vol.
-                if (flight.from) elements.fFrom.value = flight.from;
-                if (flight.to) elements.fTo.value = flight.to;
+                //    Assignation INCONDITIONNELLE : sinon les destinations du
+                //    vol précédemment édité restaient affichées.
+                elements.fFrom.value = flight.from || '';
+                elements.fTo.value = flight.to || '';
                 elements.fPassengers.value = flight.passengers;
                 elements.fBabies.value = flight.babies;
 
@@ -614,7 +632,19 @@ function openModal(flightId = null) {
                 if (sg1) sg1.style.display = hasStop ? '' : 'none';
                 if (typeof updateMidLegRow === 'function') updateMidLegRow();
                 if (typeof updateEscaleTotals === 'function') updateEscaleTotals();
-                
+
+                // ── Anti-course : ré-affirmer le trajet et l'escale APRÈS la fin
+                //    des opérations asynchrones (updateVolField, auto-remplissage…)
+                //    qui pouvaient écraser les selects avec d'anciennes valeurs. ──
+                setTimeout(function() {
+                    if (editingFlightId !== flight.id) return;   // le modal a changé entre-temps
+                    elements.fFrom.value = flight.from || '';
+                    elements.fTo.value = flight.to || '';
+                    if (elements.hasStopover) elements.hasStopover.checked = hasStop;
+                    if (elements.fStopover) elements.fStopover.value = stopCode;
+                    if (typeof updateMidLegRow === 'function') updateMidLegRow();
+                }, 450);
+
                 elements.fAuthNumber.focus();
             }
         } else {
