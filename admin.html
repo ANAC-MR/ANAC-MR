@@ -803,7 +803,7 @@
       <div style="font-size:10px;color:#8a6d1d;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Connecté</div>
       <div id="anacMenuUserName" style="font-size:13px;color:#fff;font-weight:700;letter-spacing:0.3px;margin-bottom:2px;">—</div>
       <div id="anacMenuUserRole" style="font-size:11px;color:#5a6572;margin-bottom:10px;">—</div>
-      <button id="anacMenuLogoutBtn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="width:100%;padding:9px 12px;background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.12)';this.style.color='#fca5a5';">Déconnexion</button>
+      <button id="anacMenuLogoutBtn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="width:100%;padding:9px 12px;background:rgba(239,68,68,0.12);color:#b3362b;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.12)';this.style.color='#b3362b';">Déconnexion</button>
     </div>
   </div>
   <div class="anac-menu-footer">AVIATION CIVILE · MAURITANIE</div>
@@ -1146,7 +1146,7 @@ document.addEventListener('keydown', e => {
                     <div class="card-title">Recherche par N° Autorisation</div>
                     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                         <input type="text" id="authSearchInput"
-                            style="background:rgba(20,48,79,0.05);border:1px solid #c8cfd8;border-radius:9px;padding:10px 16px;color:#fff;font-size:14px;font-weight:600;width:260px;text-transform:uppercase;"
+                            style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:10px 16px;color:#1b2430;font-size:14px;font-weight:600;width:260px;text-transform:uppercase;"
                             oninput="this.value=this.value.toUpperCase()" onkeyup="if(event.key==='Enter')searchByAuth()">
                         <button class="btn-primary" onclick="searchByAuth()" style="padding:10px 22px;">Rechercher</button>
                         <div id="authSearchResult" style="font-size:13px;font-weight:600;padding:8px 14px;border-radius:8px;display:none;"></div>
@@ -1176,7 +1176,7 @@ document.addEventListener('keydown', e => {
                                 <option value="" style="background:#1a2d45;color:#1b2430;">Toutes les compagnies</option>
                             </select>
                             <input type="text" id="fnSearch" oninput="filterFlightNums()"
-                                style="background:rgba(20,48,79,0.05);border:1px solid #d8dde4;border-radius:7px;padding:6px 12px;color:#fff;font-size:12px;width:160px;">
+                                style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:6px 12px;color:#1b2430;font-size:12px;width:160px;">
                         </div>
                     </div>
                     <div id="flightNumsList"><div style="text-align:center;color:var(--text-dim);padding:30px;font-size:13px;">Chargement...</div></div>
@@ -1304,7 +1304,7 @@ document.addEventListener('keydown', e => {
                     <div id="chgMappingArea" style="display:none;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                             <div style="font-size:13px;font-weight:700;color:#3d5a80;letter-spacing:.04em;">② APERÇU DU FICHIER</div>
-                            <button onclick="_chgReset()" style="background:rgba(252,129,129,0.1);border:1px solid rgba(252,129,129,0.25);color:#fc8181;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;">✕ Annuler</button>
+                            <button onclick="_chgReset()" style="background:#fbe9e7;border:1px solid #e0b3ad;color:#b3362b;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;">✕ Annuler</button>
                         </div>
                         <div id="chgPreviewTable" style="margin-bottom:10px;"></div>
                         <div id="chgMapStats" style="font-size:12px;color:#5a6572;"></div>
@@ -1563,7 +1563,7 @@ document.addEventListener('keydown', e => {
                     oninput="this.value=this.value.toUpperCase()">
             </div>
         </div>
-        <div id="addVolProgError" style="display:none;color:#fc8181;font-size:12px;margin-bottom:10px;"></div>
+        <div id="addVolProgError" style="display:none;color:#b3362b;font-size:12px;margin-bottom:10px;"></div>
         <div style="display:flex;justify-content:flex-end;gap:8px;">
             <button onclick="_closeAddVolProg()" style="background:rgba(20,48,79,0.05);border:1px solid #d8dde4;color:#5a6572;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;">Annuler</button>
             <button onclick="_saveAddVolProg()" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;">Enregistrer</button>
@@ -1614,7 +1614,7 @@ document.addEventListener('keydown', e => {
                 </div>
             </div>
             <div class="field-group form-full" style="background:rgba(251,191,36,0.04);border:1px solid rgba(251,191,36,0.15);border-radius:10px;padding:12px 14px;">
-                <div style="font-size:12px;font-weight:700;color:#fbbf24;margin-bottom:6px;">Plage 2 — optionnel (ex: Hiver à cheval sur 2 années)</div>
+                <div style="font-size:12px;font-weight:700;color:#a05a12;margin-bottom:6px;">Plage 2 — optionnel (ex: Hiver à cheval sur 2 années)</div>
                 <div style="font-size:11px;color:#5a6572;margin-bottom:10px;">Si les autorisations changent de préfixe SNA en cours de saison (ex: SNA25-XXX → SNA26-YYY)</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div>
@@ -1946,7 +1946,7 @@ document.addEventListener('keydown', e => {
                     style="width:100%;background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 10px;color:#1b2430;font-size:13px;">
             </div>
         </div>
-        <div id="schedModalErr" style="display:none;color:#fc8181;font-size:12px;margin-top:10px;"></div>
+        <div id="schedModalErr" style="display:none;color:#b3362b;font-size:12px;margin-top:10px;"></div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
             <button onclick="_schedCloseModal()" style="background:rgba(20,48,79,0.05);border:1px solid #d8dde4;color:#5a6572;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;">Annuler</button>
             <button onclick="_schedSave()" style="background:linear-gradient(135deg,#1A6EBD,#0D4A8C);border:none;color:#fff;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;">Enregistrer</button>
@@ -2847,11 +2847,11 @@ window.changeCredentials = async function() {
     msgEl.textContent = '';
 
     const creds = await getStoredCredentials();
-    if (!currUser && !currPass) { msgEl.style.color='#fc8181'; msgEl.textContent='Entrez vos identifiants actuels'; return; }
-    if (currUser && currUser.toUpperCase() !== creds.user.toUpperCase()) { msgEl.style.color='#fc8181'; msgEl.textContent='Identifiant actuel incorrect'; return; }
-    if (currPass && currPass !== creds.pass) { msgEl.style.color='#fc8181'; msgEl.textContent='Mot de passe actuel incorrect'; return; }
-    if (newPass && newPass.length < 6) { msgEl.style.color='#fc8181'; msgEl.textContent='Nouveau mot de passe trop court (min 6)'; return; }
-    if (newPass && newPass !== confPass) { msgEl.style.color='#fc8181'; msgEl.textContent='Les mots de passe ne correspondent pas'; return; }
+    if (!currUser && !currPass) { msgEl.style.color='#b3362b'; msgEl.textContent='Entrez vos identifiants actuels'; return; }
+    if (currUser && currUser.toUpperCase() !== creds.user.toUpperCase()) { msgEl.style.color='#b3362b'; msgEl.textContent='Identifiant actuel incorrect'; return; }
+    if (currPass && currPass !== creds.pass) { msgEl.style.color='#b3362b'; msgEl.textContent='Mot de passe actuel incorrect'; return; }
+    if (newPass && newPass.length < 6) { msgEl.style.color='#b3362b'; msgEl.textContent='Nouveau mot de passe trop court (min 6)'; return; }
+    if (newPass && newPass !== confPass) { msgEl.style.color='#b3362b'; msgEl.textContent='Les mots de passe ne correspondent pas'; return; }
 
     const finalUser = newUser  || creds.user;
     const finalPass = newPass  || creds.pass;
@@ -2875,7 +2875,7 @@ window.changeCredentials = async function() {
         msgEl.textContent = 'Mis à jour — tous les appareils ont été déconnectés';
         logActivity('Modification identifiants admin', 'security');
     } catch(e) {
-        msgEl.style.color = '#fc8181';
+        msgEl.style.color = '#b3362b';
         msgEl.textContent = 'Erreur: ' + e.message;
     }
 };
@@ -2941,14 +2941,14 @@ async function loadUsers() {
                 <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
                     <button class="user-expand" onclick="openPermModal('${u.id}','${u.username}',${JSON.stringify(perms).replace(/"/g,"'")})">Permissions</button>
                     <button onclick="deleteSecUser('${u.id}','${u.username}')"
-                        style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.25);color:#fc8181;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">
+                        style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.25);color:#b3362b;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">
                         ✕ Supprimer
                     </button>
                 </div>
             </div>`;
         }).join('');
     } catch(e) {
-        div.innerHTML = `<div style="color:#fc8181;padding:12px;font-size:13px;">Erreur: ${e.message}</div>`;
+        div.innerHTML = `<div style="color:#b3362b;padding:12px;font-size:13px;">Erreur: ${e.message}</div>`;
     }
 }
 
@@ -3038,7 +3038,7 @@ async function loadFlightNums() {
         allFlightNums = snap.docs.map(d=>({id:d.id,...d.data()}));
         renderFlightNums(allFlightNums);
     } catch(e) {
-        div.innerHTML = '<div style="color:#fc8181;padding:12px;font-size:13px;">Erreur: '+e.message+'</div>';
+        div.innerHTML = '<div style="color:#b3362b;padding:12px;font-size:13px;">Erreur: '+e.message+'</div>';
     }
 }
 
@@ -3084,7 +3084,7 @@ function renderFlightNums(list) {
             +'<td>'+tdStop+'</td>'
             +'<td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">'
             +'<button onclick="editFlightNum(&quot;'+fn.id+'&quot;)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✎</button>'
-            +'<button onclick="deleteFlightNum(&quot;'+fn.id+'&quot;,&quot;'+fn.number+'&quot;)" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✕</button>'
+            +'<button onclick="deleteFlightNum(&quot;'+fn.id+'&quot;,&quot;'+fn.number+'&quot;)" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#b3362b;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✕</button>'
             +'</td></tr>';
         }).join('')+
         '</tbody></table>';
@@ -3341,7 +3341,7 @@ async function loadProgramme() {
         _allProgramme = snapProg.docs.map(d => ({id:d.id,...d.data()}));
         renderProgrammeByCompany();
     } catch(e) {
-        container.innerHTML = '<div style="color:#fc8181;padding:20px;">Erreur: '+e.message+'</div>';
+        container.innerHTML = '<div style="color:#b3362b;padding:20px;">Erreur: '+e.message+'</div>';
     }
 }
 
@@ -3431,7 +3431,7 @@ function renderProgrammeByCompany() {
             const total   = g.vols.length;
             const restant = total - saisi;
             const pctC    = total ? saisi/total : 0;
-            const dot     = pctC===0 ? '#fc8181' : pctC===1 ? '#34d399' : '#fbbf24';
+            const dot     = pctC===0 ? '#b3362b' : pctC===1 ? '#34d399' : '#a05a12';
             return `<button data-gi="${gi}" onclick="_selectProgCompanyIdx(this.dataset.gi)"
                 style="${_progSelectedCompany===g.company?btnAct:btnInact}">
                 <span style="width:8px;height:8px;border-radius:50%;background:${dot};display:inline-block;flex-shrink:0;"></span>
@@ -3441,7 +3441,7 @@ function renderProgrammeByCompany() {
 
         // Card de la compagnie sélectionnée
         const g = groupList.find(x=>x.company===_progSelectedCompany) || groupList[0];
-        if (!g) { container.innerHTML = '<div style="color:#fc8181;padding:20px;">Aucun programme</div>'; return; }
+        if (!g) { container.innerHTML = '<div style="color:#b3362b;padding:20px;">Aucun programme</div>'; return; }
 
         // Mois
         const MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -3470,7 +3470,7 @@ function renderProgrammeByCompany() {
                     const info   = moisDispo[mm];
                     const active = _progSelectedMonth === mm;
                     const pct_m  = info.total ? info.saisi/info.total : 0;
-                    const dot    = pct_m===0 ? '#fc8181' : pct_m===1 ? '#34d399' : '#fbbf24';
+                    const dot    = pct_m===0 ? '#b3362b' : pct_m===1 ? '#34d399' : '#a05a12';
                     const bg     = active ? 'background:rgba(99,102,241,0.2);border-color:#3d5a80;color:#3d5a80;' : 'background:rgba(20,48,79,0.04);border-color:#d8dde4;color:#5a6572;';
                     return `<button data-mm="${mm}" onclick="_selectProgMonth(${mm})"
                         style="${bg}border:1px solid;border-radius:16px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
@@ -3495,24 +3495,24 @@ function renderProgrammeByCompany() {
             <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:10px;padding:10px 16px;min-width:90px;text-align:center;">
                 <div style="font-size:22px;font-weight:800;color:#34d399;">${saisiG}</div><div style="font-size:11px;color:#5a6572;">Saisis</div></div>
             <div style="background:rgba(252,129,129,0.08);border:1px solid rgba(252,129,129,0.2);border-radius:10px;padding:10px 16px;min-width:90px;text-align:center;">
-                <div style="font-size:22px;font-weight:800;color:#fc8181;">${totalG-saisiG}</div><div style="font-size:11px;color:#5a6572;">Restants</div></div>
+                <div style="font-size:22px;font-weight:800;color:#b3362b;">${totalG-saisiG}</div><div style="font-size:11px;color:#5a6572;">Restants</div></div>
             <div style="background:rgba(129,140,248,0.08);border:1px solid rgba(129,140,248,0.2);border-radius:10px;padding:10px 16px;min-width:90px;text-align:center;">
                 <div style="font-size:22px;font-weight:800;color:#3d5a80;">${totalG}</div><div style="font-size:11px;color:#5a6572;">Total</div></div>
             <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:10px 16px;min-width:90px;text-align:center;">
-                <div style="font-size:22px;font-weight:800;color:#fbbf24;">${pctG}%</div><div style="font-size:11px;color:#5a6572;">Progression</div></div>
+                <div style="font-size:22px;font-weight:800;color:#a05a12;">${pctG}%</div><div style="font-size:11px;color:#5a6572;">Progression</div></div>
         </div>`;
 
         const rowsHtml = volsFiltres.sort((a,b)=>(a.auth||'').localeCompare(b.auth||'')).map(r => {
-            const ok=_isSaisi(r), bg=ok?'rgba(52,211,153,0.07)':'rgba(252,129,129,0.05)', ac=ok?'#34d399':'#fc8181', ic=ok?'':'', rid=r.id;
+            const ok=_isSaisi(r), bg=ok?'rgba(52,211,153,0.07)':'rgba(252,129,129,0.05)', ac=ok?'#34d399':'#b3362b', ic=ok?'':'', rid=r.id;
             const cancelled = r.cancelled === true;
             const rowBg = cancelled ? 'rgba(251,191,36,0.08)' : bg;
             const rowIc = cancelled ? '' : ic;
-            const cancelBtn = '<button data-rid="'+rid+'" data-cancelled="'+(cancelled?'1':'0')+'" onclick="_toggleCancelVol(this.dataset.rid,this.dataset.cancelled)" title="'+(cancelled?'Réactiver':'Marquer annulé')+'" style="background:'+(cancelled?'rgba(251,191,36,0.2)':'rgba(251,191,36,0.07)')+';border:1px solid rgba(251,191,36,'+(cancelled?'0.5':'0.2')+');color:#fbbf24;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;margin-right:4px;">'+(cancelled?'↩':'')+'</button>';
+            const cancelBtn = '<button data-rid="'+rid+'" data-cancelled="'+(cancelled?'1':'0')+'" onclick="_toggleCancelVol(this.dataset.rid,this.dataset.cancelled)" title="'+(cancelled?'Réactiver':'Marquer annulé')+'" style="background:'+(cancelled?'rgba(251,191,36,0.2)':'rgba(251,191,36,0.07)')+';border:1px solid rgba(251,191,36,'+(cancelled?'0.5':'0.2')+');color:#a05a12;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;margin-right:4px;">'+(cancelled?'↩':'')+'</button>';
             const saisirBtn = (ok||cancelled)?'':'<button data-rid="'+rid+'" onclick="_saisirVol(this.dataset.rid)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✎ Saisir</button>';
-            const delBtn = '<button data-rid="'+rid+'" onclick="_deleteOneVol(this.dataset.rid)" style="background:rgba(229,62,62,0.10);border:1px solid rgba(229,62,62,0.25);color:#fc8181;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">✕</button>';
+            const delBtn = '<button data-rid="'+rid+'" onclick="_deleteOneVol(this.dataset.rid)" style="background:rgba(229,62,62,0.10);border:1px solid rgba(229,62,62,0.25);color:#b3362b;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">✕</button>';
             return `<tr style="background:${rowBg};${cancelled?'opacity:0.75;':''}" >
-                <td>${rowIc} <strong style="color:${cancelled?'#fbbf24':ac};font-size:12px;font-family:monospace;${cancelled?'text-decoration:line-through;':''}">${esc(r.auth||'—')}</strong></td>
-                <td style="color:${cancelled?'#fbbf24':'#e2e8f0'};font-weight:600;">${esc(r.flight||'—')}${cancelled?' <span style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.15);border-radius:3px;padding:1px 5px;">ANNULÉ</span>':''}</td>
+                <td>${rowIc} <strong style="color:${cancelled?'#a05a12':ac};font-size:12px;font-family:monospace;${cancelled?'text-decoration:line-through;':''}">${esc(r.auth||'—')}</strong></td>
+                <td style="color:${cancelled?'#a05a12':'#e2e8f0'};font-weight:600;">${esc(r.flight||'—')}${cancelled?' <span style="font-size:10px;color:#a05a12;background:rgba(251,191,36,0.15);border-radius:3px;padding:1px 5px;">ANNULÉ</span>':''}</td>
                 <td style="color:#5a6572;font-size:12px;">${esc(r.date||'—')}</td>
                 <td style="color:#3d5a80;font-size:11px;">${esc(r.decision||'—')}</td>
                 <td style="white-space:nowrap;">${cancelBtn}${saisirBtn}${delBtn}</td>
@@ -3527,7 +3527,7 @@ function renderProgrammeByCompany() {
                 </div>
                 <div style="display:flex;gap:8px;">
                     <button onclick="_openAddVolProg()" style="background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">+ Ajouter un vol</button>
-                    <button onclick="_confirmDelProgramme()" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✕ Supprimer tout</button>
+                    <button onclick="_confirmDelProgramme()" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#b3362b;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✕ Supprimer tout</button>
                 </div>
             </div>
             ${statsHtml}${moisHtml}
@@ -3795,7 +3795,7 @@ window.previewAuthRange = function() {
 
     if (!r1) {
         preview.style.display = '';
-        content.innerHTML = '<div style="font-size:12px;color:#fc8181;">Format invalide — même préfixe SNA requis dans chaque plage</div>';
+        content.innerHTML = '<div style="font-size:12px;color:#b3362b;">Format invalide — même préfixe SNA requis dans chaque plage</div>';
         return;
     }
 
@@ -3804,10 +3804,10 @@ window.previewAuthRange = function() {
 
     let html = '<div style="font-size:12px;color:#34d399;margin-bottom:4px;">Plage 1 : ' + r1.list.length + ' N° auth (' + r1.list[0] + ' → ' + r1.list[r1.list.length-1] + ')</div>';
     if (r2) {
-        html += '<div style="font-size:12px;color:#fbbf24;margin-bottom:4px;">Plage 2 : ' + r2.list.length + ' N° auth (' + r2.list[0] + ' → ' + r2.list[r2.list.length-1] + ')</div>';
+        html += '<div style="font-size:12px;color:#a05a12;margin-bottom:4px;">Plage 2 : ' + r2.list.length + ' N° auth (' + r2.list[0] + ' → ' + r2.list[r2.list.length-1] + ')</div>';
         html += '<div style="font-size:12px;color:#3d5a80;font-weight:700;">Total : ' + total + ' autorisations sur 2 plages</div>';
     } else if (first2 || last2) {
-        html += '<div style="font-size:12px;color:#fc8181;">Plage 2 : format invalide — laissez vide ou corrigez</div>';
+        html += '<div style="font-size:12px;color:#b3362b;">Plage 2 : format invalide — laissez vide ou corrigez</div>';
     }
     content.innerHTML = html;
 };
@@ -3849,11 +3849,11 @@ window.parseProgFile = async function(input) {
         if (['xlsx','xls','csv'].includes(ext)) {
             await parseExcelFile(file);
         } else {
-            status.style.color = '#fbbf24';
+            status.style.color = '#a05a12';
             status.textContent = 'Word non supporté — utilisez Excel/CSV. Saisissez manuellement la plage N° auth.';
         }
     } catch(e) {
-        status.style.color = '#fc8181';
+        status.style.color = '#b3362b';
         status.textContent = 'Erreur: '+e.message;
     }
 };
@@ -3873,7 +3873,7 @@ async function parseExcelFile(file) {
                 document.head.appendChild(s);
             });
         } catch(e) {
-            status.style.color = '#fc8181';
+            status.style.color = '#b3362b';
             status.textContent = 'Impossible de charger le parseur Excel — vérifiez votre connexion';
             return;
         }
@@ -3919,7 +3919,7 @@ async function parseExcelFile(file) {
             const ws = wb.Sheets[wb.SheetNames[0]];
             rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
         } catch(e2) {
-            status.style.color = '#fc8181';
+            status.style.color = '#b3362b';
             status.textContent = 'Erreur lecture: ' + e2.message;
             return;
         }
@@ -4261,7 +4261,7 @@ window.saveProgImport = async function() {
         closeModal('importProgModal');
         window._parsedProgRows=[];
     } catch(e) {
-        status.style.color='#fc8181';
+        status.style.color='#b3362b';
         status.textContent='Erreur: '+e.message;
         showNotif('Erreur: '+e.message,'error');
     }
@@ -4298,9 +4298,9 @@ window.searchByAuth = async function() {
             res.textContent = 'Vol déjà saisi — ' + (d.flightNumber||'') + ' · ' + (d.date||'') + ' · ' + (d.company||'');
         } else if (snapProg.docs.length > 0) {
             const d = snapProg.docs[0].data();
-            res.style.background = 'rgba(251,191,36,0.12)';
+            res.style.background = '#f7edd8';
             res.style.border     = '1px solid rgba(251,191,36,0.3)';
-            res.style.color      = '#fbbf24';
+            res.style.color      = '#a05a12';
             res.textContent = 'Dans le programme mais pas encore saisi — ' + (d.flight||'') + ' · ' + (d.date||'') + ' · ' + (d.company||'');
         } else {
             res.style.background = 'rgba(239,68,68,0.1)';
@@ -4698,7 +4698,7 @@ function _chgRenderEnriched() {
             <div style="font-size:20px;font-weight:800;color:#34d399;">${ok}</div>
             <div style="font-size:11px;color:#5a6572;">Prêts</div></div>` +
         (warn ? `<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:8px 14px;text-align:center;">
-            <div style="font-size:20px;font-weight:800;color:#fbbf24;">${warn}</div>
+            <div style="font-size:20px;font-weight:800;color:#a05a12;">${warn}</div>
             <div style="font-size:11px;color:#5a6572;">Avertissements</div></div>` : '') +
         (doublon ? `<div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:8px 14px;text-align:center;">
             <div style="font-size:20px;font-weight:800;color:#3d5a80;">${doublon}</div>
@@ -4718,7 +4718,7 @@ function _chgRenderEnriched() {
                     r.status==='warn'    ? '' : '';
         const warnBadge = r.status==='done' ? '<span style="color:#34d399;font-size:11px;">Importé</span>' :
                           r.status==='doublon' ? '<span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#3d5a80;border-radius:4px;padding:1px 6px;font-size:10px;">Doublon</span>' :
-                          r.warning ? '<span style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;border-radius:4px;padding:1px 6px;font-size:10px;">' + esc(r.warning) + '</span>' :
+                          r.warning ? '<span style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);color:#a05a12;border-radius:4px;padding:1px 6px;font-size:10px;">' + esc(r.warning) + '</span>' :
                           '<span style="color:#34d399;font-size:11px;">✓</span>';
         // Champs éditables : auth, company, type, from, to, imm, pax, bebes
         const editable = r.status !== 'done';
@@ -4881,7 +4881,7 @@ async function _chgDoImport(filterFn) {
         if (dblCount) msg += ` · ${dblCount} doublon${dblCount>1?'s':''} ignoré${dblCount>1?'s':''}`;
         notif.innerHTML = `<div style="background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:8px;padding:12px 16px;font-weight:600;">${msg}</div>`;
     } else {
-        notif.innerHTML = `<div style="background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);color:#fbbf24;border-radius:8px;padding:12px 16px;font-weight:600;">${done} vols importés · ${skipped} doublons · ${errors} erreurs</div>`;
+        notif.innerHTML = `<div style="background:#f7edd8;border:1px solid rgba(251,191,36,0.3);color:#a05a12;border-radius:8px;padding:12px 16px;font-weight:600;">${done} vols importés · ${skipped} doublons · ${errors} erreurs</div>`;
     }
     if (btnR) { btnR.disabled = false; }
     if (btnA) { btnA.disabled = false; }
@@ -5066,7 +5066,7 @@ async function _schedLoad() {
         _schedules = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         _schedRender();
     } catch(e) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="color:#fc8181;padding:12px;">${e.message}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="color:#b3362b;padding:12px;">${e.message}</td></tr>`;
     }
 }
 
@@ -5149,7 +5149,7 @@ window._schedRender = function() {
                 <td style="padding:10px 14px;font-size:11px;color:#5a6572;">${esc(period)}</td>
                 <td style="padding:10px 14px;white-space:nowrap;">
                     <button onclick="_schedEdit('${s.id}')" style="background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.25);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✎</button>
-                    <button onclick="_schedDelete('${s.id}')" style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.22);color:#fc8181;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">✕</button>
+                    <button onclick="_schedDelete('${s.id}')" style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.22);color:#b3362b;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">✕</button>
                 </td>
             </tr>`;
         }).join('');
@@ -5405,7 +5405,7 @@ async function _secLoadUsers() {
         <div style="background:rgba(20,48,79,0.03);border:1px solid rgba(20,48,79,0.06);border-left:3px solid ${color};border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
-              <span style="font-weight:700;color:#fff;font-size:14px;letter-spacing:0.3px;">${u.username}</span>
+              <span style="font-weight:700;color:#1b2430;font-size:14px;letter-spacing:0.3px;">${u.username}</span>
               <span style="font-size:10px;color:${color};background:${color}22;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">${roleLabels[role]||role}</span>
               ${isOnline ? '<span style="font-size:10px;color:#22c55e;background:#22c55e22;padding:2px 8px;border-radius:10px;font-weight:700;">● EN LIGNE</span>' : ''}
               ${u.disabled ? '<span style="font-size:10px;color:#ef4444;background:#ef444422;padding:2px 8px;border-radius:10px;font-weight:700;">DÉSACTIVÉ</span>' : ''}
@@ -5415,7 +5415,7 @@ async function _secLoadUsers() {
           <div style="display:flex;gap:6px;">
             <button onclick="_secEditUser('${u.id}')" style="padding:7px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);color:#60a5fa;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✎ Modifier</button>
             <button onclick="_secToggleDisable('${u.id}')" style="padding:7px 12px;background:#f4ecd7;border:1px solid rgba(212,175,55,0.3);color:#8a6d1d;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">${u.disabled?'Réactiver':'Désactiver'}</button>
-            <button onclick="_secDeleteUser('${u.id}','${u.username}')" style="padding:7px 12px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✕</button>
+            <button onclick="_secDeleteUser('${u.id}','${u.username}')" style="padding:7px 12px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#b3362b;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✕</button>
           </div>
         </div>
       `;
@@ -5423,7 +5423,7 @@ async function _secLoadUsers() {
     html += '</div>';
     list.innerHTML = html;
   } catch(e) {
-    list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur: ' + e.message + '</div>';
+    list.innerHTML = '<div style="text-align:center;color:#b3362b;padding:30px;">Erreur: ' + e.message + '</div>';
   }
 }
 
@@ -5535,8 +5535,8 @@ window._secSaveUser = async function() {
   const role     = document.getElementById('secUserRole').value;
   const msg      = document.getElementById('secUserModalMsg');
 
-  if (!username) { msg.textContent = 'Identifiant requis'; msg.style.color = '#fca5a5'; return; }
-  if (!_secEditingUserId && !password) { msg.textContent = 'Mot de passe requis'; msg.style.color = '#fca5a5'; return; }
+  if (!username) { msg.textContent = 'Identifiant requis'; msg.style.color = '#b3362b'; return; }
+  if (!_secEditingUserId && !password) { msg.textContent = 'Mot de passe requis'; msg.style.color = '#b3362b'; return; }
 
   // Récupérer permissions cochées (si rôle custom)
   let permissions = [];
@@ -5562,7 +5562,7 @@ window._secSaveUser = async function() {
     }
     setTimeout(() => { _secCloseUserModal(); _secLoadUsers(); if (typeof _secLoadActivity === 'function') _secLoadActivity(); }, 700);
   } catch(e) {
-    msg.textContent = '' + e.message; msg.style.color = '#fca5a5';
+    msg.textContent = '' + e.message; msg.style.color = '#b3362b';
   }
 };
 
@@ -5643,7 +5643,7 @@ async function _secLoadActivity() {
     sel.innerHTML = '<option value="">Tous les utilisateurs</option>' + allActiveUsernames.map(u => `<option value="${u}">${u}</option>`).join('');
     _secRenderActivity();
   } catch(e) {
-    list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur: ' + e.message + '</div>';
+    list.innerHTML = '<div style="text-align:center;color:#b3362b;padding:30px;">Erreur: ' + e.message + '</div>';
   }
 }
 
@@ -5689,10 +5689,10 @@ window._secRenderActivity = function() {
     const actionLabel = ACTION_LABELS[a.action] || a.action;
     const isFailed = a.action === 'login_failed';
     const bg = i % 2 === 0 ? 'rgba(20,48,79,0.025)' : 'transparent';
-    const actionColor = isFailed ? '#fca5a5' : a.action === 'delete_flight' ? '#fca5a5' : a.action === 'login_success' ? '#86efac' : '#e2e8f0';
+    const actionColor = isFailed ? '#b3362b' : a.action === 'delete_flight' ? '#b3362b' : a.action === 'login_success' ? '#86efac' : '#e2e8f0';
     html += `<tr style="background:${bg};border-bottom:1px solid rgba(20,48,79,0.04);">
       <td style="padding:10px;color:#5a6572;font-family:monospace;font-size:11px;white-space:nowrap;">${dateStr}</td>
-      <td style="padding:10px;color:#fff;font-weight:600;">${a.username||'—'}</td>
+      <td style="padding:10px;color:#1b2430;font-weight:600;">${a.username||'—'}</td>
       <td style="padding:10px;color:${actionColor};font-weight:600;">${actionLabel}</td>
       <td style="padding:10px;color:#3d4854;">${(a.details||a.target||'').slice(0,80)}</td>
     </tr>`;
@@ -5745,7 +5745,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _secLoadUsers().catch(e => {
       console.error('[Sec] _secLoadUsers error:', e);
       const list = document.getElementById('secUsersList');
-      if (list) list.innerHTML = '<div style="text-align:center;color:#fca5a5;padding:30px;">Erreur de chargement: ' + (e.message||e) + '</div>';
+      if (list) list.innerHTML = '<div style="text-align:center;color:#b3362b;padding:30px;">Erreur de chargement: ' + (e.message||e) + '</div>';
     });
   }, 800);
 });
