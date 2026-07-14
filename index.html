@@ -3024,7 +3024,9 @@ function runComparison() {
     const stats = (flights) => ({
         vols: flights.length,
         pax:  flights.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0),
-        imm:  new Set(flights.map(f=>f.registration).filter(Boolean)).size,
+        // Immatriculations distinctes NORMALISÉES : 5T-CLE, 5TCLE et 5T CLE
+        // sont le même appareil (tirets/espaces/points ignorés).
+        imm:  new Set(flights.map(f=>(f.registration||'').toUpperCase().replace(/[\s.\-]/g,'')).filter(Boolean)).size,
         monthly: monthly(flights),
     });
 
