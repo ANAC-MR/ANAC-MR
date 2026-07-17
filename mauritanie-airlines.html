@@ -588,8 +588,10 @@ function getFlightSegments(flight){
   let to   = (flight.to   || '').toUpperCase().trim();
   let stopover = (flight.hasStopover ? (flight.stopover || '') : '').toUpperCase().trim();
 
-  // Escale de secours : depuis le numéro de vol enregistré (admin)
-  if (!stopover && window._maFN) {
+  // Escale de secours : depuis le numéro de vol enregistré (admin), UNIQUEMENT
+  // si le vol n'a pas de décision explicite (évite les escales fantômes).
+  const _escaleDecidee = (flight.hasStopover === true || flight.hasStopover === false);
+  if (!stopover && !_escaleDecidee && window._maFN) {
     const info = window._maFN[_maNormFN(flight.flightNumber||'')];
     if (info && info.stopover) {
       stopover = info.stopover;
