@@ -1876,8 +1876,8 @@ document.addEventListener('keydown', e => {
                             style="width:100%;background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 10px;color:#1b2430;font-size:13px;margin-bottom:6px;">
                             <option value="">— Ville de départ —</option>
                         </select>
-                        <input id="schedFHDep" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
-                            style="width:100%;background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 10px;color:#8a6d1d;font-size:13px;font-family:monospace;">
+                        <input id="schedFHDep" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" title="Heure de départ (HH:MM)"
+                            style="width:100%;background:#fbfcfd;border:1px solid #8a99ab;border-radius:8px;padding:8px 10px;color:#14304f;font-size:14px;font-weight:700;font-family:monospace;letter-spacing:1px;">
                     </div>
                     <div style="text-align:center;color:#8a6d1d;font-size:22px;padding-top:22px;"></div>
                     <div>
@@ -1887,8 +1887,8 @@ document.addEventListener('keydown', e => {
                             <option value="">— Ville d'arrivée —</option>
                         </select>
                         <div style="display:flex;gap:6px;align-items:center;">
-                            <input id="schedFHArr" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
-                                style="flex:1;background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 10px;color:#14304f;font-size:13px;font-weight:600;font-family:monospace;">
+                            <input id="schedFHArr" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" title="Heure d'arrivée (HH:MM)"
+                                style="flex:1;background:#fbfcfd;border:1px solid #8a99ab;border-radius:8px;padding:8px 10px;color:#14304f;font-size:14px;font-weight:700;font-family:monospace;letter-spacing:1px;">
                             <select id="schedFDayOffset" onchange="_buildRouting()"
                                 title="Décalage horaire par rapport à Nouakchott (UTC+0)"
                                 style="background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 8px;color:#5a6572;font-size:11px;min-width:80px;">
