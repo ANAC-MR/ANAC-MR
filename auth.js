@@ -372,9 +372,19 @@ export function startSessionWatcher() {
         clearSession();
         alert('Votre session a été ouverte sur un autre appareil. Vous avez été déconnecté.');
         location.href = 'login.html';
+        return;
+      }
+      // Rafraîchir rôle/permissions en direct (modif admin appliquée sans reconnexion)
+      const freshRole = data.role || 'custom';
+      const freshPerms = resolvePermissions(freshRole, data.permissions);
+      const changed = freshRole !== cur.role ||
+        JSON.stringify(freshPerms) !== JSON.stringify(cur.permissions || []);
+      if (changed) {
+        saveSession({ ...cur, role: freshRole, permissions: freshPerms });
+        console.log('Permissions mises à jour depuis le serveur.');
       }
     } catch(e) {}
-  }, 6000);
+  }, 30000);  // 30 s : bien plus léger pour le réseau (était 6 s = lenteur)
 }
 
 export function stopSessionWatcher() {
