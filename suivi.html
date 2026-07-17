@@ -510,13 +510,21 @@ function enrich(f){
   if(fnInfo && fnInfo.type) flightType=fnInfo.type;  // on écrase par la valeur officielle
 
   // Prove-Destination : du numéro de vol enregistré si dispo, sinon du vol
+  // Escale : si le vol a une décision explicite (hasStopover true/false),
+  // elle prime sur celle du numéro de vol (évite les escales fantômes,
+  // ex. L6300 qui héritait de l'escale du numéro de vol).
+  const _escaleDecidee = (f.hasStopover === true || f.hasStopover === false);
+  const _stopVol = (f.hasStopover && f.stopover) ? f.stopover : '';
   let route='';
   if(fnInfo && (fnInfo.from||fnInfo.to)){
-    const ff=toIATA(fnInfo.from), tt=toIATA(fnInfo.to), ss=fnInfo.stopover?toIATA(fnInfo.stopover):'';
+    const ff=toIATA(fnInfo.from), tt=toIATA(fnInfo.to);
+    // escale : décision du vol si explicite, sinon celle du numéro de vol
+    const ssRaw = _escaleDecidee ? _stopVol : (fnInfo.stopover || _stopVol);
+    const ss = ssRaw ? toIATA(ssRaw) : '';
     route = ss ? `${ff}-${ss}-${tt}` : `${ff}-${tt}`;
   }else{
     const from=toIATA(f.from), to=toIATA(f.to);
-    const stop=(f.hasStopover&&f.stopover)?toIATA(f.stopover):'';
+    const stop=_stopVol?toIATA(_stopVol):'';
     if(from||to) route = stop ? `${from}-${stop}-${to}` : `${from}-${to}`;
   }
 
@@ -536,7 +544,8 @@ function enrich(f){
   // Compagnie : du numéro de vol si dispo, sinon celle du vol
   const company=((fnInfo&&fnInfo.company)?fnInfo.company:(f.company||'')).toUpperCase();
   // ── Données brutes d'escale (pour générer les lignes MAI) ──
-  const stopRaw = (fnInfo&&fnInfo.stopover) ? fnInfo.stopover : (f.stopover||'');
+  // Escale : décision explicite du vol prioritaire, sinon numéro de vol.
+  const stopRaw = _escaleDecidee ? _stopVol : ((fnInfo&&fnInfo.stopover) ? fnInfo.stopover : (f.stopover||''));
   const fromRaw = (fnInfo&&fnInfo.from) ? fnInfo.from : (f.from||'');
   const toRaw   = (fnInfo&&fnInfo.to)   ? fnInfo.to   : (f.to||'');
   // Escale : soit le vol l'a, soit son numéro de vol la définit (admin)
