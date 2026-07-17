@@ -1172,8 +1172,8 @@ document.addEventListener('keydown', e => {
                         <span>Numéros enregistrés</span>
                         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                             <select id="fnFilterCompany" onchange="filterFlightNums()"
-                                style="background:#1a2d45;border:1px solid #c8cfd8;border-radius:7px;padding:6px 10px;color:#1b2430;font-size:12px;min-width:180px;">
-                                <option value="" style="background:#1a2d45;color:#1b2430;">Toutes les compagnies</option>
+                                style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:6px 10px;color:#1b2430;font-size:12px;min-width:180px;">
+                                <option value="" style="background:#ffffff;color:#1b2430;">Toutes les compagnies</option>
                             </select>
                             <input type="text" id="fnSearch" oninput="filterFlightNums()"
                                 style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:6px 12px;color:#1b2430;font-size:12px;width:160px;">
@@ -1213,10 +1213,10 @@ document.addEventListener('keydown', e => {
                         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
                             <span>Journal d'activité</span>
                             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                                <select id="secActFilterUser" onchange="_secRenderActivity()" style="background:#1a2d45;border:1px solid #c8cfd8;border-radius:7px;padding:6px 10px;color:#1b2430;font-size:12px;min-width:160px;">
+                                <select id="secActFilterUser" onchange="_secRenderActivity()" style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:6px 10px;color:#1b2430;font-size:12px;min-width:160px;">
                                     <option value="">Tous les utilisateurs</option>
                                 </select>
-                                <select id="secActFilterAction" onchange="_secRenderActivity()" style="background:#1a2d45;border:1px solid #c8cfd8;border-radius:7px;padding:6px 10px;color:#1b2430;font-size:12px;min-width:160px;">
+                                <select id="secActFilterAction" onchange="_secRenderActivity()" style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:6px 10px;color:#1b2430;font-size:12px;min-width:160px;">
                                     <option value="">Toutes les actions</option>
                                     <option value="login_success">Connexion réussie</option>
                                     <option value="login_failed">Échec de connexion</option>
@@ -1372,12 +1372,12 @@ document.addEventListener('keydown', e => {
                 <!-- Filtres -->
                 <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
                     <select id="schedCompanyFilter" onchange="_schedRender()"
-                        style="background:#1a2d45;border:1px solid #c8cfd8;border-radius:8px;padding:7px 12px;color:#1b2430;font-size:13px;min-width:200px;">
-                        <option value="" style="background:#1a2d45;color:#1b2430;">Toutes les compagnies</option>
+                        style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;min-width:200px;">
+                        <option value="" style="background:#ffffff;color:#1b2430;">Toutes les compagnies</option>
                     </select>
                     <input type="text" id="schedSearch"
                         oninput="_schedRender()"
-                        style="background:rgba(20,48,79,0.05);border:1px solid #d8dde4;border-radius:8px;padding:7px 12px;color:#1b2430;font-size:13px;width:220px;">
+                        style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;width:220px;">
                     <span id="schedCount" style="font-size:12px;color:#5a6572;"></span>
                 </div>
                 <!-- Filtre par jour de la semaine -->
@@ -1536,7 +1536,7 @@ document.addEventListener('keydown', e => {
         <div id="addVolProgInfo" style="font-size:12px;color:#5a6572;margin-bottom:16px;padding:8px 12px;background:rgba(20,48,79,0.04);border-radius:8px;">
             Compagnie : <strong id="addVolProgCompany" style="color:#8a6d1d;">—</strong> &nbsp;·&nbsp;
             Saison : <strong id="addVolProgSaison" style="color:#3d5a80;">—</strong> &nbsp;·&nbsp;
-            Année : <strong id="addVolProgAnnee" style="color:#60a5fa;">—</strong>
+            Année : <strong id="addVolProgAnnee" style="color:#14304f;">—</strong>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
             <div>
@@ -1871,7 +1871,7 @@ document.addEventListener('keydown', e => {
                 <!-- Ligne principale: DEP → ARR -->
                 <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:start;margin-bottom:10px;">
                     <div>
-                        <div style="font-size:10px;color:#4A9EFF;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Départ</div>
+                        <div style="font-size:10px;color:#14304f;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Départ</div>
                         <select id="schedFDep" onchange="_buildRouting()"
                             style="width:100%;background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 10px;color:#1b2430;font-size:13px;margin-bottom:6px;">
                             <option value="">— Ville de départ —</option>
@@ -1881,14 +1881,14 @@ document.addEventListener('keydown', e => {
                     </div>
                     <div style="text-align:center;color:#8a6d1d;font-size:22px;padding-top:22px;"></div>
                     <div>
-                        <div style="font-size:10px;color:#34d399;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Arrivée finale</div>
+                        <div style="font-size:10px;color:#1c7c4c;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Arrivée finale</div>
                         <select id="schedFArr" onchange="_buildRouting()"
                             style="width:100%;background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 10px;color:#1b2430;font-size:13px;margin-bottom:6px;">
                             <option value="">— Ville d'arrivée —</option>
                         </select>
                         <div style="display:flex;gap:6px;align-items:center;">
                             <input id="schedFHArr" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
-                                style="flex:1;background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 10px;color:#60a5fa;font-size:13px;font-family:monospace;">
+                                style="flex:1;background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 10px;color:#14304f;font-size:13px;font-weight:600;font-family:monospace;">
                             <select id="schedFDayOffset" onchange="_buildRouting()"
                                 title="Décalage horaire par rapport à Nouakchott (UTC+0)"
                                 style="background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 8px;color:#5a6572;font-size:11px;min-width:80px;">
@@ -1920,7 +1920,7 @@ document.addEventListener('keydown', e => {
                             <input id="schedFHStop1" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
                                 style="background:#ffffff;border:1px solid #d8dde4;border-radius:7px;padding:7px 8px;color:#8a6d1d;font-size:12px;font-family:monospace;">
                             <input id="schedFHStop2" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]"
-                                style="background:#ffffff;border:1px solid #d8dde4;border-radius:7px;padding:7px 8px;color:#60a5fa;font-size:12px;font-family:monospace;">
+                                style="background:#ffffff;border:1px solid #d8dde4;border-radius:7px;padding:7px 8px;color:#14304f;font-size:12px;font-weight:600;font-family:monospace;">
                         </div>
                         <div style="font-size:10px;color:#475569;margin-top:4px;">Heure arrivée escale &nbsp;·&nbsp; Heure départ escale</div>
                     </div>
@@ -3036,7 +3036,15 @@ async function loadFlightNums() {
     try {
         const snap = await window._getDocs(window._collection(window._db,'flight_numbers'));
         allFlightNums = snap.docs.map(d=>({id:d.id,...d.data()}));
-        renderFlightNums(allFlightNums);
+        // Réappliquer le filtre actif (compagnie/recherche) au lieu de tout
+        // ré-afficher : sinon, après une modification, le filtre était perdu.
+        if (typeof filterFlightNums === 'function' &&
+            ((document.getElementById('fnFilterCompany') && document.getElementById('fnFilterCompany').value) ||
+             (document.getElementById('fnSearch') && document.getElementById('fnSearch').value))) {
+            filterFlightNums();
+        } else {
+            renderFlightNums(allFlightNums);
+        }
     } catch(e) {
         div.innerHTML = '<div style="color:#b3362b;padding:12px;font-size:13px;">Erreur: '+e.message+'</div>';
     }
@@ -5073,9 +5081,12 @@ async function _schedLoad() {
 function _schedFillCompanyFilter() {
     const sel = document.getElementById('schedCompanyFilter');
     if (!sel) return;
+    const current = sel.value;   // mémoriser le filtre actif
     const companies = [...new Set(_schedules.map(s => s.company).filter(Boolean))].sort();
     sel.innerHTML = '<option value="">Toutes les compagnies</option>' +
         companies.map(c => `<option value="${c}">${c}</option>`).join('');
+    // Restaurer la sélection si elle existe toujours
+    if (current && companies.indexOf(current) !== -1) sel.value = current;
 }
 
 window._schedFilterDay = function(btn) {
