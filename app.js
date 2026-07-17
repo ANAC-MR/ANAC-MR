@@ -553,15 +553,38 @@ function attachEventListeners() {
 }
 
 function handleKeyboardShortcuts(event) {
-    // Escape to close modal
-    if (event.key === 'Escape' && elements.flightModal.classList.contains('active')) {
+    const modalOpen = elements.flightModal.classList.contains('active');
+
+    // Échap : fermer la modale
+    if (event.key === 'Escape' && modalOpen) {
         closeModal();
+        return;
     }
-    
-    // Ctrl/Cmd + N to add new flight
-    if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
-        event.preventDefault();
-        openModal();
+
+    // Ctrl/Cmd + N : ouvrir le formulaire d'ajout d'un vol
+    // (ne se déclenche pas si on est déjà en train de taper dans un champ)
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'n' || event.key === 'N')) {
+        const tag = (event.target && event.target.tagName || '').toUpperCase();
+        const enSaisie = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+        if (!modalOpen && !enSaisie) {
+            event.preventDefault();
+            openModal();
+        }
+    }
+
+    // Ctrl/Cmd + S : enregistrer le vol si la modale est ouverte
+    if ((event.ctrlKey || event.metaKey) && (event.key === 's' || event.key === 'S')) {
+        if (modalOpen) {
+            event.preventDefault();
+            // Déclenche la même validation/soumission que le bouton Enregistrer
+            if (elements.flightForm) {
+                if (typeof elements.flightForm.requestSubmit === 'function') {
+                    elements.flightForm.requestSubmit();
+                } else {
+                    handleFormSubmit(new Event('submit'));
+                }
+            }
+        }
     }
 }
 
