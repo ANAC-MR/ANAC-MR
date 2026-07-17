@@ -67,7 +67,12 @@ function generateFlightLines(flight) {
     // Escale du vol lui-même, sinon celle définie dans le numéro de vol (admin).
     let stopCode = flight.hasStopover ? flight.stopover : '';
     let fromCode = flight.from, toCode = flight.to;
-    if (!stopCode && window._flightNumCache) {
+    // On ne déduit l'escale depuis le numéro de vol QUE si le vol n'a pas de
+    // décision explicite. Si hasStopover === false a été enregistré, l'utilisateur
+    // a dit « pas d'escale » → on respecte ce choix (évite les escales fantômes
+    // comme L6300 héritant de l'escale du numéro de vol).
+    const escaleDecidee = (flight.hasStopover === true || flight.hasStopover === false);
+    if (!stopCode && !escaleDecidee && window._flightNumCache) {
         const info = window._flightNumCache[normFN(flight.flightNumber||'')];
         if (info && info.stopover) {
             stopCode = info.stopover;
