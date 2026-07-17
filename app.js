@@ -1,6 +1,41 @@
 // ============================================
 // CONFIGURATION & CONSTANTS
 // ============================================
+
+// ── RACCOURCI CLAVIER GLOBAL (attaché en tout premier) ──────────
+// Ctrl/Cmd + Entrée :
+//   • formulaire fermé  → ouvre le formulaire d'ajout d'un vol
+//   • formulaire ouvert → clique sur le bouton Enregistrer
+// Autonome : ne dépend d'aucune autre fonction, donc fonctionne même si
+// une étape d'initialisation échoue plus bas.
+if (!window._kbShortcutsBound) {
+    window._kbShortcutsBound = true;
+    document.addEventListener('keydown', function(event) {
+        try {
+            const isEnter = event.key === 'Enter' || event.code === 'Enter' ||
+                            event.code === 'NumpadEnter' || event.keyCode === 13;
+            if (!((event.ctrlKey || event.metaKey) && isEnter)) return;
+            const modal = document.getElementById('flightModal');
+            const modalOpen = modal && modal.classList.contains('active');
+            event.preventDefault();
+            if (modalOpen) {
+                // Enregistrer : soumettre le formulaire (même validation que le bouton)
+                const form = document.getElementById('flightForm');
+                if (form) {
+                    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+                    else if (form.dispatchEvent) form.dispatchEvent(new Event('submit', {cancelable:true}));
+                }
+            } else {
+                // Ouvrir : cliquer sur le bouton "Ajouter un vol"
+                const addBtn = document.getElementById('addFlightBtn');
+                if (addBtn) addBtn.click();
+                else if (typeof openModal === 'function') openModal();
+            }
+        } catch (e) { console.warn('Raccourci Ctrl+Entrée:', e && e.message); }
+    });
+    console.log('Raccourci Ctrl+Entrée activé');
+}
+
 const MONTHS = [
     "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
     "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
@@ -541,8 +576,7 @@ function attachEventListeners() {
         });
     });
     
-    // Keyboard shortcuts
-    document.addEventListener('keydown', handleKeyboardShortcuts);
+    // Keyboard shortcuts : attachés globalement plus bas (window._kbShortcutsBound)
     
     // Close actions menus when clicking outside
     document.addEventListener('click', (event) => {
@@ -552,40 +586,17 @@ function attachEventListeners() {
     });
 }
 
-function handleKeyboardShortcuts(event) {
-    const modalOpen = elements.flightModal.classList.contains('active');
-
-    // Échap : fermer la modale
-    if (event.key === 'Escape' && modalOpen) {
-        closeModal();
-        return;
-    }
-
-    // Ctrl/Cmd + N : ouvrir le formulaire d'ajout d'un vol
-    // (ne se déclenche pas si on est déjà en train de taper dans un champ)
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'n' || event.key === 'N')) {
-        const tag = (event.target && event.target.tagName || '').toUpperCase();
-        const enSaisie = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
-        if (!modalOpen && !enSaisie) {
-            event.preventDefault();
-            openModal();
-        }
-    }
-
-    // Ctrl/Cmd + S : enregistrer le vol si la modale est ouverte
-    if ((event.ctrlKey || event.metaKey) && (event.key === 's' || event.key === 'S')) {
-        if (modalOpen) {
-            event.preventDefault();
-            // Déclenche la même validation/soumission que le bouton Enregistrer
-            if (elements.flightForm) {
-                if (typeof elements.flightForm.requestSubmit === 'function') {
-                    elements.flightForm.requestSubmit();
-                } else {
-                    handleFormSubmit(new Event('submit'));
-                }
+// Échap : fermer la modale (attaché séparément)
+if (!window._escBound) {
+    window._escBound = true;
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('flightModal');
+            if (modal && modal.classList.contains('active') && typeof closeModal === 'function') {
+                closeModal();
             }
         }
-    }
+    });
 }
 
 // ============================================
