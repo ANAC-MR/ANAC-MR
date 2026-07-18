@@ -396,30 +396,30 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
   <div class="anac-menu-items">
     <a href="index.html" class="anac-menu-item" data-nav="suivi">
-      <div class="icon">📋</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Accueil</div><div class="desc">LISTE DES VOLS</div>
 </div>
     </a>
     <a href="index.html?tab=rapports" class="anac-menu-item" data-nav="rapports">
-      <div class="icon">📊</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Diagrammes &amp; Rapports</div><div class="desc">STATISTIQUES</div></div>
     </a>
     <a href="index.html?tab=facturation" class="anac-menu-item" data-nav="facturation">
-      <div class="icon">🧾</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Ordre d'émission</div><div class="desc">FACTURATION</div></div>
     </a>
     <div class="anac-menu-divider"></div>
     <a href="vols.html" class="anac-menu-item" data-nav="vols">
-      <div class="icon">🛫</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Carte des Vols</div><div class="desc">VISUALISATION TEMPS RÉEL</div></div>
     </a>
     <a href="ldm.html" class="anac-menu-item" data-nav="ldm">
-      <div class="icon">📨</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">LDM / MVT</div><div class="desc">MESSAGES DE VOL</div></div>
     </a>
     <div class="anac-menu-divider"></div>
     <a href="admin.html" class="anac-menu-item" data-nav="admin">
-      <div class="icon">⚙️</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Administration</div><div class="desc">CONFIGURATION SYSTÈME</div></div>
     </a>
     <div class="anac-menu-divider"></div>
@@ -432,7 +432,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div style="font-size:10px;color:#D4AF37;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Connecté</div>
       <div id="anacMenuUserName" style="font-size:13px;color:#fff;font-weight:700;letter-spacing:0.3px;margin-bottom:2px;">—</div>
       <div id="anacMenuUserRole" style="font-size:11px;color:#94a3b8;margin-bottom:10px;">—</div>
-      <button id="anacMenuLogoutBtn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="width:100%;padding:9px 12px;background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.12)';this.style.color='#fca5a5';">🚪 Déconnexion</button>
+      <button id="anacMenuLogoutBtn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="width:100%;padding:9px 12px;background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.12)';this.style.color='#fca5a5';">Déconnexion</button>
     </div>
   </div>
   <div class="anac-menu-footer">AVIATION CIVILE · MAURITANIE</div>
@@ -489,7 +489,7 @@ document.addEventListener('keydown', e => {
 
 <div id="ldmAuth">
   <div class="la-box">
-    <div class="ico">📡</div>
+    <div class="ico"></div>
     <h2>LDM / MVT Reader</h2>
     
     <div class="la-f"><label>Identifiant</label>
@@ -504,7 +504,7 @@ document.addEventListener('keydown', e => {
 
 <div class="header">
   <div class="header-left">
-    <div class="hlogo">📨</div>
+    <div class="hlogo"></div>
     <div>
       <div class="htitle">LDM / MVT Reader</div>
       
@@ -518,21 +518,21 @@ document.addEventListener('keydown', e => {
   <!-- AUTH -->
   <div class="auth-card">
     <div class="auth-top">
-      <div class="auth-title">🔑 Connexion Gmail</div>
+      <div class="auth-title">Connexion Gmail</div>
       <div class="auth-status">
         <div class="dot" id="authDot"></div>
         <span id="authTxt">Non connecté</span>
       </div>
     </div>
     <div class="auth-actions" id="authActions">
-      <button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>
+      <button class="btn btn-gold" onclick="signIn()">Connecter mon Gmail</button>
     </div>
 
   </div>
 
   <!-- SÉLECTEUR MOIS GLOBAL -->
   <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.2);border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-    <span style="font-size:12px;font-weight:700;color:#D4AF37;white-space:nowrap;">📅 MOIS DU LDM/MVT</span>
+    <span style="font-size:12px;font-weight:700;color:#D4AF37;white-space:nowrap;">MOIS DU LDM/MVT</span>
     <select id="ldmMonthSel" onchange="_ldmMonthChanged()"
       style="background:#1e293b;border:1px solid rgba(212,175,55,0.4);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:13px;font-weight:600;cursor:pointer;">
       <option value="1">Janvier</option><option value="2">Février</option>
@@ -552,36 +552,36 @@ document.addEventListener('keydown', e => {
   <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
     <button id="tabBtnEmail" onclick="_ldmSetTab('email')"
       style="border:1px solid;border-radius:20px;padding:6px 18px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(212,175,55,0.18);border-color:#D4AF37;color:#D4AF37;">
-      📨 Email Gmail
+      Email Gmail
     </button>
     <button id="tabBtnPaste" onclick="_ldmSetTab('paste')"
       style="border:1px solid;border-radius:20px;padding:6px 18px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#64748b;">
-      📋 Coller texte
+      Coller texte
     </button>
     <button id="tabBtnImage" onclick="_ldmSetTab('image')"
       style="border:1px solid;border-radius:20px;padding:6px 18px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#64748b;">
-      🖼️ Image
+      Image
     </button>
     <button id="tabBtnArchive" onclick="_ldmSetTab('archive')"
       style="border:1px solid;border-radius:20px;padding:6px 18px;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.12);color:#64748b;">
-      📁 Archives
+      Archives
     </button>
   </div>
 
   <!-- TAB: COLLER TEXTE -->
   <div id="tabPaste" style="display:none;margin-bottom:16px;">
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;">
-      <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:10px;">📋 Coller un LDM ou MVT</div>
+      <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:10px;">Coller un LDM ou MVT</div>
       <textarea id="ldmPasteArea" rows="10"
         style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:#e2e8f0;font-size:12px;font-family:monospace;resize:vertical;box-sizing:border-box;"></textarea>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button onclick="_ldmParsePaste()"
           style="background:rgba(129,140,248,0.15);border:1px solid rgba(129,140,248,0.3);color:#818cf8;border-radius:7px;padding:7px 18px;font-size:13px;font-weight:700;cursor:pointer;">
-          🔍 Analyser
+          Analyser
         </button>
         <button onclick="document.getElementById('ldmPasteArea').value='';document.getElementById('pasteResult').style.display='none'"
           style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#64748b;border-radius:7px;padding:7px 14px;font-size:12px;cursor:pointer;">
-          🗑 Effacer
+          ✕ Effacer
         </button>
       </div>
       <div id="pasteResult" style="display:none;margin-top:12px;"></div>
@@ -597,11 +597,11 @@ document.addEventListener('keydown', e => {
       <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid rgba(212,175,55,0.2);padding-bottom:10px;">
         <button id="archSubBtnList" onclick="switchArchSub('list')"
           style="border:none;background:rgba(212,175,55,0.15);color:#D4AF37;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;">
-          📋 Archives
+          Archives
         </button>
         <button id="archSubBtnConfig" onclick="switchArchSub('config')"
           style="border:none;background:rgba(255,255,255,0.05);color:#64748b;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;">
-          ⚙️ Config paires DEP/ARR
+          Config paires DEP/ARR
         </button>
       </div>
 
@@ -609,7 +609,7 @@ document.addEventListener('keydown', e => {
       <div id="archSubList">
       <!-- Filtres archives -->
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
-        <span style="font-size:13px;font-weight:700;color:#D4AF37;">📁 Archives LDM/MVT</span>
+        <span style="font-size:13px;font-weight:700;color:#D4AF37;">Archives LDM/MVT</span>
         <select id="archMonthFilter" onchange="loadArchives()"
           style="background:#1e293b;border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:12px;">
           <option value="ALL">Tous les mois</option>
@@ -626,14 +626,14 @@ document.addEventListener('keydown', e => {
           style="background:#1e293b;border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:12px;min-width:160px;">
           <option value="ALL">Toutes compagnies</option>
         </select>
-        <button onclick="generateMissingArchives()" style="background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.4);color:#00c98d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;" title="Génère les archives pour les vols déjà dans le système">⚡ Générer manquants</button>
-        <button onclick="exportArchivesPDF()" style="background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.4);color:#60a5fa;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">📄 Exporter PDF</button>
+        <button onclick="generateMissingArchives()" style="background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.4);color:#00c98d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;" title="Génère les archives pour les vols déjà dans le système">Générer manquants</button>
+        <button onclick="exportArchivesPDF()" style="background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.4);color:#60a5fa;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">Exporter PDF</button>
       </div>
 
       <!-- Stats archives -->
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
         <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.2);border-radius:8px;padding:8px 14px;font-size:12px;">
-          📋 Total : <strong id="archStatTotal" style="color:#D4AF37;">0</strong>
+          Total : <strong id="archStatTotal" style="color:#D4AF37;">0</strong>
         </div>
         <div style="background:rgba(0,201,141,0.08);border:1px solid rgba(0,201,141,0.2);border-radius:8px;padding:8px 14px;font-size:12px;">
           LDM : <strong id="archStatLDM" style="color:#00c98d;">0</strong>
@@ -652,7 +652,7 @@ document.addEventListener('keydown', e => {
       <!-- PANEL CONFIG PAIRES DEP/ARR -->
       <div id="archSubConfig" style="display:none;">
         <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-          <span style="font-size:13px;font-weight:700;color:#D4AF37;">⚙️ Configuration des paires DEP / ARR</span>
+          <span style="font-size:13px;font-weight:700;color:#D4AF37;">Configuration des paires DEP / ARR</span>
           <button onclick="showAddPairForm()" style="background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.4);color:#00c98d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Ajouter une paire</button>
         </div>
 
@@ -679,7 +679,7 @@ document.addEventListener('keydown', e => {
               </select>
             </div>
             <div style="display:flex;gap:6px;">
-              <button onclick="savePair()" style="background:rgba(212,175,55,0.2);border:1px solid rgba(212,175,55,0.5);color:#D4AF37;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">💾 Sauver</button>
+              <button onclick="savePair()" style="background:rgba(212,175,55,0.2);border:1px solid rgba(212,175,55,0.5);color:#D4AF37;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Sauver</button>
               <button onclick="cancelPairForm()" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#64748b;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">✕</button>
             </div>
           </div>
@@ -697,9 +697,9 @@ document.addEventListener('keydown', e => {
 
   <div id="tabImage" style="display:none;margin-bottom:16px;">
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;">
-      <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:10px;">🖼️ Importer une image LDM/MVT</div>
+      <div style="font-size:13px;font-weight:700;color:#818cf8;margin-bottom:10px;">Importer une image LDM/MVT</div>
       <label style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;background:rgba(129,140,248,0.12);border:1px solid rgba(129,140,248,0.3);border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;color:#818cf8;">
-        📎 Choisir une image
+        Choisir une image
         <input type="file" id="ldmImageFile" accept="image/*" style="display:none;" onchange="_ldmParseImage(this)">
       </label>
       <span id="ldmImageName" style="font-size:12px;color:#64748b;margin-left:10px;">Aucune image sélectionnée</span>
@@ -726,8 +726,8 @@ document.addEventListener('keydown', e => {
     </div>
     <div class="status-right">
       <span class="mono" id="sLast"></span>
-      <button class="btn btn-outline btn-sm" onclick="clearAll()">🗑 Effacer</button>
-      <button class="btn btn-gold btn-sm" id="readBtn" onclick="readEmails()" disabled>📨 Lire emails</button>
+      <button class="btn btn-outline btn-sm" onclick="clearAll()">✕ Effacer</button>
+      <button class="btn btn-gold btn-sm" id="readBtn" onclick="readEmails()" disabled>Lire emails</button>
     </div>
   </div>
 
@@ -753,7 +753,7 @@ document.addEventListener('keydown', e => {
   <div class="sec-title">Emails LDM/MVT <span class="sec-badge" id="eCount">0</span></div>
   <div class="email-list" id="emailList">
     <div class="empty">
-      <div class="ico">📭</div>
+      <div class="ico"></div>
       <h3>Aucun email chargé</h3>
       
     </div>
@@ -1019,7 +1019,7 @@ window._ldmParseImage = async function(input) {
         const mi2 = window._manualEntries.length;
         window._manualEntries.push(result);
         resultDiv.innerHTML =
-            '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:11px;color:#475569;padding:4px 0;">📄 Texte extrait par OCR</summary>' +
+            '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:11px;color:#475569;padding:4px 0;">Texte extrait par OCR</summary>' +
             '<pre style="font-size:11px;color:#64748b;white-space:pre-wrap;margin-top:4px;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">' +
             esc(text) + '</pre></details>' +
             _renderManualCard(result, mi2);
@@ -1047,7 +1047,7 @@ function _renderManualCard(em, mi) {
       </div>
       <div class="email-body" id="mbdy-${mi}" style="display:none;">
         <div class="parsed-sec">
-          <div class="parsed-lbl">✦ Données extraites — vérifiez et corrigez si nécessaire</div>
+          <div class="parsed-lbl">Données extraites — vérifiez et corrigez si nécessaire</div>
           <div class="pgrid">
             <div class="pf-auth-wrap">
               <div class="pf" style="flex:1;">
@@ -1055,7 +1055,7 @@ function _renderManualCard(em, mi) {
                 <input id="m${mi}-auth" value="${esc2(p.authorizationNumber||'')}" style="text-transform:uppercase;"
                        onchange="document.getElementById('mauth-badge-'+${mi}).textContent=''">
               </div>
-              <button class="auth-lookup-btn" onclick="lookupAuthNumberManual(${mi})">🔍 Chercher</button>
+              <button class="auth-lookup-btn" onclick="lookupAuthNumberManual(${mi})">Chercher</button>
             </div>
             <div class="pf"><label>N° Vol</label><input id="m${mi}-fn" value="${esc2(p.flightNumber||'')}" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>Immatriculation</label><input id="m${mi}-rg" value="${esc2(p.registration||'')}" oninput="this.value=this.value.toUpperCase()"></div>
@@ -1068,7 +1068,7 @@ function _renderManualCard(em, mi) {
           <div class="act-row" id="mact-${mi}">
             ${imp
               ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>'
-              : `<button class="btn btn-green" onclick="importManualFlight(${mi})">⬆️ Importer dans le système</button>`
+              : `<button class="btn btn-green" onclick="importManualFlight(${mi})">⬆ Importer dans le système</button>`
             }
           </div>
         </div>
@@ -1097,9 +1097,9 @@ async function lookupAuthNumberManual(mi) {
         if (el) { el.value = auth; }
         const badge = document.getElementById('mauth-badge-'+mi);
         if (badge) { badge.textContent = '✓ Trouvé'; badge.className = 'auth-badge found'; }
-        toast('✅ N° autorisation trouvé : '+auth,'ok');
+        toast('N° autorisation trouvé : '+auth,'ok');
     } else {
-        toast('⚠️ Aucun N° autorisation trouvé pour '+fn+' le '+dt,'warn');
+        toast('Aucun N° autorisation trouvé pour '+fn+' le '+dt,'warn');
     }
 }
 
@@ -1115,12 +1115,12 @@ async function importManualFlight(mi, force) {
     const bb  = parseInt((document.getElementById('m'+mi+'-bb')||{value:'0'}).value)||0;
     const auth= (document.getElementById('m'+mi+'-auth')||{value:''}).value.trim().toUpperCase();
 
-    if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires','warn'); return; }
+    if (!fn || !dt) { toast('N° vol et date obligatoires','warn'); return; }
 
     const fp = fn+'|'+dt+'|'+rg;
     if (!force && _fbImported && _fbImported.has(fp)) {
         document.getElementById('mact-'+mi).innerHTML =
-            '<div class="dup-box">⚠️ Ce vol ('+fn+' du '+dt+') existe déjà dans Firebase.</div>' +
+            '<div class="dup-box">Ce vol ('+fn+' du '+dt+') existe déjà dans Firebase.</div>' +
             '<button class="btn btn-outline btn-sm" onclick="importManualFlight('+mi+',true)">Forcer l\'import quand même</button>';
         return;
     }
@@ -1173,11 +1173,11 @@ async function importManualFlight(mi, force) {
             badge.className='st-badge st-ok'; badge.textContent='✓ Importé';
             hdr.insertBefore(badge, document.getElementById('marr-'+mi));
         }
-        toast('✅ Vol '+fn+' importé avec succès','ok');
+        toast('Vol '+fn+' importé avec succès','ok');
     } catch(e) {
         console.error(e);
-        toast('❌ Erreur import : '+e.message,'err');
-        if (btn) { btn.disabled=false; btn.innerHTML='⬆️ Importer dans le système'; }
+        toast('Erreur import : '+e.message,'err');
+        if (btn) { btn.disabled=false; btn.innerHTML='⬆ Importer dans le système'; }
     }
 }
 
@@ -1192,7 +1192,7 @@ function _renderSingleResult(em) {
     const typeBadge = p.type
         ? `<span style="background:${p.type==='DEP'?'rgba(52,211,153,0.15)':'rgba(251,191,36,0.15)'};color:${p.type==='DEP'?'#34d399':'#fbbf24'};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700;">${p.type}</span>` : '';
     const authBadge = p.authorizationNumber
-        ? `<span style="background:rgba(212,175,55,0.12);color:#D4AF37;border:1px solid rgba(212,175,55,0.25);border-radius:4px;padding:2px 8px;font-size:11px;">🔑 ${esc2(p.authorizationNumber)}</span>` : '';
+        ? `<span style="background:rgba(212,175,55,0.12);color:#D4AF37;border:1px solid rgba(212,175,55,0.25);border-radius:4px;padding:2px 8px;font-size:11px;">${esc2(p.authorizationNumber)}</span>` : '';
 
     return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
@@ -1221,7 +1221,7 @@ function _renderSingleResult(em) {
                 <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">Fuel</div>
                 <strong style="color:#fbbf24;">${p.fuel}</strong></div>` : ''}
         </div>
-        <details><summary style="cursor:pointer;font-size:11px;color:#475569;padding:3px 0;">📄 Texte brut</summary>
+        <details><summary style="cursor:pointer;font-size:11px;color:#475569;padding:3px 0;">Texte brut</summary>
             <pre style="font-size:10px;color:#475569;white-space:pre-wrap;margin-top:4px;max-height:120px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">${esc2(em.rawText||'')}</pre>
         </details>
     </div>`;
@@ -1397,14 +1397,14 @@ async function _loadFlightNumMap() {
         };
       });
       _flightNumMap = map;
-      console.log('✅ flight_numbers chargés :', Object.keys(map).length, 'numéros (tentative '+attempt+')');
+      console.log('flight_numbers chargés :', Object.keys(map).length, 'numéros (tentative '+attempt+')');
       return _flightNumMap;
     } catch (e) {
       console.warn('flight_numbers tentative '+attempt+' échouée :', e && e.message);
       await new Promise(r => setTimeout(r, 600)); // attendre puis réessayer
     }
   }
-  console.error('❌ Impossible de charger flight_numbers après plusieurs tentatives.');
+  console.error('Impossible de charger flight_numbers après plusieurs tentatives.');
   _flightNumMap = null;
   return {};
 }
@@ -1476,7 +1476,7 @@ async function dedupAndEnrich(list) {
     }
   }
   if (_notFound.length) {
-    console.warn('⚠️ Numéros de vol ABSENTS de la liste (destination NON corrigée) : ' + [...new Set(_notFound)].join(', '));
+    console.warn('Numéros de vol ABSENTS de la liste (destination NON corrigée) : ' + [...new Set(_notFound)].join(', '));
     console.warn('→ Ajoutez ces numéros dans Admin → Numéros de Vol pour que leur destination soit correcte.');
   }
   return result;
@@ -1538,7 +1538,7 @@ window.ignoreEmail = async function(i) {
   renderEmails();
   updateStats();
   saveIgnored();
-  toast('📭 Email masqué (ignoré)','ok');
+  toast('Email masqué (ignoré)','ok');
 };
 
 // Réafficher tous les emails ignorés (annuler tous les masquages).
@@ -1549,11 +1549,11 @@ window.restoreIgnored = async function() {
   renderEmails();
   updateStats();
   saveIgnored();
-  toast('↩️ Emails ignorés réaffichés','ok');
+  toast('↩ Emails ignorés réaffichés','ok');
 };
 
 // Cache: N° vol → authorizationNumber (dernier connu dans Firebase)
-// ⚠️ Conservé pour compat mais N'EST PLUS ALIMENTÉ : réutiliser le numéro
+// Conservé pour compat mais N'EST PLUS ALIMENTÉ : réutiliser le numéro
 //    d'un autre vol créait des doublons d'autorisation.
 const _authByFlight = {};
 // Numéros d'autorisation déjà utilisés : "SNA26-XXXX" → {fn, date}
@@ -1659,7 +1659,7 @@ function signIn() {
     client_id: CLIENT_ID,
     scope: SCOPES,
     callback: (resp) => {
-      if (resp.error) { toast('❌ Erreur connexion: '+resp.error,'err'); return; }
+      if (resp.error) { toast('Erreur connexion: '+resp.error,'err'); return; }
       accessToken = resp.access_token;
       onSignedIn();
     }
@@ -1676,7 +1676,7 @@ function onSignedIn() {
   `;
   document.getElementById('readBtn').disabled = false;
   setStatus('active','Gmail connecté — prêt à lire les emails');
-  toast('✅ Gmail connecté avec succès','ok');
+  toast('Gmail connecté avec succès','ok');
 }
 
 function signOut() {
@@ -1684,7 +1684,7 @@ function signOut() {
     accessToken = null;
     document.getElementById('authDot').className = 'dot';
     document.getElementById('authTxt').textContent = 'Non connecté';
-    document.getElementById('authActions').innerHTML = `<button class="btn btn-gold" onclick="signIn()">🔐 Connecter mon Gmail</button>`;
+    document.getElementById('authActions').innerHTML = `<button class="btn btn-gold" onclick="signIn()">Connecter mon Gmail</button>`;
     document.getElementById('readBtn').disabled = true;
     setStatus('idle','Déconnecté');
     stopAuto();
@@ -1693,7 +1693,7 @@ function signOut() {
 
 // ── READ EMAILS FROM GMAIL API ──
 async function readEmails() {
-  if (!accessToken) { toast('⚠️ Connectez Gmail d\'abord','warn'); return; }
+  if (!accessToken) { toast('Connectez Gmail d\'abord','warn'); return; }
 
   const btn = document.getElementById('readBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Lecture...';
@@ -1738,7 +1738,7 @@ async function readEmails() {
       renderEmails();
       updateStats();
       setStatus('active','Aucun email LDM/MVT trouvé dans les 30 derniers jours');
-      toast('📭 Aucun email trouvé','warn');
+      toast('Aucun email trouvé','warn');
       return;
     }
 
@@ -1781,7 +1781,7 @@ async function readEmails() {
     updateStats();
     const now = new Date().toLocaleTimeString('fr-FR');
     document.getElementById('sLast').textContent = `Dernière vérif. : ${now}`;
-    toast(`✅ ${emails.length} email(s) LDM/MVT trouvé(s) — vérification Firebase...`,'ok');
+    toast(`${emails.length} email(s) LDM/MVT trouvé(s) — vérification Firebase...`,'ok');
 
     // Vérifier dans Firebase quels vols existent VRAIMENT
     try {
@@ -1797,9 +1797,9 @@ async function readEmails() {
   } catch(e) {
     console.error(e);
     setStatus('idle','Erreur : '+e.message);
-    toast('❌ '+e.message,'err');
+    toast(''+e.message,'err');
   } finally {
-    btn.disabled = false; btn.innerHTML = '📨 Lire emails';
+    btn.disabled = false; btn.innerHTML = 'Lire emails';
   }
 }
 
@@ -1810,7 +1810,7 @@ async function fetchEmail(id) {
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     return await r.json();
-  } catch { return null; }
+  } catch(e){ return null; }
 }
 
 function isLDMorMVT(em) {
@@ -1854,7 +1854,7 @@ function parseLDM(em) {
   const upper    = text.toUpperCase();
   const type     = upper.includes('MVT') && !upper.includes('LDM') ? 'MVT' : 'LDM';
   let dateReceived = '';
-  try { dateReceived = new Date(dateHdr).toISOString().split('T')[0]; } catch {}
+  try { dateReceived = new Date(dateHdr).toISOString().split('T')[0]; } catch(e){}
   // Pour les emails, on peut déduire le mois de la date de réception si pas sélectionné
   if (dateReceived && typeof _ldmMonth !== 'undefined') {
       const emailDate = new Date(dateHdr);
@@ -2149,7 +2149,7 @@ function renderEmails() {
   document.getElementById('eCount').textContent = visibleCount;
   if (!emails.length || visibleCount === 0) {
     const extra = _ignored.size ? ` · <a href="#" onclick="restoreIgnored();return false;" style="color:var(--gold);">Réafficher ${_ignored.size} ignoré(s)</a>` : '';
-    list.innerHTML = '<div class="empty"><div class="ico">📭</div><h3>Aucun email LDM/MVT à importer</h3><p>Aucun nouveau message (les vols importés et ignorés sont masqués)'+extra+'</p></div>';
+    list.innerHTML = '<div class="empty"><div class="ico"></div><h3>Aucun email LDM/MVT à importer</h3><p>Aucun nouveau message (les vols importés et ignorés sont masqués)'+extra+'</p></div>';
     return;
   }
   list.innerHTML = emails.map((em, i) => {
@@ -2167,13 +2167,13 @@ function renderEmails() {
         <div class="email-date2">${em.date||'–'}</div>
         ${imp ? '<span class="st-badge st-ok">✓ Importé</span>' : ''}
         <button onclick="event.stopPropagation(); ignoreEmail(${i});" title="Masquer cet email sans l'importer"
-          style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;margin-left:6px;">📭 Ignorer</button>
+          style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;margin-left:6px;">Ignorer</button>
         <span style="color:var(--dim);font-size:16px;margin-left:4px;" id="arr-${i}">▼</span>
       </div>
       <div class="email-body" id="bdy-${i}" style="display:none;">
         ${em.rawText ? `<div class="raw-text">${esc(em.rawText.slice(0,800))}</div>` : ''}
         <div class="parsed-sec">
-          <div class="parsed-lbl">✦ Données extraites — vérifiez et corrigez si nécessaire</div>
+          <div class="parsed-lbl">Données extraites — vérifiez et corrigez si nécessaire</div>
           <div class="pgrid">
             <div class="pf-auth-wrap">
               <div class="pf" style="flex:1;">
@@ -2181,7 +2181,7 @@ function renderEmails() {
                 <input id="p${i}-auth" value="${esc(p.authorizationNumber||'')}" style="text-transform:uppercase;"
                        onchange="document.getElementById('auth-badge-'+${i}).textContent=''">
               </div>
-              <button class="auth-lookup-btn" onclick="lookupAuthNumber(${i})">🔍 Chercher</button>
+              <button class="auth-lookup-btn" onclick="lookupAuthNumber(${i})">Chercher</button>
             </div>
             <div class="pf"><label>N° Vol</label><input id="p${i}-fn" value="${esc(p.flightNumber||'')}" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>Immatriculation</label><input id="p${i}-rg" value="${esc(p.registration||'')}" oninput="this.value=this.value.toUpperCase()"></div>
@@ -2196,7 +2196,7 @@ function renderEmails() {
           <div class="act-row" id="act-${i}">
             ${imp
               ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>'
-              : `<button class="btn btn-green" onclick="importFlight(${i})">⬆️ Importer dans le système</button>`
+              : `<button class="btn btn-green" onclick="importFlight(${i})">⬆ Importer dans le système</button>`
             }
           </div>
         </div>
@@ -2289,7 +2289,7 @@ async function importFlight(i, force) {
   const px  = parseInt(document.getElementById(`p${i}-px`).value) || 0;
   const bb  = parseInt(document.getElementById(`p${i}-bb`).value) || 0;
 
-  if (!fn || !dt) { toast('⚠️ N° vol et date obligatoires','warn'); return; }
+  if (!fn || !dt) { toast('N° vol et date obligatoires','warn'); return; }
 
   // Anti-doublon STRICT : même numéro de vol + même date = INTERDIT (non forçable).
   // (l'immatriculation n'entre pas dans la clé : un vol = un numéro + une date)
@@ -2301,9 +2301,9 @@ async function importFlight(i, force) {
   });
   if (existsStrict) {
     document.getElementById(`act-${i}`).innerHTML = `
-      <div class="dup-box" style="border-color:#ef4444;color:#fca5a5;">⛔ Doublon interdit : un vol ${fn} du ${dt} existe déjà dans le système.</div>
+      <div class="dup-box" style="border-color:#ef4444;color:#fca5a5;">Doublon interdit : un vol ${fn} du ${dt} existe déjà dans le système.</div>
     `;
-    toast('⛔ Doublon interdit : ce vol existe déjà pour cette date','err');
+    toast('Doublon interdit : ce vol existe déjà pour cette date','err');
     return;
   }
   const fp = `${fnNorm}|${dt}|${rg}`;
@@ -2324,8 +2324,8 @@ async function importFlight(i, force) {
     if (_authVal && _fbAuthUsed[_authVal]) {
       const c = _fbAuthUsed[_authVal];
       document.getElementById(`act-${i}`).innerHTML = `
-        <div class="dup-box" style="border-color:#ef4444;color:#fca5a5;">⛔ Le numéro d'autorisation ${_authVal} est déjà utilisé par le vol ${esc(c.fn)} du ${esc(c.date)}. Saisissez le bon numéro avant d'importer.</div>`;
-      toast('⛔ Numéro d\'autorisation déjà utilisé par un autre vol','err');
+        <div class="dup-box" style="border-color:#ef4444;color:#fca5a5;">Le numéro d'autorisation ${_authVal} est déjà utilisé par le vol ${esc(c.fn)} du ${esc(c.date)}. Saisissez le bon numéro avant d'importer.</div>`;
+      toast('Numéro d\'autorisation déjà utilisé par un autre vol','err');
       return;
     }
     // ── Trajet, type et compagnie pris du NUMÉRO DE VOL enregistré (source de vérité) ──
@@ -2367,13 +2367,13 @@ async function importFlight(i, force) {
     updateStats();
     // Masquer le vol importé de la liste (re-render)
     renderEmails();
-    toast(`✅ Vol ${fn} importé avec succès`,'ok');
+    toast(`Vol ${fn} importé avec succès`,'ok');
     return;
 
   } catch(e) {
     console.error(e);
-    toast('❌ Erreur import : '+e.message,'err');
-    if(btn){ btn.disabled=false; btn.innerHTML='⬆️ Importer dans le système'; }
+    toast('Erreur import : '+e.message,'err');
+    if(btn){ btn.disabled=false; btn.innerHTML='⬆ Importer dans le système'; }
   }
 }
 
@@ -2424,7 +2424,7 @@ function toggleAuto() {
   autoOn = !autoOn;
   document.getElementById('autoTrack').classList.toggle('on',autoOn);
   document.getElementById('autoLbl').textContent = autoOn ? 'Activé' : 'Désactivé';
-  if (autoOn) { startAuto(); toast('🔄 Auto-actualisation activée','ok'); }
+  if (autoOn) { startAuto(); toast('Auto-actualisation activée','ok'); }
   else        { stopAuto(); document.getElementById('sNext').textContent=''; }
 }
 function startAuto() {
@@ -2857,18 +2857,18 @@ async function loadArchives() {
       const [yr, mo] = grpKey.split('-');
       html += `<div style="margin-bottom:20px;">
         <div style="font-size:14px;font-weight:800;color:#D4AF37;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(212,175,55,0.2);">
-          📅 ${MONTHS_FR_ARCH[parseInt(mo)]} ${yr}
+          ${MONTHS_FR_ARCH[parseInt(mo)]} ${yr}
         </div>`;
 
       Object.keys(grouped[grpKey]).sort().forEach(co => {
         const items = grouped[grpKey][co];
         html += `<div style="margin-bottom:12px;">
-          <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">✈️ ${co} — ${items.length} message(s)</div>
+          <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">${co} — ${items.length} message(s)</div>
           <div style="display:flex;flex-direction:column;gap:6px;">`;
 
         items.forEach(a => {
           const typeColor = a.type === 'LDM' ? '#00c98d' : '#60a5fa';
-          const srcBadge  = a.source === 'GENERATED' ? '⚡ Généré' : (a.source === 'EMAIL' ? '📨 Email' : (a.source === 'IMAGE' ? '🖼️ Image' : '📋 Collé'));
+          const srcBadge  = a.source === 'GENERATED' ? 'Généré' : (a.source === 'EMAIL' ? 'Email' : (a.source === 'IMAGE' ? 'Image' : 'Collé'));
           html += `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;"
             onclick="toggleArchiveDetail('${a.id}')"
             onmouseover="this.style.background='rgba(255,255,255,0.06)'"
@@ -2891,11 +2891,11 @@ async function loadArchives() {
               <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
                 <button onclick="event.stopPropagation();exportSinglePDF('${a.id}')"
                   style="background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.4);color:#60a5fa;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">
-                  📄 PDF
+                  PDF
                 </button>
                 <button onclick="event.stopPropagation();deleteArchive('${a.id}')"
                   style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;">
-                  🗑️ Supprimer
+                  ✕ Supprimer
                 </button>
               </div>
             </div>
@@ -3143,13 +3143,13 @@ async function generateMissingArchives() {
     });
 
     await Promise.all(promises);
-    toast(`✅ ${generated} archive(s) générée(s) automatiquement`,'ok');
+    toast(`${generated} archive(s) générée(s) automatiquement`,'ok');
     await loadArchives();
   } catch(e) {
     toast('Erreur génération: '+e.message,'err');
     console.error(e);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '⚡ Générer manquants'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Générer manquants'; }
   }
 }
 
@@ -3201,8 +3201,8 @@ async function loadPairs() {
         <span style="font-size:11px;color:#00c98d;">ARR</span>
         <span style="font-size:13px;font-weight:800;color:#00c98d;">${p.arr ? esc(p.arr) : '<em style="color:#475569;font-weight:400;">solo</em>'}</span>
         <div style="margin-left:auto;display:flex;gap:6px;">
-          <button onclick="editPair('${p.id}')" style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.3);color:#D4AF37;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✏️ Modifier</button>
-          <button onclick="deletePair('${p.id}')" style="background:rgba(229,62,62,0.08);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">🗑️</button>
+          <button onclick="editPair('${p.id}')" style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.3);color:#D4AF37;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✎ Modifier</button>
+          <button onclick="deletePair('${p.id}')" style="background:rgba(229,62,62,0.08);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✕</button>
         </div>
       </div>`).join('');
   } catch(e) {
