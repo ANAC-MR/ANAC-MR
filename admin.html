@@ -1740,7 +1740,7 @@ document.addEventListener('keydown', e => {
                     <span id="volLockBadge" class="unlocked-badge">Libre</span>
                     <button type="button" id="btnImportProg" onclick="importFromProgramme()"
                         style="margin-left:auto;padding:5px 14px;border-radius:7px;border:1.5px solid #2B5A8E;
-                               background:transparent;color:#60a5fa;font-size:12px;font-weight:700;cursor:pointer;
+                               background:transparent;color:#2b5a8e;font-size:12px;font-weight:700;cursor:pointer;
                                display:flex;align-items:center;gap:6px;border-color:#2B5A8E;transition:all 0.2s;">
                         Importer depuis Programme de Vols
                     </button>
@@ -3091,7 +3091,7 @@ function renderFlightNums(list) {
             +'<td>'+tdTo+'</td>'
             +'<td>'+tdStop+'</td>'
             +'<td style="text-align:right;display:flex;gap:6px;justify-content:flex-end;">'
-            +'<button onclick="editFlightNum(&quot;'+fn.id+'&quot;)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✎</button>'
+            +'<button onclick="editFlightNum(&quot;'+fn.id+'&quot;)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#2b5a8e;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✎</button>'
             +'<button onclick="deleteFlightNum(&quot;'+fn.id+'&quot;,&quot;'+fn.number+'&quot;)" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#b3362b;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">✕</button>'
             +'</td></tr>';
         }).join('')+
@@ -3516,7 +3516,7 @@ function renderProgrammeByCompany() {
             const rowBg = cancelled ? 'rgba(251,191,36,0.08)' : bg;
             const rowIc = cancelled ? '' : ic;
             const cancelBtn = '<button data-rid="'+rid+'" data-cancelled="'+(cancelled?'1':'0')+'" onclick="_toggleCancelVol(this.dataset.rid,this.dataset.cancelled)" title="'+(cancelled?'Réactiver':'Marquer annulé')+'" style="background:'+(cancelled?'rgba(251,191,36,0.2)':'rgba(251,191,36,0.07)')+';border:1px solid rgba(251,191,36,'+(cancelled?'0.5':'0.2')+');color:#a05a12;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;margin-right:4px;">'+(cancelled?'↩':'')+'</button>';
-            const saisirBtn = (ok||cancelled)?'':'<button data-rid="'+rid+'" onclick="_saisirVol(this.dataset.rid)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✎ Saisir</button>';
+            const saisirBtn = (ok||cancelled)?'':'<button data-rid="'+rid+'" onclick="_saisirVol(this.dataset.rid)" style="background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);color:#2b5a8e;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✎ Saisir</button>';
             const delBtn = '<button data-rid="'+rid+'" onclick="_deleteOneVol(this.dataset.rid)" style="background:rgba(229,62,62,0.10);border:1px solid rgba(229,62,62,0.25);color:#b3362b;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">✕</button>';
             return `<tr style="background:${rowBg};${cancelled?'opacity:0.75;':''}" >
                 <td>${rowIc} <strong style="color:${cancelled?'#a05a12':ac};font-size:12px;font-family:monospace;${cancelled?'text-decoration:line-through;':''}">${esc(r.auth||'—')}</strong></td>
@@ -3850,7 +3850,7 @@ window.parseProgFile = async function(input) {
     const file = input.files[0];
     if (!file) return;
     const status = document.getElementById('impStatus');
-    status.style.color = '#60a5fa';
+    status.style.color = '#2b5a8e';
     status.textContent = 'Lecture du fichier...';
     try {
         const ext = file.name.split('.').pop().toLowerCase();
@@ -3868,7 +3868,7 @@ window.parseProgFile = async function(input) {
 
 async function parseExcelFile(file) {
     const status = document.getElementById('impStatus');
-    status.style.color = '#60a5fa';
+    status.style.color = '#2b5a8e';
     status.textContent = 'Lecture du fichier...';
 
     // Charger SheetJS si pas encore disponible
@@ -4184,7 +4184,7 @@ window._applyMapping = function() {
         const sample   = parsed[0] ? ' · Ex: '+parsed[0].auth+' | '+parsed[0].vol+' | '+parsed[0].date : '';
         res.innerHTML =
             '<span style="color:#34d399;font-weight:700;">'+parsed.length+' lignes</span>'+
-            ' · <span style="color:#60a5fa;">'+withVol+' vols</span>'+
+            ' · <span style="color:#2b5a8e;">'+withVol+' vols</span>'+
             ' · <span style="color:#8a6d1d;">'+withAuth+' auth</span>'+
             ' · <span style="color:#3d5a80;">'+withDate+' dates</span>'+
             '<span style="color:#475569;font-size:11px;">'+sample+'</span>';
@@ -4235,7 +4235,7 @@ window.saveProgImport = async function() {
     if (!first||!last) { showNotif('Entrez le premier et dernier N° autorisation (plage 1)','error'); return; }
     const range = buildAuthRangeFull(first, last, first2, last2);
     if (!range) { showNotif('Format invalide — ex: SNA25-0001. Vérifiez que chaque plage a le même préfixe SNA','error'); return; }
-    status.style.color='#60a5fa'; status.textContent='Enregistrement...';
+    status.style.color='#2b5a8e'; status.textContent='Enregistrement...';
     try {
         const parsedRows = window._parsedProgRows || [];
         const authMap = {};
@@ -4578,7 +4578,7 @@ window._chgApplyMap = async function() {
     const withVol  = _chgParsed.filter(r=>r.vol).length;
     document.getElementById('chgMapStats').innerHTML =
         `<span style="color:#34d399;font-weight:700;">${_chgParsed.length} lignes</span> · ` +
-        `<span style="color:#60a5fa;">${withVol} avec N° vol</span> · ` +
+        `<span style="color:#2b5a8e;">${withVol} avec N° vol</span> · ` +
         `<span style="color:#3d5a80;">${withDate} avec date</span>`;
 
     if (_chgParsed.length > 0) await _chgEnrich();
@@ -4590,7 +4590,7 @@ async function _chgEnrich() {
     if (!db || !_chgParsed.length) return;
 
     const statEl = document.getElementById('chgMapStats');
-    if (statEl) statEl.innerHTML += ' &nbsp;<span style="color:#60a5fa;">Chargement...</span>';
+    if (statEl) statEl.innerHTML += ' &nbsp;<span style="color:#2b5a8e;">Chargement...</span>';
 
     const { getDocs, collection, getDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     const [snapProg, snapFN, snapFlights, snapAirlines] = await Promise.all([
@@ -4743,7 +4743,7 @@ function _chgRenderEnriched() {
 
         return `<tr style="background:${bg};" data-ci="${i}">
             <td style="padding:5px 8px;font-size:13px;">${ic}</td>
-            <td style="color:#60a5fa;padding:5px 8px;white-space:nowrap;">${esc(r.date||'—')}</td>
+            <td style="color:#2b5a8e;padding:5px 8px;white-space:nowrap;">${esc(r.date||'—')}</td>
             <td style="color:#1b2430;padding:5px 8px;font-weight:600;">${esc(r.vol||'—')}</td>
             ${inp('auth', r.auth, '#D4AF37', '100px')}
             ${inp('company', r.company, '#94a3b8', '60px')}
@@ -5156,10 +5156,10 @@ window._schedRender = function() {
                 <td style="padding:10px 14px;">
                     ${_schedDaysHtml(s.days||'-------')}
                 </td>
-                <td style="padding:10px 14px;font-family:monospace;font-size:12px;color:#60a5fa;">${esc(s.routing||'—')}</td>
+                <td style="padding:10px 14px;font-family:monospace;font-size:12px;color:#2b5a8e;">${esc(s.routing||'—')}</td>
                 <td style="padding:10px 14px;font-size:11px;color:#5a6572;">${esc(period)}</td>
                 <td style="padding:10px 14px;white-space:nowrap;">
-                    <button onclick="_schedEdit('${s.id}')" style="background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.25);color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✎</button>
+                    <button onclick="_schedEdit('${s.id}')" style="background:rgba(37,99,235,0.12);border:1px solid rgba(37,99,235,0.25);color:#2b5a8e;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;margin-right:4px;">✎</button>
                     <button onclick="_schedDelete('${s.id}')" style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.22);color:#b3362b;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">✕</button>
                 </td>
             </tr>`;
@@ -5405,7 +5405,7 @@ async function _secLoadUsers() {
       return;
     }
     const roleLabels = { admin:'Administrateur', operator:'Opérateur', reader:'Lecteur', custom:'Personnalisé' };
-    const roleColors = { admin:'#D4AF37', operator:'#60a5fa', reader:'#94a3b8', custom:'#a78bfa' };
+    const roleColors = { admin:'#D4AF37', operator:'#2b5a8e', reader:'#94a3b8', custom:'#a78bfa' };
     let html = '<div style="display:grid;grid-template-columns:1fr;gap:8px;">';
     _secAllUsers.forEach(u => {
       const role = u.role || 'custom';
@@ -5424,7 +5424,7 @@ async function _secLoadUsers() {
             <div style="font-size:11px;color:#5a6572;">Dernière connexion : ${lastLogin}</div>
           </div>
           <div style="display:flex;gap:6px;">
-            <button onclick="_secEditUser('${u.id}')" style="padding:7px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);color:#60a5fa;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✎ Modifier</button>
+            <button onclick="_secEditUser('${u.id}')" style="padding:7px 12px;background:rgba(96,165,250,0.15);border:1px solid rgba(96,165,250,0.3);color:#2b5a8e;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✎ Modifier</button>
             <button onclick="_secToggleDisable('${u.id}')" style="padding:7px 12px;background:#f4ecd7;border:1px solid rgba(212,175,55,0.3);color:#8a6d1d;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">${u.disabled?'Réactiver':'Désactiver'}</button>
             <button onclick="_secDeleteUser('${u.id}','${u.username}')" style="padding:7px 12px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#b3362b;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">✕</button>
           </div>
