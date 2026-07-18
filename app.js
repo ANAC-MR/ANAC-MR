@@ -682,6 +682,8 @@ function openModal(flightId = null) {
                     if (elements.hasStopover) elements.hasStopover.checked = hasStop;
                     if (elements.fStopover) elements.fStopover.value = stopCode;
                     if (typeof updateMidLegRow === 'function') updateMidLegRow();
+                    // Règle du numéro de vol : verrouille (ou interdit) l'escale
+                    if (window.syncEscaleFromFlightNumber) syncEscaleFromFlightNumber();
                 }, 450);
 
                 elements.fAuthNumber.focus();
@@ -751,6 +753,11 @@ function handleModalBackdropClick(event) {
 function resetForm() {
     elements.flightForm.reset();
     clearValidationErrors();
+    // Ré-activer les contrôles d'escale (ils peuvent avoir été verrouillés
+    // par la règle du numéro de vol) pour le prochain vol saisi.
+    const hs = document.getElementById('hasStopover');
+    if (hs) hs.disabled = false;
+    if (elements.fStopover) elements.fStopover.disabled = false;
 }
 
 // ============================================
@@ -949,6 +956,7 @@ async function updateVolField(company, forceEmpty = false) {
                 fVol.value = sel.value;
                 // Vider auth pour recalcul
                 if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
+                syncEscaleFromFlightNumber();   // règle d'escale immédiate
                 autoFillFromFlightNumber(sel.value);
                 setTimeout(autoFillAuth, 200);
             });
@@ -1063,7 +1071,54 @@ async function autoFillFromFlightNumber(flightNum) {
         // Toujours tenter l'auto-fill du numéro d'autorisation
         await autoFillAuth();
     } catch(e) { console.warn('autoFill flight_numbers:', e.message); }
+    // Appliquer la règle d'escale du numéro de vol (verrouillage)
+    syncEscaleFromFlightNumber();
 }
+
+// ── Règle métier : l'escale est déterminée par le NUMÉRO DE VOL (admin) ──
+//   • Numéro avec escale   → case cochée + aéroport imposé, les deux VERROUILLÉS.
+//   • Numéro sans escale   → escale impossible (case décochée et verrouillée).
+//   • Numéro inconnu admin → mode manuel (liberté, comportement historique).
+function syncEscaleFromFlightNumber() {
+    const hasStopEl = document.getElementById('hasStopover');
+    const stopSel   = elements.fStopover;
+    const stopGroup = document.getElementById('stopoverGroup');
+    if (!hasStopEl || !stopSel) return;
+    const fnRaw = (document.getElementById('fVolSelect') && document.getElementById('fVolSelect').value) ||
+                  (elements.fVol && elements.fVol.value) || '';
+    const fn = normFN(fnRaw);
+    const info = (fn && window._flightNumCache) ? window._flightNumCache[fn] : null;
+    if (!info) {
+        // Numéro absent de l'admin → l'utilisateur garde la main
+        hasStopEl.disabled = false;
+        stopSel.disabled = false;
+        return;
+    }
+    if (info.stopover) {
+        // Escale définie par le numéro → imposée et verrouillée
+        let sc = info.stopover;
+        if (adminConfig && adminConfig.airports) {
+            const ap = adminConfig.airports.find(a => a.iata === sc || a.icao === sc);
+            if (ap && ap.icao) sc = ap.icao;
+        }
+        hasStopEl.checked = true;
+        hasStopEl.disabled = true;
+        stopSel.value = sc;
+        stopSel.disabled = true;
+        if (stopGroup) stopGroup.style.display = '';
+    } else {
+        // Numéro sans escale → ajout d'escale impossible
+        hasStopEl.checked = false;
+        hasStopEl.disabled = true;
+        stopSel.value = '';
+        stopSel.disabled = true;
+        if (stopGroup) stopGroup.style.display = 'none';
+    }
+    if (typeof updateMidLegRow === 'function') updateMidLegRow();
+    if (typeof updateEscaleTotals === 'function') updateEscaleTotals();
+};
+
+window.syncEscaleFromFlightNumber = syncEscaleFromFlightNumber;
 
 function updateFlightNumberPrefix(isAddMode = false) {
     const company = elements.fCompany.value;
@@ -1099,6 +1154,7 @@ function updateFlightNumberPrefix(isAddMode = false) {
             // Vider auth immédiatement
             if (elements.fAuthNumber) { elements.fAuthNumber.value = ''; elements.fAuthNumber.style.borderColor = ''; }
             _autoFillTimer = setTimeout(async () => {
+                syncEscaleFromFlightNumber();   // règle d'escale (même si numéro court)
                 await autoFillFromFlightNumber(fv.value.trim());
                 await autoFillAuth();
             }, 600);
