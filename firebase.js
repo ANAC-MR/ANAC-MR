@@ -300,10 +300,10 @@ async function deleteFlightFromFirestore(flightId) {
     try {
         const flightRef = doc(db, 'flights', flightId.trim());
         await deleteDoc(flightRef);
-        console.log('✅ Flight successfully deleted from Firebase:', flightId);
+        console.log('Flight successfully deleted from Firebase:', flightId);
         return true;
     } catch (error) {
-        console.error('❌ Error deleting flight from Firebase:');
+        console.error('Error deleting flight from Firebase:');
         console.error('  - error.code:', error.code);
         console.error('  - error.message:', error.message);
         console.error('  - flightId:', flightId);
@@ -492,7 +492,7 @@ function _showQuotaBanner() {
     const banner = document.createElement('div');
     banner.id = '_quotaBanner';
     banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-size:13px;font-weight:700;padding:10px 20px;text-align:center;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,0.4)';
-    banner.innerHTML = '⚠️ QUOTA FIREBASE DÉPASSÉ — Les opérations sont bloquées. Attendez minuit (UTC) ou vérifiez votre plan Firebase.'
+    banner.innerHTML = 'QUOTA FIREBASE DÉPASSÉ — Les opérations sont bloquées. Attendez minuit (UTC) ou vérifiez votre plan Firebase.'
         + '<button onclick="document.getElementById(\'_quotaBanner\').remove();sessionStorage.removeItem(\'_quotaExceeded\')" '
         + 'style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;">✕ Fermer</button>';
     document.body.prepend(banner);
