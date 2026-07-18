@@ -176,7 +176,7 @@ async function callFn(name, data) {
 // ── Session locale ───────────────────────────────────────────────
 export function getSession() {
   try { return JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)); }
-  catch { return null; }
+  catch(e){ return null; }
 }
 export function saveSession(data) {
   sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({ ...data, ts: Date.now() }));
@@ -415,7 +415,7 @@ export function showNoPermissionScreen() {
                 background:linear-gradient(135deg,#0F1E3D,#1A3A6B);z-index:99999;font-family:-apple-system,'Segoe UI',sans-serif;">
       <div style="background:#fff;border-radius:18px;padding:48px 40px;max-width:440px;width:90%;text-align:center;
                   box-shadow:0 30px 80px rgba(0,0,0,0.4);">
-        <div style="font-size:60px;margin-bottom:18px;">🔒</div>
+        <div style="font-size:60px;margin-bottom:18px;"></div>
         <h2 style="color:#0F1E3D;font-size:22px;font-weight:700;margin:0 0 10px;">Accès refusé</h2>
         <p style="color:#64748b;font-size:14px;line-height:1.6;margin:0 0 28px;">
           Vous n'avez pas la permission d'accéder à cette page. Contactez l'administrateur si vous pensez qu'il s'agit d'une erreur.
@@ -612,12 +612,12 @@ export async function getActivityLog({ limit = 200, since = null } = {}) {
 }
 
 export const ACTION_LABELS = {
-  'login_success':  '🔓 Connexion réussie',
-  'login_failed':   '⛔ Échec de connexion',
-  'logout':         '🚪 Déconnexion',
-  'add_flight':     '➕ Ajout vol',
-  'edit_flight':    '✏️ Modification vol',
-  'delete_flight':  '🗑️ Suppression vol',
+  'login_success':  'Connexion réussie',
+  'login_failed':   'Échec de connexion',
+  'logout':         'Déconnexion',
+  'add_flight':     'Ajout vol',
+  'edit_flight':    '✎ Modification vol',
+  'delete_flight':  '✕ Suppression vol',
 };
 
 // ── Exposition globale ───────────────────────────────────────────
