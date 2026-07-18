@@ -631,6 +631,28 @@ function getFlightSegments(flight){
   ];
 }
 
+// ── Diagnostic : lister les vols qui génèrent un tronçon entre deux villes ──
+// Usage console : _maDiag('Casablanca','Nouadhibou')
+window._maDiag = function(cityA, cityB){
+  const A = (cityA||'').toLowerCase(), B = (cityB||'').toLowerCase();
+  const hits = [];
+  (allFlights||[]).forEach(f => {
+    if (!isMauritanieAirlines(f.company)) return;
+    getFlightSegments(f).forEach(seg => {
+      const c1 = cityName(seg.from).toLowerCase(), c2 = cityName(seg.to).toLowerCase();
+      if ((c1.includes(A)&&c2.includes(B)) || (c1.includes(B)&&c2.includes(A))) {
+        hits.push({ vol:f.flightNumber, date:f.date, from:f.from, to:f.to,
+          hasStopover:f.hasStopover, stopover:f.stopover||'',
+          escaleHeriteeDuNumero: (!f.stopover && f.hasStopover===undefined && window._maFN && window._maFN[_maNormFN(f.flightNumber||'')] && window._maFN[_maNormFN(f.flightNumber||'')].stopover) || '',
+          segment: seg.from+' → '+seg.to });
+      }
+    });
+  });
+  console.table(hits);
+  console.log(hits.length + ' vol(s) génèrent un tronçon ' + cityA + ' ↔ ' + cityB);
+  return hits;
+};
+
 // ══════════════════════════════════════════════════════════════════
 // CONSTRUCTION DU TABLEAU CROISÉ
 // ══════════════════════════════════════════════════════════════════
@@ -1010,8 +1032,15 @@ window.exportXLSX = function(){
   if (!showPax && !showNb) { alert('Cochez au moins "Passagers" ou "Nombre de vols".'); return; }
 
   const wb = XLSX.utils.book_new();
+  // Exporter UNIQUEMENT l'année appliquée dans le filtre (currentYear),
+  // et non toutes les années — c'était la cause du « 2025 seulement ».
   const maFlights = allFlights.filter(f => isMauritanieAirlines(f.company) && f.date);
-  const years = [...new Set(maFlights.map(f => new Date(f.date).getFullYear()))].sort((a,b) => a-b);
+  let years;
+  if (typeof currentYear !== 'undefined' && currentYear) {
+    years = [currentYear];
+  } else {
+    years = [...new Set(maFlights.map(f => new Date(f.date).getFullYear()))].sort((a,b) => a-b);
+  }
   if (!years.length) years.push(new Date().getFullYear());
 
   years.forEach(year => {
@@ -1104,7 +1133,7 @@ window.exportXLSX = function(){
     XLSX.utils.book_append_sheet(wb, ws, String(year));
   });
 
-  XLSX.writeFile(wb, 'Mauritanie-Airlines-PAX-Destinations.xlsx');
+  XLSX.writeFile(wb, 'Mauritanie-Airlines-PAX-Destinations-' + years.join('-') + '.xlsx');
 };
 
 
