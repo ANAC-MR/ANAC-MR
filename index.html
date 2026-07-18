@@ -1167,11 +1167,12 @@ document.addEventListener('keydown', e => {
                         <select id="fctAnnee"></select>
                     </div>
                     <div class="fact-param">
-                        <label>Vols domestiques</label>
-                        <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:0;">
-                            <input type="checkbox" id="fctDomestique" style="width:16px;height:16px;cursor:pointer;">
-                            <span>Inclure (Mauritania Airlines)</span>
-                        </label>
+                        <label>Type de vols</label>
+                        <select id="fctTypeVols">
+                            <option value="intl">Internationaux seulement</option>
+                            <option value="tous">Internationaux + domestiques</option>
+                            <option value="dom">Domestiques seulement</option>
+                        </select>
                     </div>
                     <div class="fact-param" id="fctDebWrap" style="display:none;">
                         <label>Date début</label>
@@ -3340,12 +3341,15 @@ function fctIsMR(code) {
 
 function fctGetFlights() {
     let all = getFlights();
-    // Vols domestiques (départ ET arrivée en Mauritanie) : exclus par défaut,
-    // inclus seulement si la case « Inclure » est cochée.
-    const domInclus = !!(document.getElementById('fctDomestique') && document.getElementById('fctDomestique').checked);
-    if (!domInclus) {
+    // Type de vols : intl = internationaux seuls (défaut) ;
+    // tous = internationaux + domestiques ; dom = domestiques seuls.
+    // Domestique = départ ET arrivée en Mauritanie.
+    const tv = (document.getElementById('fctTypeVols') && document.getElementById('fctTypeVols').value) || 'intl';
+    if (tv === 'intl') {
         all = all.filter(f => !(fctIsMR(f.from) && fctIsMR(f.to)));
-    }
+    } else if (tv === 'dom') {
+        all = all.filter(f => fctIsMR(f.from) && fctIsMR(f.to));
+    } // 'tous' : aucun filtre
     const periode = document.getElementById('fctPeriode').value;
     const annee = +document.getElementById('fctAnnee').value;
     if (periode === 'mois') {
@@ -3388,17 +3392,19 @@ function fctBuildRows() {
 }
 
 const FCT_MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-console.log('SGV index — version FACTURATION-V2 (tri PAX, domestiques, phrase dynamique)');
+console.log('SGV index — version FACTURATION-V3 (tri PAX, type de vols 3 états, phrase dynamique)');
 
 // Phrase d'introduction du document, adaptée aux options :
 //  • domestiques inclus  → on retire « internationaux »
 //  • arrivées incluses   → on retire « embarqués »
 //  • mois → « au mois de X YYYY » ; période libre → « du D1 au D2 »
 function fctPhraseIntro() {
-    const domInclus = !!(document.getElementById('fctDomestique') && document.getElementById('fctDomestique').checked);
+    const tv = (document.getElementById('fctTypeVols') && document.getElementById('fctTypeVols').value) || 'intl';
     const arrInclus = fctActiveCols().indexOf('pax_arr') !== -1;
     let t = 'Passagers';
-    if (!domInclus) t += ' internationaux';
+    if (tv === 'intl') t += ' internationaux';
+    else if (tv === 'dom') t += ' domestiques';
+    // tv === 'tous' : ni « internationaux » ni « domestiques »
     if (!arrInclus) t += ' embarqués';
     const p  = document.getElementById('fctPeriode').value;
     const an = document.getElementById('fctAnnee').value;
