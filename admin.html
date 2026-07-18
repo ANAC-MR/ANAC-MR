@@ -1888,10 +1888,10 @@ document.addEventListener('keydown', e => {
                         </select>
                         <div style="display:flex;gap:6px;align-items:center;">
                             <input id="schedFHArr" type="text" onchange="_buildRouting()" oninput="_autoTimeColon(this)" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" title="Heure d'arrivée (HH:MM)"
-                                style="flex:1;background:#fbfcfd;border:1px solid #8a99ab;border-radius:8px;padding:8px 10px;color:#14304f;font-size:14px;font-weight:700;font-family:monospace;letter-spacing:1px;">
+                                style="flex:1;min-width:90px;background:#fbfcfd;border:1px solid #8a99ab;border-radius:8px;padding:8px 10px;color:#14304f;font-size:14px;font-weight:700;font-family:monospace;letter-spacing:1px;">
                             <select id="schedFDayOffset" onchange="_buildRouting()"
                                 title="Décalage horaire par rapport à Nouakchott (UTC+0)"
-                                style="background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 8px;color:#5a6572;font-size:11px;min-width:80px;">
+                                style="background:#ffffff;border:1px solid #c8cfd8;border-radius:8px;padding:8px 8px;color:#5a6572;font-size:11px;width:78px;flex-shrink:0;">
                                 <option value="">UTC+0</option>
                                 <option value="-1">UTC-1</option>
                                 <option value="-2">UTC-2</option>
