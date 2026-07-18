@@ -117,16 +117,16 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
 
 <header>
   <a href="index.html" class="logo">
-    <span class="logo-icon">✈️</span>
+    <span class="logo-icon"></span>
     <div><div class="logo-name">ANAC Mauritanie</div><div class="logo-sub">Suivi Hebdomadaire du Trafic</div></div>
   </a>
-  <button class="btn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="padding:7px 14px;">🚪 Déconnexion</button>
+  <button class="btn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="padding:7px 14px;">Déconnexion</button>
 </header>
 
 <div class="wrap">
   <div class="tabs-row">
-    <button class="tab-btn active" id="tab-suivi" onclick="showTab('suivi')">📊 Suivi Hebdomadaire</button>
-    <button class="tab-btn" id="tab-params" onclick="showTab('params')">⚙️ Immatriculations</button>
+    <button class="tab-btn active" id="tab-suivi" onclick="showTab('suivi')">Suivi Hebdomadaire</button>
+    <button class="tab-btn" id="tab-params" onclick="showTab('params')">Immatriculations</button>
   </div>
 
   <!-- ══════════ ONGLET SUIVI ══════════ -->
@@ -142,7 +142,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
         <button class="btn" onclick="nextWeek()">7 j →</button>
       </div>
       <div class="spacer"></div>
-      <button class="btn btn-gold" id="exportBtn" onclick="exportExcel()">⬇️ Télécharger Excel</button>
+      <button class="btn btn-gold" id="exportBtn" onclick="exportExcel()">⬇ Télécharger Excel</button>
     </div>
     <div class="rep-head">
       <div class="rep-title">SUIVI HEBDOMADAIRE DU TRAFIC AÉRIEN</div>
@@ -171,7 +171,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
   <!-- ══════════ ONGLET PARAMÈTRES IMMATRICULATIONS ══════════ -->
   <div id="page-params" class="hidden">
     <div class="panel" id="acFormPanel">
-      <h3>➕ Ajouter / Modifier une immatriculation</h3>
+      <h3>Ajouter / Modifier une immatriculation</h3>
       <div class="form-grid">
         <div class="fg" style="grid-column:1/-1;">
           <label>Immatriculation(s) — séparées par virgule, espace ou retour à la ligne</label>
@@ -190,18 +190,18 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
           <input type="number" id="acCap" min="1">
         </div>
         <div class="fg">
-          <button class="btn btn-gold" onclick="saveAircraft()">💾 Enregistrer</button>
+          <button class="btn btn-gold" onclick="saveAircraft()">Enregistrer</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--dim);margin-top:8px;">💡 Pour un même type d'avion ayant plusieurs immatriculations, saisissez-les toutes dans le champ (ex : une par ligne ou séparées par des virgules) avec le même type et la même capacité — elles seront toutes enregistrées en une fois.</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:8px;">Pour un même type d'avion ayant plusieurs immatriculations, saisissez-les toutes dans le champ (ex : une par ligne ou séparées par des virgules) avec le même type et la même capacité — elles seront toutes enregistrées en une fois.</div>
       <input type="hidden" id="acEditId">
     </div>
 
     <div class="panel ac-list">
-      <h3>🛩️ Immatriculations enregistrées (<span id="acCount">0</span>)</h3>
+      <h3>Immatriculations enregistrées (<span id="acCount">0</span>)</h3>
       <div class="toolbar" style="margin-bottom:14px;">
         <div class="tb-group">
-          <span class="tb-label">🔍 Recherche</span>
+          <span class="tb-label">Recherche</span>
           <input type="text" id="fltSearch" style="width:150px;text-transform:uppercase;"
                  oninput="this.value=this.value.toUpperCase(); renderAircraftList();">
         </div>
@@ -220,10 +220,10 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
           <input type="number" id="fltCapVal" min="0" style="width:90px;" oninput="renderAircraftList()">
         </div>
         <div class="spacer"></div>
-        <button class="btn" onclick="resetFilters()">✖ Réinitialiser</button>
+        <button class="btn" onclick="resetFilters()">Réinitialiser</button>
       </div>
       <div id="bulkBar" class="hidden" style="background:#0c1d33;border:1px solid var(--gold);border-radius:12px;padding:14px 18px;margin-bottom:14px;">
-        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">✏️ Modifier la sélection (<span id="bulkCount">0</span> immatriculation(s))</div>
+        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">✎ Modifier la sélection (<span id="bulkCount">0</span> immatriculation(s))</div>
         <div class="form-grid">
           <div class="fg">
             <label>Compagnie</label>
@@ -238,10 +238,10 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
             <input type="number" id="bulkCap" min="1">
           </div>
           <div class="fg">
-            <button class="btn btn-gold" onclick="applyBulkEdit()">✅ Appliquer à la sélection</button>
+            <button class="btn btn-gold" onclick="applyBulkEdit()">Appliquer à la sélection</button>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--dim);margin-top:8px;">💡 Laissez un champ vide pour ne pas le modifier. Seuls les champs remplis seront appliqués à toutes les immatriculations cochées.</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:8px;">Laissez un champ vide pour ne pas le modifier. Seuls les champs remplis seront appliqués à toutes les immatriculations cochées.</div>
       </div>
       <div id="acListWrap"><div class="loading">Chargement…</div></div>
     </div>
@@ -772,7 +772,7 @@ function renderSummary(flights){
     </tr>`;
   }
   document.getElementById('companyRates').innerHTML = cos.length ? `
-    <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">📊 Taux moyen par compagnie</div>
+    <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">Taux moyen par compagnie</div>
     <div class="tbl-wrap"><table style="min-width:auto;">
       <thead><tr><th style="text-align:left;">Compagnie</th><th>Vols</th><th>Passagers</th><th>Taux moyen</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -948,8 +948,8 @@ async function exportExcel(){
     X.utils.book_append_sheet(wb,ws,'Suivi');
     const name='Suivi_Trafic_'+fmtDateLocal(monday)+'_au_'+fmtDateLocal(sunday)+'.xlsx';
     X.writeFile(wb,name);
-    toast('✅ Fichier Excel téléchargé','ok');
-  }catch(e){ console.error(e); toast('❌ Erreur export : '+(e.message||e),'err'); }
+    toast('Fichier Excel téléchargé','ok');
+  }catch(e){ console.error(e); toast('Erreur export : '+(e.message||e),'err'); }
   finally{ btn.disabled=false; btn.innerHTML=old; }
 }
 
@@ -1028,8 +1028,8 @@ async function renderAircraftList(){
       <td class="fn-cell">${esc(a.reg)}</td>
       <td>${esc(a.type||'—')}</td>
       <td>${a.capacity!=null?a.capacity:'<span class="cap-empty">—</span>'}</td>
-      <td><button class="del-btn" onclick="editAircraft('${a.id}')">✏️</button>
-          <button class="del-btn" onclick="delAircraft('${a.id}','${esc(a.reg)}')">🗑️</button></td>
+      <td><button class="del-btn" onclick="editAircraft('${a.id}')">✎</button>
+          <button class="del-btn" onclick="delAircraft('${a.id}','${esc(a.reg)}')">✕</button></td>
     </tr>`;
   }
   html+='</tbody></table>';
@@ -1058,9 +1058,9 @@ window.updateBulkBar=function(){
   bar.classList.toggle('hidden', checked.length===0);
 };
 window.applyBulkEdit=async function(){
-  if(!(window.ANAC_AUTH&&window.ANAC_AUTH.hasPerm&&window.ANAC_AUTH.hasPerm('manage_aircraft'))){ toast('⛔ Permission requise : gestion des immatriculations','err'); return; }
+  if(!(window.ANAC_AUTH&&window.ANAC_AUTH.hasPerm&&window.ANAC_AUTH.hasPerm('manage_aircraft'))){ toast('Permission requise : gestion des immatriculations','err'); return; }
   const ids=[...document.querySelectorAll('.ac-chk:checked')].map(c=>c.value);
-  if(!ids.length){ toast('⚠️ Aucune immatriculation sélectionnée','warn'); return; }
+  if(!ids.length){ toast('Aucune immatriculation sélectionnée','warn'); return; }
   const company=(document.getElementById('bulkCompany').value||'').trim();
   const type=(document.getElementById('bulkType').value||'').trim();
   const capRaw=(document.getElementById('bulkCap').value||'').trim();
@@ -1068,31 +1068,31 @@ window.applyBulkEdit=async function(){
   if(company) patch.company=company;
   if(type) patch.type=type;
   if(capRaw!==''){ const n=Number(capRaw); if(!isNaN(n)&&n>0) patch.capacity=n; }
-  if(!Object.keys(patch).length){ toast('⚠️ Remplissez au moins un champ à modifier','warn'); return; }
+  if(!Object.keys(patch).length){ toast('Remplissez au moins un champ à modifier','warn'); return; }
   patch.updatedAt=new Date().toISOString();
   try{
     let n=0;
     for(const id of ids){ await updateDoc(doc(db,'aircraft',id),patch); n++; }
-    toast(`✅ ${n} immatriculation(s) modifiée(s)`,'ok');
+    toast(`${n} immatriculation(s) modifiée(s)`,'ok');
     document.getElementById('bulkCompany').value='';
     document.getElementById('bulkType').value='';
     document.getElementById('bulkCap').value='';
     await loadAircraft(); renderAircraftList();
-  }catch(e){ toast('❌ Erreur : '+(e.message||e),'err'); }
+  }catch(e){ toast('Erreur : '+(e.message||e),'err'); }
 };
 
 window.saveAircraft=async function(){
-  if(!(window.ANAC_AUTH&&window.ANAC_AUTH.hasPerm&&window.ANAC_AUTH.hasPerm('manage_aircraft'))){ toast('⛔ Permission requise : gestion des immatriculations','err'); return; }
+  if(!(window.ANAC_AUTH&&window.ANAC_AUTH.hasPerm&&window.ANAC_AUTH.hasPerm('manage_aircraft'))){ toast('Permission requise : gestion des immatriculations','err'); return; }
   const regRaw=(document.getElementById('acReg').value||'').trim().toUpperCase();
   const type=(document.getElementById('acType').value||'').trim();
   const capRaw=(document.getElementById('acCap').value||'').trim();
   const company=(document.getElementById('acCompany').value||'').trim();
   const editId=document.getElementById('acEditId').value;
   // ── Tous les champs sont obligatoires (ajout ET modification) ──
-  if(!regRaw){ toast('⚠️ Saisissez au moins une immatriculation','warn'); return; }
-  if(!company){ toast('⚠️ La compagnie est obligatoire','warn'); return; }
-  if(!type){ toast('⚠️ Le type d\'appareil est obligatoire','warn'); return; }
-  if(capRaw===''||isNaN(Number(capRaw))||Number(capRaw)<=0){ toast('⚠️ La capacité est obligatoire (nombre > 0)','warn'); return; }
+  if(!regRaw){ toast('Saisissez au moins une immatriculation','warn'); return; }
+  if(!company){ toast('La compagnie est obligatoire','warn'); return; }
+  if(!type){ toast('Le type d\'appareil est obligatoire','warn'); return; }
+  if(capRaw===''||isNaN(Number(capRaw))||Number(capRaw)<=0){ toast('La capacité est obligatoire (nombre > 0)','warn'); return; }
   const capacity = Number(capRaw);
 
   // Découper en plusieurs immatriculations (virgule, espace, point-virgule, retour ligne)
@@ -1103,12 +1103,12 @@ window.saveAircraft=async function(){
   try{
     // ── MODIFICATION : une seule immat ──
     if(editId){
-      if(regs.length>1){ toast('⚠️ En modification, une seule immatriculation à la fois','warn'); return; }
+      if(regs.length>1){ toast('En modification, une seule immatriculation à la fois','warn'); return; }
       const reg=regs[0]; const key=normReg(reg);
       const existing=Object.values(_aircraft).find(a=>normReg(a.reg)===key && a.id!==editId);
-      if(existing){ toast('❌ Cette immatriculation existe déjà','err'); return; }
+      if(existing){ toast('Cette immatriculation existe déjà','err'); return; }
       await updateDoc(doc(db,'aircraft',editId),{ reg, type, capacity, company, updatedAt:new Date().toISOString() });
-      toast('✅ Immatriculation mise à jour','ok');
+      toast('Immatriculation mise à jour','ok');
     }else{
       // ── AJOUT GROUPÉ ──
       let added=0, skipped=0;
@@ -1120,9 +1120,9 @@ window.saveAircraft=async function(){
         added++;
         _aircraft[key]={id:'tmp',reg,type,capacity,company}; // éviter doublon dans la même boucle
       }
-      if(added && skipped) toast(`✅ ${added} ajoutée(s), ${skipped} déjà existante(s) ignorée(s)`,'ok');
-      else if(added) toast(`✅ ${added} immatriculation(s) enregistrée(s)`,'ok');
-      else toast('⚠️ Toutes ces immatriculations existent déjà','warn');
+      if(added && skipped) toast(`${added} ajoutée(s), ${skipped} déjà existante(s) ignorée(s)`,'ok');
+      else if(added) toast(`${added} immatriculation(s) enregistrée(s)`,'ok');
+      else toast('Toutes ces immatriculations existent déjà','warn');
     }
     document.getElementById('acReg').value='';
     document.getElementById('acType').value='';
@@ -1130,7 +1130,7 @@ window.saveAircraft=async function(){
     document.getElementById('acCompany').value='';
     document.getElementById('acEditId').value='';
     await loadAircraft(); renderAircraftList();
-  }catch(e){ toast('❌ Erreur : '+(e.message||e),'err'); }
+  }catch(e){ toast('Erreur : '+(e.message||e),'err'); }
 };
 
 window.editAircraft=function(id){
@@ -1145,13 +1145,13 @@ window.editAircraft=function(id){
 };
 
 window.delAircraft=async function(id,reg){
-  if(!(window.ANAC_AUTH&&window.ANAC_AUTH.hasPerm&&window.ANAC_AUTH.hasPerm('manage_aircraft'))){ toast('⛔ Permission requise : gestion des immatriculations','err'); return; }
+  if(!(window.ANAC_AUTH&&window.ANAC_AUTH.hasPerm&&window.ANAC_AUTH.hasPerm('manage_aircraft'))){ toast('Permission requise : gestion des immatriculations','err'); return; }
   if(!confirm('Supprimer l\'immatriculation '+reg+' ?')) return;
   try{
     await deleteDoc(doc(db,'aircraft',id));
-    toast('🗑️ Supprimée','ok');
+    toast('✕ Supprimée','ok');
     await loadAircraft(); renderAircraftList();
-  }catch(e){ toast('❌ Erreur : '+(e.message||e),'err'); }
+  }catch(e){ toast('Erreur : '+(e.message||e),'err'); }
 };
 
 // ════ NAVIGATION ════
@@ -1182,6 +1182,19 @@ document.getElementById('startPicker').addEventListener('change',reloadWeek);
 (async function(){
   await ensureAuth();
   await Promise.all([ loadAircraft(), loadAirports(), loadSchedules(), loadAirlines(), loadFlightNumbers() ]);
+  // ── Filet de sécurité (mobile/connexion lente) : si les données clés sont
+  //    vides (échec silencieux au 1er essai), on retente une fois après 2 s. ──
+  setTimeout(async function(){
+    try {
+      if (!Object.keys(_aircraft||{}).length) {
+        console.warn('Réessai chargement (données vides au 1er essai)…');
+        await Promise.all([ loadAircraft(), loadAirports(), loadSchedules(), loadAirlines(), loadFlightNumbers() ]);
+        const sp2=document.getElementById('startPicker');
+        if (sp2 && sp2.value) await loadWeek(sp2.value);
+        renderAircraftList();
+      }
+    } catch(e) { console.warn('Réessai:', e && e.message); }
+  }, 2000);
   // ── Permission "manage_aircraft" : sans elle, la gestion des
   //    immatriculations est en lecture seule (formulaire/boutons masqués). ──
   if (!(window.ANAC_AUTH && window.ANAC_AUTH.hasPerm && window.ANAC_AUTH.hasPerm('manage_aircraft'))) {
