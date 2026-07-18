@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'></text></svg>">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ANAC Mauritanie – Accueil</title>
@@ -734,34 +734,34 @@ table, tbody, tr, td { overflow: visible; }
   </div>
   <div class="anac-menu-items">
     <a href="index.html" class="anac-menu-item" data-nav="suivi">
-      <div class="icon">📋</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Accueil</div><div class="desc">LISTE DES VOLS</div>
 </div>
     </a>
     <a href="index.html?tab=rapports" class="anac-menu-item" data-nav="rapports">
-      <div class="icon">📊</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Diagrammes &amp; Rapports</div><div class="desc">STATISTIQUES</div></div>
     </a>
     <a href="index.html?tab=facturation" class="anac-menu-item" data-nav="facturation">
-      <div class="icon">🧾</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Ordre d'émission</div><div class="desc">FACTURATION</div></div>
     </a>
     <div class="anac-menu-divider"></div>
     <a href="vols.html" class="anac-menu-item" data-nav="vols">
-      <div class="icon">🛫</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Carte des Vols</div><div class="desc">VISUALISATION TEMPS RÉEL</div></div>
     </a>
     <a href="ldm.html" class="anac-menu-item" data-nav="ldm">
-      <div class="icon">📨</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">LDM / MVT</div><div class="desc">MESSAGES DE VOL</div></div>
     </a>
     <a href="suivi.html" class="anac-menu-item" data-nav="suivi-trafic">
-      <div class="icon">📊</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Suivi Hebdomadaire</div><div class="desc">TRAFIC PAR SEMAINE</div></div>
     </a>
     <div class="anac-menu-divider"></div>
     <a href="admin.html" class="anac-menu-item" data-nav="admin">
-      <div class="icon">⚙️</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Administration</div><div class="desc">CONFIGURATION SYSTÈME</div></div>
     </a>
     <div class="anac-menu-divider"></div>
@@ -774,7 +774,7 @@ table, tbody, tr, td { overflow: visible; }
       <div style="font-size:10px;color:#D4AF37;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Connecté</div>
       <div id="anacMenuUserName" style="font-size:13px;color:#fff;font-weight:700;letter-spacing:0.3px;margin-bottom:2px;">—</div>
       <div id="anacMenuUserRole" style="font-size:11px;color:#94a3b8;margin-bottom:10px;">—</div>
-      <button id="anacMenuLogoutBtn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="width:100%;padding:9px 12px;background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.12)';this.style.color='#fca5a5';">🚪 Déconnexion</button>
+      <button id="anacMenuLogoutBtn" onclick="window.ANAC_AUTH && window.ANAC_AUTH.logout()" style="width:100%;padding:9px 12px;background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.12)';this.style.color='#fca5a5';">Déconnexion</button>
     </div>
   </div>
   <div class="anac-menu-footer">AVIATION CIVILE · MAURITANIE</div>
@@ -880,15 +880,15 @@ document.addEventListener('keydown', e => {
                 <div id="chipsList" style="display:contents;"></div>
 
                 <!-- Raccourcis filtres fréquents -->
-                <button class="chip-quick" id="qkPeriod" onclick="_openChipEditor('period',event)">📅 Période</button>
-                <button class="chip-quick" id="qkDates" onclick="_openChipEditor('dates',event)">📆 Dates</button>
-                <button class="chip-quick" id="qkCompany" onclick="_openChipEditor('company',event)">✈️ Compagnie</button>
+                <button class="chip-quick" id="qkPeriod" onclick="_openChipEditor('period',event)">Période</button>
+                <button class="chip-quick" id="qkDates" onclick="_openChipEditor('dates',event)">Dates</button>
+                <button class="chip-quick" id="qkCompany" onclick="_openChipEditor('company',event)">Compagnie</button>
 
                 <button class="chip-add" id="btnAddChip" onclick="_toggleChipPicker(event)">＋ Ajouter filtre</button>
 
                 <!-- Compteur total des vols filtrés -->
                 <div id="totalVolsCounter" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);border:1px solid rgba(212,175,55,0.5);border-radius:20px;padding:6px 14px;color:#D4AF37;font-size:12px;font-weight:700;letter-spacing:0.3px;">
-                  <span style="font-size:14px;">✈️</span>
+                  <span style="font-size:14px;"></span>
                   <span id="totalVolsLabel">0 vol</span>
                 </div>
 
@@ -922,7 +922,7 @@ document.addEventListener('keydown', e => {
                         onmouseout="this.style.boxShadow='none';this.style.transform='none'">
                         ＋ Ajouter un vol
                     </button>
-                    <button class="btn-warning" id="undoBtn" style="display:none;">↩️ Annuler suppression</button>
+                    <button class="btn-warning" id="undoBtn" style="display:none;">↩ Annuler suppression</button>
                     <button id="btnExportSuivi" data-perm="export_flights" onclick="exportSuiviExcel()"
                         style="padding:10px 18px;font-size:13px;background:#fff;color:#1a2d45;border:1px solid #e5e7eb;border-radius:10px;font-weight:600;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;"
                         onmouseover="this.style.background='#f8fafc';this.style.borderColor='#D4AF37';this.style.color='#0f1e3d'"
@@ -963,7 +963,7 @@ document.addEventListener('keydown', e => {
 <!-- HEADER -->
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
   <div>
-    <h2 style="font-size:20px;font-weight:800;color:#1a2d45;margin:0;">📊 Diagrammes</h2>
+    <h2 style="font-size:20px;font-weight:800;color:#1a2d45;margin:0;">Diagrammes</h2>
     
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -989,7 +989,7 @@ document.addEventListener('keydown', e => {
              font-family:inherit;display:flex;align-items:center;gap:6px;transition:all .15s;"
       onmouseover="this.style.background='rgba(229,62,62,.3)'"
       onmouseout="this.style.background='linear-gradient(135deg,rgba(229,62,62,.25),rgba(229,62,62,.1))'">
-      <span>📄</span> Exporter PDF
+      <span></span> Exporter PDF
     </button>
   </div>
 </div>
@@ -1023,35 +1023,35 @@ document.addEventListener('keydown', e => {
 
   <!-- Vols/mois -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">✈️ Vols par mois</div>
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Vols par mois</div>
     <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Vols enregistrés</div>
     <div style="position:relative;height:210px;"><canvas id="chartVolsMois"></canvas></div>
   </div>
 
   <!-- PAX/mois séparé DEP/ARR -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">👥 Passagers par mois</div>
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Passagers par mois</div>
     <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Départs NKC vs Arrivées NKC</div>
     <div style="position:relative;height:210px;"><canvas id="chartPaxMois"></canvas></div>
   </div>
 
   <!-- Top compagnies -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">🏆 Top compagnies</div>
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Top compagnies</div>
     <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Classement par nombre de vols</div>
     <div style="position:relative;height:210px;"><canvas id="chartTopComp"></canvas></div>
   </div>
 
   <!-- PAX/compagnie -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">🎫 Passagers par compagnie</div>
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Passagers par compagnie</div>
     <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Total transportés</div>
     <div style="position:relative;height:210px;"><canvas id="chartPaxComp"></canvas></div>
   </div>
 
   <!-- Destinations cliquables pleine largeur -->
   <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">🗺️ Destinations les plus fréquentées</div>
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Destinations les plus fréquentées</div>
     <div style="font-size:11px;color:#5A7A9A;margin-bottom:14px;">Depuis / vers Nouakchott — cliquez sur une ville pour voir les détails</div>
     <div id="destCards" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;"></div>
     <div id="destDetail" style="display:none;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;margin-top:6px;"></div>
@@ -1059,7 +1059,7 @@ document.addEventListener('keydown', e => {
 
   <!-- Comparaison 2 compagnies pleine largeur -->
   <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">⚖️ Comparaison de deux compagnies</div>
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">Comparaison de deux compagnies</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
       <select id="cmpA" onchange="runComparison()" style="background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);border-radius:8px;padding:7px 12px;color:#60a5fa;font-size:13px;font-family:inherit;min-width:160px;">
         <option value="">— Compagnie A —</option>
@@ -1081,7 +1081,7 @@ document.addEventListener('keydown', e => {
     </div>
     <!-- Période personnalisée -->
     <div id="cmpPeriodRow" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;">
-      <span style="font-size:11px;color:#5A7A9A;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">📅 Période personnalisée</span>
+      <span style="font-size:11px;color:#5A7A9A;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Période personnalisée</span>
       <label style="font-size:12px;color:#94a3b8;">Du <input type="date" id="cmpDateDeb" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
       <label style="font-size:12px;color:#94a3b8;">Au <input type="date" id="cmpDateFin" onchange="runComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
       <button onclick="document.getElementById('cmpDateDeb').value='';document.getElementById('cmpDateFin').value='';runComparison();" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;">✕ Effacer</button>
@@ -1093,7 +1093,7 @@ document.addEventListener('keydown', e => {
 
   <!-- Compagnies sur même trajet pleine largeur -->
   <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">🛤️ Compagnies sur le même trajet</div>
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">Compagnies sur le même trajet</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
       <select id="routeFilter" onchange="runRouteComparison()" style="background:rgba(212,175,55,.12);border:2px solid rgba(212,175,55,.5);border-radius:8px;padding:7px 12px;color:#D4AF37;font-size:13px;font-family:inherit;min-width:220px;font-weight:600;">
         <option value="">— Choisir une destination —</option>
@@ -1111,7 +1111,7 @@ document.addEventListener('keydown', e => {
     </div>
     <!-- Période personnalisée route -->
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:10px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;">
-      <span style="font-size:11px;color:#5A7A9A;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">📅 Période personnalisée</span>
+      <span style="font-size:11px;color:#5A7A9A;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Période personnalisée</span>
       <label style="font-size:12px;color:#94a3b8;">Du <input type="date" id="routeDateDeb" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
       <label style="font-size:12px;color:#94a3b8;">Au <input type="date" id="routeDateFin" onchange="runRouteComparison()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:inherit;"></label>
       <button onclick="document.getElementById('routeDateDeb').value='';document.getElementById('routeDateFin').value='';runRouteComparison();" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;">✕ Effacer</button>
@@ -1131,7 +1131,7 @@ document.addEventListener('keydown', e => {
         <div class="fact-section">
 
             <div class="fact-hero">
-                <div class="fact-hero-icon">📄</div>
+                <div class="fact-hero-icon"></div>
                 <div>
                     <h2 class="fact-hero-title">Ordre d'Émission de Facture</h2>
                     <p class="fact-hero-sub">Générez le document officiel ANAC Mauritanie</p>
@@ -1140,7 +1140,7 @@ document.addEventListener('keydown', e => {
 
             <div class="fact-panel">
                 <div class="fact-panel-hdr">
-                    <span class="fact-panel-hdr-icon">⚙️</span>
+                    <span class="fact-panel-hdr-icon"></span>
                     <span class="fact-panel-hdr-title">Paramètres du document</span>
                 </div>
                 <div class="fact-params-grid">
@@ -1187,28 +1187,28 @@ document.addEventListener('keydown', e => {
 
             <div class="fact-panel">
                 <div class="fact-panel-hdr">
-                    <span class="fact-panel-hdr-icon">📊</span>
+                    <span class="fact-panel-hdr-icon"></span>
                     <span class="fact-panel-hdr-title">Colonnes à inclure</span>
                 </div>
                 <div class="fact-chips-row">
                     <label class="fact-chip">
                         <input type="checkbox" class="fact-chip-cb" data-col="pax_dep" checked>
-                        <span class="fact-chip-inner"><span>🛫</span><span>PAX Départs</span><span class="fact-chip-check">✓</span></span>
+                        <span class="fact-chip-inner"><span></span><span>PAX Départs</span><span class="fact-chip-check">✓</span></span>
                     </label>
                     <label class="fact-chip">
                         <input type="checkbox" class="fact-chip-cb" data-col="pax_arr" checked>
-                        <span class="fact-chip-inner"><span>🛬</span><span>PAX Arrivées</span><span class="fact-chip-check">✓</span></span>
+                        <span class="fact-chip-inner"><span></span><span>PAX Arrivées</span><span class="fact-chip-check">✓</span></span>
                     </label>
                     <label class="fact-chip">
                         <input type="checkbox" class="fact-chip-cb" data-col="vols">
-                        <span class="fact-chip-inner"><span>✈️</span><span>Nombre de vols</span><span class="fact-chip-check">✓</span></span>
+                        <span class="fact-chip-inner"><span></span><span>Nombre de vols</span><span class="fact-chip-check">✓</span></span>
                     </label>
                 </div>
             </div>
 
             <div class="fact-panel">
                 <div class="fact-panel-hdr">
-                    <span class="fact-panel-hdr-icon">🏢</span>
+                    <span class="fact-panel-hdr-icon"></span>
                     <span class="fact-panel-hdr-title">Compagnies</span>
                     <div class="fact-panel-hdr-actions">
                         <button class="fact-sel-btn" onclick="fctSelectAll(true)">Tout sélectionner</button>
@@ -1220,18 +1220,18 @@ document.addEventListener('keydown', e => {
 
             <div class="fact-actions-bar">
                 <button class="fact-btn-primary" onclick="fctGenApercu()">
-                    <span>👁</span> Générer l'aperçu
+                    <span>◉</span> Générer l'aperçu
                 </button>
                 <button class="fact-btn-success" id="btnFctDocx" onclick="fctTelecharger()" style="display:none;">
-                    <span>⬇️</span> Télécharger .docx
+                    <span>⬇</span> Télécharger .docx
                 </button>
             </div>
 
             <div class="fact-preview-panel">
-                <div class="fact-preview-panel-hdr"><span>🔍</span> Aperçu du document</div>
+                <div class="fact-preview-panel-hdr"><span></span> Aperçu du document</div>
                 <div id="fctPreview">
                     <div class="fact-empty-state">
-                        <div class="fact-empty-state-icon">📋</div>
+                        <div class="fact-empty-state-icon"></div>
                         <p>Configurez les paramètres puis cliquez sur<br><strong>« Générer l'aperçu »</strong></p>
                     </div>
                 </div>
@@ -1250,7 +1250,7 @@ document.addEventListener('keydown', e => {
   <!-- HEADER -->
   <div class="fm-header">
     <div class="fm-header-left">
-      <span class="fm-header-icon">✈</span>
+      <span class="fm-header-icon"></span>
       <div>
         <h2 class="fm-title" id="fpTitle">Ajouter un vol</h2>
         <p class="fm-subtitle">Remplissez les informations ci-dessous</p>
@@ -1262,7 +1262,7 @@ document.addEventListener('keydown', e => {
   <form id="flightForm" class="fm-form">
 
     <!-- LIGNE 1 : Identification -->
-    <div class="fm-section-label">🪪 Identification</div>
+    <div class="fm-section-label">Identification</div>
     <div class="fm-grid fm-grid-4">
       <div class="fm-field">
         <label>N° autorisation</label>
@@ -1291,15 +1291,15 @@ document.addEventListener('keydown', e => {
     </div>
 
     <!-- LIGNE 2 : Itinéraire -->
-    <div class="fm-section-label">🗺️ Itinéraire</div>
+    <div class="fm-section-label">Itinéraire</div>
 
     <!-- Boutons Type -->
     <div class="fm-type-row">
       <button type="button" class="fm-type-btn active" id="btnDEP" onclick="selectType('DEP')">
-        <span>🛫</span><span>Départ</span>
+        <span></span><span>Départ</span>
       </button>
       <button type="button" class="fm-type-btn" id="btnARR" onclick="selectType('ARR')">
-        <span>🛬</span><span>Arrivée</span>
+        <span></span><span>Arrivée</span>
       </button>
     </div>
     <input type="hidden" id="fType" value="DEP">
@@ -1317,13 +1317,13 @@ document.addEventListener('keydown', e => {
     </div>
 
     <!-- LIGNE 3 : Passagers -->
-    <div class="fm-section-label" id="topPaxLabel">👥 Passagers</div>
+    <div class="fm-section-label" id="topPaxLabel">Passagers</div>
     <div class="fm-grid fm-grid-4" id="topPaxGrid">
       <div class="fm-field">
         <label>PAX (vol)</label>
         <div class="fm-counter">
           <button type="button" class="fm-cnt" onclick="stepCount('fPassengers',-1)">−</button>
-          <input type="number" id="fPassengers" min="0" value="0" required oninput="updateTotals()">
+          <input type="number" id="fPassengers" min="0" value="0" required oninput="if(window.updateEscaleTotals)updateEscaleTotals()">
           <button type="button" class="fm-cnt" onclick="stepCount('fPassengers',1)">+</button>
         </div>
       </div>
@@ -1331,7 +1331,7 @@ document.addEventListener('keydown', e => {
         <label>Bébés (vol)</label>
         <div class="fm-counter">
           <button type="button" class="fm-cnt" onclick="stepCount('fBabies',-1)">−</button>
-          <input type="number" id="fBabies" min="0" value="0" required oninput="updateTotals()">
+          <input type="number" id="fBabies" min="0" value="0" required oninput="if(window.updateEscaleTotals)updateEscaleTotals()">
           <button type="button" class="fm-cnt" onclick="stepCount('fBabies',1)">+</button>
         </div>
       </div>
@@ -1357,7 +1357,7 @@ document.addEventListener('keydown', e => {
     </div>
 
     <div class="fm-stopover-panel" id="stopoverGroup" style="display:none;">
-      <div class="fm-stopover-title">✈ Escale</div>
+      <div class="fm-stopover-title">Escale</div>
       <div class="fm-grid fm-grid-4">
         <div class="fm-field fm-field-col2">
           <label>Aéroport d'escale</label>
@@ -1445,7 +1445,7 @@ document.addEventListener('keydown', e => {
     <!-- FOOTER -->
     <div class="fm-footer">
       <button type="button" class="fm-btn-cancel" onclick="closeModal()">Annuler</button>
-      <button type="submit" class="fm-btn-save">💾 Enregistrer le vol</button>
+      <button type="submit" class="fm-btn-save">Enregistrer le vol</button>
     </div>
 
   </form>
@@ -1894,7 +1894,7 @@ async function _captureChartHiRes(chartKey, targetWpx, targetHpx) {
         console.error('Capture HD failed:', e);
         // Fallback : capturer le canvas visible
         try { return srcChart.canvas.toDataURL('image/jpeg', 0.92); }
-        catch { return null; }
+        catch(e){ return null; }
     } finally {
         container.remove();
     }
@@ -1937,7 +1937,7 @@ async function _captureCmpChartHiRes(chartKey, targetWpx, targetHpx) {
     } catch(e) {
         console.error('Capture cmp HD failed:', e);
         try { return srcChart.canvas.toDataURL('image/jpeg', 0.92); }
-        catch { return null; }
+        catch(e){ return null; }
     } finally {
         container.remove();
     }
@@ -3001,7 +3001,7 @@ function runComparison() {
     const res  = document.getElementById('cmpResult');
 
     if (!a || !b) { res.innerHTML = '<span style="color:#a0aec0;font-size:13px;">Sélectionnez deux compagnies pour comparer</span>'; return; }
-    if (a === b)  { res.innerHTML = '<span style="color:#e53e3e;font-size:13px;">⚠️ Choisissez deux compagnies différentes</span>'; return; }
+    if (a === b)  { res.innerHTML = '<span style="color:#e53e3e;font-size:13px;">Choisissez deux compagnies différentes</span>'; return; }
 
     const all = getFlights();
     const filter = f => {
@@ -3175,7 +3175,7 @@ function runRouteComparison() {
         var share = Math.round(s.vols / all.length * 100);
         var peakM = s.byMonth.indexOf(Math.max.apply(null, s.byMonth));
         var peakHtml = (isMultiMonth && s.byMonth[peakM] > 0)
-            ? '<div style="font-size:10px;color:'+color+';margin-top:5px;">📈 Pic: '+MONTHS_FR[peakM]+' ('+s.byMonth[peakM]+' vols)</div>'
+            ? '<div style="font-size:10px;color:'+color+';margin-top:5px;">Pic: '+MONTHS_FR[peakM]+' ('+s.byMonth[peakM]+' vols)</div>'
             : '';
         kpiHtml += '<div style="flex:1;min-width:150px;background:rgba(255,255,255,.03);border:1px solid '+color+'33;'
             +'border-radius:12px;padding:13px 16px;position:relative;overflow:hidden;">'
@@ -3191,17 +3191,17 @@ function runRouteComparison() {
     var chartHtml = isMultiMonth
         ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
             +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">📊 Vols par mois</div>'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Vols par mois</div>'
             +'<div style="position:relative;height:200px;"><canvas id="routeChartVols"></canvas></div></div>'
             +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">👥 Passagers par mois</div>'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Passagers par mois</div>'
             +'<div style="position:relative;height:200px;"><canvas id="routeChartPax"></canvas></div></div></div>'
         : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
             +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🥧 Part des vols</div>'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Part des vols</div>'
             +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartVols"></canvas></div></div>'
             +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">🥧 Part des passagers</div>'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Part des passagers</div>'
             +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartPax"></canvas></div></div></div>';
 
     res.innerHTML =
@@ -3768,10 +3768,10 @@ window._hasPerm = function(perm) {
   const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   // Filtres accessibles via "+ Ajouter filtre" (les fréquents sont déjà en raccourci)
   const FILTER_DEFS = [
-    { id:'from',     icon:'🛫', label:'Départ de' },
-    { id:'to',       icon:'🛬', label:'Arrivée à' },
-    { id:'imm',      icon:'🏷️', label:'Immatriculation' },
-    { id:'vol',      icon:'🔢', label:'N° Vol' },
+    { id:'from',     icon:'', label:'Départ de' },
+    { id:'to',       icon:'', label:'Arrivée à' },
+    { id:'imm',      icon:'', label:'Immatriculation' },
+    { id:'vol',      icon:'', label:'N° Vol' },
   ];
 
   // ═══ HELPERS ═══
@@ -3794,17 +3794,17 @@ window._hasPerm = function(perm) {
       let lbl = '';
       if (m !== 'ALL') lbl = MONTHS_FR[+m] + ' ';
       lbl += (y !== 'ALL') ? y : 'toutes années';
-      chips.push({ id:'period', icon:'📅', text: lbl.trim() });
+      chips.push({ id:'period', icon:'', text: lbl.trim() });
     }
     if (d1 || d2) {
       let lbl = 'Du ' + (d1 ? formatDateFR(d1) : '…') + ' au ' + (d2 ? formatDateFR(d2) : '…');
-      chips.push({ id:'dates', icon:'📆', text: lbl });
+      chips.push({ id:'dates', icon:'', text: lbl });
     }
-    if (co !== 'ALL') chips.push({ id:'company', icon:'✈️', text: co });
-    if (fr !== 'ALL') chips.push({ id:'from', icon:'🛫', text: 'De : ' + fr });
-    if (to !== 'ALL') chips.push({ id:'to', icon:'🛬', text: 'Vers : ' + to });
-    if (im) chips.push({ id:'imm', icon:'🏷️', text: 'Imm : ' + im });
-    if (vn) chips.push({ id:'vol', icon:'🔢', text: 'N° : ' + vn });
+    if (co !== 'ALL') chips.push({ id:'company', icon:'', text: co });
+    if (fr !== 'ALL') chips.push({ id:'from', icon:'', text: 'De : ' + fr });
+    if (to !== 'ALL') chips.push({ id:'to', icon:'', text: 'Vers : ' + to });
+    if (im) chips.push({ id:'imm', icon:'', text: 'Imm : ' + im });
+    if (vn) chips.push({ id:'vol', icon:'', text: 'N° : ' + vn });
     return chips;
   }
 
