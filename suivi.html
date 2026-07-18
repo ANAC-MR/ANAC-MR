@@ -174,7 +174,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
       <h3>Ajouter / Modifier une immatriculation</h3>
       <div class="form-grid">
         <div class="fg" style="grid-column:1/-1;">
-          <label>Immatriculation(s) — séparées par virgule, espace ou retour à la ligne</label>
+          <label>Immatriculation(s)</label>
           <textarea id="acReg" rows="2" oninput="this.value=this.value.toUpperCase()" style="background:#0a1626;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 11px;font-size:13px;font-family:var(--font);outline:none;resize:vertical;"></textarea>
         </div>
         <div class="fg">
@@ -193,7 +193,6 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
           <button class="btn btn-gold" onclick="saveAircraft()">Enregistrer</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--dim);margin-top:8px;">Pour un même type d'avion ayant plusieurs immatriculations, saisissez-les toutes dans le champ (ex : une par ligne ou séparées par des virgules) avec le même type et la même capacité — elles seront toutes enregistrées en une fois.</div>
       <input type="hidden" id="acEditId">
     </div>
 
