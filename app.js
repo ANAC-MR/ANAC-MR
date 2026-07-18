@@ -632,7 +632,7 @@ function openModal(flightId = null) {
                 updateFlightNumberPrefix(false);
 
                 if (window.selectType) window.selectType(flight.type || 'DEP'); else { const fi=document.getElementById('fType'); if(fi) fi.value=flight.type; }
-                // ⚠️ selectType/updateRouteByType reconstruisent De/À avec les
+                // selectType/updateRouteByType reconstruisent De/À avec les
                 //    valeurs par défaut : on repose ICI le trajet réel du vol.
                 //    Assignation INCONDITIONNELLE : sinon les destinations du
                 //    vol précédemment édité restaient affichées.
@@ -823,7 +823,7 @@ function validateForm() {
             normFN(f.flightNumber) === fNum && f.date === fDate && f.id !== editingFlightId
         );
         if (dupVol) {
-            showFieldError(elements.fVol, '⛔ Un vol avec ce numéro existe déjà pour cette date. Doublon interdit.');
+            showFieldError(elements.fVol, 'Un vol avec ce numéro existe déjà pour cette date. Doublon interdit.');
             isValid = false;
         }
     }
@@ -1778,8 +1778,8 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals, parit
             <div class="actions-wrapper" style="margin-left:6px;">
                 <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">⋯</button>
                 <div class="actions-menu" id="actions-${flight.id}">
-                    <button data-perm="edit_flight" onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item"><span class="action-icon">✏️</span><span>Modifier</span></button>
-                    <button data-perm="delete_flight" onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete"><span class="action-icon">🗑️</span><span>Supprimer</span></button>
+                    <button data-perm="edit_flight" onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item"><span class="action-icon">✎</span><span>Modifier</span></button>
+                    <button data-perm="delete_flight" onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete"><span class="action-icon">✕</span><span>Supprimer</span></button>
                 </div>
             </div>
         </td>`;
@@ -1789,8 +1789,8 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals, parit
             <div class="actions-wrapper">
                 <button class="actions-btn" onclick="app.toggleActionsMenu(event, '${flight.id}')" aria-label="Actions">⋯</button>
                 <div class="actions-menu" id="actions-${flight.id}">
-                    <button data-perm="edit_flight" onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item"><span class="action-icon">✏️</span><span>Modifier</span></button>
-                    <button data-perm="delete_flight" onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete"><span class="action-icon">🗑️</span><span>Supprimer</span></button>
+                    <button data-perm="edit_flight" onclick="event.stopPropagation(); app.editFlight('${flight.id}')" class="action-item"><span class="action-icon">✎</span><span>Modifier</span></button>
+                    <button data-perm="delete_flight" onclick="event.stopPropagation(); app.deleteFlight('${flight.id}')" class="action-item action-delete"><span class="action-icon">✕</span><span>Supprimer</span></button>
                 </div>
             </div>
         </td>`;
