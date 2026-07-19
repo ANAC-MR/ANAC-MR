@@ -936,9 +936,6 @@ document.addEventListener('keydown', e => {
             <div class="nav-item" onclick="showSection('schedules')" data-section="schedules">
                 <span class="icon">HV</span> Horaires & Vols
             </div>
-            <div class="nav-item" onclick="window.open('import.html','_blank')">
-                <span class="icon">IM</span> Import Programme
-            </div>
         </nav>
 
         <!-- Main Content -->
@@ -2910,7 +2907,6 @@ const ALL_PERMISSIONS = [
   { key:'add_flight',   label:'Ajout de vol',         desc:'Ajouter des vols au système' },
   { key:'edit_flight',  label:'✎ Modifier un vol',      desc:'Modifier les vols existants' },
   { key:'delete_flight',label:'✕ Supprimer un vol',    desc:'Supprimer des vols' },
-  { key:'import',       label:'Import Programme',     desc:'Importer le programme des vols' },
 ];
 
 async function loadUsers() {
@@ -3534,7 +3530,7 @@ function renderProgrammeByCompany() {
                     <div style="font-size:12px;color:#5a6572;margin-top:2px;">${lblSais} ${esc(g.annee)}</div>
                 </div>
                 <div style="display:flex;gap:8px;">
-                    <button onclick="_openAddVolProg()" style="background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">+ Ajouter un vol</button>
+                    <button onclick="_openAddVolProg()" style="background:#eaf4ee;border:1px solid #c4dccd;color:#1c7c4c;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">+ Ajouter un vol</button>
                     <button onclick="_confirmDelProgramme()" style="background:rgba(229,62,62,0.12);border:1px solid rgba(229,62,62,0.3);color:#b3362b;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">✕ Supprimer tout</button>
                 </div>
             </div>
@@ -4625,6 +4621,11 @@ function _chgAnalyzeSheet(rows, sheetName, ctxYear) {
         if (/^DATE|^JOUR|^DAY/.test(hdr[c] || '')) groups.push({ date:c, vol:-1, pax:-1, bebe:-1, imm:-1 });
     }
     if (!groups.length) return out;
+    // Colonnes d'immatriculation présentes n'importe où dans l'en-tête
+    const immCols = [];
+    for (let c = 0; c < nCols; c++) {
+        if (/IMMAT|^REG|REGISTR|TAIL|APPAREIL|A\/C/.test(hdr[c] || '')) immCols.push(c);
+    }
     groups.forEach((g, gi) => {
         const end = (gi+1 < groups.length) ? groups[gi+1].date : nCols;
         for (let c = g.date+1; c < end; c++) {
@@ -4639,6 +4640,11 @@ function _chgAnalyzeSheet(rows, sheetName, ctxYear) {
         g.type = t;
         out.bands.push({ type: t });
     });
+    // Une SEULE colonne immatriculation pour toute la ligne : elle s'applique
+    // à toutes les bandes (le départ et l'arrivée d'une ligne = même appareil).
+    if (immCols.length) {
+        groups.forEach(function(g) { if (g.imm < 0) g.imm = immCols[0]; });
+    }
     out.layout = groups.length > 1 ? 'multi-bandes' : 'simple';
 
     const sm = _CHG_MOIS[up(sheetName)] || 0;
@@ -5150,7 +5156,7 @@ async function _chgDoImport(filterFn) {
         let msg = `${done} vol${done>1?'s':''} importé${done>1?'s':''} avec succès`;
         if (skipped)  msg += ` · ${skipped} doublon${skipped>1?'s':''} détecté${skipped>1?'s':''}`;
         if (dblCount) msg += ` · ${dblCount} doublon${dblCount>1?'s':''} ignoré${dblCount>1?'s':''}`;
-        notif.innerHTML = `<div style="background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399;border-radius:8px;padding:12px 16px;font-weight:600;">${msg}</div>`;
+        notif.innerHTML = `<div style="background:#eaf4ee;border:1px solid #c4dccd;color:#1c7c4c;border-radius:8px;padding:12px 16px;font-weight:600;">${msg}</div>`;
     } else {
         notif.innerHTML = `<div style="background:#f7edd8;border:1px solid rgba(251,191,36,0.3);color:#a05a12;border-radius:8px;padding:12px 16px;font-weight:600;">${done} vols importés · ${skipped} doublons · ${errors} erreurs</div>`;
     }
