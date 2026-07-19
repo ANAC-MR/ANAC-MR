@@ -4605,12 +4605,13 @@ function _chgAnalyzeSheet(rows, sheetName, ctxYear) {
     const norm = v => String(v === null || v === undefined ? '' : v).trim();
     const up   = v => norm(v).toUpperCase();
 
+    // 1. Ligne d'en-tête
     let hr = -1;
     for (let r = 0; r < Math.min(rows.length, 8); r++) {
         const cells = rows[r].map(up);
         const hasDate = cells.some(c => /^DATE|^JOUR|^DAY/.test(c));
-        const hasVol  = cells.some(c => /^(N.?\s?)?VOL|FLIGHT|FLT/.test(c));
-        const hasPax  = cells.some(c => /^PAX|^PASS/.test(c));
+        const hasVol  = cells.some(c => /VOL|FLIGHT|FLT/.test(c));
+        const hasPax  = cells.some(c => /PAX|PASS/.test(c));
         if (hasDate && (hasVol || hasPax)) { hr = r; break; }
     }
     out.headerRow = hr;
@@ -4619,64 +4620,83 @@ function _chgAnalyzeSheet(rows, sheetName, ctxYear) {
     const hdr   = rows[hr].map(up);
     const nCols = Math.max.apply(null, rows.map(r => r.length));
 
+    // 2. Bandes indiquées par la ligne au-dessus (portée jusqu'au libellé suivant)
     const bandRow = hr > 0 ? rows[hr-1].map(up) : [];
-    const bandAt  = {};
-    bandRow.forEach((c, i) => {
-        if (/ARRIV|^ARR\b|ARRIVAL/.test(c))          bandAt[i] = 'ARR';
-        else if (/D[EÉ]PART|^DEP\b|DEPARTURE/.test(c)) bandAt[i] = 'DEP';
+    const bandLabel = {};
+    bandRow.forEach((c, k) => {
+        if (/ARRIV|^ARR\b|ARRIVAL/.test(c))            bandLabel[k] = 'ARR';
+        else if (/D[EÉ]PART|^DEP\b|DEPARTURE/.test(c)) bandLabel[k] = 'DEP';
     });
 
-    const groups = [];
+    // 3. Classer chaque colonne : quel champ, quelle bande
+    const FIELD = c => {
+        if (/^DATE|^JOUR|^DAY/.test(c))                          return 'date';
+        if (/SEGMENT|TRON[CÇ]ON|^ROUTE|^TRAJET/.test(c))         return 'segment';
+        if (/VOL|FLIGHT|FLT/.test(c))                            return 'vol';
+        if (/B[EÉ]B[EÉ]|INFANT|^INF|BABY|CHD|ENFANT/.test(c))    return 'bebe';
+        if (/PAX|PASS|ADULT|ADT/.test(c))                        return 'pax';
+        if (/IMMAT|^REG|REGISTR|TAIL|APPAREIL|A\/C/.test(c))     return 'imm';
+        return '';
+    };
+    const cols = [];
     for (let c = 0; c < nCols; c++) {
-        if (/^DATE|^JOUR|^DAY/.test(hdr[c] || '')) groups.push({ date:c, vol:-1, pax:-1, bebe:-1, imm:-1 });
+        const h = hdr[c] || '';
+        const f = FIELD(h);
+        if (!f) continue;
+        // Bande : d'abord le libellé DANS l'en-tête, sinon la ligne au-dessus
+        let b = '';
+        if (/D[EÉ]PART|\bDEP\b/.test(h))     b = 'DEP';
+        else if (/ARRIV|\bARR\b/.test(h))    b = 'ARR';
+        else { for (let k = c; k >= 0; k--) { if (bandLabel[k]) { b = bandLabel[k]; break; } } }
+        cols.push({ c: c, field: f, band: b });
     }
-    if (!groups.length) return out;
-    // Colonnes d'immatriculation présentes n'importe où dans l'en-tête
-    const immCols = [];
-    for (let c = 0; c < nCols; c++) {
-        if (/IMMAT|^REG|REGISTR|TAIL|APPAREIL|A\/C/.test(hdr[c] || '')) immCols.push(c);
-    }
-    groups.forEach((g, gi) => {
-        const end = (gi+1 < groups.length) ? groups[gi+1].date : nCols;
-        for (let c = g.date+1; c < end; c++) {
-            const h = hdr[c] || '';
-            if (g.vol < 0 && /VOL|FLIGHT|FLT/.test(h))                        g.vol = c;
-            else if (g.bebe < 0 && /B[EÉ]B[EÉ]|INFANT|^INF|BABY/.test(h))     g.bebe = c;
-            else if (g.pax < 0 && /PAX|PASS|ADULT|ADT/.test(h))               g.pax = c;
-            else if (g.imm < 0 && /IMMAT|REG|TAIL|APPAREIL|A\/C/.test(h))     g.imm = c;
-        }
-        let t = '';
-        for (let c = g.date; c >= 0; c--) { if (bandAt[c]) { t = bandAt[c]; break; } }
-        g.type = t;
-        out.bands.push({ type: t });
+    if (!cols.length) return out;
+
+    // 4. Bandes présentes
+    let bands = [];
+    cols.forEach(x => { if (x.band && bands.indexOf(x.band) === -1) bands.push(x.band); });
+    if (!bands.length) bands = [''];
+
+    // 5. Colonnes par bande : la sienne, sinon une colonne unique = partagée
+    //    (ex. une seule colonne DATE ou IMMATRICULATION pour toute la ligne)
+    const FIELDS = ['date','vol','segment','pax','bebe','imm'];
+    const maps = bands.map(function(b) {
+        const m = { band: b };
+        FIELDS.forEach(function(f) {
+            const own = cols.filter(function(x){ return x.field === f && x.band === b; });
+            if (own.length) { m[f] = own[0].c; return; }
+            const all = cols.filter(function(x){ return x.field === f; });
+            m[f] = (all.length === 1) ? all[0].c : -1;   // colonne unique => partagée
+        });
+        return m;
     });
-    // Une SEULE colonne immatriculation pour toute la ligne : elle s'applique
-    // à toutes les bandes (le départ et l'arrivée d'une ligne = même appareil).
-    if (immCols.length) {
-        groups.forEach(function(g) { if (g.imm < 0) g.imm = immCols[0]; });
-    }
-    out.layout = groups.length > 1 ? 'multi-bandes' : 'simple';
+    out.bands  = maps.map(function(m){ return { type: m.band }; });
+    const hasSeg = maps.some(function(m){ return m.segment >= 0; });
+    out.layout = (bands.length > 1 ? 'multi-bandes' : 'simple') + (hasSeg ? ' · segments' : '');
 
     const sm = _CHG_MOIS[up(sheetName)] || 0;
 
+    // 6. Extraction, une ligne par bande
     for (let r = hr+1; r < rows.length; r++) {
         const row = rows[r];
         if (!row || row.every(v => !norm(v))) continue;
         if (row.some(v => _CHG_RX_TOTAL.test(norm(v)))) continue;
-        groups.forEach(g => {
-            const rawDate = norm(row[g.date]);
-            const vol     = g.vol >= 0 ? up(row[g.vol]) : '';
-            const paxRaw  = g.pax >= 0 ? norm(row[g.pax]) : '';
+        maps.forEach(function(m) {
+            const rawDate = m.date >= 0 ? norm(row[m.date]) : '';
+            const vol     = m.vol  >= 0 ? up(row[m.vol])    : '';
+            const paxRaw  = m.pax  >= 0 ? norm(row[m.pax])  : '';
+            const seg     = m.segment >= 0 ? up(row[m.segment]).replace(/[^A-Z0-9]/g,'') : '';
             if (!rawDate && !vol) return;
-            if (!vol && !paxRaw) return;
+            if (!vol && !paxRaw)  return;
             out.rows.push({
                 date:  _chgRepairDate(rawDate, ctxYear, sm),
                 dateRaw: rawDate,
                 vol:   vol,
-                pax:   g.pax  >= 0 ? (parseInt(paxRaw) || 0) : 0,
-                bebes: g.bebe >= 0 ? (parseInt(norm(row[g.bebe])) || 0) : 0,
-                imm:   g.imm  >= 0 ? up(row[g.imm]) : '',
-                typeHint: g.type || '',
+                segment: seg,
+                pax:   m.pax  >= 0 ? (parseInt(paxRaw) || 0) : 0,
+                bebes: m.bebe >= 0 ? (parseInt(norm(row[m.bebe])) || 0) : 0,
+                imm:   m.imm  >= 0 ? up(row[m.imm]) : '',
+                typeHint: m.band || '',
                 sheet: sheetName
             });
         });
@@ -4839,6 +4859,146 @@ window._chgApplyMap = async function() {
 };
 
 // ── Enrichissement depuis Firebase ──
+
+// ── Reconstitution des vols à partir des SEGMENTS (format Mauritania Airlines) ──
+// Chaque ligne du fichier est un tronçon. Plusieurs tronçons du même vol le même
+// jour = un seul vol avec escale. Tronçons identiques répétés = rotations
+// distinctes (vol pèlerinage) → suffixe A, B, C…
+function _chgAssembleSegments(rows, fnDocs, airportsList) {
+    const nrm = function(v){ return String(v||'').toUpperCase().replace(/[-\s\.]/g,''); };
+    // IATA → ICAO (le système stocke en ICAO)
+    const toIcao = function(code) {
+        const c = String(code||'').toUpperCase().trim();
+        if (!c) return '';
+        const list = airportsList || [];
+        for (let i = 0; i < list.length; i++) {
+            const a = list[i];
+            if (String(a.iata||'').toUpperCase() === c || String(a.icao||'').toUpperCase() === c)
+                return String(a.icao || c).toUpperCase();
+        }
+        return c;
+    };
+    const split = function(seg) {
+        const t = String(seg||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+        return t.length === 6 ? [t.slice(0,3), t.slice(3,6)] : [null, null];
+    };
+    const fnInfo = function(vol) {
+        const cf = _chgCanonFN(vol);
+        for (let i = 0; i < (fnDocs||[]).length; i++) {
+            const f = fnDocs[i];
+            if (_chgCanonFN(f.number) === cf || nrm(f.number) === nrm(vol)) return f;
+        }
+        return null;
+    };
+
+    // Grouper par date + n° de vol + sens
+    const groups = {};
+    rows.forEach(function(r) {
+        const k = (r.date||'') + '|' + _chgCanonFN(r.vol) + '|' + (r.typeHint||'');
+        if (!groups[k]) groups[k] = [];
+        groups[k].push(r);
+    });
+
+    const out = [];
+    Object.keys(groups).forEach(function(k) {
+        const g = groups[k];
+        const base = g[0];
+        // Occurrences de chaque tronçon
+        const bySeg = {};
+        g.forEach(function(r) { const sg = r.segment || ''; (bySeg[sg] = bySeg[sg] || []).push(r); });
+        const segKeys = Object.keys(bySeg);
+        const counts  = segKeys.map(function(sg){ return bySeg[sg].length; });
+        const kRot    = Math.max.apply(null, counts);
+        const uniform = counts.every(function(c){ return c === kRot; });
+
+        // Nombre de rotations : tronçons identiques répétés de façon uniforme
+        const nRot = (kRot > 1 && uniform) ? kRot : 1;
+
+        for (let rot = 0; rot < nRot; rot++) {
+            const segs = segKeys.map(function(sg) {
+                const arr = bySeg[sg];
+                return { seg: sg, row: (nRot > 1 ? arr[rot] : arr[0]),
+                         pax: (nRot > 1 ? arr[rot] : arr[0]).pax || 0,
+                         allPax: arr.reduce(function(a,x){ return a + (x.pax||0); }, 0) };
+            });
+            const volName = base.vol + (rot > 0 ? String.fromCharCode(64 + rot) : '');   // L6300, L6300A, L6300B
+            const flight = {
+                date: base.date, dateRaw: base.dateRaw, vol: volName,
+                typeHint: base.typeHint, sheet: base.sheet,
+                imm: base.imm || '', bebes: base.bebes || 0,
+                pax: 0, from: '', to: '', stopover: '',
+                hasStopover: false, stopoverPax: 0, midLegPax: 0,
+                segInfo: segs.map(function(x){ return x.seg; }).join(' + '),
+                segWarn: ''
+            };
+
+            if (segs.length === 1) {
+                const p = split(segs[0].seg);
+                if (p[0]) { flight.from = toIcao(p[0]); flight.to = toIcao(p[1]); }
+                flight.pax = segs[0].pax;
+
+            } else if (segs.length === 3) {
+                // Escale mauritanienne : déduction pure des données
+                const pairs = segs.map(function(x){ return split(x.seg); });
+                if (pairs.some(function(p){ return !p[0]; })) { flight.segWarn = 'Tronçon illisible'; }
+                else {
+                    const org = {}, dst = {};
+                    pairs.forEach(function(p){ org[p[0]] = 1; dst[p[1]] = 1; });
+                    const src = Object.keys(org).filter(function(a){ return !dst[a]; });
+                    const fin = Object.keys(dst).filter(function(b){ return !org[b]; });
+                    const esc = Object.keys(org).filter(function(a){ return dst[a]; });
+                    if (src.length === 1 && fin.length === 1 && esc.length === 1) {
+                        const F = src[0], T = fin[0], E = esc[0];
+                        const find = function(a,b){ for (let i=0;i<segs.length;i++){ const p=pairs[i]; if(p[0]===a&&p[1]===b) return segs[i].pax; } return 0; };
+                        const mainPax = find(F,T), stopPax = find(F,E), midPax = find(E,T);
+                        flight.from = toIcao(F); flight.to = toIcao(T); flight.stopover = toIcao(E);
+                        flight.hasStopover = true;
+                        flight.stopoverPax = stopPax;
+                        flight.midLegPax   = midPax;
+                        flight.pax         = mainPax + stopPax;   // convention du système
+                    } else flight.segWarn = 'Tronçons incohérents';
+                }
+
+            } else if (segs.length === 2) {
+                // Escale étrangère : la destination finale vient de « Numéros de Vol »
+                const info = fnInfo(base.vol);
+                const pairs = segs.map(function(x){ return split(x.seg); });
+                if (!info || !info.stopover) {
+                    flight.segWarn = 'Escale à vérifier — n° de vol absent de l\'admin';
+                    const p0 = pairs[0];
+                    if (p0[0]) { flight.from = toIcao(p0[0]); flight.to = toIcao(p0[1]); }
+                    flight.pax = segs[0].pax + segs[1].pax;
+                } else {
+                    const F = String(info.from||'').toUpperCase(), T = String(info.to||'').toUpperCase();
+                    let iMain = -1;
+                    for (let i = 0; i < pairs.length; i++) {
+                        if (pairs[i][0] === F && pairs[i][1] === T) { iMain = i; break; }
+                    }
+                    if (iMain < 0) {
+                        flight.segWarn = 'Tronçons ne correspondent pas au n° de vol';
+                        flight.pax = segs[0].pax + segs[1].pax;
+                        if (pairs[0][0]) { flight.from = toIcao(pairs[0][0]); flight.to = toIcao(pairs[0][1]); }
+                    } else {
+                        const iOther = 1 - iMain;
+                        flight.from = toIcao(F); flight.to = toIcao(T);
+                        flight.stopover = toIcao(info.stopover);
+                        flight.hasStopover = true;
+                        flight.stopoverPax = segs[iOther].pax;
+                        flight.pax = segs[iMain].pax + segs[iOther].pax;
+                    }
+                }
+            } else {
+                flight.segWarn = segs.length + ' tronçons — à vérifier';
+                flight.pax = segs.reduce(function(a,x){ return a + x.pax; }, 0);
+            }
+            out.push(flight);
+        }
+    });
+    // Trier par date puis n° de vol
+    out.sort(function(a,b){ return (a.date||'').localeCompare(b.date||'') || (a.vol||'').localeCompare(b.vol||''); });
+    return out;
+}
+
 async function _chgEnrich() {
     const db = window._db || window.db;
     if (!db || !_chgParsed.length) return;
@@ -4879,7 +5039,14 @@ async function _chgEnrich() {
     // ex: TK0584 → TK584, AT0511 → AT511
     const normVol = _chgCanonFN;
 
-    _chgEnriched = _chgParsed.map(row => {
+    // ── Format « tronçons » (MAI) : reconstituer les vols avant enrichissement ──
+    let _srcRows = _chgParsed;
+    if (_chgParsed.some(function(r){ return r.segment; })) {
+        _srcRows = _chgAssembleSegments(_chgParsed, fnDocs, (typeof airports !== 'undefined' ? airports : []));
+        console.log('Tronçons reconstitués :', _chgParsed.length, 'lignes →', _srcRows.length, 'vols');
+    }
+
+    _chgEnriched = _srcRows.map(row => {
         const fn    = nrm(row.vol);     // TK0584
         const fnShort = normVol(row.vol); // TK584
         const result = {...row, auth:'', company:'', type:'DEP', from:'', to:'', status:'ok', warning:''};
@@ -4927,7 +5094,11 @@ async function _chgEnrich() {
         // Priorité : Firebase > fallback hardcodé
         const hub = hubMap[company] || HARD_HUB[company] || '';
 
-        if (result.type === 'DEP') {
+        if (row.from && row.to) {
+            // Trajet réel issu des tronçons du fichier : il fait foi
+            result.from = row.from;
+            result.to   = row.to;
+        } else if (result.type === 'DEP') {
             result.from = 'GQNO';
             result.to   = hub || '';
         } else {
@@ -4940,6 +5111,8 @@ async function _chgEnrich() {
         if (!row.date) {
             result.status = 'warn';
             result.warning = 'Date illisible' + (row.dateRaw ? ' (' + row.dateRaw + ')' : '');
+        } else if (row.segWarn) {
+            result.status = 'warn'; result.warning = row.segWarn;
         } else if (existingKeys.has(key)) {
             result.status = 'doublon'; result.warning = 'Déjà saisi';
         } else if (!result.company) {
@@ -5139,7 +5312,13 @@ async function _chgDoImport(filterFn) {
                 to:          r.to   || '',
                 passengers:  r.pax  || 0,
                 babies:      r.bebes|| 0,
-                hasStopover: false, stopover:'', stopoverPax:0, stopoverBabies:0,
+                // Escale reconstituée depuis les tronçons (MAI), sinon aucune
+                hasStopover: !!r.hasStopover,
+                stopover:    r.stopover || '',
+                stopoverPax: r.stopoverPax || 0,
+                stopoverBabies: 0,
+                midLegPax:   r.midLegPax || 0,
+                midLegBabies: 0,
                 timestamp:   Date.now(),
                 createdAt:   new Date().toISOString(),
                 updatedAt:   new Date().toISOString()
