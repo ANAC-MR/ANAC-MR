@@ -1297,7 +1297,7 @@ document.addEventListener('keydown', e => {
                             </label>
                             <span id="chgFileName" style="font-size:13px;color:#5a6572;">Aucun fichier sélectionné</span>
                         </div>
-                        <div style="margin-top:8px;font-size:11px;color:#475569;">Formats acceptés : Excel (.xlsx, .xls), CSV — colonnes : Date, N° Vol, PAX, Bébés (optionnel), Immatriculation (optionnel)</div>
+                        <div style="margin-top:8px;font-size:11px;color:#475569;">Excel (.xlsx, .xls) ou CSV. Toutes les feuilles sont lues. Colonnes reconnues : Date, Vol, PAX, Bébés, Immatriculation — y compris les tableaux à deux blocs ARRIVÉE / DÉPART.</div>
                     </div>
 
                     <!-- Aperçu fichier + stats détection -->
@@ -4408,6 +4408,9 @@ let _chgRawRows   = null;
 let _chgHasHeader = false;
 let _chgParsed    = [];   // [{date, vol, pax, bebes, imm}]
 let _chgEnriched  = [];   // [{...parsed, auth, company, type, from, to, ...}]
+let _chgAutoInfo  = null; // infos de détection automatique (feuilles, bandes, année)
+let _chgAllParsed = [];   // toutes les lignes, toutes feuilles confondues
+let _chgSheetSel  = '';   // feuille choisie ('' = toutes)
 
 // Init de la section (appelé à chaque ouverture)
 window._chgInit = function() {
@@ -4426,56 +4429,259 @@ window._chgReadFile = async function(input) {
     document.getElementById('chgFileName').textContent = file.name;
 
     if (typeof XLSX === 'undefined') {
-        await new Promise((res,rej) => {
-            const s = document.createElement('script');
-            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-            s.onload = res; s.onerror = rej;
-            document.head.appendChild(s);
+        await new Promise((res, rej) => {
+            const sc = document.createElement('script');
+            sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            sc.onload = res; sc.onerror = rej;
+            document.head.appendChild(sc);
         });
     }
 
-    const buf  = await file.arrayBuffer();
-    const uint = new Uint8Array(buf);
-    const wb   = XLSX.read(uint, {type:'array'});
-    const ws   = wb.Sheets[wb.SheetNames[0]];
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(new Uint8Array(buf), { type: 'array' });
 
-    // Lecture cellule par cellule avec conversion dates
-    const rows = [];
-    for (let R = range.s.r; R <= range.e.r; R++) {
-        const row = [];
-        for (let Ci = range.s.c; Ci <= range.e.c; Ci++) {
-            const addr = XLSX.utils.encode_cell({r:R, c:Ci});
-            const cell = ws[addr];
-            if (!cell) { row.push(''); continue; }
-            if (cell.t === 'd') {
-                const d = cell.v;
-                row.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
-            } else if (cell.t === 'n' && cell.z && /[ymd]/i.test(cell.z)) {
-                const d = new Date(Math.round((cell.v - 25569)*86400*1000));
-                row.push(d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0'));
-            } else {
-                row.push(cell.v !== undefined ? String(cell.v) : '');
+    // ── Lire TOUTES les feuilles (et non plus la première seulement) ──
+    const sheetsRaw = wb.SheetNames.map(function(name) {
+        const ws = wb.Sheets[name];
+        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+        const rows = [];
+        for (let R = range.s.r; R <= range.e.r; R++) {
+            const row = [];
+            for (let C = range.s.c; C <= range.e.c; C++) {
+                const cell = ws[XLSX.utils.encode_cell({ r:R, c:C })];
+                if (!cell) { row.push(''); continue; }
+                if (cell.t === 'd') {
+                    const d = cell.v;
+                    row.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+                } else if (cell.t === 'n' && cell.z && /[ymd]/i.test(cell.z)) {
+                    const d = new Date(Math.round((cell.v - 25569) * 86400 * 1000));
+                    row.push(d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0'));
+                } else {
+                    row.push(cell.v !== undefined ? String(cell.v) : '');
+                }
             }
+            rows.push(row);
         }
-        // Ignorer lignes entièrement vides
-        if (row.every(v => !String(v||'').trim())) continue;
-        rows.push(row);
+        return { name: name, rows: rows };
+    }).filter(function(sh) { return sh.rows.some(function(r) { return r.some(function(v) { return String(v||'').trim(); }); }); });
+
+    if (!sheetsRaw.length) { alert('Fichier vide ou illisible'); return; }
+
+    // ── Analyse automatique ──
+    const ctxYear = _chgGuessYear(sheetsRaw, file.name);
+    const details = [];
+    let all = [];
+    sheetsRaw.forEach(function(sh) {
+        const res = _chgAnalyzeSheet(sh.rows, sh.name, ctxYear);
+        if (res.headerRow >= 0 && res.rows.length) {
+            all = all.concat(res.rows);
+            const types = res.bands.map(function(b){ return b.type || '?'; }).join('+');
+            details.push({ name: sh.name, n: res.rows.length, layout: res.layout, types: types });
+        } else {
+            details.push({ name: sh.name, n: 0, layout: 'non reconnu', types: '' });
+        }
+    });
+
+    if (all.length) {
+        _chgAllParsed = all;
+        _chgAutoInfo  = { file: file.name, year: ctxYear, details: details };
+        // Par défaut : la PREMIÈRE feuille contenant des vols (import feuille par feuille)
+        const prem = details.filter(function(d){ return d.n > 0; })[0];
+        _chgSheetSel = prem ? prem.name : '';
+        _chgParsed = _chgAllParsed.filter(function(r){ return !_chgSheetSel || r.sheet === _chgSheetSel; });
+        _chgShowAuto();
+        await _chgEnrich();
+        return;
     }
 
-    if (!rows.length) { alert('Fichier vide ou illisible'); return; }
-
-    // Détecter en-tête — ligne 1 = données si commence par une date, sinon c'est un en-tête
-    const first = String(rows[0][0]||'').trim();
-    const looksLikeDate = /^\d{4}-\d{2}-\d{2}/.test(first) ||
-                          /^\d{1,2}[\/\-\.\s]\d{1,2}/.test(first);
-    _chgHasHeader = !looksLikeDate;
+    // ── Repli : mode manuel (fichier au format inattendu) ──
+    const rows = sheetsRaw[0].rows.filter(function(r) { return r.some(function(v) { return String(v||'').trim(); }); });
+    const first = String(rows[0][0] || '').trim();
+    _chgHasHeader = !(/^\d{4}-\d{2}-\d{2}/.test(first) || /^\d{1,2}[\/\-\.\s]\d{1,2}/.test(first));
     _chgRawRows = rows;
-
     _chgShowMapping(rows, _chgHasHeader);
 };
 
+// ── Aperçu du mode automatique ──
+// Changer la feuille à importer
+window._chgSelectSheet = async function(name) {
+    _chgSheetSel = name || '';
+    _chgParsed = _chgAllParsed.filter(function(r){ return !_chgSheetSel || r.sheet === _chgSheetSel; });
+    _chgShowAuto();
+    await _chgEnrich();
+};
+
+function _chgShowAuto() {
+    const inf = _chgAutoInfo || {};
+    const d   = inf.details || [];
+    const nOk  = _chgParsed.filter(function(r){ return r.date; }).length;
+    const nBad = _chgParsed.length - nOk;
+    const arr  = _chgParsed.filter(function(r){ return r.typeHint === 'ARR'; }).length;
+    const dep  = _chgParsed.filter(function(r){ return r.typeHint === 'DEP'; }).length;
+
+    const chip = function(txt, col) {
+        return '<span style="display:inline-block;background:#f0f2f5;border:1px solid #d8dde4;border-left:3px solid '+col+
+               ';border-radius:3px;padding:4px 10px;font-size:12px;margin:0 6px 6px 0;">'+txt+'</span>';
+    };
+    let html = '<div style="margin-bottom:10px;">' +
+        chip('<b>'+_chgParsed.length+'</b> vols à importer'+(_chgSheetSel?' — '+esc(_chgSheetSel):' (toutes feuilles)'), '#14304f') +
+        (arr ? chip('<b>'+arr+'</b> arrivées', '#1c7c4c') : '') +
+        (dep ? chip('<b>'+dep+'</b> départs', '#2b5a8e') : '') +
+        chip('année <b>'+inf.year+'</b>', '#8a6d1d') +
+        (nBad ? chip('<b>'+nBad+'</b> date(s) illisible(s)', '#b3362b') : '') +
+        '</div>';
+    // ── Sélecteur de feuille : import feuille par feuille ──
+    const btn = function(label, val, n, actif) {
+        const on = actif
+          ? 'background:#14304f;color:#fff;border-color:#14304f;'
+          : 'background:#fff;color:#1b2430;border-color:#b9c2cc;';
+        return '<button onclick="_chgSelectSheet(\''+String(val).replace(/'/g,"\\'")+'\')" '+
+               'style="'+on+'border-width:1px;border-style:solid;border-radius:3px;padding:6px 12px;'+
+               'font-size:12px;font-weight:600;cursor:pointer;margin:0 6px 6px 0;">'+
+               esc(label)+(n!==null?' <span style="opacity:.7;font-weight:400;">('+n+')</span>':'')+'</button>';
+    };
+    let sel = '<div style="margin-bottom:6px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5a6572;">Feuille à importer</div><div style="margin-bottom:12px;">';
+    d.filter(function(x){ return x.n > 0; }).forEach(function(x) {
+        sel += btn(x.name, x.name, x.n, _chgSheetSel === x.name);
+    });
+    sel += btn('Toutes les feuilles', '', _chgAllParsed.length, _chgSheetSel === '');
+    sel += '</div>';
+    html = sel + html;
+
+    html += '<table class="fn-table" style="font-size:12px;"><thead><tr><th>Feuille</th><th>Disposition</th><th>Bandes</th><th>Vols</th></tr></thead><tbody>' +
+        d.map(function(x) {
+            const cur = (_chgSheetSel === x.name);
+            return '<tr'+(cur?' style="background:#f4ecd7;"':'')+'><td><b>'+esc(x.name)+'</b>'+(cur?' ←':'')+'</td><td>'+esc(x.layout)+'</td><td>'+esc(x.types||'—')+'</td><td>'+x.n+'</td></tr>';
+        }).join('') + '</tbody></table>';
+
+    document.getElementById('chgPreviewTable').innerHTML = html;
+    document.getElementById('chgMapStats').innerHTML = '';
+    document.getElementById('chgMappingArea').style.display = '';
+}
+
 // ── Afficher le mapping ──
+
+// ── Analyse intelligente d'une feuille : bandes ARRIVÉE/DÉPART, en-têtes
+//    sur plusieurs lignes, lignes TOTAL, dates incomplètes. ───────────────
+function _chgValidDMY(y, m, d) {
+    y=+y; m=+m; d=+d;
+    if (!(m>=1&&m<=12) || !(d>=1&&d<=31)) return false;
+    const dt = new Date(Date.UTC(y, m-1, d));
+    return dt.getUTCMonth() === m-1 && dt.getUTCDate() === d;
+}
+
+// Répare une date : année absente ou erronée (anomalie Excel 1900), JJ/MM, jour seul
+function _chgRepairDate(raw, ctxYear, ctxMonth) {
+    const s = String(raw === null || raw === undefined ? '' : raw).trim();
+    if (!s) return '';
+    let m = String(_parseDate(s)).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+        let y = +m[1], mo = +m[2], d = +m[3];
+        if (y < 2000 && ctxYear) y = ctxYear;
+        return _chgValidDMY(y, mo, d) ? _chgMkDate(y, mo, d) : '';
+    }
+    m = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})$/);          // JJ/MM sans année
+    if (m && ctxYear) {
+        let d = +m[1], mo = +m[2];
+        if (mo > 12 && d <= 12) { const t = d; d = mo; mo = t; }
+        return _chgValidDMY(ctxYear, mo, d) ? _chgMkDate(ctxYear, mo, d) : '';
+    }
+    m = s.match(/^(\d{1,2})$/);                            // jour seul
+    if (m && ctxYear && ctxMonth) return _chgValidDMY(ctxYear, ctxMonth, +m[1]) ? _chgMkDate(ctxYear, ctxMonth, +m[1]) : '';
+    return '';
+}
+
+const _CHG_RX_TOTAL = /^\s*(TOTAL|TOTAUX|SOUS.?TOTAL|CUMUL|MOYENNE|SUM|GRAND\s*TOTAL)\b/i;
+
+function _chgAnalyzeSheet(rows, sheetName, ctxYear) {
+    const out = { rows: [], layout: '', headerRow: -1, bands: [] };
+    if (!rows || !rows.length) return out;
+    const norm = v => String(v === null || v === undefined ? '' : v).trim();
+    const up   = v => norm(v).toUpperCase();
+
+    let hr = -1;
+    for (let r = 0; r < Math.min(rows.length, 8); r++) {
+        const cells = rows[r].map(up);
+        const hasDate = cells.some(c => /^DATE|^JOUR|^DAY/.test(c));
+        const hasVol  = cells.some(c => /^(N.?\s?)?VOL|FLIGHT|FLT/.test(c));
+        const hasPax  = cells.some(c => /^PAX|^PASS/.test(c));
+        if (hasDate && (hasVol || hasPax)) { hr = r; break; }
+    }
+    out.headerRow = hr;
+    if (hr < 0) return out;
+
+    const hdr   = rows[hr].map(up);
+    const nCols = Math.max.apply(null, rows.map(r => r.length));
+
+    const bandRow = hr > 0 ? rows[hr-1].map(up) : [];
+    const bandAt  = {};
+    bandRow.forEach((c, i) => {
+        if (/ARRIV|^ARR\b|ARRIVAL/.test(c))          bandAt[i] = 'ARR';
+        else if (/D[EÉ]PART|^DEP\b|DEPARTURE/.test(c)) bandAt[i] = 'DEP';
+    });
+
+    const groups = [];
+    for (let c = 0; c < nCols; c++) {
+        if (/^DATE|^JOUR|^DAY/.test(hdr[c] || '')) groups.push({ date:c, vol:-1, pax:-1, bebe:-1, imm:-1 });
+    }
+    if (!groups.length) return out;
+    groups.forEach((g, gi) => {
+        const end = (gi+1 < groups.length) ? groups[gi+1].date : nCols;
+        for (let c = g.date+1; c < end; c++) {
+            const h = hdr[c] || '';
+            if (g.vol < 0 && /VOL|FLIGHT|FLT/.test(h))                        g.vol = c;
+            else if (g.bebe < 0 && /B[EÉ]B[EÉ]|INFANT|^INF|BABY/.test(h))     g.bebe = c;
+            else if (g.pax < 0 && /PAX|PASS|ADULT|ADT/.test(h))               g.pax = c;
+            else if (g.imm < 0 && /IMMAT|REG|TAIL|APPAREIL|A\/C/.test(h))     g.imm = c;
+        }
+        let t = '';
+        for (let c = g.date; c >= 0; c--) { if (bandAt[c]) { t = bandAt[c]; break; } }
+        g.type = t;
+        out.bands.push({ type: t });
+    });
+    out.layout = groups.length > 1 ? 'multi-bandes' : 'simple';
+
+    const sm = _CHG_MOIS[up(sheetName)] || 0;
+
+    for (let r = hr+1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row.every(v => !norm(v))) continue;
+        if (row.some(v => _CHG_RX_TOTAL.test(norm(v)))) continue;
+        groups.forEach(g => {
+            const rawDate = norm(row[g.date]);
+            const vol     = g.vol >= 0 ? up(row[g.vol]) : '';
+            const paxRaw  = g.pax >= 0 ? norm(row[g.pax]) : '';
+            if (!rawDate && !vol) return;
+            if (!vol && !paxRaw) return;
+            out.rows.push({
+                date:  _chgRepairDate(rawDate, ctxYear, sm),
+                dateRaw: rawDate,
+                vol:   vol,
+                pax:   g.pax  >= 0 ? (parseInt(paxRaw) || 0) : 0,
+                bebes: g.bebe >= 0 ? (parseInt(norm(row[g.bebe])) || 0) : 0,
+                imm:   g.imm  >= 0 ? up(row[g.imm]) : '',
+                typeHint: g.type || '',
+                sheet: sheetName
+            });
+        });
+    }
+    return out;
+}
+
+// Année de contexte : la plus fréquente dans le classeur, sinon nom de fichier
+function _chgGuessYear(sheetsRaw, fileName) {
+    const count = {};
+    sheetsRaw.forEach(sh => sh.rows.forEach(r => r.forEach(v => {
+        const m = String(_parseDate(v)).match(/^(\d{4})-/);
+        if (m && +m[1] >= 2000 && +m[1] <= 2100) count[m[1]] = (count[m[1]] || 0) + 1;
+    })));
+    let best = null, bn = 0;
+    Object.keys(count).forEach(y => { if (count[y] > bn) { bn = count[y]; best = +y; } });
+    if (best) return best;
+    const fm = String(fileName || '').match(/(20\d{2})/);
+    return fm ? +fm[1] : new Date().getFullYear();
+}
+
 function _chgShowMapping(rows, hasHeader) {
     const dataRows = hasHeader ? rows.slice(1) : rows;
     const nCols    = rows[0].length;
@@ -4597,6 +4803,8 @@ window._chgApplyMap = async function() {
     const iPax  = gi('chgMapPax'),  iBebe = gi('chgMapBebe'), iImm = gi('chgMapImm');
 
     _chgParsed = dataRows.map(row => ({
+        typeHint: '',
+        dateRaw: iDate>=0 ? String(row[iDate]||'') : '',
         date: iDate>=0 ? _parseDate(row[iDate]) : '',
         vol:  iVol >=0 ? String(row[iVol]||'').trim().toUpperCase() : '',
         pax:  iPax >=0 ? (parseInt(row[iPax])||0) : 0,
@@ -4689,6 +4897,13 @@ async function _chgEnrich() {
             result.type = (rawType === 'ARR') ? 'ARR' : 'DEP';
         }
 
+        // 2bis. Le TYPE vient du NUMÉRO DE VOL (admin) — c'est la référence.
+        //       La bande ARRIVÉE/DÉPART du fichier ne sert que si le numéro
+        //       de vol est inconnu du système.
+        if (!fnMatch && (row.typeHint === 'ARR' || row.typeHint === 'DEP')) {
+            result.type = row.typeHint;
+        }
+
         // 3. Déduire from/to selon type + hub de la compagnie
         const company = result.company || (progMatch && progMatch.company) || '';
         const HARD_HUB = {
@@ -4709,15 +4924,33 @@ async function _chgEnrich() {
 
         // 4. Statut
         const key = fn+'__'+row.date;
-        if (existingKeys.has(key)) {
+        if (!row.date) {
+            result.status = 'warn';
+            result.warning = 'Date illisible' + (row.dateRaw ? ' (' + row.dateRaw + ')' : '');
+        } else if (existingKeys.has(key)) {
             result.status = 'doublon'; result.warning = 'Déjà saisi';
-        } else if (!result.auth) {
-            result.status = 'warn'; result.warning = 'Auth introuvable';
         } else if (!result.company) {
             result.status = 'warn'; result.warning = 'Compagnie inconnue';
+        } else if (!result.auth) {
+            // Pas de n° d'autorisation : on importe quand même, il pourra
+            // être complété plus tard depuis la page d'accueil.
+            result.status = 'ok'; result.warning = 'Sans n° auth';
         }
 
         return result;
+    });
+
+    // ── Doublons À L'INTÉRIEUR du fichier (même vol + même date 2 fois) ──
+    const vus = new Set();
+    _chgEnriched.forEach(r => {
+        if (!r.date || !r.vol) return;
+        const k = nrm(r.vol) + '__' + r.date;
+        if (vus.has(k)) {
+            r.status = 'doublon';
+            r.warning = 'Doublon dans le fichier';
+        } else {
+            vus.add(k);
+        }
     });
 
     _chgRenderEnriched();
@@ -4927,6 +5160,9 @@ async function _chgDoImport(filterFn) {
 }
 
 window._chgReset = function() {
+    _chgAutoInfo = null;
+    _chgAllParsed = [];
+    _chgSheetSel = '';
     _chgRawRows = null; _chgParsed = []; _chgEnriched = [];
     const ma = document.getElementById('chgMappingArea');
     const ea = document.getElementById('chgEnrichedArea');
