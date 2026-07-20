@@ -720,6 +720,22 @@ function openModal(flightId = null) {
                     if (elements.hasStopover) elements.hasStopover.checked = hasStop;
                     if (elements.fStopover) elements.fStopover.value = stopCode;
                     if (typeof updateMidLegRow === 'function') updateMidLegRow();
+                    // Numéro de vol : le reposer AUSSI dans le select verrouillé,
+                    // que updateVolField a pu reconstruire entre-temps.
+                    elements.fVol.value = flight.flightNumber || '';
+                    const _vsel = document.getElementById('fVolSelect');
+                    if (_vsel && flight.flightNumber) {
+                        let _ok = false;
+                        for (let i = 0; i < _vsel.options.length; i++) {
+                            if (_vsel.options[i].value === flight.flightNumber) { _ok = true; break; }
+                        }
+                        if (!_ok) {
+                            const _o = document.createElement('option');
+                            _o.value = flight.flightNumber; _o.textContent = flight.flightNumber;
+                            _vsel.appendChild(_o);
+                        }
+                        _vsel.value = flight.flightNumber;
+                    }
                     // Règle du numéro de vol : verrouille (ou interdit) l'escale
                     if (window.syncEscaleFromFlightNumber) syncEscaleFromFlightNumber();
                 }, 450);
@@ -939,9 +955,24 @@ async function updateVolField(company, forceEmpty = false) {
     const parent = fVol.parentNode;
     const existingSelect = parent.querySelector('#fVolSelect');
 
-    // Si le select existe déjà pour la même compagnie et qu'on n'est pas en forceEmpty
-    // ne pas le recréer — ça effacerait la sélection en cours
+    // Si le select existe déjà pour la même compagnie, on ne le RECONSTRUIT pas
+    // (ça effacerait la sélection), mais on ré-applique quand même le numéro du
+    // vol en cours d'édition : sinon il reste vide, comme laissé par la
+    // fermeture précédente — c'est ce qui donnait l'impression d'une remise à zéro.
     if (existingSelect && !forceEmpty && existingSelect.dataset.company === company) {
+        if (editingFlightId && fVol.value) {
+            const val = fVol.value;
+            let found = false;
+            for (let i = 0; i < existingSelect.options.length; i++) {
+                if (existingSelect.options[i].value === val) { found = true; break; }
+            }
+            if (!found) {
+                const opt = document.createElement('option');
+                opt.value = val; opt.textContent = val;
+                existingSelect.appendChild(opt);
+            }
+            existingSelect.value = val;
+        }
         return;
     }
     if (existingSelect) existingSelect.remove();
