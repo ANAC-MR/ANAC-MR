@@ -844,9 +844,11 @@ async function exportExcel(){
         f.capacity!=null?f.capacity:'',
         main.pax!=null?main.pax:'',
         '',                            // Taux : rempli par formule Excel
-        hasEscale?('Total PAX: '+totalPax):(f.obs||'')
+        hasEscale?('Total PAX: '+totalPax):(f.obs||''),
+        f.company,   // J : compagnie technique (toutes lignes) — masquée
+        1            // K : 1 = ligne principale (comptage des vols) — masquée
       ]);
-      meta.push({day:f.dayName, company:f.company, showDay, isSub:false, isMid:false});
+      meta.push({day:f.dayName, company:f.company, showDay, isSub:false, isMid:false, xlRow:rows.length});
       // Sous-lignes escale (avec n° vol, capacité, PAX ; le taux se calcule par formule)
       for(let li=1; li<lines.length; li++){
         const l=lines[li];
@@ -859,14 +861,16 @@ async function exportExcel(){
           f.capacity!=null?f.capacity:'',
           l.pax!=null?l.pax:'',
           '',
-          ''
+          '',
+          f.company,   // J : compagnie technique
+          0            // K : 0 = sous-ligne (non comptée comme vol)
         ]);
-        meta.push({day:f.dayName, company:f.company, showDay:false, isSub:true, isMid:l.isMidLeg});
+        meta.push({day:f.dayName, company:f.company, showDay:false, isSub:true, isMid:l.isMidLeg, xlRow:rows.length});
       }
     }
 
     const ws=X.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:11},{wch:16},{wch:18},{wch:22},{wch:30},{wch:9},{wch:16},{wch:18},{wch:12}];
+    ws['!cols']=[{wch:11},{wch:16},{wch:18},{wch:22},{wch:30},{wch:9},{wch:16},{wch:18},{wch:12},{hidden:true},{hidden:true}];
     ws['!merges']=[
       {s:{r:0,c:0},e:{r:0,c:8}},              // titre fusionné
       {s:{r:1,c:4},e:{r:1,c:8}}               // dates fusionnées
@@ -943,7 +947,108 @@ async function exportExcel(){
       }
     }
 
-    const wb=X.utils.book_new();
+
+    // ═══════════════════════════════════════════════════════════════
+    //  BLOCS DE SYNTHÈSE — reliés au grand tableau par des FORMULES,
+    //  de sorte qu'une modification d'un vol dans Excel recalcule
+    //  automatiquement les totaux et le tableau par compagnie.
+    // ═══════════════════════════════════════════════════════════════
+    // Lignes de données = de la 1re à la dernière ligne poussée (meta).
+    const dataRowsXl = meta.map(function(m){ return m.xlRow; });      // 1-based
+    const firstXl = dataRowsXl.length ? Math.min.apply(null, dataRowsXl) : 4;
+    const lastXl  = dataRowsXl.length ? Math.max.apply(null, dataRowsXl) : 4;
+    const gRng = 'G' + firstXl + ':G' + lastXl;   // Passagers
+    const hRng = 'H' + firstXl + ':H' + lastXl;   // Taux
+    const jRng = 'J' + firstXl + ':J' + lastXl;   // Compagnie technique (toutes lignes)
+    const kRng = 'K' + firstXl + ':K' + lastXl;   // 1 = vol principal
+    const fRng = 'F' + firstXl + ':F' + lastXl;   // Capacité
+
+    // Nombre de vols = nb de lignes principales (colonne B renseignée à chaque
+    // 1re ligne de vol). On l'obtient en comptant les lignes NON-sous-lignes.
+    const nbVolsReal = meta.filter(function(m){ return !m.isSub; }).length;
+
+    let R = lastXl + 2;   // 2 lignes vides de séparation
+
+    // ── Bandeau de totaux (Vols · Passagers · Taux moyen) ──
+    const totRow = R;
+    X.utils.sheet_add_aoa(ws, [[
+        'TOTAUX', '', '', '', '',
+        { t:'n', f:'SUM(' + kRng + ')' },        // F : nb de vols = live
+        { t:'n', f:'SUM(' + gRng + ')' },        // G : somme passagers = live
+        { t:'n', f:'IFERROR(AVERAGE(' + hRng + '),"")', z:'0.0%' }, // H : taux moyen = live
+        ''
+    ]], { origin: 'A' + totRow });
+    ws['!merges'].push({ s:{r:totRow-1,c:0}, e:{r:totRow-1,c:4} });
+
+    const totFill = { fgColor:{ rgb:'FF'+HEADER_TITLE_COLOR } };
+    for (let c=0;c<9;c++){
+        const ad=X.utils.encode_cell({r:totRow-1,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
+        ws[ad].s={ font:{name:fontName,bold:true,sz:11,color:{rgb:'FFFFFFFF'}},
+                   fill:totFill, alignment:center, border };
+    }
+    // Libellés sous les chiffres
+    const labRow = totRow + 1;
+    X.utils.sheet_add_aoa(ws, [['', '', '', '', '', 'VOLS', 'PASSAGERS', 'TAUX MOYEN', '']], { origin:'A'+labRow });
+    for (let c=5;c<8;c++){
+        const ad=X.utils.encode_cell({r:labRow-1,c});
+        ws[ad].s={ font:{name:fontName,bold:true,sz:8,color:{rgb:'FF888888'}}, alignment:center };
+    }
+
+    // ── Tableau « Taux moyen par compagnie » (formules SUMIF/AVERAGEIF) ──
+    let R2 = labRow + 2;
+    const titleRow = R2;
+    X.utils.sheet_add_aoa(ws, [['Taux moyen par compagnie','','','','','','','','']], { origin:'A'+titleRow });
+    ws['!merges'].push({ s:{r:titleRow-1,c:0}, e:{r:titleRow-1,c:3} });
+    ws['A'+titleRow].s={ font:{name:fontName,bold:true,sz:11,color:{rgb:'FF'+HEADER_TITLE_COLOR}} };
+
+    const headRow = titleRow + 1;
+    X.utils.sheet_add_aoa(ws, [['Compagnie','Vols','Passagers','Taux moyen','','','','','']], { origin:'A'+headRow });
+    for (let c=0;c<4;c++){
+        const ad=X.utils.encode_cell({r:headRow-1,c});
+        ws[ad].s={ font:{name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}},
+                   fill:{fgColor:{rgb:'FF'+HEADER_COLS_COLOR}}, alignment:center, border };
+    }
+
+    // Liste ordonnée des compagnies (MAI d'abord), comme à l'écran
+    const coSet = {};
+    meta.forEach(function(m){ if(!m.isSub){ coSet[m.company||'(Sans compagnie)']=1; } });
+    const coList = Object.keys(coSet).sort(function(a,b){
+        if(isMAI(a)&&!isMAI(b)) return -1;
+        if(!isMAI(a)&&isMAI(b)) return 1;
+        return a.localeCompare(b);
+    });
+
+    coList.forEach(function(co, idx){
+        const r = headRow + 1 + idx;         // 1-based
+        // COUNTIF sur B = nb de vols ; SUMIF sur G = passagers ;
+        // AVERAGEIF sur H (lignes de CETTE compagnie ayant un taux) = taux moyen.
+        const crit = '"'+String(co).replace(/"/g,'""')+'"';
+        X.utils.sheet_add_aoa(ws, [[
+            co,
+            { t:'n', f:'SUMIFS('+kRng+','+jRng+','+crit+')' },                 // vols = lignes principales de la compagnie
+            { t:'n', f:'SUMIF('+jRng+','+crit+','+gRng+')' },                  // passagers (inclut sous-lignes escale)
+            { t:'n', f:'IFERROR(AVERAGEIFS('+hRng+','+jRng+','+crit+','+hRng+',"<>"),"")', z:'0.0%' }
+        ]], { origin:'A'+r });
+
+        const coColor=companyColor(co);
+        for (let c=0;c<4;c++){
+            const ad=X.utils.encode_cell({r:r-1,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
+            const st={ font:{name:fontName,sz:10}, border,
+                       alignment:{vertical:'center',horizontal:(c===0?'left':'center')} };
+            if(c===0 && coColor){ st.fill={fgColor:{rgb:'FF'+coColor}};
+                st.font={name:fontName,sz:10,bold:true,color:{rgb:'FFFFFFFF'}}; }
+            ws[ad].s=st;
+        }
+    });
+
+    // Étendre la plage imprimée du classeur (!ref) pour inclure les nouveaux blocs
+    const endRow = headRow + coList.length;
+    const cur = X.utils.decode_range(ws['!ref']);
+    cur.e.r = Math.max(cur.e.r, endRow);
+    cur.e.c = Math.max(cur.e.c, 8);
+    ws['!ref'] = X.utils.encode_range(cur);
+
+        const wb=X.utils.book_new();
     X.utils.book_append_sheet(wb,ws,'Suivi');
     const name='Suivi_Trafic_'+fmtDateLocal(monday)+'_au_'+fmtDateLocal(sunday)+'.xlsx';
     X.writeFile(wb,name);
