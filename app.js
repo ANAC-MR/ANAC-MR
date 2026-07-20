@@ -36,6 +36,44 @@ if (!window._kbShortcutsBound) {
     console.log('Raccourci Ctrl+Entrée activé');
 }
 
+// ── Ctrl+M : modifier le vol survolé (ou le dernier cliqué) ──────
+if (!window._ctrlMBound) {
+    window._ctrlMBound = true;
+
+    // Mémoriser la ligne sous le curseur, et la dernière ligne cliquée
+    document.addEventListener('mouseover', function(e) {
+        const tr = e.target && e.target.closest ? e.target.closest('tr[data-flight-id]') : null;
+        window._hoverFlightId = tr ? tr.getAttribute('data-flight-id') : null;
+    });
+    document.addEventListener('click', function(e) {
+        const tr = e.target && e.target.closest ? e.target.closest('tr[data-flight-id]') : null;
+        if (tr) window._lastClickedFlightId = tr.getAttribute('data-flight-id');
+    });
+
+    document.addEventListener('keydown', function(event) {
+        try {
+            if (!(event.ctrlKey || event.metaKey)) return;
+            if (event.key !== 'm' && event.key !== 'M' && event.keyCode !== 77) return;
+            const modal = document.getElementById('flightModal');
+            if (modal && modal.classList.contains('active')) return;   // déjà ouvert
+            event.preventDefault();
+
+            const id = window._hoverFlightId || window._lastClickedFlightId;
+            if (!id) {
+                if (typeof showNotification === 'function') showNotification('Placez le curseur sur un vol, puis Ctrl+M', 'warning');
+                return;
+            }
+            if (window._hasPerm && !window._hasPerm('edit_flight')) {
+                if (typeof showNotification === 'function') showNotification('Accès refusé — permission insuffisante pour modifier un vol', 'error');
+                return;
+            }
+            if (window.app && window.app.editFlight) window.app.editFlight(id);
+            else if (typeof openEditModal === 'function') openEditModal(id);
+        } catch (e) { console.warn('Raccourci Ctrl+M:', e && e.message); }
+    });
+    console.log('Raccourci Ctrl+M activé (modifier le vol survolé)');
+}
+
 const MONTHS = [
     "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
     "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
@@ -1773,6 +1811,8 @@ function renderTable(filteredFlights, offset) {
 //  - isGroupStart : 1ère ligne du vol → trait de séparation supérieur.
 function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals, parity, isGroupStart) {
     const row = document.createElement('tr');
+    // Identifiant du vol porté par la ligne (utilisé par le raccourci Ctrl+M)
+    if (flight && flight.id) row.setAttribute('data-flight-id', flight.id);
 
     // ── Couleur alternée par vol (X, Y, X, Y…) ──
     const groupBg = parity === 1 ? '#edf3fb' : '#ffffff';
