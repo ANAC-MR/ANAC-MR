@@ -562,6 +562,7 @@ function enrich(f){
     flightNumberRaw:fnum,
     route, typeDisp,
     capacity:cap, passengers:pax,
+    isCharter:charterFromFlight(f),
     babies:(f.babies!=null?Number(f.babies):null),
     rate:(cap&&pax!=null&&cap>0)?(pax/cap):null,
     obs:f.observation||f.obs||'',
@@ -646,33 +647,23 @@ function sortFlights(a,b){
 
 function rateClass(r){ if(r==null) return ''; if(r>=0.75) return 'rate-hi'; if(r>=0.5) return 'rate-mid'; return 'rate-lo'; }
 
-// ── Vols pèlerinage « distingués » (L6300/L6301 dupliqués le même jour) ──
-// Le 1er vol du jour reste normal ; les suivants sont colorés (rose pâle).
-// Recalcul à l'affichage (groupage date + base) → attrape aussi les doublons
-// saisis manuellement, pas seulement ceux suffixés à l'import (L6300A…).
-function _pilgrimBase(fn){
+// ── Charter Flights (vols MAI hors programme régulier) ──
+// Coloration basée sur le champ isCharter du vol. Migration douce : les anciens
+// vols pèlerinage suffixés (L6300A/B) sont considérés Charter s'ils n'ont pas le champ.
+function _charterBaseFN(fn){
   let s=(fn==null?'':String(fn)).toUpperCase().replace(/[^A-Z0-9]/g,'');
   s=s.replace(/[A-Z]+$/,'');
   if(/^L60*300$/.test(s)) return 'L6300';
   if(/^L60*301$/.test(s)) return 'L6301';
   return null;
 }
-function _pilgrimSuffix(fn){ const s=(fn==null?'':String(fn)).toUpperCase().replace(/[^A-Z0-9]/g,''); const m=s.match(/[A-Z]+$/); return m?m[0]:''; }
-function annotatePilgrimExtras(list){
-  const groups={};
-  list.forEach(function(f){
-    if(!f) return; f.__pilgrimExtra=false;
-    if(!suiviIsMAI(f.company)) return;
-    const base=_pilgrimBase(f.flightNumberRaw||f.flightNumber);
-    if(!base) return;
-    const key=(f.date||'')+'|'+base;
-    (groups[key]=groups[key]||[]).push(f);
-  });
-  Object.keys(groups).forEach(function(k){
-    const g=groups[k]; if(g.length<2) return;
-    g.sort(function(a,b){ const sa=_pilgrimSuffix(a.flightNumberRaw||a.flightNumber),sb=_pilgrimSuffix(b.flightNumberRaw||b.flightNumber); return sa<sb?-1:(sa>sb?1:0); });
-    for(let i=1;i<g.length;i++) g[i].__pilgrimExtra=true;
-  });
+function _charterSuffix(fn){ const s=(fn==null?'':String(fn)).toUpperCase().replace(/[^A-Z0-9]/g,''); const m=s.match(/[A-Z]+$/); return m?m[0]:''; }
+function charterFromFlight(f){
+  if(!f) return false;
+  if(f.isCharter!==undefined && f.isCharter!==null) return !!f.isCharter;
+  // Migration : ancien vol pèlerinage suffixé (L6300A/B) + MAI
+  const fn=f.flightNumber||'';
+  return suiviIsMAI(f.company) && !!_charterBaseFN(fn) && _charterSuffix(fn)!=='';
 }
 
 function renderTable(flights){
@@ -681,8 +672,7 @@ function renderTable(flights){
     body.innerHTML='<tr class="empty-row"><td colspan="9">Aucun vol enregistré pour cette période.</td></tr>';
     return;
   }
-  // Marquage des vols pèlerinage distingués (2e+ L6300/L6301 du jour)
-  annotatePilgrimExtras(flights);
+  // Coloration Charter Flights : basée sur le champ isCharter (calculé dans enrich)
   // Pré-générer les lignes de chaque vol (escales incluses)
   const expanded=flights.map(f=>({ f, lines:suiviFlightLines(f) }));
   // Compter le nombre TOTAL de lignes par jour (pour le rowspan de la cellule jour)
@@ -715,7 +705,7 @@ function renderTable(flights){
     const mainPaxCell = main.pax!=null ? main.pax : '—';
     const totalBadge = hasEscale
       ? ` <span style="display:inline-block;background:#0f1e3d;color:#D4AF37;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:6px;">Σ ${totalPax}</span>` : '';
-    const pilgRow = f.__pilgrimExtra ? ' style="background:#fce4ec;"' : '';
+    const pilgRow = f.isCharter ? ' style="background:#fce4ec;"' : '';
     html+=`<tr class="${showDay?'day-start':''}"${pilgRow}>
       ${dayTd}
       <td class="co-cell">${showCo?esc(f.company):''}</td>
