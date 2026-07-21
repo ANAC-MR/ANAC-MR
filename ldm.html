@@ -2176,7 +2176,7 @@ function renderEmails() {
             <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
 
           </div>
-          ${_escaleIsMAI(p.company) ? `<div style="margin-top:6px;"><label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e2e8f0;background:rgba(252,228,236,0.08);border:1px solid #f3b6cd;border-radius:8px;padding:7px 12px;"><input type="checkbox" id="p${i}-charter" ${p.isCharter?'checked':''} onchange="if(emails[${i}]&&emails[${i}].parsed)emails[${i}].parsed.isCharter=this.checked" style="accent-color:#e58bad;"> Charter Flight (MAI hors programme régulier)</label></div>` : ''}
+          ${_escaleIsMAI(p.company) ? `<div style="margin-top:6px;display:flex;justify-content:flex-end;"><label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e2e8f0;background:rgba(252,228,236,0.08);border:1px solid #f3b6cd;border-radius:8px;padding:7px 12px;"><input type="checkbox" id="p${i}-charter" ${p.isCharter?'checked':''} onchange="if(emails[${i}]&&emails[${i}].parsed)emails[${i}].parsed.isCharter=this.checked" style="accent-color:#e58bad;"> Charter Flight</label></div>` : ''}
           ${_escalePreviewHTML(p, i)}
           <div class="act-row" id="act-${i}">
             ${imp
