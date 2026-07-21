@@ -1345,6 +1345,7 @@ document.addEventListener('keydown', e => {
                                     <th>Immat.</th>
                                     <th>PAX</th>
                                     <th>Bébés</th>
+                                    <th style="width:60px;">Charter</th>
                                     <th>Statut</th>
                                 </tr></thead>
                                 <tbody id="chgEnrichedBody"></tbody>
@@ -4921,7 +4922,7 @@ function _chgAssembleSegments(rows, fnDocs, airportsList) {
                          pax: (nRot > 1 ? arr[rot] : arr[0]).pax || 0,
                          allPax: arr.reduce(function(a,x){ return a + (x.pax||0); }, 0) };
             });
-            const volName = base.vol + (rot > 0 ? String.fromCharCode(64 + rot) : '');   // L6300, L6300A, L6300B
+            const volName = base.vol;   // suffixe A/B supprimé (rotations distinguées par isCharter)
             const flight = {
                 date: base.date, dateRaw: base.dateRaw, vol: volName,
                 typeHint: base.typeHint, sheet: base.sheet,
@@ -4929,7 +4930,9 @@ function _chgAssembleSegments(rows, fnDocs, airportsList) {
                 pax: 0, from: '', to: '', stopover: '',
                 hasStopover: false, stopoverPax: 0, midLegPax: 0,
                 segInfo: segs.map(function(x){ return x.seg; }).join(' + '),
-                segWarn: ''
+                segWarn: '',
+                // Rotation supplémentaire d'un même jour (2e, 3e…) → Charter Flight par défaut
+                isCharter: (rot > 0)
             };
 
             if (segs.length === 1) {
@@ -5113,7 +5116,7 @@ async function _chgEnrich() {
             result.warning = 'Date illisible' + (row.dateRaw ? ' (' + row.dateRaw + ')' : '');
         } else if (row.segWarn) {
             result.status = 'warn'; result.warning = row.segWarn;
-        } else if (existingKeys.has(key)) {
+        } else if (existingKeys.has(key) && !result.isCharter) {
             result.status = 'doublon'; result.warning = 'Déjà saisi';
         } else if (!result.company) {
             result.status = 'warn'; result.warning = 'Compagnie inconnue';
@@ -5127,9 +5130,11 @@ async function _chgEnrich() {
     });
 
     // ── Doublons À L'INTÉRIEUR du fichier (même vol + même date 2 fois) ──
+    // Les Charter Flights sont exclus de ce contrôle : plusieurs rotations d'un
+    // même n° de vol le même jour peuvent cohabiter.
     const vus = new Set();
     _chgEnriched.forEach(r => {
-        if (!r.date || !r.vol) return;
+        if (!r.date || !r.vol || r.isCharter) return;
         const k = nrm(r.vol) + '__' + r.date;
         if (vus.has(k)) {
             r.status = 'doublon';
@@ -5202,6 +5207,7 @@ function _chgRenderEnriched() {
             ${inp('imm', r.imm, '#94a3b8', '70px')}
             ${inp('pax', r.pax, '#34d399', '45px')}
             ${inp('bebes', r.bebes, '#94a3b8', '40px')}
+            <td style="padding:5px 8px;text-align:center;">${editable ? `<input type="checkbox" ${r.isCharter?'checked':''} title="Charter Flight (MAI hors programme régulier)" onchange="_chgToggleCharter(${i},this.checked)" style="accent-color:#e58bad;cursor:pointer;">` : (r.isCharter?'Charter':'')}</td>
             <td style="padding:5px 8px;white-space:nowrap;">${warnBadge}</td>
         </tr>`;
     }).join('');
@@ -5240,6 +5246,27 @@ window._chgUpdate = function(i, field, value) {
     if (btnR) { btnR.textContent = 'Importer prêts (' + ok + ')'; btnR.style.display = ok>0?'':'none'; }
     if (btnA) { btnA.textContent = 'Importer tout (' + toImport + ')'; btnA.style.display = toImport>0?'':'none'; }
 };
+
+// ── Case Charter d'une ligne d'aperçu ──
+// Cocher Charter lève l'anti-doublon pour cette ligne (plusieurs rotations du
+// même n° de vol le même jour peuvent alors cohabiter).
+window._chgToggleCharter = function(i, checked) {
+    const r = _chgEnriched[i];
+    if (!r) return;
+    r.isCharter = !!checked;
+    if (checked && r.status === 'doublon') {
+        // La ligne redevient importable
+        r.status = r.auth ? 'ok' : 'ok';
+        r.warning = r.company ? '' : 'Compagnie inconnue';
+    }
+    _chgRenderEnriched();
+};
+
+// Charter effectif d'une ligne (MAI uniquement).
+function _chgIsCharter(r){
+    const c = (r && r.company || '').toUpperCase();
+    return !!(r && r.isCharter) && (c.includes('MAURITANIA') || c === 'L6' || c === 'MAI');
+}
 
 // ── Import prêts seulement (status === 'ok') ──
 window._chgImportReady = async function() {
@@ -5280,7 +5307,7 @@ async function _chgDoImport(filterFn) {
         const fnZ = _chgCanonFN(r.vol||'');
         const key1 = fn  + '__' + r.date;
         const key2 = fnZ + '__' + r.date;
-        const isDbl = nowKeys.has(key1) || nowKeys.has(key2);
+        const isDbl = (nowKeys.has(key1) || nowKeys.has(key2)) && !_chgIsCharter(r);
         if (isDbl) {
             r.status = 'doublon'; r.warning = 'Déjà saisi';
         } else if (r.status === 'doublon') {
@@ -5294,10 +5321,11 @@ async function _chgDoImport(filterFn) {
     let done = 0, errors = 0, skipped = 0;
 
     for (const r of toImport) {
-        // Vérification finale anti-doublon
+        // Vérification finale anti-doublon (les Charter Flights en sont exemptés)
         const fn  = nrm2(r.vol||'');
         const fnZ = _chgCanonFN(r.vol||'');
-        if (nowKeys.has(fn+'__'+r.date) || nowKeys.has(fnZ+'__'+r.date)) {
+        const _isCh = _chgIsCharter(r);
+        if (!_isCh && (nowKeys.has(fn+'__'+r.date) || nowKeys.has(fnZ+'__'+r.date))) {
             r.status = 'doublon'; r.warning = 'Déjà saisi'; skipped++; continue;
         }
         try {
@@ -5312,6 +5340,7 @@ async function _chgDoImport(filterFn) {
                 to:          r.to   || '',
                 passengers:  r.pax  || 0,
                 babies:      r.bebes|| 0,
+                isCharter:   _isCh,
                 // Escale reconstituée depuis les tronçons (MAI), sinon aucune
                 hasStopover: !!r.hasStopover,
                 stopover:    r.stopover || '',
@@ -5324,9 +5353,12 @@ async function _chgDoImport(filterFn) {
                 updatedAt:   new Date().toISOString()
             };
             await addDoc(collection(db, 'flights'), flightData);
-            // Ajouter à nowKeys pour éviter les doublons dans le même import
-            nowKeys.add(fn  + '__' + r.date);
-            nowKeys.add(fnZ + '__' + r.date);
+            // Ajouter à nowKeys pour éviter les doublons — SAUF pour les Charter
+            // Flights, dont plusieurs rotations du même jour peuvent cohabiter.
+            if (!_isCh) {
+                nowKeys.add(fn  + '__' + r.date);
+                nowKeys.add(fnZ + '__' + r.date);
+            }
             r.status = 'done';
             done++;
         } catch(e) {
