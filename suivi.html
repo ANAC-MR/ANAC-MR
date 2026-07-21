@@ -519,11 +519,16 @@ function enrich(f){
     const ff=toIATA(fnInfo.from), tt=toIATA(fnInfo.to);
     // escale : décision du vol si explicite, sinon celle du numéro de vol
     const ssRaw = _escaleDecidee ? _stopVol : (fnInfo.stopover || _stopVol);
-    const ss = ssRaw ? toIATA(ssRaw) : '';
+    let ss = ssRaw ? toIATA(ssRaw) : '';
+    // Escale ignorée si identique à l'origine ou à la destination : ce n'est pas
+    // une vraie escale intermédiaire. Évite les trajets redondants « IST-NKC-NKC »
+    // (ex. TK597, dont l'escale saisie = la destination NKC).
+    if(ss && (ss===ff || ss===tt)) ss='';
     route = ss ? `${ff}-${ss}-${tt}` : `${ff}-${tt}`;
   }else{
     const from=toIATA(f.from), to=toIATA(f.to);
-    const stop=_stopVol?toIATA(_stopVol):'';
+    let stop=_stopVol?toIATA(_stopVol):'';
+    if(stop && (stop===from || stop===to)) stop='';
     if(from||to) route = stop ? `${from}-${stop}-${to}` : `${from}-${to}`;
   }
 
@@ -641,12 +646,43 @@ function sortFlights(a,b){
 
 function rateClass(r){ if(r==null) return ''; if(r>=0.75) return 'rate-hi'; if(r>=0.5) return 'rate-mid'; return 'rate-lo'; }
 
+// ── Vols pèlerinage « distingués » (L6300/L6301 dupliqués le même jour) ──
+// Le 1er vol du jour reste normal ; les suivants sont colorés (rose pâle).
+// Recalcul à l'affichage (groupage date + base) → attrape aussi les doublons
+// saisis manuellement, pas seulement ceux suffixés à l'import (L6300A…).
+function _pilgrimBase(fn){
+  let s=(fn==null?'':String(fn)).toUpperCase().replace(/[^A-Z0-9]/g,'');
+  s=s.replace(/[A-Z]+$/,'');
+  if(/^L60*300$/.test(s)) return 'L6300';
+  if(/^L60*301$/.test(s)) return 'L6301';
+  return null;
+}
+function _pilgrimSuffix(fn){ const s=(fn==null?'':String(fn)).toUpperCase().replace(/[^A-Z0-9]/g,''); const m=s.match(/[A-Z]+$/); return m?m[0]:''; }
+function annotatePilgrimExtras(list){
+  const groups={};
+  list.forEach(function(f){
+    if(!f) return; f.__pilgrimExtra=false;
+    if(!suiviIsMAI(f.company)) return;
+    const base=_pilgrimBase(f.flightNumberRaw||f.flightNumber);
+    if(!base) return;
+    const key=(f.date||'')+'|'+base;
+    (groups[key]=groups[key]||[]).push(f);
+  });
+  Object.keys(groups).forEach(function(k){
+    const g=groups[k]; if(g.length<2) return;
+    g.sort(function(a,b){ const sa=_pilgrimSuffix(a.flightNumberRaw||a.flightNumber),sb=_pilgrimSuffix(b.flightNumberRaw||b.flightNumber); return sa<sb?-1:(sa>sb?1:0); });
+    for(let i=1;i<g.length;i++) g[i].__pilgrimExtra=true;
+  });
+}
+
 function renderTable(flights){
   const body=document.getElementById('suiviBody');
   if(!flights.length){
     body.innerHTML='<tr class="empty-row"><td colspan="9">Aucun vol enregistré pour cette période.</td></tr>';
     return;
   }
+  // Marquage des vols pèlerinage distingués (2e+ L6300/L6301 du jour)
+  annotatePilgrimExtras(flights);
   // Pré-générer les lignes de chaque vol (escales incluses)
   const expanded=flights.map(f=>({ f, lines:suiviFlightLines(f) }));
   // Compter le nombre TOTAL de lignes par jour (pour le rowspan de la cellule jour)
@@ -679,7 +715,8 @@ function renderTable(flights){
     const mainPaxCell = main.pax!=null ? main.pax : '—';
     const totalBadge = hasEscale
       ? ` <span style="display:inline-block;background:#0f1e3d;color:#D4AF37;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:6px;">Σ ${totalPax}</span>` : '';
-    html+=`<tr class="${showDay?'day-start':''}">
+    const pilgRow = f.__pilgrimExtra ? ' style="background:#fce4ec;"' : '';
+    html+=`<tr class="${showDay?'day-start':''}"${pilgRow}>
       ${dayTd}
       <td class="co-cell">${showCo?esc(f.company):''}</td>
       <td class="fn-cell">${esc(f.flightNumber)}</td>
@@ -698,7 +735,7 @@ function renderTable(flights){
       const secRate = (f.capacity && l.pax!=null && f.capacity>0) ? (l.pax/f.capacity) : null;
       const secRateCell = secRate!=null ? `<span class="rate-cell ${rateClass(secRate)}">${(secRate*100).toFixed(1)}%</span>` : '—';
       const secCap = f.capacity!=null ? f.capacity : '<span class="cap-empty">—</span>';
-      html+=`<tr>
+      html+=`<tr${pilgRow}>
         <td class="co-cell"></td>
         <td class="fn-cell">${esc(f.flightNumber)}</td>
         <td class="route-cell" style="background:#f4c430;color:#3a2c00;font-weight:700;">${esc(l.routeTxt||'—')}</td>
@@ -970,32 +1007,54 @@ async function exportExcel(){
     let R = lastXl + 2;   // 2 lignes vides de séparation
 
     // ── Bandeau de totaux (Vols · Passagers · Taux moyen) ──
-    const totRow = R;
-    X.utils.sheet_add_aoa(ws, [[
-        'TOTAUX', '', '', '', '',
-        { t:'n', f:'SUM(' + kRng + ')' },        // F : nb de vols = live
-        { t:'n', f:'SUM(' + gRng + ')' },        // G : somme passagers = live
-        { t:'n', f:'IFERROR(AVERAGE(' + hRng + '),"")', z:'0.0%' }, // H : taux moyen = live
-        ''
-    ]], { origin: 'A' + totRow });
-    ws['!merges'].push({ s:{r:totRow-1,c:0}, e:{r:totRow-1,c:4} });
+    // Mini-tableau encadré, aligné sous les colonnes F/G/H du grand tableau :
+    //   • étiquette « TOTAUX » fusionnée verticalement sur 2 lignes (bloc gauche équilibré)
+    //   • ligne du haut = en-têtes VOLS / PASSAGERS / TAUX MOYEN (fond bleu moyen, comme les colonnes)
+    //   • ligne du bas  = valeurs live (formules), encadrées, fond clair
+    const headTotRow = R;        // en-têtes
+    const valTotRow  = R + 1;    // valeurs
 
-    const totFill = { fgColor:{ rgb:'FF'+HEADER_TITLE_COLOR } };
-    for (let c=0;c<9;c++){
-        const ad=X.utils.encode_cell({r:totRow-1,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
-        ws[ad].s={ font:{name:fontName,bold:true,sz:11,color:{rgb:'FFFFFFFF'}},
-                   fill:totFill, alignment:center, border };
+    // Ligne en-têtes : TOTAUX (A-E) + VOLS / PASSAGERS / TAUX MOYEN (F/G/H)
+    X.utils.sheet_add_aoa(ws, [[
+        'TOTAUX', '', '', '', '', 'VOLS', 'PASSAGERS', 'TAUX MOYEN', ''
+    ]], { origin: 'A' + headTotRow });
+    // Ligne valeurs : A-E couvert par la fusion, formules en F/G/H
+    X.utils.sheet_add_aoa(ws, [[
+        '', '', '', '', '',
+        { t:'n', f:'SUM(' + kRng + ')' },                            // F : nb de vols = live
+        { t:'n', f:'SUM(' + gRng + ')' },                            // G : somme passagers = live
+        { t:'n', f:'IFERROR(AVERAGE(' + hRng + '),"")', z:'0.0%' },  // H : taux moyen = live
+        ''
+    ]], { origin: 'A' + valTotRow });
+
+    // Fusion « TOTAUX » : A-E sur les 2 lignes → bloc gauche compact et équilibré
+    ws['!merges'].push({ s:{r:headTotRow-1,c:0}, e:{r:valTotRow-1,c:4} });
+
+    // Étiquette TOTAUX : bleu foncé (comme le titre), blanc, gras, centré, encadré
+    for (let rr=headTotRow-1; rr<=valTotRow-1; rr++){
+        for (let c=0;c<5;c++){
+            const ad=X.utils.encode_cell({r:rr,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
+            ws[ad].s={ font:{name:fontName,bold:true,sz:12,color:{rgb:'FFFFFFFF'}},
+                       fill:{fgColor:{rgb:'FF'+HEADER_TITLE_COLOR}},
+                       alignment:{horizontal:'center',vertical:'center'}, border };
+        }
     }
-    // Libellés sous les chiffres
-    const labRow = totRow + 1;
-    X.utils.sheet_add_aoa(ws, [['', '', '', '', '', 'VOLS', 'PASSAGERS', 'TAUX MOYEN', '']], { origin:'A'+labRow });
+    // En-têtes VOLS / PASSAGERS / TAUX MOYEN : bleu moyen (comme les en-têtes de colonnes)
     for (let c=5;c<8;c++){
-        const ad=X.utils.encode_cell({r:labRow-1,c});
-        ws[ad].s={ font:{name:fontName,bold:true,sz:8,color:{rgb:'FF888888'}}, alignment:center };
+        const ad=X.utils.encode_cell({r:headTotRow-1,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
+        ws[ad].s={ font:{name:fontName,bold:true,sz:9,color:{rgb:'FFFFFFFF'}},
+                   fill:{fgColor:{rgb:'FF'+HEADER_COLS_COLOR}}, alignment:center, border };
+    }
+    // Valeurs F/G/H : encadrées, fond clair, gras bleu foncé, centré
+    for (let c=5;c<8;c++){
+        const ad=X.utils.encode_cell({r:valTotRow-1,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
+        ws[ad].s={ font:{name:fontName,bold:true,sz:11,color:{rgb:'FF'+HEADER_TITLE_COLOR}},
+                   fill:{fgColor:{rgb:'FFEFF3FA'}}, alignment:center, border };
+        if(c===7){ ws[ad].z='0.0%'; }   // conserve le format pourcentage sur le taux
     }
 
     // ── Tableau « Taux moyen par compagnie » (formules SUMIF/AVERAGEIF) ──
-    let R2 = labRow + 2;
+    let R2 = valTotRow + 2;
     const titleRow = R2;
     X.utils.sheet_add_aoa(ws, [['Taux moyen par compagnie','','','','','','','','']], { origin:'A'+titleRow });
     ws['!merges'].push({ s:{r:titleRow-1,c:0}, e:{r:titleRow-1,c:3} });
