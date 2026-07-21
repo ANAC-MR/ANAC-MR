@@ -133,6 +133,77 @@ function isMAIcompany(company) {
     const c = (company || '').toUpperCase();
     return c.includes('MAURITANIA') || c === 'MAI' || c === 'L6';
 }
+
+// ── Normalisation du NOM de compagnie (fusion des variantes de casse) ──
+// « MAURITANIA AIRLINES » (saisie manuelle), « Mauritania Airlines » (import) et
+// « mauritania airlines » désignent la MÊME compagnie. On ramène chaque libellé à
+// sa forme canonique : celle de la config admin (cfg-airlines), sinon la constante
+// AIRLINES. Non destructif : n'affecte que l'affichage/agrégation en mémoire, pas
+// Firestore (les vols existants sont nettoyés au fil des éditions/enregistrements).
+function _coNormKey(s) {
+    return (s == null ? '' : String(s)).trim().toUpperCase().replace(/\s+/g, ' ');
+}
+let _coCanonMap = null;
+function canonCompany(raw) {
+    const v = (raw == null ? '' : String(raw)).trim();
+    if (!v) return v;
+    const names = (adminConfig && adminConfig.airlines && adminConfig.airlines.length)
+        ? adminConfig.airlines.map(function(a){ return a && a.name; })
+        : AIRLINES;
+    const wantLen = names.length;
+    // Cache reconstruit si la config a changé (nb d'entrées différent)
+    if (!_coCanonMap || _coCanonMap.__len !== wantLen) {
+        const m = { __len: wantLen };
+        names.forEach(function(n){ if (n) m[_coNormKey(n)] = String(n).trim(); });
+        _coCanonMap = m;
+    }
+    const hit = _coCanonMap[_coNormKey(v)];
+    return hit || v;
+}
+
+// ── Vols pèlerinage « distingués » (L6300/L6301 dupliqués le même jour) ──
+// Règle métier : le 1er vol L6300 (ou L6301) d'une même DATE reste normal ; les
+// suivants (2e, 3e…) sont « distingués » et colorés. Recalcul à l'affichage : on
+// groupe par date + base (L6300/L6301) — cela attrape aussi les doublons saisis à
+// la main, pas seulement ceux suffixés à l'import (L6300A, L6300B…).
+function _pilgrimBase(fn){
+    let s = (fn == null ? '' : String(fn)).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    s = s.replace(/[A-Z]+$/, '');            // retire un éventuel suffixe de rotation (A, B…)
+    if (/^L60*300$/.test(s)) return 'L6300';
+    if (/^L60*301$/.test(s)) return 'L6301';
+    return null;
+}
+function _pilgrimSuffix(fn){
+    const s = (fn == null ? '' : String(fn)).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const m = s.match(/[A-Z]+$/);
+    return m ? m[0] : '';
+}
+function annotatePilgrimExtras(list){
+    const groups = {};
+    for (let i = 0; i < list.length; i++){
+        const f = list[i];
+        if (!f) continue;
+        f.__pilgrimExtra = false;
+        if (!isMAIcompany(f.company)) continue;
+        const base = _pilgrimBase(f.flightNumber);
+        if (!base) continue;
+        const key = (f.date || '') + '|' + base;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(f);
+    }
+    Object.keys(groups).forEach(function(k){
+        const g = groups[k];
+        if (g.length < 2) return;
+        // Ordre : sans suffixe d'abord, puis A, B… → le 1er reste normal, le reste distingué
+        g.sort(function(a, b){
+            const sa = _pilgrimSuffix(a.flightNumber), sb = _pilgrimSuffix(b.flightNumber);
+            if (sa !== sb) return sa < sb ? -1 : 1;
+            return 0;
+        });
+        for (let i = 1; i < g.length; i++) g[i].__pilgrimExtra = true;
+    });
+}
+
 // Renvoie un tableau de "lignes" à afficher pour un vol.
 // Chaque ligne : { from, to, passengers, babies, isMidLeg, isVirtual, parent }
 // isVirtual = true pour les lignes générées (autres que la ligne principale).
@@ -505,15 +576,22 @@ function populateSelects() {
     emptyFormOpt.selected = true;
     elements.fCompany.appendChild(emptyFormOpt);
 
+    const _seenCo = {};
     airlinesList.forEach(airline => {
+        // Libellé canonique + dédup : évite deux entrées « MAURITANIA AIRLINES »
+        // et « Mauritania Airlines » dans le filtre d'accueil / le formulaire.
+        const canon = canonCompany(airline);
+        if (!canon || _seenCo[canon]) return;
+        _seenCo[canon] = 1;
+
         const filterOption = document.createElement('option');
-        filterOption.value = airline;
-        filterOption.textContent = airline;
+        filterOption.value = canon;
+        filterOption.textContent = canon;
         elements.companySelect.appendChild(filterOption);
         
         const formOption = document.createElement('option');
-        formOption.value = airline;
-        formOption.textContent = airline;
+        formOption.value = canon;
+        formOption.textContent = canon;
         elements.fCompany.appendChild(formOption);
     });
     
@@ -1848,6 +1926,8 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals, parit
     // ── Couleur alternée par vol (X, Y, X, Y…) ──
     const groupBg = parity === 1 ? '#edf3fb' : '#ffffff';
     row.style.background = groupBg;
+    // Vol pèlerinage distingué (2e+ L6300/L6301 du jour) : ligne rose pâle
+    if (flight && flight.__pilgrimExtra) row.style.background = '#fce4ec';
     if (isGroupStart) row.style.borderTop = '2px solid #d7e2f0';
 
     const formattedDate = formatDateEU(flight.date);
@@ -1986,6 +2066,18 @@ function updateFlightsData(newFlights) {
         }
         newFlights = filtered;
     } catch (e) { console.warn('Dédup légère:', e && e.message); }
+
+    // ── Fusion des variantes de casse du nom de compagnie (non destructif) ──
+    // Ex. « MAURITANIA AIRLINES » ≡ « Mauritania Airlines ». Corrige d'un coup le
+    // filtre d'accueil (comparaison exacte) ET les agrégations des graphes/rapports
+    // (qui itèrent sur les compagnies distinctes de window.appFlights).
+    for (let _i = 0; _i < newFlights.length; _i++) {
+        const _f = newFlights[_i];
+        if (_f && _f.company) _f.company = canonCompany(_f.company);
+    }
+
+    // ── Marquage des vols pèlerinage distingués (2e+ L6300/L6301 du jour) ──
+    annotatePilgrimExtras(newFlights);
 
     flights = newFlights;
     // Peupler le select année avec les années disponibles
