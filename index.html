@@ -766,7 +766,7 @@ table, tbody, tr, td { overflow: visible; }
     </a>
     <div class="anac-menu-divider"></div>
     <a href="mauritanie-airlines.html" class="anac-menu-item" data-nav="ma">
-      <div class="icon">🇲🇷</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Mauritanie Airlines</div><div class="desc">PAX PAR DESTINATION</div></div>
     </a>
     <!-- ─── Pied de menu : utilisateur connecté ─── -->
@@ -1267,7 +1267,7 @@ document.addEventListener('keydown', e => {
                     <span>◉</span> Générer l'aperçu
                 </button>
                 <button class="fact-btn-success" id="btnFctDocx" onclick="fctTelecharger()" style="display:none;">
-                    <span>⬇</span> Télécharger .docx
+                    <span>↓</span> Télécharger .docx
                 </button>
             </div>
 
@@ -2048,7 +2048,7 @@ async function exportChartsToPDF() {
 
     const btn = document.getElementById('btnExportCharts');
     let oldHTML = '';
-    if (btn) { oldHTML = btn.innerHTML; btn.innerHTML = '<span>⏳</span> Génération...'; btn.disabled = true; }
+    if (btn) { oldHTML = btn.innerHTML; btn.innerHTML = 'Génération...'; btn.disabled = true; }
 
     try {
         // Capturer tous les graphiques en HD dans des canvas offscreen
@@ -3469,17 +3469,6 @@ function fctPhraseIntro() {
     return t;
 }
 
-function fctPeriodeLabel() {
-    const p = document.getElementById('fctPeriode').value;
-    const an = document.getElementById('fctAnnee').value;
-    if (p === 'mois') {
-        return 'mois de ' + FCT_MOIS[+document.getElementById('fctMois').value - 1] + ' ' + an;
-    }
-    const d = document.getElementById('fctDeb').value;
-    const f = document.getElementById('fctFin').value;
-    const fmt = s => s ? new Date(s).toLocaleDateString('fr-FR') : '…';
-    return 'période du ' + fmt(d) + ' au ' + fmt(f);
-}
 
 // ── Aperçu HTML ──────────────────────────────────────────────────
 window.fctGenApercu = function() {
@@ -3785,7 +3774,7 @@ window._hasPerm = function(perm) {
     padding:28px 32px;max-width:480px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,.5);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <div>
-        <div style="font-size:17px;font-weight:800;color:#e2e8f0;">⬇ Exporter en Excel</div>
+        <div style="font-size:17px;font-weight:800;color:#e2e8f0;">↓ Exporter en Excel</div>
         
       </div>
       <button onclick="document.getElementById('exportModal').style.display='none'"
@@ -3806,7 +3795,7 @@ window._hasPerm = function(perm) {
         style="background:linear-gradient(135deg,#34d399,#059669);border:none;
         color:#fff;border-radius:8px;padding:9px 24px;font-size:13px;font-weight:700;
         cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(52,211,153,.3);">
-        ⬇ Télécharger
+        ↓ Télécharger
       </button>
     </div>
   </div>
