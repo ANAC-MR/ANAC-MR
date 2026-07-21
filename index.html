@@ -929,6 +929,15 @@ document.addEventListener('keydown', e => {
                         onmouseout="this.style.background='#fff';this.style.borderColor='#e5e7eb';this.style.color='#1a2d45'">
                         ↓ Exporter Excel
                     </button>
+                    <div style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;">
+                        <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.4px;">Charter Flights</span>
+                        <select id="charterViewMode" onchange="if(window.app&&window.app.render)window.app.render()"
+                            style="padding:9px 12px;font-size:13px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#1a2d45;font-family:inherit;font-weight:600;cursor:pointer;">
+                            <option value="sep">Séparés</option>
+                            <option value="mix">Mélangés</option>
+                            <option value="only">Charters seuls</option>
+                        </select>
+                    </div>
                 </div>
             </section>
 
@@ -952,6 +961,28 @@ document.addEventListener('keydown', e => {
                                 <td></td>
                             </tr>
                         </tfoot>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ═══ SECTION SÉPARÉE : CHARTER FLIGHTS (mode « Séparés ») ═══ -->
+            <section class="table-section" id="charterSection" style="display:none;margin-top:18px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                    <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#fce4ec;border:1px solid #f3b6cd;"></span>
+                    <h3 style="margin:0;font-size:15px;font-weight:800;color:#7a2540;">Charter Flights</h3>
+                    <span id="charterCount" style="font-size:12px;font-weight:700;color:#a05070;background:#fce4ec;border:1px solid #f3b6cd;border-radius:10px;padding:2px 10px;">0 vol</span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:44px;text-align:center;">N°</th>
+                                <th>N° d'autorisation</th><th>Date</th><th>Compagnie</th>
+                                <th>Immatriculation</th><th>N° Vol</th><th style="text-align:center;">Trajet</th>
+                                <th>Type</th><th>PAX</th><th>Bébés</th><th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="charterTableBody"></tbody>
                     </table>
                 </div>
             </section>
@@ -980,6 +1011,11 @@ document.addEventListener('keydown', e => {
     <select id="chartCompanyFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;min-width:160px;">
       <option value="ALL">Toutes les compagnies</option>
     </select>
+
+    <label title="Par défaut, les Charter Flights sont exclus des diagrammes, rapports et facturation."
+      style="display:inline-flex;align-items:center;gap:6px;color:#e2e8f0;font-size:12px;cursor:pointer;background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;font-family:inherit;">
+      <input type="checkbox" id="chartsIncludeCharter" onchange="refreshCharts()" style="accent-color:#e58bad;"> Inclure les Charter Flights
+    </label>
 
     <button onclick="resetChartFilters()" style="background:#1a2d45;border:1px solid rgba(255,255,255,.2);color:#94a3b8;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;">↺</button>
     <button onclick="exportChartsToPDF()" id="btnExportCharts" data-perm="export_flights"
@@ -1364,6 +1400,15 @@ document.addEventListener('keydown', e => {
       </label>
     </div>
 
+    <!-- Charter Flight (MAI uniquement) -->
+    <div class="fm-stopover-toggle" id="charterToggle" style="display:none;">
+      <label class="fm-chk-label">
+        <input type="checkbox" id="fCharter">
+        <span class="fm-chk-box"></span>
+        <span>Charter Flight (vol MAI hors programme régulier)</span>
+      </label>
+    </div>
+
     <div class="fm-stopover-panel" id="stopoverGroup" style="display:none;">
       <div class="fm-stopover-title">Escale</div>
       <div class="fm-grid fm-grid-4">
@@ -1570,7 +1615,13 @@ function getDestCity(f){
     return to||from||null;
 }
 
-function getFlights(){return window.appFlights||[];}
+function getFlights(){
+  const all = window.appFlights||[];
+  // Charter Flights exclus des diagrammes/rapports sauf si la case est cochée.
+  const inc = document.getElementById('chartsIncludeCharter');
+  if (inc && inc.checked) return all;
+  return all.filter(function(f){ return !(f && f.isCharter); });
+}
 
 function filterFlights(flights){
     const y  = document.getElementById('chartYearFilter').value;
@@ -3340,7 +3391,8 @@ function fctIsMR(code) {
 }
 
 function fctGetFlights() {
-    let all = getFlights();
+    // Les Charter Flights ne sont JAMAIS comptés dans la facturation.
+    let all = getFlights().filter(f => !(f && f.isCharter));
     // Type de vols : intl = internationaux seuls (défaut) ;
     // tous = internationaux + domestiques ; dom = domestiques seuls.
     // Domestique = départ ET arrivée en Mauritanie.
