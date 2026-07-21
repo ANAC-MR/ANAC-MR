@@ -799,7 +799,7 @@
     </a>
     <div class="anac-menu-divider"></div>
     <a href="mauritanie-airlines.html" class="anac-menu-item" data-nav="ma">
-      <div class="icon">🇲🇷</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Mauritanie Airlines</div><div class="desc">PAX PAR DESTINATION</div></div>
     </a>
     <!-- ─── Pied de menu : utilisateur connecté ─── -->
@@ -1227,7 +1227,7 @@ document.addEventListener('keydown', e => {
                                     <option value="delete_flight">✕ Suppression vol</option>
                                 </select>
                                 <button class="btn-secondary" onclick="_secRefreshActivity()" style="padding:6px 12px;font-size:12px;">↻ Actualiser</button>
-                                <button class="btn-primary" onclick="_secExportActivity()" style="padding:6px 12px;font-size:12px;">⬇ Excel</button>
+                                <button class="btn-primary" onclick="_secExportActivity()" style="padding:6px 12px;font-size:12px;">↓ Excel</button>
                             </div>
                         </div>
                         <div id="secActivityList"><div style="text-align:center;color:#5a6572;padding:30px;font-size:13px;">Chargement...</div></div>
@@ -5260,8 +5260,9 @@ window._chgToggleCharter = function(i, checked) {
     r.isCharter = !!checked;
     if (checked && r.status === 'doublon') {
         // La ligne redevient importable
-        r.status = r.auth ? 'ok' : 'ok';
-        r.warning = r.company ? '' : 'Compagnie inconnue';
+        r.status = 'ok';
+        r.warning = !r.company ? 'Compagnie inconnue' : (!r.auth ? 'Sans n° auth' : '');
+        if (r.warning === 'Compagnie inconnue') r.status = 'warn';
     }
     _chgRenderEnriched();
 };
