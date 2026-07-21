@@ -451,7 +451,7 @@ document.addEventListener('keydown', e => {
     <button class="btn-export" onclick="exportXLSX()">⬇ Exporter Excel</button>
   </div>
 
-  <!-- Marqueur des vols pèlerinage distingués (2e+ L6300/L6301 du jour) -->
+  <!-- Marqueur des Charter Flights -->
   <div id="pilgrimMarker" style="display:none;background:#fce4ec;border:1px solid #f3b6cd;border-radius:12px;padding:10px 16px;margin-bottom:20px;font-size:13px;color:#7a2540;font-weight:600;"></div>
 
   <!-- TABLEAU 1 : DOMESTIQUES -->
@@ -572,35 +572,31 @@ function isMauritanieAirlines(company){
   return MA_NAMES.some(n => c === n || c.includes(n));
 }
 
-// ── Vols pèlerinage distingués (2e+ L6300/L6301 du même jour) ──
-// Recalcul à l'affichage (groupage date + base). Renvoie le nombre de vols
-// « supplémentaires » (au-delà du 1er de chaque groupe) et les dates concernées.
-function _pilgrimBase(fn){
+// ── Charter Flights (vols MAI hors programme régulier) ──
+// Comptage basé sur le champ isCharter. Migration douce : les anciens vols
+// pèlerinage suffixés (L6300A/B) sont comptés Charter s'ils n'ont pas le champ.
+function _charterBaseFN(fn){
   let s=(fn==null?'':String(fn)).toUpperCase().replace(/[^A-Z0-9]/g,'');
   s=s.replace(/[A-Z]+$/,'');
   if(/^L60*300$/.test(s)) return 'L6300';
   if(/^L60*301$/.test(s)) return 'L6301';
   return null;
 }
-function countPilgrimExtras(flights, year){
-  const groups={};
+function _charterSuffix(fn){ const s=(fn==null?'':String(fn)).toUpperCase().replace(/[^A-Z0-9]/g,''); const m=s.match(/[A-Z]+$/); return m?m[0]:''; }
+function isCharterFlight(f){
+  if(!f) return false;
+  if(f.isCharter!==undefined && f.isCharter!==null) return !!f.isCharter;
+  return isMauritanieAirlines(f.company) && !!_charterBaseFN(f.flightNumber) && _charterSuffix(f.flightNumber)!=='';
+}
+function countCharters(flights, year){
+  let n=0; const dates={};
   (flights||[]).forEach(function(f){
     if(!f || !f.date) return;
     if(year && new Date(f.date).getFullYear()!==year) return;
-    if(!isMauritanieAirlines(f.company)) return;
-    const base=_pilgrimBase(f.flightNumber);
-    if(!base) return;
-    const key=f.date+'|'+base;
-    (groups[key]=groups[key]||[]).push(f);
+    if(!isCharterFlight(f)) return;
+    n++; dates[f.date]=1;
   });
-  let extras=0; const dates={};
-  Object.keys(groups).forEach(function(k){
-    const g=groups[k];
-    if(g.length<2) return;
-    extras += (g.length-1);
-    dates[k.split('|')[0]]=1;
-  });
-  return { extras:extras, days:Object.keys(dates).length };
+  return { extras:n, days:Object.keys(dates).length };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -846,14 +842,14 @@ window.renderAll = function(){
   const data = buildCrossTable(allFlights, currentYear);
   renderTable(data.domestic, 'domTableWrap', 'domBadge');
   renderTable(data.international, 'intTableWrap', 'intBadge');
-  // Marqueur des vols pèlerinage distingués
+  // Marqueur des Charter Flights
   const mk = document.getElementById('pilgrimMarker');
   if (mk){
-    const pg = countPilgrimExtras(allFlights, currentYear);
+    const pg = countCharters(allFlights, currentYear);
     if (pg.extras > 0){
       mk.style.display = '';
-      mk.textContent = 'Pèlerinage ' + currentYear + ' : ' + pg.extras + ' vol' + (pg.extras>1?'s':'')
-        + ' distingué' + (pg.extras>1?'s':'') + ' (2e+ L6300/L6301 du jour) sur ' + pg.days + ' jour' + (pg.days>1?'s':'') + '.';
+      mk.textContent = 'Charter Flights ' + currentYear + ' : ' + pg.extras + ' vol' + (pg.extras>1?'s':'')
+        + ' sur ' + pg.days + ' jour' + (pg.days>1?'s':'') + '.';
     } else {
       mk.style.display = 'none';
       mk.textContent = '';
