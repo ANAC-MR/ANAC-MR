@@ -428,7 +428,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     </a>
     <div class="anac-menu-divider"></div>
     <a href="mauritanie-airlines.html" class="anac-menu-item" data-nav="ma">
-      <div class="icon">🇲🇷</div>
+      <div class="icon"></div>
       <div class="label"><div class="main">Mauritanie Airlines</div><div class="desc">PAX PAR DESTINATION</div></div>
     </a>
     <!-- ─── Pied de menu : utilisateur connecté ─── -->
@@ -879,7 +879,7 @@ window._ldmParsePaste = function() {
 
     const div = document.getElementById('pasteResult');
     div.style.display = '';
-    div.innerHTML = '<div style="color:#60a5fa;font-size:13px;padding:8px;">⏳ Vérification Firebase...</div>';
+    div.innerHTML = '<div style="color:#60a5fa;font-size:13px;padding:8px;">Vérification Firebase...</div>';
 
     // Recharger Firebase pour vérifier doublon + auth en temps réel
     _checkManualEntry(mi, fn, dt, rg, parsed).then(() => {
@@ -972,7 +972,7 @@ window._ldmParseImage = async function(input) {
 
     const resultDiv = document.getElementById('imageResult');
     resultDiv.style.display = '';
-    resultDiv.innerHTML = '<div style="color:#60a5fa;font-size:13px;">⏳ Chargement OCR...</div>';
+    resultDiv.innerHTML = '<div style="color:#60a5fa;font-size:13px;">Chargement OCR...</div>';
 
     try {
         // Charger Tesseract.js si pas encore chargé
@@ -985,12 +985,12 @@ window._ldmParseImage = async function(input) {
             });
         }
 
-        resultDiv.innerHTML = '<div style="color:#60a5fa;font-size:13px;">⏳ Lecture du texte en cours (peut prendre 10-20 secondes)...</div>';
+        resultDiv.innerHTML = '<div style="color:#60a5fa;font-size:13px;">Lecture du texte en cours (peut prendre 10-20 secondes)...</div>';
 
         const { data: { text } } = await Tesseract.recognize(file, 'eng', {
             logger: m => {
                 if (m.status === 'recognizing text') {
-                    resultDiv.innerHTML = `<div style="color:#60a5fa;font-size:13px;">⏳ OCR : ${Math.round(m.progress*100)}%</div>`;
+                    resultDiv.innerHTML = `<div style="color:#60a5fa;font-size:13px;">OCR : ${Math.round(m.progress*100)}%</div>`;
                 }
             }
         });
@@ -1072,7 +1072,7 @@ function _renderManualCard(em, mi) {
           <div class="act-row" id="mact-${mi}">
             ${imp
               ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>'
-              : `<button class="btn btn-green" onclick="importManualFlight(${mi})">⬆ Importer dans le système</button>`
+              : `<button class="btn btn-green" onclick="importManualFlight(${mi})">↑ Importer dans le système</button>`
             }
           </div>
         </div>
@@ -1181,59 +1181,11 @@ async function importManualFlight(mi, force) {
     } catch(e) {
         console.error(e);
         toast('Erreur import : '+e.message,'err');
-        if (btn) { btn.disabled=false; btn.innerHTML='⬆ Importer dans le système'; }
+        if (btn) { btn.disabled=false; btn.innerHTML='↑ Importer dans le système'; }
     }
 }
 
 // ── Ancien rendu simple (gardé pour compatibilité) ──
-function _renderSingleResult(em) {
-    const p = em.parsed || {};
-    const esc2 = v => String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const MOIS = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-    const badge = em.type === 'MVT'
-        ? '<span style="background:rgba(212,175,55,0.15);color:#D4AF37;border:1px solid rgba(212,175,55,0.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;">MVT</span>'
-        : '<span style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;">LDM</span>';
-    const typeBadge = p.type
-        ? `<span style="background:${p.type==='DEP'?'rgba(52,211,153,0.15)':'rgba(251,191,36,0.15)'};color:${p.type==='DEP'?'#34d399':'#fbbf24'};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700;">${p.type}</span>` : '';
-    const authBadge = p.authorizationNumber
-        ? `<span style="background:rgba(212,175,55,0.12);color:#D4AF37;border:1px solid rgba(212,175,55,0.25);border-radius:4px;padding:2px 8px;font-size:11px;">${esc2(p.authorizationNumber)}</span>` : '';
-    const pilgBadge = p.isCharter
-        ? '<span style="background:#fce4ec;color:#7a2540;border:1px solid #f3b6cd;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;">Charter Flight</span>' : '';
-
-    return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-            ${badge} ${typeBadge}
-            <span style="color:#e2e8f0;font-weight:700;font-size:15px;">${esc2(p.flightNumber||'—')}</span>
-            <span style="color:#64748b;font-size:12px;">${esc2(p.date||'')} · ${MOIS[_ldmMonth]} ${_ldmYear}</span>
-            ${authBadge}
-            ${pilgBadge}
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;font-size:12px;margin-bottom:12px;">
-            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;">
-                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">Immat.</div>
-                <strong style="color:#e2e8f0;">${esc2(p.registration||'—')}</strong></div>
-            <div style="background:rgba(56,189,248,0.06);border-radius:8px;padding:8px;">
-                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">De</div>
-                <strong style="color:#38bdf8;">${esc2(p.from||'—')}</strong></div>
-            <div style="background:rgba(56,189,248,0.06);border-radius:8px;padding:8px;">
-                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">À</div>
-                <strong style="color:#38bdf8;">${esc2(p.to||'—')}</strong></div>
-            <div style="background:rgba(52,211,153,0.06);border-radius:8px;padding:8px;">
-                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">PAX</div>
-                <strong style="color:#34d399;font-size:16px;">${p.totalPax||0}</strong></div>
-            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;">
-                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">Bébés</div>
-                <strong style="color:#94a3b8;">${p.paxBabies||0}</strong></div>
-            ${p.fuel ? `<div style="background:rgba(251,191,36,0.06);border-radius:8px;padding:8px;">
-                <div style="color:#64748b;font-size:10px;text-transform:uppercase;margin-bottom:3px;">Fuel</div>
-                <strong style="color:#fbbf24;">${p.fuel}</strong></div>` : ''}
-        </div>
-        <details><summary style="cursor:pointer;font-size:11px;color:#475569;padding:3px 0;">Texte brut</summary>
-            <pre style="font-size:10px;color:#475569;white-space:pre-wrap;margin-top:4px;max-height:120px;overflow-y:auto;background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">${esc2(em.rawText||'')}</pre>
-        </details>
-    </div>`;
-}
-
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── CONSTANTS ──
@@ -2224,12 +2176,12 @@ function renderEmails() {
             <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
 
           </div>
-          ${_escaleIsMAI(p.company) ? `<div style="margin-top:6px;"><label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e2e8f0;background:rgba(252,228,236,0.08);border:1px solid #f3b6cd;border-radius:8px;padding:7px 12px;"><input type="checkbox" id="p${i}-charter" ${p.isCharter?'checked':''} style="accent-color:#e58bad;"> Charter Flight (MAI hors programme régulier)</label></div>` : ''}
+          ${_escaleIsMAI(p.company) ? `<div style="margin-top:6px;"><label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e2e8f0;background:rgba(252,228,236,0.08);border:1px solid #f3b6cd;border-radius:8px;padding:7px 12px;"><input type="checkbox" id="p${i}-charter" ${p.isCharter?'checked':''} onchange="if(emails[${i}]&&emails[${i}].parsed)emails[${i}].parsed.isCharter=this.checked" style="accent-color:#e58bad;"> Charter Flight (MAI hors programme régulier)</label></div>` : ''}
           ${_escalePreviewHTML(p, i)}
           <div class="act-row" id="act-${i}">
             ${imp
               ? '<span style="color:var(--green);font-size:13px;font-weight:600;">✓ Déjà importé dans le système</span>'
-              : `<button class="btn btn-green" onclick="importFlight(${i})">⬆ Importer dans le système</button>`
+              : `<button class="btn btn-green" onclick="importFlight(${i})">↑ Importer dans le système</button>`
             }
           </div>
         </div>
@@ -2324,11 +2276,17 @@ async function importFlight(i, force) {
 
   if (!fn || !dt) { toast('N° vol et date obligatoires','warn'); return; }
 
-  // Anti-doublon STRICT : même numéro de vol + même date = INTERDIT (non forçable).
+  // Charter Flight (case de la carte) : levée de l'anti-doublon strict, car
+  // plusieurs rotations d'un même n° de vol le même jour sont légitimes.
+  const _charterCbLdm = document.getElementById('p'+i+'-charter');
+  const _charterChecked = !!(_charterCbLdm && _charterCbLdm.checked);
+
+  // Anti-doublon STRICT : même numéro de vol + même date = INTERDIT (non forçable),
+  // SAUF pour les Charter Flights (case cochée).
   // (l'immatriculation n'entre pas dans la clé : un vol = un numéro + une date)
   // Comparaison insensible aux zéros (KP14 = KP0014).
   const fnNorm = _normFN(fn);
-  const existsStrict = [..._fbImported].some(k => {
+  const existsStrict = !_charterChecked && [..._fbImported].some(k => {
     const parts = String(k).split('|');
     return parts[0] === fnNorm && parts[1] === dt;
   });
@@ -2374,8 +2332,7 @@ async function importFlight(i, force) {
     }
     const _finalCompany = finalCo || detectCompany(fn);
     // Charter Flight (MAI uniquement) — case à cocher de la carte
-    const _charterCb = document.getElementById('p'+i+'-charter');
-    const _isCharter = !!(_escaleIsMAI(_finalCompany) && _charterCb && _charterCb.checked);
+    const _isCharter = !!(_escaleIsMAI(_finalCompany) && _charterChecked);
     await addDoc(collection(db,'flights'), {
       flightNumber: _canonFN(fn), registration: rg,
       date: dt,
@@ -2411,7 +2368,7 @@ async function importFlight(i, force) {
   } catch(e) {
     console.error(e);
     toast('Erreur import : '+e.message,'err');
-    if(btn){ btn.disabled=false; btn.innerHTML='⬆ Importer dans le système'; }
+    if(btn){ btn.disabled=false; btn.innerHTML='↑ Importer dans le système'; }
   }
 }
 
@@ -2559,7 +2516,7 @@ async function lookupAuthNumber(i) {
   if (!fn) { toast('Saisissez un numéro de vol d\'abord','warn'); return; }
 
   badge.className = 'auth-badge';
-  badge.textContent = '⏳';
+  badge.textContent = '...';
 
   try {
     const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
@@ -3128,7 +3085,7 @@ function _drawArchiveContent(pdf, arch, x, y, boxW, boxH) {
 async function generateMissingArchives() {
   await _ldmWaitAuth();
   const btn = event && event.target;
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Génération...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Génération...'; }
 
   try {
     const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
