@@ -344,6 +344,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url('assets/ANAC
       <div class="icon"></div>
       <div class="label"><div class="main">LDM / MVT</div><div class="desc">MESSAGES DE VOL</div></div>
     </a>
+    <a href="suivi.html" class="anac-menu-item" data-nav="suivi-trafic">
+      <div class="icon"></div>
+      <div class="label"><div class="main">Suivi Hebdomadaire</div><div class="desc">TRAFIC PAR SEMAINE</div></div>
+    </a>
     <div class="anac-menu-divider"></div>
     <a href="admin.html" class="anac-menu-item" data-nav="admin">
       <div class="icon"></div>
@@ -446,6 +450,18 @@ document.addEventListener('keydown', e => {
           Nombre de vols
         </label>
       </div>
+    </div>
+
+    <div style="width:1px;height:40px;background:#e5e7eb;"></div>
+
+    <div>
+      <div class="lbl" style="margin-bottom:6px;">Charter Flights</div>
+      <select id="maCharterMode" onchange="renderAll()"
+        style="padding:8px 12px;font-size:13px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#1b2430;font-family:inherit;font-weight:600;cursor:pointer;">
+        <option value="avec">Avec charters</option>
+        <option value="sans">Sans charters</option>
+        <option value="seuls">Charters seuls</option>
+      </select>
     </div>
 
     <button class="btn-export" onclick="exportXLSX()">⬇ Exporter Excel</button>
@@ -587,6 +603,14 @@ function isCharterFlight(f){
   if(!f) return false;
   if(f.isCharter!==undefined && f.isCharter!==null) return !!f.isCharter;
   return isMauritanieAirlines(f.company) && !!_charterBaseFN(f.flightNumber) && _charterSuffix(f.flightNumber)!=='';
+}
+// Filtre la liste des vols selon le mode Charter choisi en haut (avec/sans/seuls).
+function _maFilterByCharter(list){
+  const el = document.getElementById('maCharterMode');
+  const mode = el ? el.value : 'avec';
+  if(mode === 'sans')  return (list||[]).filter(function(f){ return !isCharterFlight(f); });
+  if(mode === 'seuls') return (list||[]).filter(function(f){ return isCharterFlight(f); });
+  return list || [];   // 'avec' : tout
 }
 function countCharters(flights, year){
   let n=0; const dates={};
@@ -839,7 +863,7 @@ function renderTable(groupedData, containerId, badgeId){
 
 window.renderAll = function(){
   if (!currentYear) return;
-  const data = buildCrossTable(allFlights, currentYear);
+  const data = buildCrossTable(_maFilterByCharter(allFlights), currentYear);
   renderTable(data.domestic, 'domTableWrap', 'domBadge');
   renderTable(data.international, 'intTableWrap', 'intBadge');
   // Marqueur des Charter Flights
@@ -1087,7 +1111,7 @@ window.exportXLSX = function(){
   if (!years.length) years.push(new Date().getFullYear());
 
   years.forEach(year => {
-    const data = buildCrossTable(allFlights, year);
+    const data = buildCrossTable(_maFilterByCharter(allFlights), year);
     const ws = {};
     let r = 0;
     const merges = [];
