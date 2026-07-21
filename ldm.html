@@ -1193,6 +1193,8 @@ function _renderSingleResult(em) {
         ? `<span style="background:${p.type==='DEP'?'rgba(52,211,153,0.15)':'rgba(251,191,36,0.15)'};color:${p.type==='DEP'?'#34d399':'#fbbf24'};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700;">${p.type}</span>` : '';
     const authBadge = p.authorizationNumber
         ? `<span style="background:rgba(212,175,55,0.12);color:#D4AF37;border:1px solid rgba(212,175,55,0.25);border-radius:4px;padding:2px 8px;font-size:11px;">${esc2(p.authorizationNumber)}</span>` : '';
+    const pilgBadge = p.__pilgrimExtra
+        ? '<span style="background:#fce4ec;color:#7a2540;border:1px solid #f3b6cd;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;">Pèlerinage — vol supplémentaire</span>' : '';
 
     return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
@@ -1200,6 +1202,7 @@ function _renderSingleResult(em) {
             <span style="color:#e2e8f0;font-weight:700;font-size:15px;">${esc2(p.flightNumber||'—')}</span>
             <span style="color:#64748b;font-size:12px;">${esc2(p.date||'')} · ${MOIS[_ldmMonth]} ${_ldmYear}</span>
             ${authBadge}
+            ${pilgBadge}
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;font-size:12px;margin-bottom:12px;">
             <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:8px;">
@@ -1479,7 +1482,39 @@ async function dedupAndEnrich(list) {
     console.warn('Numéros de vol ABSENTS de la liste (destination NON corrigée) : ' + [...new Set(_notFound)].join(', '));
     console.warn('→ Ajoutez ces numéros dans Admin → Numéros de Vol pour que leur destination soit correcte.');
   }
+  _annotatePilgrimLDM(result);
   return result;
+}
+
+// ── Signalement des vols pèlerinage (L6300/L6301 dupliqués le même jour) ──
+// Marque, dans le lot parsé, les vols « supplémentaires » (2e+ d'une même date)
+// qui seront distingués (colorés) côté Suivi/Accueil. Signal informatif.
+function _pilgrimBaseLDM(fn){
+  let s=(fn==null?'':String(fn)).toUpperCase().replace(/[^A-Z0-9]/g,'');
+  s=s.replace(/[A-Z]+$/,'');
+  if(/^L60*300$/.test(s)) return 'L6300';
+  if(/^L60*301$/.test(s)) return 'L6301';
+  return null;
+}
+function _pilgrimSuffixLDM(fn){ const s=(fn==null?'':String(fn)).toUpperCase().replace(/[^A-Z0-9]/g,''); const m=s.match(/[A-Z]+$/); return m?m[0]:''; }
+function _annotatePilgrimLDM(list){
+  const groups={};
+  (list||[]).forEach(function(em){
+    const p=em && em.parsed; if(!p) return;
+    p.__pilgrimExtra=false;
+    const co=(p.company||'').toUpperCase();
+    if(!(co.includes('MAURITANIA')||co==='L6'||co==='MAI')) return;
+    const base=_pilgrimBaseLDM(p.flightNumber);
+    if(!base) return;
+    const date=(p.date||em.date||'');
+    const key=date+'|'+base;
+    (groups[key]=groups[key]||[]).push(em);
+  });
+  Object.keys(groups).forEach(function(k){
+    const g=groups[k]; if(g.length<2) return;
+    g.sort(function(a,b){ const sa=_pilgrimSuffixLDM(a.parsed.flightNumber),sb=_pilgrimSuffixLDM(b.parsed.flightNumber); return sa<sb?-1:(sa>sb?1:0); });
+    for(let i=1;i<g.length;i++) g[i].parsed.__pilgrimExtra=true;
+  });
 }
 
 // fingerprint = flightNumber|date|registration
@@ -2145,6 +2180,8 @@ function renderEmails() {
   const list = document.getElementById('emailList');
   // Masquer : vols déjà importés (doublons) ET emails ignorés manuellement.
   emails.forEach(em => { if (_ignored.has(em.id)) em._ignored = true; });
+  // Signalement pèlerinage : marque les 2e+ L6300/L6301 d'une même date
+  _annotatePilgrimLDM(emails);
   const visibleCount = emails.filter(em => !em._imported && !em._ignored).length;
   document.getElementById('eCount').textContent = visibleCount;
   if (!emails.length || visibleCount === 0) {
@@ -2166,6 +2203,7 @@ function renderEmails() {
         </div>
         <div class="email-date2">${em.date||'–'}</div>
         ${imp ? '<span class="st-badge st-ok">✓ Importé</span>' : ''}
+        ${p.__pilgrimExtra ? '<span class="st-badge" style="background:#fce4ec;color:#7a2540;border:1px solid #f3b6cd;">Pèlerinage · supplémentaire</span>' : ''}
         <button onclick="event.stopPropagation(); ignoreEmail(${i});" title="Masquer cet email sans l'importer"
           style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;margin-left:6px;">Ignorer</button>
         <span style="color:var(--dim);font-size:16px;margin-left:4px;" id="arr-${i}">▼</span>
