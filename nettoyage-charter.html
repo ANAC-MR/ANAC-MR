@@ -77,6 +77,8 @@ td{padding:7px 10px;border-bottom:1px solid #eef1f6;}
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, getDocs, doc, updateDoc }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getAuth, signInAnonymously, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
@@ -86,8 +88,24 @@ const firebaseConfig = {
   messagingSenderId: "906668222910",
   appId: "1:906668222910:web:0231614b880df3196e26cf"
 };
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+// Les règles Firestore exigent request.auth != null → connexion anonyme préalable.
+let _authed = false;
+function ensureAuthed(){
+  return new Promise(function(resolve, reject){
+    if (_authed || auth.currentUser){ _authed = true; return resolve(); }
+    signInAnonymously(auth).then(function(){
+      if (auth.currentUser){ _authed = true; return resolve(); }
+      const unsub = onAuthStateChanged(auth, function(u){
+        if (u){ unsub(); _authed = true; resolve(); }
+      });
+      setTimeout(function(){ if (auth.currentUser){ _authed = true; resolve(); } else reject(new Error('Connexion anonyme trop longue')); }, 6000);
+    }).catch(reject);
+  });
+}
 
 let _toFix = [];   // liste des corrections à appliquer
 
@@ -119,9 +137,11 @@ function logLine(msg){
 document.getElementById('btnScan').addEventListener('click', async function(){
   const btn = document.getElementById('btnScan');
   const st  = document.getElementById('scanStatus');
-  btn.disabled = true; st.textContent = 'Lecture des vols…';
+  btn.disabled = true; st.textContent = 'Connexion…';
   _toFix = [];
   try {
+    await ensureAuthed();
+    st.textContent = 'Lecture des vols…';
     const snap = await getDocs(collection(db, 'flights'));
     let total = 0;
     snap.forEach(function(d){
@@ -198,6 +218,8 @@ document.getElementById('btnApply').addEventListener('click', async function(){
   btn.disabled = true; scanBtn.disabled = true;
   document.getElementById('confirmChk').disabled = true;
   logLine('Application de ' + _toFix.length + ' correction(s)…');
+
+  try { await ensureAuthed(); } catch (e){ logLine('Connexion échouée : ' + (e && e.message ? e.message : e)); btn.disabled=false; scanBtn.disabled=false; return; }
 
   let done = 0, errors = 0;
   for (let i = 0; i < _toFix.length; i++){
