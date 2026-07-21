@@ -161,47 +161,27 @@ function canonCompany(raw) {
     return hit || v;
 }
 
-// ── Vols pèlerinage « distingués » (L6300/L6301 dupliqués le même jour) ──
-// Règle métier : le 1er vol L6300 (ou L6301) d'une même DATE reste normal ; les
-// suivants (2e, 3e…) sont « distingués » et colorés. Recalcul à l'affichage : on
-// groupe par date + base (L6300/L6301) — cela attrape aussi les doublons saisis à
-// la main, pas seulement ceux suffixés à l'import (L6300A, L6300B…).
-function _pilgrimBase(fn){
+// ── Charter Flights (vols MAI hors programme régulier) ──
+// Identification par CASE À COCHER manuelle (champ booléen isCharter sur le vol).
+// L'auto-détection par n° de vol (L6300/L6301 + suffixes A/B) est SUPPRIMÉE.
+// Migration douce : les anciens vols pèlerinage suffixés (L6300A, L6301B…) sont
+// cochés « Charter » au chargement s'ils n'ont pas encore le champ isCharter.
+function _charterBaseFN(fn){
     let s = (fn == null ? '' : String(fn)).toUpperCase().replace(/[^A-Z0-9]/g, '');
-    s = s.replace(/[A-Z]+$/, '');            // retire un éventuel suffixe de rotation (A, B…)
+    s = s.replace(/[A-Z]+$/, '');
     if (/^L60*300$/.test(s)) return 'L6300';
     if (/^L60*301$/.test(s)) return 'L6301';
     return null;
 }
-function _pilgrimSuffix(fn){
+function _charterSuffix(fn){
     const s = (fn == null ? '' : String(fn)).toUpperCase().replace(/[^A-Z0-9]/g, '');
     const m = s.match(/[A-Z]+$/);
     return m ? m[0] : '';
 }
-function annotatePilgrimExtras(list){
-    const groups = {};
-    for (let i = 0; i < list.length; i++){
-        const f = list[i];
-        if (!f) continue;
-        f.__pilgrimExtra = false;
-        if (!isMAIcompany(f.company)) continue;
-        const base = _pilgrimBase(f.flightNumber);
-        if (!base) continue;
-        const key = (f.date || '') + '|' + base;
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(f);
-    }
-    Object.keys(groups).forEach(function(k){
-        const g = groups[k];
-        if (g.length < 2) return;
-        // Ordre : sans suffixe d'abord, puis A, B… → le 1er reste normal, le reste distingué
-        g.sort(function(a, b){
-            const sa = _pilgrimSuffix(a.flightNumber), sb = _pilgrimSuffix(b.flightNumber);
-            if (sa !== sb) return sa < sb ? -1 : 1;
-            return 0;
-        });
-        for (let i = 1; i < g.length; i++) g[i].__pilgrimExtra = true;
-    });
+// Ancien vol pèlerinage à migrer : MAI + base L6300/L6301 + suffixe lettre (A, B…)
+function _isLegacyCharterFlight(f){
+    if (!f || !isMAIcompany(f.company)) return false;
+    return !!_charterBaseFN(f.flightNumber) && _charterSuffix(f.flightNumber) !== '';
 }
 
 // Renvoie un tableau de "lignes" à afficher pour un vol.
@@ -788,6 +768,11 @@ function openModal(flightId = null) {
                 if (typeof updateMidLegRow === 'function') updateMidLegRow();
                 if (typeof updateEscaleTotals === 'function') updateEscaleTotals();
 
+                // Charter Flight : afficher la case (si MAI) et charger l'état
+                toggleCharterField(flight.company);
+                const _chkC = document.getElementById('fCharter');
+                if (_chkC) _chkC.checked = !!flight.isCharter;
+
                 // ── Anti-course : ré-affirmer le trajet et l'escale APRÈS la fin
                 //    des opérations asynchrones (updateVolField, auto-remplissage…)
                 //    qui pouvaient écraser les selects avec d'anciennes valeurs. ──
@@ -847,6 +832,11 @@ function openModal(flightId = null) {
 
             const sg0 = document.getElementById('stopoverGroup');
             if (sg0) sg0.style.display = 'none';
+
+            // Charter Flight : décocher + masquer tant qu'aucune compagnie MAI choisie
+            const _chkC0 = document.getElementById('fCharter');
+            if (_chkC0) _chkC0.checked = false;
+            toggleCharterField('');
 
             // Modal vierge : aucune compagnie ni route pré-remplie.
             // L'utilisateur choisit lui-même la compagnie.
@@ -998,6 +988,9 @@ function getFormData() {
     // Sinon (vol normal ou autre compagnie), on garde le champ PAX (VOL) du haut.
     const mainPax     = isMaiStop ? (parseInt(document.getElementById('fMainPax').value)||0) : (parseInt(elements.fPassengers.value) || 0);
     const mainBabies  = isMaiStop ? (parseInt(document.getElementById('fMainBabies').value)||0) : (parseInt(elements.fBabies.value) || 0);
+    // Charter Flight (MAI uniquement) — case à cocher manuelle
+    const _charterCb  = document.getElementById('fCharter');
+    const isCharter   = !!(isMAIcompany(comp) && _charterCb && _charterCb.checked);
 
     return {
         authorizationNumber: elements.fAuthNumber.value.trim().toUpperCase(),
@@ -1023,6 +1016,7 @@ function getFormData() {
         // PAX TOTAL du vol = vol principal + escale (le milieu est interne, non compté)
         passengers: mainPax + stopPax,
         babies:     mainBabies + stopBabies,
+        isCharter:  isCharter,
         timestamp:  Date.now()
     };
 }
@@ -1289,6 +1283,17 @@ function updateFlightNumberPrefix(isAddMode = false) {
     updateImmField(company);
     // Update vol number field based on admin config — forceEmpty en mode ADD
     updateVolField(company, isAddMode);
+    // Charter Flight : la case ne s'affiche que pour MAI
+    toggleCharterField(company);
+}
+
+// Affiche/masque la case « Charter » selon la compagnie (MAI uniquement).
+function toggleCharterField(company){
+    const wrap = document.getElementById('charterToggle');
+    if (!wrap) return;
+    const show = isMAIcompany(company);
+    wrap.style.display = show ? '' : 'none';
+    if (!show){ const cb = document.getElementById('fCharter'); if (cb) cb.checked = false; }
 }
 
 // Listener sur le champ fVol (input texte) pour auto-fill depuis flight_numbers ET programme_vols
@@ -1797,13 +1802,53 @@ function render() {
     // Mémoriser la liste triée pour la pagination
     window._filteredSorted = filteredFlights;
 
+    // ── Mode d'affichage des Charter Flights (Séparés / Mélangés / Charters seuls) ──
+    const modeEl = document.getElementById('charterViewMode');
+    const mode = modeEl ? modeEl.value : 'sep';
+    const charterF = filteredFlights.filter(f => f && f.isCharter);
+    const normalF  = filteredFlights.filter(f => !(f && f.isCharter));
+    let mainSet;
+    if (mode === 'mix') mainSet = filteredFlights;      // tout ensemble
+    else if (mode === 'only') mainSet = charterF;       // charters seuls
+    else mainSet = normalF;                             // 'sep' (défaut) : charters à part
+
+    window._filteredSorted = mainSet;
+
     // Ajuster la page courante si hors limites (ex: après filtre)
-    const totalPages = Math.max(1, Math.ceil(filteredFlights.length / window._pageSize));
+    const totalPages = Math.max(1, Math.ceil(mainSet.length / window._pageSize));
     if (window._currentPage > totalPages) window._currentPage = totalPages;
 
-    renderTableWithPagination(filteredFlights);
-    renderTotals(filteredFlights);
-    renderPaginationControls(filteredFlights.length);
+    renderTableWithPagination(mainSet);
+    renderTotals(mainSet);
+    renderPaginationControls(mainSet.length);
+
+    // Section séparée des Charter Flights (uniquement en mode « Séparés »)
+    renderCharterSection(mode === 'sep' ? charterF : []);
+}
+
+// Rendu de la section séparée « Charter Flights » (non paginée).
+function renderCharterSection(list){
+    const sec  = document.getElementById('charterSection');
+    const body = document.getElementById('charterTableBody');
+    if (!sec || !body) return;
+    if (!list || !list.length){ sec.style.display = 'none'; body.innerHTML = ''; return; }
+    sec.style.display = '';
+    const cnt = document.getElementById('charterCount');
+    if (cnt) cnt.textContent = list.length + ' vol' + (list.length > 1 ? 's' : '');
+    body.innerHTML = '';
+    list.forEach((flight, idx) => {
+        const lines = (typeof generateFlightLines === 'function') ? generateFlightLines(flight) : [null];
+        const parity = idx % 2;
+        if (lines.length <= 1) {
+            body.appendChild(createFlightRow(flight, idx + 1, null, 0, 1, null, parity, true));
+        } else {
+            const totalPax = lines.reduce((s,l)=> s + (Number(l.passengers)||0), 0);
+            const totalBab = lines.reduce((s,l)=> s + (Number(l.babies)||0), 0);
+            lines.forEach((line, li) => {
+                body.appendChild(createFlightRow(flight, li === 0 ? (idx + 1) : null, line, li, lines.length, {totalPax, totalBab}, parity, li === 0));
+            });
+        }
+    });
 }
 
 function renderTableWithPagination(filteredFlights) {
@@ -1926,8 +1971,8 @@ function createFlightRow(flight, rowNum, line, lineIdx, lineCount, totals, parit
     // ── Couleur alternée par vol (X, Y, X, Y…) ──
     const groupBg = parity === 1 ? '#edf3fb' : '#ffffff';
     row.style.background = groupBg;
-    // Vol pèlerinage distingué (2e+ L6300/L6301 du jour) : ligne rose pâle
-    if (flight && flight.__pilgrimExtra) row.style.background = '#fce4ec';
+    // Vol Charter (MAI hors programme régulier) : ligne rose pâle
+    if (flight && flight.isCharter) row.style.background = '#fce4ec';
     if (isGroupStart) row.style.borderTop = '2px solid #d7e2f0';
 
     const formattedDate = formatDateEU(flight.date);
@@ -2076,8 +2121,18 @@ function updateFlightsData(newFlights) {
         if (_f && _f.company) _f.company = canonCompany(_f.company);
     }
 
-    // ── Marquage des vols pèlerinage distingués (2e+ L6300/L6301 du jour) ──
-    annotatePilgrimExtras(newFlights);
+    // ── Charter Flights : normaliser le champ isCharter (migration douce) ──
+    // Si le vol n'a pas encore le champ, on coche automatiquement les anciens
+    // vols pèlerinage suffixés (L6300A/B) ; sinon on respecte la valeur stockée.
+    for (let _i = 0; _i < newFlights.length; _i++) {
+        const _f = newFlights[_i];
+        if (!_f) continue;
+        if (_f.isCharter === undefined || _f.isCharter === null) {
+            _f.isCharter = _isLegacyCharterFlight(_f);
+        } else {
+            _f.isCharter = !!_f.isCharter;
+        }
+    }
 
     flights = newFlights;
     // Peupler le select année avec les années disponibles
@@ -2345,7 +2400,8 @@ window.app = {
     updateFlightsData,
     showNotification,
     toggleActionsMenu,
-    editFlight
+    editFlight,
+    render
 };
 
 // ── BroadcastChannel: écoute les commandes de inject_test_flights.html ──
