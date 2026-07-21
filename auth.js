@@ -223,7 +223,6 @@ export function resolvePermissions(role, customPerms) {
 
 // Compat : la consultation des mots de passe est SUPPRIMÉE (sécurité).
 // Stubs conservés pour ne pas casser les pages qui les appellent.
-export function decHint() { return ''; }
 export function getPasswordHint() { return ''; }
 
 // ── Authentification ─────────────────────────────────────────────
