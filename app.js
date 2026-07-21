@@ -1799,9 +1799,6 @@ function render() {
         return getAuthNum(a.authorizationNumber) - getAuthNum(b.authorizationNumber);
     });
 
-    // Mémoriser la liste triée pour la pagination
-    window._filteredSorted = filteredFlights;
-
     // ── Mode d'affichage des Charter Flights (Séparés / Mélangés / Charters seuls) ──
     const modeEl = document.getElementById('charterViewMode');
     const mode = modeEl ? modeEl.value : 'sep';
@@ -1812,6 +1809,7 @@ function render() {
     else if (mode === 'only') mainSet = charterF;       // charters seuls
     else mainSet = normalF;                             // 'sep' (défaut) : charters à part
 
+    // Mémoriser la liste affichée (pagination + export Excel de l'accueil)
     window._filteredSorted = mainSet;
 
     // Ajuster la page courante si hors limites (ex: après filtre)
@@ -2089,14 +2087,33 @@ function setupRealtimeListener() {
 }
 
 function updateFlightsData(newFlights) {
+    // ── Normalisation préalable (AVANT la dédup) ──
+    // 1. Fusion des variantes de casse du nom de compagnie (non destructif).
+    //    Ex. « MAURITANIA AIRLINES » ≡ « Mauritania Airlines ». Corrige d'un coup le
+    //    filtre d'accueil (comparaison exacte) ET les agrégations des graphes/rapports.
+    // 2. Champ isCharter : migration douce des anciens vols suffixés (L6300A/B).
+    for (let _i = 0; _i < newFlights.length; _i++) {
+        const _f = newFlights[_i];
+        if (!_f) continue;
+        if (_f.company) _f.company = canonCompany(_f.company);
+        if (_f.isCharter === undefined || _f.isCharter === null) {
+            _f.isCharter = _isLegacyCharterFlight(_f);
+        } else {
+            _f.isCharter = !!_f.isCharter;
+        }
+    }
+
     // ── Masquage LÉGER des doublons (sans suppression Firestore) ──
     // On masque les copies exactes à l'affichage, mais on NE SUPPRIME PLUS
     // automatiquement en base : les suppressions re-déclenchaient le listener
     // temps réel → boucle de re-renders → lenteur et scintillement.
+    // Les Charter Flights sont EXEMPTÉS : plusieurs rotations d'un même n° de vol
+    // le même jour (même trajet, sans n° auth) sont légitimes et doivent rester visibles.
     try {
         const seen = new Set();
         const filtered = [];
         for (const f of newFlights) {
+            if (f && f.isCharter) { filtered.push(f); continue; }
             const key = [
                 (f.authorizationNumber || '').trim().toUpperCase(),
                 (f.date || '').trim(),
@@ -2111,28 +2128,6 @@ function updateFlightsData(newFlights) {
         }
         newFlights = filtered;
     } catch (e) { console.warn('Dédup légère:', e && e.message); }
-
-    // ── Fusion des variantes de casse du nom de compagnie (non destructif) ──
-    // Ex. « MAURITANIA AIRLINES » ≡ « Mauritania Airlines ». Corrige d'un coup le
-    // filtre d'accueil (comparaison exacte) ET les agrégations des graphes/rapports
-    // (qui itèrent sur les compagnies distinctes de window.appFlights).
-    for (let _i = 0; _i < newFlights.length; _i++) {
-        const _f = newFlights[_i];
-        if (_f && _f.company) _f.company = canonCompany(_f.company);
-    }
-
-    // ── Charter Flights : normaliser le champ isCharter (migration douce) ──
-    // Si le vol n'a pas encore le champ, on coche automatiquement les anciens
-    // vols pèlerinage suffixés (L6300A/B) ; sinon on respecte la valeur stockée.
-    for (let _i = 0; _i < newFlights.length; _i++) {
-        const _f = newFlights[_i];
-        if (!_f) continue;
-        if (_f.isCharter === undefined || _f.isCharter === null) {
-            _f.isCharter = _isLegacyCharterFlight(_f);
-        } else {
-            _f.isCharter = !!_f.isCharter;
-        }
-    }
 
     flights = newFlights;
     // Peupler le select année avec les années disponibles
