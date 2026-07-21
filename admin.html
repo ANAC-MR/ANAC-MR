@@ -5211,7 +5211,7 @@ function _chgRenderEnriched() {
             ${inp('imm', r.imm, '#94a3b8', '70px')}
             ${inp('pax', r.pax, '#34d399', '45px')}
             ${inp('bebes', r.bebes, '#94a3b8', '40px')}
-            <td style="padding:5px 8px;text-align:center;">${editable ? `<input type="checkbox" ${r.isCharter?'checked':''} title="Charter Flight (MAI hors programme régulier)" onchange="_chgToggleCharter(${i},this.checked)" style="accent-color:#e58bad;cursor:pointer;">` : (r.isCharter?'Charter':'')}</td>
+            <td style="padding:5px 8px;text-align:center;">${editable ? `<input type="checkbox" ${r.isCharter?'checked':''} title="Charter Flight" onchange="_chgToggleCharter(${i},this.checked)" style="accent-color:#e58bad;cursor:pointer;">` : (r.isCharter?'Charter':'')}</td>
             <td style="padding:5px 8px;white-space:nowrap;">${warnBadge}</td>
         </tr>`;
     }).join('');
