@@ -1743,10 +1743,10 @@ async function readEmails() {
 
     setStatus('loading',`${listData.messages.length} email(s) trouvé(s) — extraction des données...`);
 
-    // Fetch each email
-    const fetched = await Promise.all(
-      listData.messages.map(m => fetchEmail(m.id))
-    );
+    // Récupération à CONCURRENCE LIMITÉE (5 à la fois) : un Promise.all sur
+    // 100 messages dépasse le quota Gmail (429 Too Many Requests) et perd
+    // silencieusement des emails. fetchEmail réessaie en plus sur 429.
+    const fetched = await _fetchEmailsLimited(listData.messages.map(m => m.id), 5);
 
     // Filter and parse
     emails = fetched
@@ -1803,13 +1803,40 @@ async function readEmails() {
 }
 
 async function fetchEmail(id) {
-  try {
-    const r = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    return await r.json();
-  } catch(e){ return null; }
+  // Jusqu'à 3 tentatives ; sur 429 (quota Gmail), attente progressive avant réessai.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (r.status === 429) {
+        await new Promise(res => setTimeout(res, 800 * (attempt + 1)));
+        continue;
+      }
+      if (!r.ok) return null;
+      return await r.json();
+    } catch(e) {
+      await new Promise(res => setTimeout(res, 400));
+    }
+  }
+  return null;
+}
+
+// Exécute fetchEmail sur une liste d'ids avec au plus `limit` requêtes simultanées.
+async function _fetchEmailsLimited(ids, limit) {
+  const results = new Array(ids.length);
+  let next = 0;
+  async function worker() {
+    while (next < ids.length) {
+      const i = next; next++;
+      results[i] = await fetchEmail(ids[i]);
+    }
+  }
+  const workers = [];
+  for (let w = 0; w < Math.min(limit, ids.length); w++) workers.push(worker());
+  await Promise.all(workers);
+  return results;
 }
 
 function isLDMorMVT(em) {
