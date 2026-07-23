@@ -122,7 +122,10 @@ async function getAuth() {
   const app = await getApp();
   const m = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
   _auth = m.getAuth(app);
-  try { await m.setPersistence(_auth, m.browserSessionPersistence); } catch(e) {}
+  // Persistance LOCALE : la session Firebase survit à la fermeture de l'onglet,
+  // comme la session applicative (localStorage). Évite de retomber sur une
+  // session anonyme en rouvrant une page.
+  try { await m.setPersistence(_auth, m.browserLocalPersistence); } catch(e) {}
   return _auth;
 }
 async function getFunctions() {
@@ -240,6 +243,31 @@ async function loadProfileByUid(uid) {
   return { id:d.id, ...d.data() };
 }
 
+// ── Propagation de la session réelle vers les autres apps Firebase ──
+// Connecte chaque instance Firebase déjà initialisée (app par défaut de
+// firebase.js, etc.) avec le MÊME compte, afin que les accès Firestore
+// se fassent sous une session réelle et non anonyme.
+async function _propagateSession(A, email, pass) {
+  try {
+    const { getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const apps = getApps();
+    for (const ap of apps) {
+      if (!ap || ap.name === 'anac-auth') continue;   // déjà connectée
+      try {
+        const a2 = A.getAuth(ap);
+        try { await A.setPersistence(a2, A.browserLocalPersistence); } catch(e) {}
+        const cur = a2.currentUser;
+        if (cur && !cur.isAnonymous) continue;        // déjà une session réelle
+        if (cur && cur.isAnonymous) { try { await A.signOut(a2); } catch(e) {} }
+        await A.signInWithEmailAndPassword(a2, email, pass);
+      } catch(e) { console.warn('Propagation session (' + ap.name + '):', e && e.message); }
+    }
+  } catch(e) { console.warn('Propagation session:', e && e.message); }
+}
+
+// Session Firebase réelle (non anonyme) sur cette instance ?
+function _isRealUser(u) { return !!u && u.isAnonymous !== true; }
+
 export async function login(username, password) {
   const uname = (username || '').trim();
   const pass  = password || '';
@@ -248,7 +276,6 @@ export async function login(username, password) {
   const auth = await getAuth();
   const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
   const email = usernameToEmail(uname);
-
   // Connexion Firebase Auth directe (e-mail dérivé, aucune lecture
   // Firestore préalable). Vaut aussi pour DADY (compte réel
   // dady@sgv-anac.local créé au bootstrap).
@@ -302,6 +329,14 @@ export async function login(username, password) {
     } catch(e) {}
   }
 
+  // ── Propager la session RÉELLE aux autres instances Firebase ──
+  // Le login se fait sur l'app 'anac-auth', mais les données Firestore
+  // passent par l'app par défaut (firebase.js) : deux instances = deux
+  // sessions distinctes. Sans cette propagation, l'app par défaut
+  // retomberait sur une session ANONYME, alors que les règles Firestore
+  // durcies exigent un compte réel.
+  await _propagateSession(A, email, pass);
+
   saveSession({
     username: profile ? profile.username : uname,
     role, permissions: perms, sessionId: sid,
@@ -327,8 +362,17 @@ export async function logout() {
     }
     try {
       const auth = await getAuth();
-      const { signOut } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-      await signOut(auth);
+      const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+      await A.signOut(auth);
+      // Fermer aussi les autres instances (app par défaut de firebase.js),
+      // sinon la session réelle y survivrait après déconnexion.
+      try {
+        const { getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        for (const ap of getApps()) {
+          if (!ap || ap.name === 'anac-auth') continue;
+          try { await A.signOut(A.getAuth(ap)); } catch(e) {}
+        }
+      } catch(e) {}
     } catch(e) {}
   }
   clearSession();
@@ -444,13 +488,15 @@ export async function ensureAuthed(app) {
   let auth;
   try {
     auth = A.getAuth(app);
-    try { await A.setPersistence(auth, A.browserSessionPersistence); } catch(e) {}
+    try { await A.setPersistence(auth, A.browserLocalPersistence); } catch(e) {}
   } catch(e) { return false; }
 
-  if (auth.currentUser) { _authedApps.add(app); return true; }
+  const isPublic = (typeof window !== 'undefined' && window.ANAC_PUBLIC_MODE);
 
-  // Mode public (carte) → connexion anonyme
-  if (typeof window !== 'undefined' && window.ANAC_PUBLIC_MODE) {
+  // Mode public (carte des vols) → session anonyme, seule lecture autorisée
+  // par les règles Firestore (collection schedules uniquement).
+  if (isPublic) {
+    if (auth.currentUser) { _authedApps.add(app); return true; }
     try {
       await A.signInAnonymously(auth);
       await _waitAuth(A, auth);
@@ -459,16 +505,20 @@ export async function ensureAuthed(app) {
     } catch(e) { console.warn('Anon auth:', e && e.message); return false; }
   }
 
-  // Anonyme : suffisant pour lire les données métier (la règle
-  // exige uniquement request.auth != null). Les opérations
-  // sensibles (comptes) passent par Cloud Functions qui vérifient
-  // le claim admin séparément.
-  try {
-    await A.signInAnonymously(auth);
-    await _waitAuth(A, auth);
-    _authedApps.add(app);
-    return true;
-  } catch(e) { console.warn('ensureAuthed anon:', e && e.message); return false; }
+  // Pages authentifiées : une session RÉELLE est exigée (les règles
+  // Firestore refusent les sessions anonymes). La session persistée met
+  // un instant à être restaurée au chargement → on l'attend.
+  if (_isRealUser(auth.currentUser)) { _authedApps.add(app); return true; }
+  await _waitAuth(A, auth);
+  if (_isRealUser(auth.currentUser)) { _authedApps.add(app); return true; }
+
+  // Session anonyme résiduelle (ancienne version) : inutilisable désormais.
+  // On la supprime et on renvoie l'utilisateur vers la page de connexion.
+  if (auth.currentUser && auth.currentUser.isAnonymous) {
+    try { await A.signOut(auth); } catch(e) {}
+    console.warn('Session anonyme obsolète — reconnexion requise.');
+  }
+  return false;
 }
 
 function _waitAuth(A, auth) {
@@ -494,16 +544,9 @@ export async function listUsers() {
       setTimeout(() => { try{unsub();}catch(e){} resolve(); }, 5000);
     });
   }
-  if (!auth.currentUser) {
-    // Toujours rien : connexion anonyme (suffisante pour LIRE).
-    try { await A.signInAnonymously(auth); } catch(e) {}
-    await new Promise((resolve) => {
-      if (auth.currentUser) return resolve();
-      const unsub = A.onAuthStateChanged(auth, (u) => { if (u) { try{unsub();}catch(e){} resolve(); } });
-      setTimeout(() => { try{unsub();}catch(e){} resolve(); }, 5000);
-    });
-  }
-  if (!auth.currentUser) {
+  // Plus de repli anonyme : les règles Firestore réservent la lecture de
+  // anac_users aux comptes réels.
+  if (!_isRealUser(auth.currentUser)) {
     throw new Error('Session Firebase non établie — reconnectez-vous (DADY).');
   }
   try { await auth.currentUser.getIdToken(); } catch(e) {}
