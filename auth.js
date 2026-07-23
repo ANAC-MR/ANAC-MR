@@ -492,13 +492,19 @@ export async function ensureAuthed(app) {
   if (_authedApps.has(app)) return true;
 
   const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+  const isPublic  = (typeof window !== 'undefined' && window.ANAC_PUBLIC_MODE);
+  const isDefault = app.name === '[DEFAULT]';
   let auth;
   try {
     auth = A.getAuth(app);
-    try { await A.setPersistence(auth, A.browserLocalPersistence); } catch(e) {}
+    // Persistance : locale pour l'app par défaut (session restaurée à chaque
+    // page) et le mode public ; EN MÉMOIRE pour les instances secondaires
+    // (admin-reader, ldm, …) qui reçoivent leur session par copie à chaque
+    // chargement — ainsi aucune session secondaire ne traîne sur le poste.
+    try {
+      await A.setPersistence(auth, (isPublic || isDefault) ? A.browserLocalPersistence : A.inMemoryPersistence);
+    } catch(e) {}
   } catch(e) { return false; }
-
-  const isPublic = (typeof window !== 'undefined' && window.ANAC_PUBLIC_MODE);
 
   // Mode public (carte des vols) → session anonyme, seule lecture autorisée
   // par les règles Firestore (collection schedules uniquement).
@@ -513,30 +519,59 @@ export async function ensureAuthed(app) {
   }
 
   // Pages authentifiées : une session RÉELLE est exigée (les règles
-  // Firestore refusent les sessions anonymes). La session persistée met
-  // un instant à être restaurée au chargement → on l'attend.
+  // Firestore refusent les sessions anonymes).
   if (_isRealUser(auth.currentUser)) { _authedApps.add(app); return true; }
+
+  // 1) Copier la session réelle d'une autre instance déjà connectée
+  //    (anac-auth ou l'app par défaut). Couvre toutes les instances
+  //    secondaires créées à la volée, sans redemander le mot de passe.
+  if (await _copyRealSession(A, auth, app)) { _authedApps.add(app); return true; }
+
+  // 2) Attendre la restauration de la session persistée (app par défaut),
+  //    puis retenter la copie (les autres instances ont pu se restaurer).
   await _waitAuth(A, auth);
   if (_isRealUser(auth.currentUser)) { _authedApps.add(app); return true; }
+  if (await _copyRealSession(A, auth, app)) { _authedApps.add(app); return true; }
 
   // Session anonyme résiduelle (ancienne version) : inutilisable désormais.
   if (auth.currentUser && auth.currentUser.isAnonymous) {
     try { await A.signOut(auth); } catch(e) {}
   }
 
-  // Aucune session réelle sur cette instance alors qu'une session applicative
-  // existe (cas d'une connexion antérieure au changement) : plutôt que de
-  // basculer silencieusement en mode dégradé, on renvoie vers la connexion.
-  // Garde anti-boucle : une seule redirection par onglet.
-  try {
-    if (typeof window !== 'undefined' && getSession()) {
-      const K = 'anac_relogin_once';
-      if (!sessionStorage.getItem(K)) {
-        sessionStorage.setItem(K, '1');
-        console.warn('Session Firebase absente — reconnexion requise.');
-        clearSession();
-        location.href = 'login.html';
+  // Échec définitif. On ne redirige que si c'est l'app PAR DÉFAUT (le canal
+  // de données principal) qui n'a pas de session : l'échec d'une instance
+  // secondaire ne doit jamais déconnecter l'utilisateur.
+  if (isDefault) {
+    try {
+      if (typeof window !== 'undefined' && getSession()) {
+        const K = 'anac_relogin_once';
+        if (!sessionStorage.getItem(K)) {
+          sessionStorage.setItem(K, '1');
+          console.warn('Session Firebase absente — reconnexion requise.');
+          clearSession();
+          location.href = 'login.html';
+        }
       }
+    } catch(e) {}
+  }
+  return false;
+}
+
+// Copie la session réelle d'une autre instance Firebase du même projet vers
+// `auth` (mécanisme officiel updateCurrentUser — aucun mot de passe requis).
+async function _copyRealSession(A, auth, app) {
+  try {
+    const FBAPP = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const apps = FBAPP.getApps();
+    for (const ap of apps) {
+      if (!ap || ap === app) continue;
+      let src = null;
+      try { src = A.getAuth(ap).currentUser; } catch(e) { continue; }
+      if (!_isRealUser(src)) continue;
+      try {
+        await A.updateCurrentUser(auth, src);
+        if (_isRealUser(auth.currentUser)) return true;
+      } catch(e) { console.warn('Copie session (' + ap.name + ' → ' + app.name + '):', e && e.message); }
     }
   } catch(e) {}
   return false;
