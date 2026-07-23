@@ -6,6 +6,24 @@
 <title>ANAC – Lecteur LDM/MVT</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// CDN de repli si cdnjs est inaccessible (sinon : pas de génération PDF).
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    if (typeof window.jspdf !== 'undefined') return;
+    var urls = ['https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+                'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'];
+    (function next(i){
+      if (typeof window.jspdf !== 'undefined' || i >= urls.length) return;
+      var s = document.createElement('script');
+      s.src = urls[i];
+      s.onload = function(){ next(i + 1); };
+      s.onerror = function(){ next(i + 1); };
+      document.head.appendChild(s);
+    })(0);
+  }, 800);
+});
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#0a1628;--navy2:#0f1f3d;--blue:#1a3a6b;--accent:#D4AF37;--green:#00c98d;--red:#e53e3e;--text:#e8edf5;--dim:#7a8ba8;--border:rgba(212,175,55,0.15);--card:rgba(255,255,255,0.04);}
