@@ -249,8 +249,15 @@ async function loadProfileByUid(uid) {
 // se fassent sous une session réelle et non anonyme.
 async function _propagateSession(A, email, pass) {
   try {
-    const { getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const apps = getApps();
+    const FBAPP = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    // login.html ne charge PAS firebase.js : l'app par défaut n'existe pas
+    // encore à cet instant. On la crée ici pour y ouvrir la session, qui sera
+    // ensuite restaurée (persistance locale) sur index.html, ldm.html, etc.
+    let apps = FBAPP.getApps();
+    if (!apps.some(function(a){ return a && a.name === '[DEFAULT]'; })) {
+      try { FBAPP.initializeApp(FB_CONFIG); } catch(e) {}
+      apps = FBAPP.getApps();
+    }
     for (const ap of apps) {
       if (!ap || ap.name === 'anac-auth') continue;   // déjà connectée
       try {
@@ -513,11 +520,25 @@ export async function ensureAuthed(app) {
   if (_isRealUser(auth.currentUser)) { _authedApps.add(app); return true; }
 
   // Session anonyme résiduelle (ancienne version) : inutilisable désormais.
-  // On la supprime et on renvoie l'utilisateur vers la page de connexion.
   if (auth.currentUser && auth.currentUser.isAnonymous) {
     try { await A.signOut(auth); } catch(e) {}
-    console.warn('Session anonyme obsolète — reconnexion requise.');
   }
+
+  // Aucune session réelle sur cette instance alors qu'une session applicative
+  // existe (cas d'une connexion antérieure au changement) : plutôt que de
+  // basculer silencieusement en mode dégradé, on renvoie vers la connexion.
+  // Garde anti-boucle : une seule redirection par onglet.
+  try {
+    if (typeof window !== 'undefined' && getSession()) {
+      const K = 'anac_relogin_once';
+      if (!sessionStorage.getItem(K)) {
+        sessionStorage.setItem(K, '1');
+        console.warn('Session Firebase absente — reconnexion requise.');
+        clearSession();
+        location.href = 'login.html';
+      }
+    }
+  } catch(e) {}
   return false;
 }
 
