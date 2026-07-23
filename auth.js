@@ -494,15 +494,16 @@ export async function ensureAuthed(app) {
   const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
   const isPublic  = (typeof window !== 'undefined' && window.ANAC_PUBLIC_MODE);
   const isDefault = app.name === '[DEFAULT]';
+  const isAuthApp = app.name === 'anac-auth';
   let auth;
   try {
     auth = A.getAuth(app);
-    // Persistance : locale pour l'app par défaut (session restaurée à chaque
-    // page) et le mode public ; EN MÉMOIRE pour les instances secondaires
+    // Persistance : locale pour l'app par défaut, l'app de login ('anac-auth')
+    // et le mode public ; EN MÉMOIRE pour les instances secondaires
     // (admin-reader, ldm, …) qui reçoivent leur session par copie à chaque
     // chargement — ainsi aucune session secondaire ne traîne sur le poste.
     try {
-      await A.setPersistence(auth, (isPublic || isDefault) ? A.browserLocalPersistence : A.inMemoryPersistence);
+      await A.setPersistence(auth, (isPublic || isDefault || isAuthApp) ? A.browserLocalPersistence : A.inMemoryPersistence);
     } catch(e) {}
   } catch(e) { return false; }
 
@@ -538,33 +539,53 @@ export async function ensureAuthed(app) {
     try { await A.signOut(auth); } catch(e) {}
   }
 
-  // Échec définitif. On ne redirige que si c'est l'app PAR DÉFAUT (le canal
-  // de données principal) qui n'a pas de session : l'échec d'une instance
-  // secondaire ne doit jamais déconnecter l'utilisateur.
-  if (isDefault) {
-    try {
-      if (typeof window !== 'undefined' && getSession()) {
-        const K = 'anac_relogin_once';
-        if (!sessionStorage.getItem(K)) {
-          sessionStorage.setItem(K, '1');
-          console.warn('Session Firebase absente — reconnexion requise.');
-          clearSession();
-          location.href = 'login.html';
-        }
+  // Échec définitif : la source canonique a été attendue et il n'existe
+  // aucune session réelle persistée dans ce navigateur. Une reconnexion est
+  // réellement nécessaire → renvoi vers la page de connexion (une seule fois
+  // par onglet, garde anti-boucle), quelle que soit la page/instance.
+  try {
+    if (typeof window !== 'undefined' && getSession()) {
+      const K = 'anac_relogin_once';
+      if (!sessionStorage.getItem(K)) {
+        sessionStorage.setItem(K, '1');
+        console.warn('Session Firebase absente — reconnexion requise.');
+        clearSession();
+        location.href = 'login.html';
       }
-    } catch(e) {}
-  }
+    }
+  } catch(e) {}
   return false;
 }
 
 // Copie la session réelle d'une autre instance Firebase du même projet vers
 // `auth` (mécanisme officiel updateCurrentUser — aucun mot de passe requis).
+// La restauration d'une session persistée étant ASYNCHRONE, on initialise la
+// source canonique ('anac-auth', session du login) et on ATTEND sa
+// restauration avant de copier — sinon currentUser est encore null au
+// chargement de la page et la copie échoue au premier essai.
 async function _copyRealSession(A, auth, app) {
   try {
     const FBAPP = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const apps = FBAPP.getApps();
-    for (const ap of apps) {
-      if (!ap || ap === app) continue;
+
+    // 1) Source canonique : l'app 'anac-auth' (créée au besoin), restauration attendue.
+    try {
+      const apps = FBAPP.getApps();
+      const src = apps.find(function(a){ return a && a.name === 'anac-auth'; })
+               || FBAPP.initializeApp(FB_CONFIG, 'anac-auth');
+      if (src !== app) {
+        const sAuth = A.getAuth(src);
+        try { await A.setPersistence(sAuth, A.browserLocalPersistence); } catch(e) {}
+        if (!_isRealUser(sAuth.currentUser)) await _waitAuth(A, sAuth);
+        if (_isRealUser(sAuth.currentUser)) {
+          await A.updateCurrentUser(auth, sAuth.currentUser);
+          if (_isRealUser(auth.currentUser)) return true;
+        }
+      }
+    } catch(e) {}
+
+    // 2) Repli : toute autre instance déjà restaurée (ex. app par défaut).
+    for (const ap of FBAPP.getApps()) {
+      if (!ap || ap === app || ap.name === 'anac-auth') continue;
       let src = null;
       try { src = A.getAuth(ap).currentUser; } catch(e) { continue; }
       if (!_isRealUser(src)) continue;
