@@ -11,7 +11,6 @@
 //  • L'identifiant DADY reste le compte de secours ; il est adossé
 //    à un vrai compte Firebase (créé au bootstrap) portant le claim
 //    admin. Le filet de secours est conservé mais son mot de passe
-//    n'existe dans le code que sous forme d'empreinte SHA-256.
 // ═══════════════════════════════════════════════════════════════
 
 const FB_CONFIG = {
@@ -26,28 +25,8 @@ const FB_CONFIG = {
 const FUNCTIONS_REGION = 'europe-west1';
 
 export const AUTH_SESSION_KEY = 'anac_auth_v4';
-export const FALLBACK_USER = 'DADY';
 // Le mot de passe du filet de secours n'est PLUS stocké en clair.
-// On ne conserve que son empreinte SHA-256 (irréversible) : le code
-// peut vérifier un mot de passe sans jamais le contenir. Lire ce
-// fichier ne révèle aucun secret exploitable.
-const FALLBACK_PASS_SHA256 = '1b24b5004bd90d5fdace6cbf87b062892d1de27dabb14fb8c1dc05354412fa84';
 
-// Calcule l'empreinte SHA-256 d'une chaîne (hex minuscule).
-async function _sha256Hex(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Vrai si le mot de passe saisi correspond à l'empreinte du filet.
-async function _isFallbackPass(pass) {
-  try {
-    const h = await _sha256Hex(String(pass || ''));
-    // Comparaison simple ; l'empreinte n'étant pas un secret, pas
-    // besoin de comparaison à temps constant ici.
-    return h === FALLBACK_PASS_SHA256;
-  } catch (e) { return false; }
-}
 
 const EMAIL_DOMAIN = 'sgv-anac.local';
 
@@ -88,9 +67,9 @@ export const ROLES = {
   },
   'reader': {
     label: 'Lecteur',
-    desc: 'Consultation seule (aucune modification)',
+    desc: 'Consultation seule : Accueil, Suivi hebdomadaire, Mauritania Airlines',
     permissions: [
-      'view_flights','view_charts','view_facturation','view_map','access_ldm','access_suivi','access_ma'
+      'view_flights','access_suivi','access_ma'
     ]
   },
   'custom': {
@@ -203,7 +182,6 @@ const PERM_ALIASES = {
 export function hasPerm(perm) {
   const s = getSession();
   if (!s) return false;
-  if (s.username === FALLBACK_USER) return true;
   if (s.role === 'admin') return true;
   // Rôles standards : résolus dynamiquement depuis ROLES (les sessions déjà
   // ouvertes bénéficient ainsi des nouvelles permissions sans reconnexion).
@@ -234,13 +212,15 @@ function newSessionId() {
 }
 
 async function loadProfileByUid(uid) {
+  // Option A : le document anac_users a pour ID le uid Firebase.
+  // Lecture directe (autorisée par la règle « chacun lit son propre doc »),
+  // plus de requête sur toute la collection.
   const db = await getDB();
-  const { collection, query, where, getDocs } =
+  const { doc, getDoc } =
     await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-  const snap = await getDocs(query(collection(db,'anac_users'), where('uid','==',uid)));
-  if (snap.empty) return null;
-  const d = snap.docs[0];
-  return { id:d.id, ...d.data() };
+  const snap = await getDoc(doc(db,'anac_users',uid));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
 }
 
 // ── Propagation de la session réelle vers les autres apps Firebase ──
@@ -290,23 +270,16 @@ export async function login(username, password) {
   try {
     cred = await A.signInWithEmailAndPassword(auth, email, pass);
   } catch (err) {
-    // FILET DE SECOURS DADY : si le compte réel n'existe pas encore
-    // (bootstrap non exécuté) ou panne, on autorise l'accès local
-    // pour ne JAMAIS être verrouillé dehors. Mode dégradé : la
-    // gestion des comptes via Cloud Function exigera le compte réel.
-    if (uname === FALLBACK_USER && await _isFallbackPass(pass)) {
-      const sid = newSessionId();
-      saveSession({
-        username: FALLBACK_USER, role: 'admin',
-        permissions: Object.keys(ALL_PERMISSIONS),
-        sessionId: sid, isFallback: true
-      });
-      try { if (!auth.currentUser) await A.signInAnonymously(auth); } catch(e) {}
-      await logActivity('login_success', uname, 'Compte de secours (mode dégradé)');
-      return { ok:true, degraded:true };
+    // Échec d'authentification (identifiants invalides, compte désactivé,
+    // ou trop de tentatives). Plus aucun filet de secours côté client.
+    var _msg = 'Identifiants incorrects';
+    if (err && err.code === 'auth/too-many-requests') {
+      _msg = 'Trop de tentatives. Réessayez dans quelques minutes.';
+    } else if (err && err.code === 'auth/user-disabled') {
+      _msg = 'Ce compte est désactivé.';
     }
-    await logActivity('login_failed', uname, 'Identifiants invalides');
-    return { ok:false, error:'Identifiants incorrects' };
+    try { await logActivity('login_failed', uname, err && err.code ? err.code : 'invalid'); } catch(e) {}
+    return { ok:false, error:_msg };
   }
 
   // Authentifié : chargement du profil (rôle/permissions).
@@ -319,11 +292,11 @@ export async function login(username, password) {
     return { ok:false, error:'Compte désactivé' };
   }
 
-  const isDady = uname.toUpperCase() === FALLBACK_USER;
-  const role   = profile ? (profile.role || 'custom') : (isDady ? 'admin' : 'custom');
-  const perms  = isDady
-    ? Object.keys(ALL_PERMISSIONS)
-    : resolvePermissions(role, profile && profile.permissions);
+  // Le rôle fait autorité côté serveur via le custom claim ; côté client on
+  // reflète simplement le profil pour l'affichage. Un compte sans profil
+  // Firestore ne reçoit aucune permission (fail-safe).
+  const role   = profile ? (profile.role || 'reader') : 'reader';
+  const perms  = profile ? resolvePermissions(role, profile.permissions) : [];
 
   const sid = newSessionId();
   if (profile && profile.id) {
@@ -637,7 +610,7 @@ export async function listUsers() {
 export async function createUser({ username, password, role, permissions }) {
   const uname = (username || '').trim();
   if (!uname) throw new Error('Identifiant requis');
-  if (uname.toUpperCase() === FALLBACK_USER) throw new Error('Identifiant réservé');
+  if (uname.toUpperCase() === 'DADY') throw new Error('Identifiant réservé');
   if (!password) throw new Error('Mot de passe requis');
   if (password.length < 6) throw new Error('Le mot de passe doit faire au moins 6 caractères');
   try {
@@ -697,7 +670,7 @@ function _fnErr(e, fallback) {
   const msg = (e && (e.message || (e.details && e.details.message))) || '';
   if (/unauthenticated|permission-denied|droits|administration/i.test(msg)) {
     return 'Action réservée à un administrateur connecté (compte réel requis). ' +
-           'En mode dégradé DADY : exécutez le bootstrap puis reconnectez-vous.';
+           'Session administrateur requise — reconnectez-vous.';
   }
   return fallback + (msg ? ' : ' + msg : '');
 }
@@ -745,6 +718,5 @@ window.ANAC_AUTH = {
   requireAuth, showNoPermissionScreen, startSessionWatcher, stopSessionWatcher,
   listUsers, createUser, updateUser, deleteUser, resetPassword, getPasswordHint,
   logActivity, getActivityLog, ensureAuthed,
-  ALL_PERMISSIONS, ROLES, ACTION_LABELS, resolvePermissions,
-  FALLBACK_USER
+  ALL_PERMISSIONS, ROLES, ACTION_LABELS, resolvePermissions
 };

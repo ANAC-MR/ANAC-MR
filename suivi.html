@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Suivi Hebdomadaire du Trafic — ANAC Mauritanie</title>
+<link rel="icon" type="image/png" href="assets/ANAC-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -114,6 +115,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
   import { requireAuth } from './auth.js';
   if (!requireAuth('access_suivi')) { /* requireAuth gère redirection/refus */ }
 </script>
+<script type="module" src="./perms.js"></script>
 
 <header>
   <a href="index.html" class="logo">
@@ -142,7 +144,7 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
         <button class="btn" onclick="nextWeek()">7 j →</button>
       </div>
       <div class="spacer"></div>
-      <button class="btn btn-gold" id="exportBtn" onclick="exportExcel()">↓ Télécharger Excel</button>
+      <button class="btn btn-gold" id="exportBtn" data-perm="export_flights" onclick="exportExcel()">↓ Télécharger Excel</button>
     </div>
     <div class="rep-head">
       <div class="rep-title">SUIVI HEBDOMADAIRE DU TRAFIC AÉRIEN</div>

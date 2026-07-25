@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ANAC Mauritanie – Panneau Administration</title>
+<link rel="icon" type="image/png" href="assets/ANAC-logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -2049,7 +2050,6 @@ const configDoc    = () => doc(db, 'flights', 'cfg-format');
 // ─── AUTH CONFIG ──
 const AUTH_KEY   = 'anac_admin_auth';
 const DEFAULT_USER = 'DADY';
-const DEFAULT_PASS = 'ANACdady';
 let MAX_ATTEMPTS  = 5;
 let LOCKOUT_MS    = 15 * 60 * 1000; // 15 min
 // Mot de passe chargé depuis Firebase (partagé entre tous les appareils)
@@ -2057,34 +2057,11 @@ let _cachedPass = null;
 let _cachedUser = null;
 
 async function getStoredCredentials() {
-    if (_cachedPass) return { user: _cachedUser, pass: _cachedPass };
-    try {
-        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-        const fbConfig = {
-            apiKey:"AIzaSyAdR2xj-R1fGqP7OMBJ9NKB7JgNYmTK6ww",
-            authDomain:"anacmr-67835.firebaseapp.com",
-            projectId:"anacmr-67835",
-            storageBucket:"anacmr-67835.firebasestorage.app",
-            messagingSenderId:"906668222910",
-            appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"
-        };
-        const apps = getApps();
-        const app  = apps.find(a=>a.name==='auth-reader') || initializeApp(fbConfig,'auth-reader');
-        const db   = getFirestore(app);
-        const snap = await getDoc(doc(db,'flights','cfg-auth'));
-        if (snap.exists()) {
-            _cachedPass = snap.data().password || DEFAULT_PASS;
-            _cachedUser = snap.data().username || DEFAULT_USER;
-        } else {
-            _cachedPass = DEFAULT_PASS;
-            _cachedUser = DEFAULT_USER;
-        }
-    } catch(e) {
-        _cachedPass = DEFAULT_PASS;
-        _cachedUser = DEFAULT_USER;
-    }
-    return { user: _cachedUser, pass: _cachedPass };
+    // Ancien système d'auth admin (mot de passe en clair dans flights/cfg-auth)
+    // SUPPRIMÉ. L'authentification réelle est gérée par auth.js + Firebase Auth.
+    // Stub conservé uniquement pour ne pas casser d'éventuels appels résiduels.
+    const s = (window.ANAC_AUTH && window.ANAC_AUTH.getSession) ? window.ANAC_AUTH.getSession() : null;
+    return { user: (s && s.username) || DEFAULT_USER, pass: null };
 }
 
 // ─── STATE ──────────────────────────────
@@ -2878,14 +2855,9 @@ window.changeCredentials = async function() {
 
     try {
         // Utiliser le db global
-        await window._setDoc(window._doc(window._db,'flights','cfg-auth'), {
-            username: finalUser,
-            password: finalPass,
-            updatedAt: new Date().toISOString(),
-            sessionReset: Date.now()   // ← déconnecte tous les appareils
-        });
-        _cachedUser = finalUser;
-        _cachedPass = finalPass;
+        // Changement d'identifiants admin legacy DÉSACTIVÉ (écrivait un mot de
+        // passe en clair). Utilisez « Sécurité & Utilisateurs » (Cloud Functions).
+        throw new Error('Fonction déplacée vers Sécurité & Utilisateurs.');
         ['secCurrUser','secNewUser','secCurrentPass','secNewPass','secConfirmPass'].forEach(id => {
             const el = document.getElementById(id); if(el) el.value='';
         });
@@ -2907,9 +2879,9 @@ window.forceLogoutAll = async function() {
     if (!confirm('Déconnecter tous les appareils connectés au site ?')) return;
     try {
         // Utiliser le db global
-        const snap = await window._getDoc(window._doc(window._db,'flights','cfg-auth'));
-        const data = snap.exists() ? snap.data() : {};
-        await window._setDoc(window._doc(window._db,'flights','cfg-auth'), { ...data, sessionReset: Date.now() });
+        // Déconnexion globale via cfg-auth SUPPRIMÉE. La révocation de session
+        // se gère désormais par compte (currentSessionId dans anac_users).
+        throw new Error('Utilisez la gestion par utilisateur dans Sécurité & Utilisateurs.');
         document.getElementById('secMsg').style.color = '#00c98d';
         document.getElementById('secMsg').textContent = 'Tous les appareils ont été déconnectés';
         showNotif('Déconnexion globale déclenchée', 'success');
@@ -3013,35 +2985,15 @@ window.showAddUserModal = function() {
 };
 
 window.saveNewUser = async function() {
-    const uname = (document.getElementById('newUname').value||'').trim().toUpperCase();
-    const pass1 = document.getElementById('newUpass').value||'';
-    const pass2 = document.getElementById('newUpass2').value||'';
-    if (!uname||!pass1) { showNotif('Remplissez tous les champs','error'); return; }
-    if (pass1!==pass2)  { showNotif('Les mots de passe ne correspondent pas','error'); return; }
-    if (pass1.length<6) { showNotif('Mot de passe trop court (min 6)','error'); return; }
-    try {
-        const q    = window._query(window._collection(window._db,'anac_users'), window._where('username','==',uname));
-        const snap = await window._getDocs(q);
-        if (!snap.empty) { showNotif('Identifiant déjà existant','error'); return; }
-        const creds = await getStoredCredentials();
-        await window._addDoc(window._collection(window._db,'anac_users'), {
-            username:uname, password:pass1, role:'user',
-            permissions: [],
-            createdAt:new Date().toISOString(), createdBy:creds.user
-        });
-        closeModal('userModal');
-        showNotif('Compte "'+uname+'" créé — configurez ses permissions','success');
-        loadUsers();
-    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+    // Création de compte legacy (mot de passe en clair dans anac_users) SUPPRIMÉE.
+    // Redirige vers la création sécurisée (Cloud Function adminCreateUser).
+    if (typeof showNotif === 'function') showNotif('Utilisez « Sécurité & Utilisateurs » pour créer un compte.', 'info');
 };
 
 window.deleteSecUser = async function(id, uname) {
-    if (!confirm('Supprimer le compte "'+uname+'" ?')) return;
-    try {
-        await window._deleteDoc(window._doc(window._db,'anac_users',id));
-        showNotif('Compte "'+uname+'" supprimé','success');
-        loadUsers();
-    } catch(e) { showNotif('Erreur: '+e.message,'error'); }
+    // Suppression legacy (delete direct) SUPPRIMÉE. Utilise la Cloud Function.
+    if (typeof window._secDeleteUser === 'function') return window._secDeleteUser(id, uname);
+    if (typeof showNotif === 'function') showNotif('Utilisez « Sécurité & Utilisateurs ».', 'info');
 };
 
 // ══ NUMÉROS DE VOL ══════════════════════════════════════════════

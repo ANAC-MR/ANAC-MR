@@ -331,7 +331,6 @@ const DESTINATIONS = [
 // ============================================
 // AUTHENTICATION
 // ============================================
-const ADMIN_PASSWORD = "ANACdady";
 let isAuthenticated = false;
 
 // ============================================
