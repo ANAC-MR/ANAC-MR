@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ANAC — Amorçage administrateur</title>
+<link rel="icon" href="data:,">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;background:#eef1f6;color:#1b2430;padding:24px;}
@@ -14,49 +15,42 @@ h1{font-size:20px;font-weight:800;color:#1F3864;margin-bottom:8px;}
 .warn{background:#fff7e6;border:1px solid #fcd34d;color:#8a6d1d;border-radius:10px;padding:12px 14px;font-size:13px;margin:14px 0;line-height:1.5;}
 label{display:block;font-size:12px;font-weight:700;color:#5a6572;text-transform:uppercase;letter-spacing:.4px;margin:14px 0 6px;}
 input{width:100%;padding:11px 13px;border:1px solid #e3e8ef;border-radius:10px;font-size:14px;font-family:inherit;}
-.btn{border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:18px;}
-.btn-primary{background:#1F3864;color:#fff;}
-.btn-primary:hover{background:#28477d;}
-.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn{border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px;width:100%;}
+.btn-1{background:#1F3864;color:#fff;}
+.btn-1:hover{background:#28477d;}
+.btn-2{background:#0d7a4f;color:#fff;}
+.btn-2:hover{background:#0f8f5c;}
+#log{font-family:'JetBrains Mono',monospace;font-size:12px;background:#0f1e3d;color:#cbd5e1;border-radius:10px;padding:14px;margin-top:16px;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;}
+.ok{color:#7CF5B0;} .err{color:#ff9a9a;} .muted{color:#8ea0bf;}
 .step{display:flex;gap:10px;align-items:flex-start;margin:10px 0;font-size:13px;color:#334;}
 .num{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#1F3864;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
-#log{font-family:'JetBrains Mono',monospace;font-size:12px;background:#0f1e3d;color:#cbd5e1;border-radius:10px;padding:14px;margin-top:16px;max-height:260px;overflow:auto;white-space:pre-wrap;display:none;}
-.ok{color:#7CF5B0;} .err{color:#ff9a9a;}
 </style>
 </head>
 <body>
 <div class="wrap">
-
   <div class="card">
     <h1>Amorçage de l'administrateur</h1>
-    <p class="sub">Cet outil transforme le compte <strong>DADY</strong> en administrateur officiel
-      (pose le rôle <code>admin</code>), puis met à jour tous les comptes existants pour la nouvelle
-      sécurité. À utiliser <strong>une seule fois</strong>.</p>
-
-    <div class="warn">
-      À faire <strong>avant</strong> d'activer les nouvelles règles Firestore. N'écrit aucun mot de
-      passe en base. Après succès, tu devras te déconnecter puis te reconnecter sur le site.
-    </div>
+    <p class="sub">Transforme le compte <strong>DADY</strong> en administrateur officiel, puis met à
+      jour tous les comptes. À utiliser une seule fois. Sans danger si tu cliques plusieurs fois.</p>
+    <div class="warn">À faire <strong>avant</strong> d'activer les nouvelles règles Firestore.
+      Après le bouton 1, déconnecte-toi puis reconnecte-toi sur le site avant le bouton 2.</div>
 
     <label>Secret d'amorçage</label>
     <input id="secret" type="text" placeholder="Zt9-..." autocomplete="off">
-
     <label>Mot de passe actuel du compte DADY</label>
     <input id="pass" type="password" placeholder="Ton mot de passe DADY" autocomplete="off">
 
-    <button class="btn btn-primary" id="btnBoot">Étape 1 — Créer l'administrateur</button>
-    <button class="btn btn-primary" id="btnMigrate" style="display:none;background:#0d7a4f;">Étape 2 — Mettre à jour les comptes</button>
+    <button class="btn btn-1" id="btnBoot">1 — Créer l'administrateur</button>
+    <button class="btn btn-2" id="btnMigrate">2 — Mettre à jour les comptes (après reconnexion)</button>
 
-    <div id="log"></div>
+    <div id="log"><span class="muted">Prêt. Renseigne les deux champs puis clique le bouton 1.</span></div>
   </div>
 
   <div class="card">
-    <p class="sub"><strong>Déroulé :</strong></p>
-    <div class="step"><span class="num">1</span><span>Clique « Créer l'administrateur ». DADY reçoit le rôle admin.</span></div>
-    <div class="step"><span class="num">2</span><span>Va sur le site, <strong>déconnecte-toi puis reconnecte-toi</strong> (le rôle n'entre dans la session qu'à la reconnexion).</span></div>
-    <div class="step"><span class="num">3</span><span>Reviens ici, clique « Mettre à jour les comptes » (ré-indexe et étiquette tous les comptes).</span></div>
+    <div class="step"><span class="num">1</span><span>Bouton 1 : DADY reçoit le rôle admin.</span></div>
+    <div class="step"><span class="num">2</span><span>Sur le site : <strong>déconnexion puis reconnexion</strong> (le rôle entre dans la session).</span></div>
+    <div class="step"><span class="num">3</span><span>Reviens ici, bouton 2 : ré-indexe et étiquette tous les comptes.</span></div>
   </div>
-
 </div>
 
 <script type="module">
@@ -77,62 +71,71 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const fns  = getFunctions(app, 'europe-west1');
-const EMAIL_DOMAIN = 'sgv-anac.local';
+const EMAIL = 'dady@sgv-anac.local';
 
 function log(msg, cls){
   const el = document.getElementById('log');
-  el.style.display = '';
   const line = document.createElement('div');
   if (cls) line.className = cls;
   line.textContent = msg;
   el.appendChild(line);
   el.scrollTop = el.scrollHeight;
 }
+function clearLog(){ document.getElementById('log').innerHTML = ''; }
+
+async function ensureSignedIn(pass){
+  try { await setPersistence(auth, browserLocalPersistence); } catch(e) {}
+  if (auth.currentUser) return true;
+  if (!pass) { log('Renseigne le mot de passe DADY.', 'err'); return false; }
+  try {
+    await signInWithEmailAndPassword(auth, EMAIL, pass);
+    return true;
+  } catch (e) {
+    if (e && (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials')) {
+      log('Mot de passe DADY incorrect.', 'err');
+    } else if (e && e.code === 'auth/too-many-requests') {
+      log('Trop de tentatives. Attends quelques minutes et réessaie.', 'err');
+    } else {
+      log('Connexion impossible : ' + (e && (e.code || e.message)), 'err');
+    }
+    return false;
+  }
+}
 
 document.getElementById('btnBoot').addEventListener('click', async function(){
-  const btn = document.getElementById('btnBoot');
+  clearLog();
   const secret = document.getElementById('secret').value.trim();
   const pass   = document.getElementById('pass').value;
-  if (!secret || !pass) { log('Renseigne le secret ET le mot de passe DADY.', 'err'); return; }
-  btn.disabled = true;
+  if (!secret) { log('Renseigne le secret d\'amorçage.', 'err'); return; }
+  log('Connexion du compte DADY…', 'muted');
+  if (!(await ensureSignedIn(pass))) return;
+  log('Connecté. Création/promotion de l\'administrateur…', 'muted');
   try {
-    log('Connexion du compte DADY…');
-    try { await setPersistence(auth, browserLocalPersistence); } catch(e) {}
-    await signInWithEmailAndPassword(auth, 'dady@' + EMAIL_DOMAIN, pass);
-    log('Connecté. Appel de bootstrapFirstAdmin…');
-    const res = await httpsCallable(fns, 'bootstrapFirstAdmin')({
-      secret: secret, username: 'DADY', password: pass
-    });
-    log('Administrateur créé/promu. uid = ' + (res.data && res.data.uid), 'ok');
-    log('→ Va sur le site, DÉCONNECTE-toi puis RECONNECTE-toi, puis reviens cliquer « Étape 2 ».', 'ok');
-    document.getElementById('btnMigrate').style.display = '';
+    const res = await httpsCallable(fns, 'bootstrapFirstAdmin')({ secret, username:'DADY', password:pass });
+    log('SUCCÈS — DADY est administrateur. uid = ' + (res.data && res.data.uid), 'ok');
+    log('→ Va sur le site, DÉCONNECTE-toi puis RECONNECTE-toi, puis reviens cliquer le bouton 2.', 'ok');
   } catch (e) {
-    log('Échec : ' + (e && e.message ? e.message : e), 'err');
-    if (e && e.code === 'functions/permission-denied') log('→ Le secret ne correspond pas.', 'err');
-    if (e && (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential')) log('→ Mot de passe DADY incorrect.', 'err');
-    btn.disabled = false;
+    if (e && e.code === 'functions/permission-denied') log('Le secret ne correspond pas à celui du serveur.', 'err');
+    else log('Échec : ' + (e && (e.message || e.code)), 'err');
   }
 });
 
 document.getElementById('btnMigrate').addEventListener('click', async function(){
-  const btn = document.getElementById('btnMigrate');
+  clearLog();
   const pass = document.getElementById('pass').value;
-  btn.disabled = true;
+  log('Vérification de la session…', 'muted');
+  if (!(await ensureSignedIn(pass))) return;
+  try { await auth.currentUser.getIdToken(true); } catch(e) {}
+  log('Migration des comptes (rôles + ré-indexation)…', 'muted');
   try {
-    // S'assurer d'une session à jour (jeton frais avec le claim admin)
-    if (!auth.currentUser && pass) {
-      try { await signInWithEmailAndPassword(auth, 'dady@' + EMAIL_DOMAIN, pass); } catch(e) {}
-    }
-    if (auth.currentUser) { try { await auth.currentUser.getIdToken(true); } catch(e) {} }
-    log('Migration des comptes (rôles + ré-indexation)…');
     const res = await httpsCallable(fns, 'migrateUsersToUidId')({});
     const d = res.data || {};
-    log('Terminé : ' + (d.moved||0) + ' compte(s) ré-indexé(s), ' + (d.claimed||0) + ' rôle(s) posé(s), ' + (d.skipped||0) + ' ignoré(s).', 'ok');
-    log('Étape 2 (amorçage) FINIE. Tu peux fermer cette page et poursuivre le plan.', 'ok');
+    log('TERMINÉ : ' + (d.moved||0) + ' ré-indexé(s), ' + (d.claimed||0) + ' rôle(s) posé(s), ' + (d.skipped||0) + ' ignoré(s).', 'ok');
+    log('Amorçage FINI. Tu peux fermer cette page et poursuivre.', 'ok');
   } catch (e) {
-    log('Échec migration : ' + (e && e.message ? e.message : e), 'err');
-    if (e && e.code === 'functions/permission-denied') log('→ Ta session n’a pas encore le rôle admin : déconnecte-toi et reconnecte-toi sur le site, puis réessaie.', 'err');
-    btn.disabled = false;
+    if (e && e.code === 'functions/permission-denied')
+      log('Ta session n\'a pas encore le rôle admin : déconnecte-toi et reconnecte-toi sur le site, puis réessaie ce bouton.', 'err');
+    else log('Échec : ' + (e && (e.message || e.code)), 'err');
   }
 });
 </script>
