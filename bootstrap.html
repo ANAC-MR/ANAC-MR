@@ -85,10 +85,15 @@ function clearLog(){ document.getElementById('log').innerHTML = ''; }
 
 async function ensureSignedIn(pass){
   try { await setPersistence(auth, browserLocalPersistence); } catch(e) {}
-  if (auth.currentUser) return true;
   if (!pass) { log('Renseigne le mot de passe DADY.', 'err'); return false; }
+  // On force TOUJOURS une connexion fraîche : une session résiduelle expirée
+  // (jeton non rafraîchissable) provoquait « Connexion requise » / 401.
+  try { await auth.signOut(); } catch(e) {}
   try {
     await signInWithEmailAndPassword(auth, EMAIL, pass);
+    // Laisser le jeton se propager, puis le forcer à jour (récupère le claim admin).
+    await new Promise(function(r){ setTimeout(r, 800); });
+    try { if (auth.currentUser) await auth.currentUser.getIdToken(true); } catch(e) {}
     return true;
   } catch (e) {
     if (e && (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential' || e.code === 'auth/invalid-login-credentials')) {
