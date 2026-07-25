@@ -8,10 +8,10 @@
 //    <div data-dady-only="1">...</div>   (réservé au compte DADY)
 // ═══════════════════════════════════════════════════════════════
 
-import { getSession, hasPerm, FALLBACK_USER } from './auth.js';
+import { getSession, hasPerm } from './auth.js';
 
 function isDady(s) {
-  return s && s.username === FALLBACK_USER;
+  return s && String(s.username || '').toUpperCase() === 'DADY';
 }
 
 export function applyPermissionsToUI() {

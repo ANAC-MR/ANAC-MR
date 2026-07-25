@@ -5832,13 +5832,13 @@ import {
   ALL_PERMISSIONS, ROLES, ACTION_LABELS,
   listUsers, createUser, updateUser, deleteUser,
   getActivityLog, resolvePermissions, getSession,
-  getPasswordHint, FALLBACK_USER
+  getPasswordHint
 } from './auth.js';
 
 // Seul le compte DADY peut consulter les mots de passe des utilisateurs
 function _isDadyUser() {
   const s = getSession();
-  return s && s.username === FALLBACK_USER;
+  return s && String(s.username || '').toUpperCase() === 'DADY';
 }
 
 let _secEditingUserId = null;
