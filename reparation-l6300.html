@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Réparation L6300 / L6301</title>
+<link rel="icon" href="data:,">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#eef1f6;color:#1b2430;padding:24px;}
+.wrap{max-width:940px;margin:0 auto;}
+.card{background:#fff;border:1px solid #e3e8ef;border-radius:14px;padding:22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+h1{font-size:19px;color:#1F3864;margin-bottom:6px;}
+h2{font-size:15px;color:#1F3864;margin:6px 0 8px;}
+.sub{font-size:13px;color:#5a6572;line-height:1.5;margin-bottom:8px;}
+input{padding:10px 12px;border:1px solid #e3e8ef;border-radius:9px;font-size:14px;width:220px;}
+.btn{border:none;border-radius:9px;padding:11px 18px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;margin-right:8px;}
+.btn-scan{background:#1F3864;color:#fff;} .btn-scan:hover{background:#28477d;}
+.btn-fix{background:#0d7a4f;color:#fff;} .btn-fix:hover{background:#0f8f5c;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+th,td{border:1px solid #e3e8ef;padding:6px 8px;text-align:left;}
+th{background:#f4f6fa;}
+.bad{background:#fde8e8;} .ok{background:#e8f6ee;}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;}
+.tag-bad{background:#dc3545;color:#fff;} .tag-ok{background:#0d7a4f;color:#fff;}
+#log{font-family:monospace;font-size:12px;background:#0f1e3d;color:#cbd5e1;border-radius:9px;padding:12px;margin-top:12px;white-space:pre-wrap;min-height:40px;}
+.err{color:#ff9a9a;} .grn{color:#7CF5B0;} .muted{color:#8ea0bf;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Réparation des escales fantômes L6300 / L6301</h1>
+    <p class="sub">1) Affiche toutes les entrées cachées. 2) Supprime le doublon « Numéros de Vol »
+      qui porte une escale. 3) Nettoie les vols déjà importés avec escale fantôme.
+      <strong>Rien n'est modifié tant que tu ne cliques pas sur un bouton vert.</strong></p>
+    <input id="pass" type="password" placeholder="Mot de passe DADY">
+    <br><button class="btn btn-scan" id="btnScan">1 — Analyser (lecture seule)</button>
+    <div id="log">Prêt.</div>
+  </div>
+  <div id="results"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const cfg = {
+  apiKey: "AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
+  authDomain: "anacmr-67835.firebaseapp.com",
+  projectId: "anacmr-67835",
+  storageBucket: "anacmr-67835.firebasestorage.app",
+  messagingSenderId: "906668222910",
+  appId: "1:906668222910:web:0231614b880df3196e26cf"
+};
+const app = initializeApp(cfg);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let _fnToDelete = [];   // docs flight_numbers en double à supprimer
+let _flToFix = [];      // vols à corriger
+
+function log(m,c){ const e=document.getElementById('log'); const d=document.createElement('div'); if(c)d.className=c; d.textContent=m; e.appendChild(d); e.scrollTop=e.scrollHeight; }
+function clg(){ document.getElementById('log').innerHTML=''; }
+function normFN(s){ let v=(s||'').toString().toUpperCase().replace(/[-\s.]/g,''); v=v.replace(/^([A-Z]+)0*(\d.*)$/,'$1$2'); return v; }
+function isTarget(fn){ const n=normFN(fn); return n==='L6300'||n==='L6301'; }
+
+async function ensureAuth(pass){
+  try{ await setPersistence(auth,browserLocalPersistence);}catch(e){}
+  try{ await auth.signOut(); }catch(e){}
+  await signInWithEmailAndPassword(auth,'dady@sgv-anac.local',pass);
+}
+
+document.getElementById('btnScan').addEventListener('click', async function(){
+  clg(); document.getElementById('results').innerHTML='';
+  _fnToDelete=[]; _flToFix=[];
+  const pass=document.getElementById('pass').value;
+  if(!pass){ log('Renseigne le mot de passe DADY.','err'); return; }
+  try{ log('Connexion…'); await ensureAuth(pass); log('Connecté.','grn'); }
+  catch(e){ log('Connexion échouée : '+(e&&(e.code||e.message)),'err'); return; }
+
+  // ── flight_numbers : TOUTES les entrées L6300/L6301 ──
+  const fnSnap=await getDocs(collection(db,'flight_numbers'));
+  const fn={L6300:[],L6301:[]};
+  fnSnap.forEach(d=>{ const x=d.data(); const num=x.number||x.flightNumber||''; const n=normFN(num); if(n==='L6300'||n==='L6301') fn[n].push({id:d.id,...x}); });
+
+  let html='<div class="card"><h2>1. Entrées « Numéros de Vol » (toutes, doublons inclus)</h2>';
+  html+='<table><tr><th>docId</th><th>N°</th><th>From</th><th>To</th><th>Escale</th><th>Type</th><th>Verdict</th></tr>';
+  ['L6300','L6301'].forEach(key=>{
+    const rows=fn[key];
+    const cleanExists=rows.some(r=>!(r.stopover||'').trim());
+    rows.forEach(r=>{
+      const stop=(r.stopover||'').trim().toUpperCase();
+      // À supprimer : entrée AVEC escale, à condition qu'une entrée SANS escale existe (on ne supprime jamais la dernière)
+      const toDel = !!stop && cleanExists;
+      if(toDel) _fnToDelete.push({col:'flight_numbers',id:r.id,num:key,stop});
+      html+=`<tr class="${stop?'bad':'ok'}"><td>${r.id}</td><td>${r.number||r.flightNumber||''}</td><td>${(r.from||'').toUpperCase()}</td><td>${(r.to||'').toUpperCase()}</td><td><strong>${stop||'—'}</strong></td><td>${(r.type||'').toUpperCase()}</td><td>${toDel?'<span class="tag tag-bad">DOUBLON À SUPPRIMER</span>':(stop?'<span class="tag tag-bad">escale (seule entrée, gardée)</span>':'<span class="tag tag-ok">bonne entrée</span>')}</td></tr>`;
+    });
+  });
+  html+='</table></div>';
+
+  // ── flights : vols L6300/L6301 avec escale enregistrée (fantômes) ──
+  const flSnap=await getDocs(collection(db,'flights'));
+  const ghosts=[];
+  flSnap.forEach(d=>{ const x=d.data(); if(isTarget(x.flightNumber||'')){
+    const hs=x.hasStopover===true; const stop=(x.stopover||'').trim();
+    if(hs||stop) ghosts.push({id:d.id,...x});
+  }});
+  ghosts.forEach(g=>_flToFix.push({col:'flights',id:g.id}));
+
+  html+='<div class="card"><h2>2. Vols déjà importés avec escale fantôme</h2>';
+  if(!ghosts.length) html+='<p class="sub">Aucun — aucun vol L6300/L6301 ne porte d\'escale.</p>';
+  else{
+    html+='<table><tr><th>Date</th><th>N°</th><th>From</th><th>To</th><th>hasStopover</th><th>Escale</th></tr>';
+    ghosts.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    ghosts.forEach(g=>{ html+=`<tr class="bad"><td>${g.date||''}</td><td>${g.flightNumber||''}</td><td>${(g.from||'').toUpperCase()}</td><td>${(g.to||'').toUpperCase()}</td><td>${String(g.hasStopover)}</td><td><strong>${g.stopover||'—'}</strong></td></tr>`; });
+    html+='</table>';
+  }
+  html+='</div>';
+
+  // ── Actions ──
+  html+='<div class="card"><h2>3. Corrections</h2>';
+  html+=`<p class="sub">• Doublons « Numéros de Vol » à supprimer : <strong>${_fnToDelete.length}</strong><br>`;
+  html+=`• Vols à nettoyer (escale retirée) : <strong>${_flToFix.length}</strong></p>`;
+  if(_fnToDelete.length || _flToFix.length){
+    html+='<button class="btn btn-fix" id="btnFix">2 — Appliquer les corrections</button>';
+  } else {
+    html+='<p class="sub grn">Rien à corriger. Tout est propre.</p>';
+  }
+  html+='</div>';
+  document.getElementById('results').innerHTML=html;
+  log('Analyse terminée. Vérifie les tableaux avant d\'appliquer.','grn');
+
+  const bf=document.getElementById('btnFix');
+  if(bf) bf.addEventListener('click', applyFixes);
+});
+
+async function applyFixes(){
+  const btn=document.getElementById('btnFix'); btn.disabled=true;
+  const pass=document.getElementById('pass').value;
+  try{ await ensureAuth(pass); }catch(e){ log('Reconnexion échouée : '+(e&&e.code),'err'); btn.disabled=false; return; }
+  let done=0,err=0;
+  // Supprimer les doublons flight_numbers
+  for(const it of _fnToDelete){
+    try{ await deleteDoc(doc(db,'flight_numbers',it.id)); log('Doublon supprimé : '+it.num+' (escale '+it.stop+') ['+it.id+']','grn'); done++; }
+    catch(e){ log('Échec suppression '+it.id+' : '+(e&&e.code),'err'); err++; }
+  }
+  // Nettoyer les vols fantômes
+  for(const it of _flToFix){
+    try{ await updateDoc(doc(db,'flights',it.id), { hasStopover:false, stopover:'', stopoverPax:0, stopoverBabies:0 }); log('Vol nettoyé ['+it.id+']','grn'); done++; }
+    catch(e){ log('Échec correction '+it.id+' : '+(e&&e.code),'err'); err++; }
+  }
+  log('Terminé : '+done+' correction(s), '+err+' erreur(s).', err?'err':'grn');
+  if(!err) log('→ Recharge le site (Ctrl+Shift+R). L\'escale fantôme doit disparaître.','grn');
+}
+</script>
+</body>
+</html>
