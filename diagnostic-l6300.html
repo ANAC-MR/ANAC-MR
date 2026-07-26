@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnostic L6300 / L6301</title>
+<link rel="icon" href="data:,">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#eef1f6;color:#1b2430;padding:24px;}
+.wrap{max-width:900px;margin:0 auto;}
+.card{background:#fff;border:1px solid #e3e8ef;border-radius:14px;padding:22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+h1{font-size:19px;color:#1F3864;margin-bottom:6px;}
+h2{font-size:15px;color:#1F3864;margin:16px 0 8px;}
+.sub{font-size:13px;color:#5a6572;line-height:1.5;margin-bottom:8px;}
+input{padding:10px 12px;border:1px solid #e3e8ef;border-radius:9px;font-size:14px;width:200px;}
+.btn{border:none;border-radius:9px;padding:11px 18px;font-size:14px;font-weight:700;cursor:pointer;background:#1F3864;color:#fff;margin-top:10px;}
+.btn:hover{background:#28477d;}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+th,td{border:1px solid #e3e8ef;padding:6px 8px;text-align:left;}
+th{background:#f4f6fa;font-weight:700;}
+.bad{background:#fde8e8;} .warn{background:#fff7e6;} .ok{background:#e8f6ee;}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;}
+.tag-bad{background:#dc3545;color:#fff;} .tag-ok{background:#0d7a4f;color:#fff;} .tag-warn{background:#c9971d;color:#fff;}
+#log{font-family:monospace;font-size:12px;background:#0f1e3d;color:#cbd5e1;border-radius:9px;padding:12px;margin-top:12px;white-space:pre-wrap;min-height:40px;}
+.err{color:#ff9a9a;} .grn{color:#7CF5B0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Diagnostic des vols L6300 / L6301</h1>
+    <p class="sub">Cet outil lit la base et montre <strong>exactement</strong> pourquoi une escale
+      fantôme (ex. NKC→TUN) apparaît. Il ne modifie rien — lecture seule.</p>
+    <input id="pass" type="password" placeholder="Mot de passe DADY">
+    <br><button class="btn" id="btn">Analyser L6300 et L6301</button>
+    <div id="log">Prêt.</div>
+  </div>
+  <div id="results"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, collection, getDocs }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const cfg = {
+  apiKey: "AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
+  authDomain: "anacmr-67835.firebaseapp.com",
+  projectId: "anacmr-67835",
+  storageBucket: "anacmr-67835.firebasestorage.app",
+  messagingSenderId: "906668222910",
+  appId: "1:906668222910:web:0231614b880df3196e26cf"
+};
+const app = initializeApp(cfg);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+function log(m,c){ const e=document.getElementById('log'); const d=document.createElement('div'); if(c)d.className=c; d.textContent=m; e.appendChild(d); }
+function normFN(s){ let v=(s||'').toString().toUpperCase().replace(/[-\s.]/g,''); v=v.replace(/^([A-Z]+)0*(\d.*)$/,'$1$2'); return v; }
+function isTarget(fn){ const n=normFN(fn); return n==='L6300'||n==='L6301'; }
+
+document.getElementById('btn').addEventListener('click', async function(){
+  document.getElementById('log').innerHTML='';
+  document.getElementById('results').innerHTML='';
+  const pass=document.getElementById('pass').value;
+  if(!pass){ log('Renseigne le mot de passe DADY.','err'); return; }
+  try{
+    try{ await setPersistence(auth,browserLocalPersistence);}catch(e){}
+    try{ await auth.signOut(); }catch(e){}
+    log('Connexion…');
+    await signInWithEmailAndPassword(auth,'dady@sgv-anac.local',pass);
+    log('Connecté. Lecture de la base…','grn');
+  }catch(e){ log('Connexion échouée : '+(e&&(e.code||e.message)),'err'); return; }
+
+  // 1) flight_numbers : toutes les entrées L6300/L6301
+  const fnSnap = await getDocs(collection(db,'flight_numbers'));
+  const fnRows=[];
+  fnSnap.forEach(d=>{ const x=d.data(); const num=x.number||x.flightNumber||''; if(isTarget(num)) fnRows.push({id:d.id,...x}); });
+
+  let html='<div class="card"><h2>1. Table « Numéros de Vol » (flight_numbers)</h2>';
+  html+='<p class="sub">Ce que le système croit savoir sur L6300/L6301. Une escale ici = escale fantôme sur les vols sans décision explicite.</p>';
+  if(!fnRows.length){ html+='<p class="sub">Aucune entrée L6300/L6301 — donc l\'escale ne vient pas d\'ici.</p>'; }
+  else{
+    html+='<table><tr><th>docId</th><th>Numéro</th><th>From</th><th>To</th><th>Escale (stopover)</th><th>Type</th><th>Verdict</th></tr>';
+    fnRows.forEach(r=>{
+      const stop=(r.stopover||'').toUpperCase();
+      const bad=!!stop;
+      html+=`<tr class="${bad?'bad':'ok'}"><td>${r.id}</td><td>${r.number||r.flightNumber||''}</td><td>${(r.from||'').toUpperCase()}</td><td>${(r.to||'').toUpperCase()}</td><td><strong>${stop||'—'}</strong></td><td>${(r.type||'').toUpperCase()}</td><td>${bad?'<span class="tag tag-bad">ESCALE ICI</span>':'<span class="tag tag-ok">OK</span>'}</td></tr>`;
+    });
+    html+='</table>';
+    if(fnRows.length>1) html+='<p class="sub" style="color:#c0392b;margin-top:8px;"><strong>⚠ Plusieurs entrées</strong> pour le même numéro : possible doublon à nettoyer.</p>';
+  }
+  html+='</div>';
+
+  // 2) flights : les vols L6300/L6301 et leur champ hasStopover
+  const flSnap = await getDocs(collection(db,'flights'));
+  const flRows=[];
+  flSnap.forEach(d=>{ const x=d.data(); if(isTarget(x.flightNumber||'')) flRows.push({id:d.id,...x}); });
+
+  html+='<div class="card"><h2>2. Vols réels L6300/L6301 (flights)</h2>';
+  html+='<p class="sub">Un vol avec <code>hasStopover</code> absent (ancien vol) hérite de l\'escale du numéro de vol → fantôme. Un vol avec <code>hasStopover=false</code> est protégé.</p>';
+  html+='<table><tr><th>Date</th><th>N° vol</th><th>From</th><th>To</th><th>hasStopover</th><th>stopover</th><th>Verdict</th></tr>';
+  flRows.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const hasFnEscale = fnRows.some(r=>(r.stopover||'').trim());
+  flRows.forEach(f=>{
+    const hs=f.hasStopover;
+    const decided=(hs===true||hs===false);
+    let verdict,cls;
+    if(hs===true && (f.stopover||'').trim()){ verdict='<span class="tag tag-warn">escale propre</span>'; cls='warn'; }
+    else if(!decided && hasFnEscale){ verdict='<span class="tag tag-bad">FANTÔME (hérite du n° de vol)</span>'; cls='bad'; }
+    else{ verdict='<span class="tag tag-ok">OK</span>'; cls='ok'; }
+    html+=`<tr class="${cls}"><td>${f.date||''}</td><td>${f.flightNumber||''}</td><td>${(f.from||'').toUpperCase()}</td><td>${(f.to||'').toUpperCase()}</td><td>${hs===undefined?'<em>absent</em>':String(hs)}</td><td>${(f.stopover||'—')}</td><td>${verdict}</td></tr>`;
+  });
+  html+='</table></div>';
+
+  // 3) Conclusion
+  html+='<div class="card"><h2>3. Conclusion</h2>';
+  const ghosts = flRows.filter(f=>!(f.hasStopover===true||f.hasStopover===false) && hasFnEscale);
+  if(hasFnEscale && ghosts.length){
+    html+=`<p class="sub"><strong>Cause trouvée :</strong> la table Numéros de Vol définit une escale pour L6300/L6301, et ${ghosts.length} vol(s) ancien(s) sans <code>hasStopover</code> en héritent. <br><strong>Deux corrections possibles :</strong><br>• <strong>A</strong> — Retirer l\'escale (from/to/stopover) de l\'entrée L6300/L6301 dans la table Numéros de Vol (si ces vols ne font jamais escale).<br>• <strong>B</strong> — Marquer chaque ancien vol « sans escale » (hasStopover=false).<br>Je peux te préparer l\'outil pour l\'une ou l\'autre.</p>`;
+  } else if(hasFnEscale){
+    html+='<p class="sub">La table Numéros de Vol contient une escale pour L6300/L6301, mais aucun vol actuel n\'en hérite (tous ont une décision explicite). Si un fantôme apparaît encore, il vient d\'un vol précis listé ci-dessus en rouge.</p>';
+  } else {
+    html+='<p class="sub">Aucune escale définie dans la table Numéros de Vol pour L6300/L6301. L\'escale fantôme viendrait alors d\'un vol ayant <code>hasStopover=true</code> + stopover rempli (lignes oranges ci-dessus).</p>';
+  }
+  html+='</div>';
+
+  document.getElementById('results').innerHTML=html;
+  log('Analyse terminée.','grn');
+});
+</script>
+</body>
+</html>
