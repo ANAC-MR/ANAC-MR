@@ -1340,7 +1340,7 @@ document.addEventListener('keydown', e => {
     <div class="fm-grid fm-grid-4">
       <div class="fm-field">
         <label>N° autorisation</label>
-        <input type="text" id="fAuthNumber" required maxlength="10">
+        <input type="text" id="fAuthNumber" maxlength="10">
         <small class="field-hint">Format : SNA26-XXXX</small>
       </div>
       <div class="fm-field">
@@ -1433,7 +1433,7 @@ document.addEventListener('keydown', e => {
     <!-- Charter Flight (MAI uniquement) -->
     <div class="fm-stopover-toggle" id="charterToggle" style="display:none;">
       <label class="fm-chk-label">
-        <input type="checkbox" id="fCharter">
+        <input type="checkbox" id="fCharter" onchange="if(window.applyCharterAuthRule)window.applyCharterAuthRule()">
         <span class="fm-chk-box"></span>
         <span>Charter Flight</span>
       </label>

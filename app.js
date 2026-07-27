@@ -906,8 +906,11 @@ function validateForm() {
     clearValidationErrors();
     let isValid = true;
     
+    // Un Charter Flight n'a JAMAIS de n° d'autorisation : on ne l'exige pas.
+    const _cbCharter = document.getElementById('fCharter');
+    const _isCharter = !!(_cbCharter && _cbCharter.checked);
+
     const required = [
-        { field: elements.fAuthNumber, message: 'Le numéro d\'autorisation est requis' },
         { field: elements.fDate, message: 'La date est requise' },
         { field: elements.fCompany, message: 'La compagnie est requise' },
         { field: elements.fImm, message: 'L\'immatriculation est requise' },
@@ -915,6 +918,9 @@ function validateForm() {
         { field: elements.fFrom, message: 'L\'aéroport de départ est requis' },
         { field: elements.fTo, message: 'L\'aéroport d\'arrivée est requis' }
     ];
+    if (!_isCharter) {
+        required.unshift({ field: elements.fAuthNumber, message: 'Le numéro d\'autorisation est requis' });
+    }
     
     required.forEach(({ field, message }) => {
         if (!field.value.trim()) {
@@ -944,9 +950,11 @@ function validateForm() {
 
     // Validate flight number + date uniqueness (interdiction stricte des doublons)
     // Bloque à l'ajout ET à la modification ; autorise si c'est le MÊME vol qu'on édite.
+    // EXEMPTION Charter : plusieurs rotations d'un même n° de vol le même jour
+    // sont légitimes pour un charter → pas de blocage doublon.
     const fNum = normFN(elements.fVol && elements.fVol.value ? elements.fVol.value : '');
     const fDate = elements.fDate ? elements.fDate.value.trim() : '';
-    if (fNum && fDate) {
+    if (fNum && fDate && !_isCharter) {
         const dupVol = flights.find(f =>
             normFN(f.flightNumber) === fNum && f.date === fDate && f.id !== editingFlightId
         );
@@ -1287,12 +1295,33 @@ function updateFlightNumberPrefix(isAddMode = false) {
 }
 
 // Affiche/masque la case « Charter » selon la compagnie (MAI uniquement).
+// ── Règle Charter : un charter n'a JAMAIS de n° d'autorisation ──
+// Case cochée -> champ N° auth vidé, désactivé, non obligatoire.
+// Case décochée -> champ réactivé et obligatoire (vol régulier).
+window.applyCharterAuthRule = function(){
+    const cb   = document.getElementById('fCharter');
+    const auth = document.getElementById('fAuthNumber');
+    if (!auth) return;
+    const isCharter = !!(cb && cb.checked);
+    if (isCharter){
+        auth.value = '';
+        auth.disabled = true;
+        auth.required = false;
+        auth.placeholder = 'Non requis (charter)';
+    } else {
+        auth.disabled = false;
+        auth.required = true;
+        auth.placeholder = '';
+    }
+};
+
 function toggleCharterField(company){
     const wrap = document.getElementById('charterToggle');
     if (!wrap) return;
     const show = isMAIcompany(company);
     wrap.style.display = show ? '' : 'none';
     if (!show){ const cb = document.getElementById('fCharter'); if (cb) cb.checked = false; }
+    if (window.applyCharterAuthRule) window.applyCharterAuthRule();
 }
 
 // Listener sur le champ fVol (input texte) pour auto-fill depuis flight_numbers ET programme_vols
