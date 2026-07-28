@@ -23,7 +23,7 @@ const EMAIL_DOMAIN = 'sgv-anac.local';
 const ROLES = ['admin', 'operator', 'reader'];
 
 // Secret d'amorçage : utilisé UNE seule fois, puis à neutraliser (plan étape F).
-const BOOTSTRAP_SECRET = 'Zt9-Kp3mW-x7Qv-Lr2n-Hy8s';
+const BOOTSTRAP_SECRET = null;   // amorçage TERMINÉ : secret retiré, bootstrapFirstAdmin désactivé
 
 function usernameToEmail(username) {
   return String(username || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '') + '@' + EMAIL_DOMAIN;
