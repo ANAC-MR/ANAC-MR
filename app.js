@@ -1738,7 +1738,8 @@ function filterFlights() {
     const toFilter = elements.toSelect.value;
     const dateFrom = elements.searchFrom.value;
     const dateTo = elements.searchTo.value;
-    const immFilter = elements.searchImm.value.toUpperCase().trim();
+    // Normalisation : 5TCLC == 5T-CLC == 5T CLC (tirets/espaces/points ignorés).
+    const immFilter = elements.searchImm.value.toUpperCase().replace(/[\s.\-]/g,'').trim();
     const volFilter = elements.searchVol.value.toUpperCase().trim();
     
     const yearFilter = (elements.yearSelect && elements.yearSelect.value) || 'ALL';
@@ -1786,7 +1787,7 @@ function filterFlights() {
         }
         
         // Registration filter (case-insensitive)
-        if (immFilter && !flight.registration.toUpperCase().includes(immFilter)) {
+        if (immFilter && !(flight.registration||'').toUpperCase().replace(/[\s.\-]/g,'').includes(immFilter)) {
             return false;
         }
         
