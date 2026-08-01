@@ -95,7 +95,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('assets/ANAC
 <!-- ANAC_AUTH_GUARD_INJECTED -->
 <script type="module">
   import { requireAuth } from './auth.js';
-  if (!requireAuth('access_ma')) {
+  if (!requireAuth('access_admin')) {
     // requireAuth a déjà géré la redirection / l'écran d'erreur
   }
 </script>
@@ -358,7 +358,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('assets/ANAC
       <div class="icon"></div>
       <div class="label"><div class="main">Mauritanie Airlines</div><div class="desc">PAX PAR DESTINATION</div></div>
     </a>
-    <a href="statistiques-compagnies.html" class="anac-menu-item" data-nav="stats-co">
+    <a href="statistiques-compagnies.html" class="anac-menu-item" data-nav="stats-co" data-perm="access_admin">
       <div class="icon"></div>
       <div class="label"><div class="main">Statistiques Compagnies</div><div class="desc">PAX PAR COMPAGNIE</div></div>
     </a>
@@ -714,59 +714,134 @@ window.doExportXLSX = function(){
     return a.localeCompare(b);
   });
 
-  const NAVY={patternType:'solid',fgColor:{rgb:'0F1E3D'}};
-  const GOLD={rgb:'D4AF37'}; const WHITE={rgb:'FFFFFF'};
-  const hdrStyle={fill:NAVY,font:{color:GOLD,bold:true,sz:10},alignment:{horizontal:'center',vertical:'center'},border:_bd()};
-  const totStyle={fill:{patternType:'solid',fgColor:{rgb:'F5E9C8'}},font:{bold:true,sz:10},alignment:{horizontal:'center'},border:_bd()};
-  function _bd(){const s={style:'thin',color:{rgb:'D9D9D9'}};return{top:s,bottom:s,left:s,right:s};}
+  // ── Palette & styles ──
+  const NAVY   = {rgb:'0F1E3D'}, BLUE = {rgb:'1A3A6B'}, GOLD = {rgb:'D4AF37'};
+  const WHITE  = {rgb:'FFFFFF'}, DARK = {rgb:'1A2D45'}, GREY = {rgb:'64748B'};
+  const bd1 = {style:'thin',  color:{rgb:'C8D2E0'}};
+  const bd2 = {style:'medium',color:{rgb:'0F1E3D'}};
+  const borderAll  = {top:bd1,bottom:bd1,left:bd1,right:bd1};
+  const F = 'Calibri';
 
-  const aoa=[]; const styles=[];
-  // En-tête
-  const head=['Compagnie / Sens', ...months.map(m=>MOIS_LONG[m]), 'Total'];
-  aoa.push(head);
+  function styMonthHdr(){ return {fill:{patternType:'solid',fgColor:BLUE},font:{name:F,color:GOLD,bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:{top:bd2,bottom:bd2,left:bd1,right:bd1}}; }
+  function stySubHdr(){  return {fill:{patternType:'solid',fgColor:{rgb:'E8EDF5'}},font:{name:F,color:{rgb:'1A3A6B'},bold:true,sz:9},alignment:{horizontal:'center',vertical:'center'},border:borderAll}; }
+  function styCoName(){  return {fill:{patternType:'solid',fgColor:{rgb:'F0F4FF'}},font:{name:F,color:NAVY,bold:true,sz:11},alignment:{horizontal:'left',vertical:'center',indent:1},border:{top:bd2,bottom:bd1,left:bd2,right:bd1}}; }
+  function stySens(dep){ return {fill:{patternType:'solid',fgColor:{rgb: dep?'FFFFFF':'FAFBFD'}},font:{name:F,color:GREY,bold:true,sz:10},alignment:{horizontal:'left',vertical:'center',indent:2},border:borderAll}; }
+  function styPax(dep){  return {fill:{patternType:'solid',fgColor:{rgb: dep?'FFFFFF':'FAFBFD'}},font:{name:F,color:DARK,bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:borderAll}; }
+  function styNb(dep){   return {fill:{patternType:'solid',fgColor:{rgb: dep?'F4F7FC':'EEF2F9'}},font:{name:F,color:{rgb:'2B5A8E'},sz:9},alignment:{horizontal:'center',vertical:'center'},border:borderAll}; }
+  function styTotCell(){ return {fill:{patternType:'solid',fgColor:{rgb:'FBF3D6'}},font:{name:F,color:NAVY,bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:{top:bd1,bottom:bd1,left:bd2,right:bd1}}; }
+  function styTotRow(){  return {fill:{patternType:'solid',fgColor:{rgb:'D4AF37'}},font:{name:F,color:NAVY,bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:{top:bd2,bottom:bd2,left:bd1,right:bd1}}; }
+  function styTotLabel(){return {fill:{patternType:'solid',fgColor:{rgb:'D4AF37'}},font:{name:F,color:NAVY,bold:true,sz:12},alignment:{horizontal:'left',vertical:'center',indent:1},border:{top:bd2,bottom:bd2,left:bd2,right:bd1}}; }
+  function styTitle(){   return {fill:{patternType:'solid',fgColor:NAVY},font:{name:F,color:GOLD,bold:true,sz:16},alignment:{horizontal:'center',vertical:'center'}}; }
 
-  const colPax=Array(12).fill(0), colNb=Array(12).fill(0);
-  companies.forEach(co=>{
-    const d=data[co];
-    ['DEP','ARR'].forEach(sens=>{
-      const pax=sens==='DEP'?d.DEP:d.ARR;
-      const nb =sens==='DEP'?d.DEPn:d.ARRn;
-      const label=(sens==='DEP'?'Départs':'Arrivées');
-      const row=[ (sens==='DEP'?co+' — ':'   ')+label ];
-      let rp=0,rn=0;
-      months.forEach(m=>{ row.push(_xlCell(pax[m],nb[m],showPax,showNb)); rp+=pax[m]; rn+=nb[m]; colPax[m]+=pax[m]; colNb[m]+=nb[m]; });
-      row.push(_xlCell(rp,rn,showPax,showNb));
-      aoa.push(row);
+  // Sous-colonnes par mois : Pax et/ou Vols
+  const subCols = [];
+  if(showPax) subCols.push('pax');
+  if(showNb)  subCols.push('nb');
+  const nSub = subCols.length;
+
+  const ws = {};
+  const merges = [];
+  let R = 0;
+
+  // Largeur totale : 1 (compagnie/sens) + months*nSub + total*nSub
+  const totalCols = 1 + months.length*nSub + nSub;
+
+  // Ligne 0 : Titre
+  ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:'STATISTIQUES PAR COMPAGNIE — '+currentYear, s:styTitle() };
+  merges.push({s:{r:R,c:0},e:{r:R,c:totalCols-1}});
+  R++;
+  // Ligne 1 : vide (respiration)
+  R++;
+
+  // Ligne d'en-tête 1 : mois (fusionné sur nSub colonnes) + Total
+  const hdrRow1 = R, hdrRow2 = R+1;
+  ws[XLSX.utils.encode_cell({r:hdrRow1,c:0})] = { v:'Compagnie', s:styMonthHdr() };
+  merges.push({s:{r:hdrRow1,c:0},e:{r:hdrRow2,c:0}});
+  let c = 1;
+  months.forEach(m=>{
+    ws[XLSX.utils.encode_cell({r:hdrRow1,c})] = { v:MOIS_LONG[m], s:styMonthHdr() };
+    if(nSub>1) merges.push({s:{r:hdrRow1,c},e:{r:hdrRow1,c:c+nSub-1}});
+    // sous-en-têtes
+    subCols.forEach((sc,k)=>{
+      ws[XLSX.utils.encode_cell({r:hdrRow2,c:c+k})] = { v: sc==='pax'?'Passagers':'Vols', s:stySubHdr() };
     });
+    c += nSub;
   });
   // Total
-  const trow=['TOTAL']; let gp=0,gn=0;
-  months.forEach(m=>{ trow.push(_xlCell(colPax[m],colNb[m],showPax,showNb)); gp+=colPax[m]; gn+=colNb[m]; });
-  trow.push(_xlCell(gp,gn,showPax,showNb));
-  aoa.push(trow);
+  ws[XLSX.utils.encode_cell({r:hdrRow1,c})] = { v:'TOTAL', s:styMonthHdr() };
+  if(nSub>1) merges.push({s:{r:hdrRow1,c},e:{r:hdrRow1,c:c+nSub-1}});
+  subCols.forEach((sc,k)=>{
+    ws[XLSX.utils.encode_cell({r:hdrRow2,c:c+k})] = { v: sc==='pax'?'Passagers':'Vols', s:stySubHdr() };
+  });
+  R = hdrRow2+1;
 
-  function _xlCell(pax,nb,sp,sn){
-    if(sp&&sn) return (pax||0)+' ('+(nb||0)+')';
-    if(sp) return pax||0;
-    return nb||0;
-  }
+  // Corps : 2 lignes par compagnie
+  const colPax=Array(12).fill(0), colNb=Array(12).fill(0);
+  companies.forEach(co=>{
+    const d = data[co];
+    ['DEP','ARR'].forEach((sens,si)=>{
+      const dep = sens==='DEP';
+      const pax = dep? d.DEP : d.ARR;
+      const nb  = dep? d.DEPn: d.ARRn;
+      // Colonne A : nom compagnie (ligne DEP) puis sens
+      if(dep){
+        ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:co, s:styCoName() };
+        // fusion verticale du nom sur 2 lignes ? Non : on met le nom sur DEP, et 'Arrivées' en dessous.
+        // Pour clarté, on met "Compagnie — Départs" et "— Arrivées"
+        ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:co+'  ·  Départs', s:styCoName() };
+      } else {
+        ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:'        Arrivées', s:stySens(false) };
+      }
+      let cc = 1, rowPax=0, rowNb=0;
+      months.forEach(m=>{
+        subCols.forEach(sc=>{
+          if(sc==='pax') ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:pax[m], t:'n', s:styPax(dep) };
+          else           ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:nb[m],  t:'n', s:styNb(dep) };
+        });
+        rowPax+=pax[m]; rowNb+=nb[m];
+        colPax[m]+=pax[m]; colNb[m]+=nb[m];
+      });
+      // Total ligne
+      subCols.forEach(sc=>{
+        if(sc==='pax') ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:rowPax, t:'n', s:styTotCell() };
+        else           ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:rowNb,  t:'n', s:styTotCell() };
+      });
+      R++;
+    });
+  });
 
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  // Styles
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for(let R=range.s.r;R<=range.e.r;R++){
-    for(let C=range.s.c;C<=range.e.c;C++){
-      const cell=ws[XLSX.utils.encode_cell({r:R,c:C})];
-      if(!cell) continue;
-      if(R===0) cell.s=hdrStyle;
-      else if(R===range.e.r) cell.s=totStyle;
-      else cell.s={alignment:{horizontal:C===0?'left':'center'},border:_bd(),font:{sz:10}};
-    }
-  }
-  ws['!cols']=[{wch:26}, ...months.map(()=>({wch:12})), {wch:14}];
-  const wb=XLSX.utils.book_new();
+  // Ligne TOTAL générale
+  ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:'TOTAL GÉNÉRAL', s:styTotLabel() };
+  let cc=1, gPax=0, gNb=0;
+  months.forEach(m=>{
+    subCols.forEach(sc=>{
+      if(sc==='pax') ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:colPax[m], t:'n', s:styTotRow() };
+      else           ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:colNb[m],  t:'n', s:styTotRow() };
+    });
+    gPax+=colPax[m]; gNb+=colNb[m];
+  });
+  subCols.forEach(sc=>{
+    if(sc==='pax') ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:gPax, t:'n', s:styTotRow() };
+    else           ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:gNb,  t:'n', s:styTotRow() };
+  });
+  R++;
+
+  // Dimensions
+  ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:R-1,c:totalCols-1}});
+  ws['!merges'] = merges;
+  const cols = [{wch:26}];
+  months.forEach(()=> subCols.forEach(sc=> cols.push({wch: sc==='pax'?11:8})));
+  subCols.forEach(sc=> cols.push({wch: sc==='pax'?12:9}));
+  ws['!cols'] = cols;
+  // Hauteur de lignes (aération)
+  ws['!rows'] = [];
+  ws['!rows'][0] = {hpt:26};        // titre
+  ws['!rows'][hdrRow1] = {hpt:20};
+  ws['!rows'][hdrRow2] = {hpt:16};
+
+  const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Compagnies '+currentYear);
-  const modeLabel={all:'',dom:'_domestique',int:'_international',none:'_sansMA'}[document.getElementById('maMode').value]||'';
+  const modeLabel = {all:'',dom:'_domestique',int:'_international',none:'_sansMA'}[document.getElementById('maMode').value]||'';
   XLSX.writeFile(wb, 'Statistiques_Compagnies_'+currentYear+modeLabel+'.xlsx');
   closeExportDialog();
 };
