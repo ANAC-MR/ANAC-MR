@@ -754,6 +754,7 @@ document.addEventListener('keydown', e => {
     <div class="status-right">
       <span class="mono" id="sLast"></span>
       <button class="btn btn-outline btn-sm" onclick="clearAll()">✕ Effacer</button>
+      <button class="btn btn-outline btn-sm" onclick="forceRescan()" title="Oublie les emails déjà importés et refait une lecture complète">↻ Tout re-vérifier</button>
       <button class="btn btn-gold btn-sm" id="readBtn" onclick="readEmails()" disabled>Lire emails</button>
     </div>
   </div>
@@ -1545,6 +1546,44 @@ async function saveIgnored() {
   } catch(e) { console.warn('saveIgnored:', e && e.message); }
 }
 
+// Emails DÉJÀ IMPORTÉS (par leur ID Gmail). Persistés dans ldm_config/imported.
+// Permet de NE PAS retélécharger leur contenu → lecture bien plus rapide :
+// au fil du temps, « Lire les emails » ne charge plus que les NOUVEAUX messages.
+const _importedIds = new Set();
+async function loadImportedIds() {
+  try {
+    await _ldmWaitAuth();
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) { try { await window.ANAC_AUTH.ensureAuthed(app); } catch(e){} }
+    const db  = getFirestore(app);
+    const snap = await getDoc(doc(db, 'ldm_config', 'imported'));
+    _importedIds.clear();
+    if (snap.exists() && Array.isArray(snap.data().ids)) snap.data().ids.forEach(id => _importedIds.add(id));
+    console.log('LDM: emails déjà importés (mémorisés) :', _importedIds.size);
+  } catch(e) { console.warn('loadImportedIds (non bloquant):', e && e.message); }
+}
+async function saveImportedIds() {
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const app = getApps().find(a=>a.name==='ldm') || initializeApp(FB,'ldm');
+    if (window.ANAC_AUTH && window.ANAC_AUTH.ensureAuthed) { try { await window.ANAC_AUTH.ensureAuthed(app); } catch(e){} }
+    const db  = getFirestore(app);
+    await setDoc(doc(db, 'ldm_config', 'imported'), { ids: [..._importedIds], updatedAt: new Date().toISOString() });
+  } catch(e) { console.warn('saveImportedIds:', e && e.message); }
+}
+
+// « Tout re-vérifier » : oublie la liste des emails déjà importés (skip) et
+// refait une lecture complète depuis Gmail (rescan intégral).
+window.forceRescan = async function() {
+  _importedIds.clear();
+  try { await saveImportedIds(); } catch(e) {}
+  if (accessToken) { toast('Re-vérification complète…','ok'); await readEmails(); }
+  else { toast('Connectez Gmail d\'abord','warn'); }
+};
+
 // Ignorer un email (le masquer sans importer).
 window.ignoreEmail = async function(i) {
   const em = emails[i];
@@ -1754,13 +1793,19 @@ async function readEmails() {
       } catch(qe) { console.warn('Query failed:', qstr, qe && qe.message); }
     }
 
-    // Charger la liste des emails IGNORÉS AVANT tout : on ne re-télécharge PAS
-    // leur contenu (gros gain de vitesse) et ils ne réapparaissent plus.
-    try { await loadIgnored(); } catch(e) { /* non bloquant */ }
-    const _beforeIgn = allMessages.length;
-    allMessages = allMessages.filter(m => !_ignored.has(m.id));
-    const _skipIgn = _beforeIgn - allMessages.length;
-    if (_skipIgn > 0) console.log('LDM: ' + _skipIgn + ' email(s) ignoré(s) non retéléchargés.');
+    // Charger AVANT le fetch la liste des emails IGNORÉS et des emails DÉJÀ
+    // IMPORTÉS : on ne re-télécharge PAS leur contenu (gros gain de vitesse)
+    // et les ignorés ne réapparaissent plus.
+    try { await Promise.all([loadIgnored(), loadImportedIds()]); } catch(e) { /* non bloquant */ }
+    // Élaguer les IDs importés qui ne sont plus dans le périmètre Gmail actuel
+    // (borne la liste dans le temps ; ces emails ne sont de toute façon plus lus).
+    let _prunedImp = false;
+    for (const id of [..._importedIds]) { if (!seenIds.has(id)) { _importedIds.delete(id); _prunedImp = true; } }
+    if (_prunedImp) { try { await saveImportedIds(); } catch(e){} }
+    const _before = allMessages.length;
+    allMessages = allMessages.filter(m => !_ignored.has(m.id) && !_importedIds.has(m.id));
+    const _skip = _before - allMessages.length;
+    if (_skip > 0) console.log('LDM: ' + _skip + ' email(s) ignorés/déjà importés non retéléchargés.');
 
     const listData = { messages: allMessages };
 
@@ -2434,6 +2479,8 @@ async function importFlight(i, force) {
     _fbImported.add(fp);
     if (_authVal) _fbAuthUsed[_authVal] = { fn: fn, date: dt };
     emails[i]._imported = true;
+    // Mémoriser l'ID Gmail : les prochaines lectures ne le retéléchargeront plus.
+    if (emails[i].id) { _importedIds.add(emails[i].id); saveImportedIds(); }
 
     updateStats();
     // Masquer le vol importé de la liste (re-render)
