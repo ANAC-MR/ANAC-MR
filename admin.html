@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https: data:; object-src 'none'; base-uri 'self';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ANAC Mauritanie – Panneau Administration</title>
 <link rel="icon" type="image/png" href="assets/ANAC-logo.png">
@@ -535,7 +536,7 @@
         .form-full { grid-column: 1 / -1; }
         .stat-card.blue { border-left-color: var(--blue); }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
     // CDN de repli si cdnjs est inaccessible (sinon : pas d'import/export Excel).
     window.addEventListener('load', function(){
@@ -2918,22 +2919,24 @@ async function loadUsers() {
             div.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:30px;font-size:13px;">Aucun utilisateur secondaire</div>';
             return;
         }
+        window._secUsersById = {};
         div.innerHTML = users.map(u => {
+            window._secUsersById[u.id] = u;   // résolution par id (anti-XSS attribut)
             const perms = u.permissions || [];
             const chips = ALL_PERMISSIONS.map(p =>
                 `<span class="perm-chip ${perms.includes(p.key)?'on':'off'}">${p.label}</span>`
             ).join('');
             return `
             <div class="user-row" id="urow-${u.id}">
-                <div class="user-avatar">${(u.username||'?')[0]}</div>
+                <div class="user-avatar">${esc((u.username||'?')[0])}</div>
                 <div class="user-info">
-                    <div class="user-name">${u.username}</div>
-                    <div class="user-date">Créé le ${u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR'):'—'}${u.createdBy?' · par '+u.createdBy:''}</div>
+                    <div class="user-name">${esc(u.username)}</div>
+                    <div class="user-date">Créé le ${u.createdAt?new Date(u.createdAt).toLocaleDateString('fr-FR'):'—'}${u.createdBy?' · par '+esc(u.createdBy):''}</div>
                     <div class="user-perms">${chips}</div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-                    <button class="user-expand" onclick="openPermModal('${u.id}','${u.username}',${JSON.stringify(perms).replace(/"/g,"'")})">Permissions</button>
-                    <button onclick="deleteSecUser('${u.id}','${u.username}')"
+                    <button class="user-expand" onclick="openPermModal('${u.id}')">Permissions</button>
+                    <button onclick="deleteSecUser('${u.id}')"
                         style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.25);color:#b3362b;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;">
                         ✕ Supprimer
                     </button>
@@ -2945,10 +2948,11 @@ async function loadUsers() {
     }
 }
 
-window.openPermModal = function(id, username, permsRaw) {
-    const perms = Array.isArray(permsRaw) ? permsRaw : [];
+window.openPermModal = function(id) {
+    const u = (window._secUsersById || {})[id] || {};
+    const perms = Array.isArray(u.permissions) ? u.permissions : [];
     document.getElementById('permUserId').value = id;
-    document.getElementById('permUsername').textContent = username;
+    document.getElementById('permUsername').textContent = u.username || '';
     const grid = document.getElementById('permGrid');
     grid.innerHTML = ALL_PERMISSIONS.map(p => `
         <div class="perm-item ${perms.includes(p.key)?'active':''}" id="perm-${p.key}" onclick="togglePerm('${p.key}')">
@@ -2992,7 +2996,8 @@ window.saveNewUser = async function() {
     if (typeof showNotif === 'function') showNotif('Utilisez « Sécurité & Utilisateurs » pour créer un compte.', 'info');
 };
 
-window.deleteSecUser = async function(id, uname) {
+window.deleteSecUser = async function(id) {
+    const uname = ((window._secUsersById || {})[id] || {}).username || '';
     // Suppression legacy (delete direct) SUPPRIMÉE. Utilise la Cloud Function.
     if (typeof window._secDeleteUser === 'function') return window._secDeleteUser(id, uname);
     if (typeof showNotif === 'function') showNotif('Utilisez « Sécurité & Utilisateurs ».', 'info');
@@ -6118,7 +6123,7 @@ async function _secLoadActivity() {
     const allActiveUsernames = users.map(u => u.username).filter(Boolean);
     if (!allActiveUsernames.includes('DADY')) allActiveUsernames.push('DADY');
     allActiveUsernames.sort();
-    sel.innerHTML = '<option value="">Tous les utilisateurs</option>' + allActiveUsernames.map(u => `<option value="${u}">${u}</option>`).join('');
+    sel.innerHTML = '<option value="">Tous les utilisateurs</option>' + allActiveUsernames.map(u => { const e = String(u).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); return `<option value="${e}">${e}</option>`; }).join('');
     _secRenderActivity();
   } catch(e) {
     list.innerHTML = '<div style="text-align:center;color:#b3362b;padding:30px;">Erreur: ' + e.message + '</div>';

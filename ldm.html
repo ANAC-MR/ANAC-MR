@@ -2,10 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https: data:; object-src 'none'; base-uri 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ANAC – Lecteur LDM/MVT</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
 // CDN de repli si cdnjs est inaccessible (sinon : pas de génération PDF).
 window.addEventListener('load', function(){
@@ -2635,24 +2636,14 @@ async function lookupAuthNumber(i) {
 
 // ══ LDM AUTH ══════════════════════════════════════════
 const _LS='anac_sess';
-const _LC={apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",authDomain:"anacmr-67835.firebaseapp.com",projectId:"anacmr-67835",storageBucket:"anacmr-67835.firebasestorage.app",messagingSenderId:"906668222910",appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"};
-let _ldb=null;
-async function _lDB(){if(_ldb)return _ldb;const{initializeApp,getApps}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');const{getFirestore}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const a=getApps().find(x=>x.name==='_la')||initializeApp(_LC,'_la');_ldb=getFirestore(a);return _ldb;}
-async function _lChk(u,p){try{const db=await _lDB();const{collection,query,where,getDocs,doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const q=query(collection(db,'anac_users'),where('username','==',u.toUpperCase()));const s=await getDocs(q);if(!s.empty){const x=s.docs[0].data();return x.password===p;}const c=await getDoc(doc(db,'flights','cfg-auth'));const su=c.exists()?(c.data().username||'DADY'):'DADY';const sp=c.exists()?(c.data().password||'ANACdady'):'ANACdady';return u.toUpperCase()===su.toUpperCase()&&p===sp;}catch(e){return false;}}
-async function _lValid(ts){try{const db=await _lDB();const{doc,getDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');const c=await getDoc(doc(db,'flights','cfg-auth'));if(c.exists()&&(c.data().sessionReset||0)>ts)return false;}catch(e){}return true;}
-async function _laLogin(){
-  const u=(document.getElementById('laUser').value||'').trim();
-  const p=document.getElementById('laPass').value||'';
-  const err=document.getElementById('laErr');
-  const btn=document.getElementById('laBtn');
-  err.textContent='';
-  if(!u||!p){err.textContent='Remplissez tous les champs';return;}
-  btn.disabled=true;btn.textContent='Vérification...';
-  const ok=await _lChk(u,p);
-  btn.disabled=false;btn.textContent='Connexion';
-  if(ok){sessionStorage.setItem(_LS,JSON.stringify({u:u.toUpperCase(),ts:Date.now()}));document.getElementById('ldmAuth').classList.add('hidden');}
-  else{err.textContent='Identifiants incorrects';document.getElementById('laPass').value='';}
-}
+// ── Auth héritée NEUTRALISÉE (audit sécurité 2026-08) ──
+// L'ancien gate local (comparaison de mot de passe EN CLAIR lu dans Firestore
+// + identifiants EN DUR) a été SUPPRIMÉ. L'accès à cette page est désormais
+// géré uniquement par login.html + auth.js (requireAuth) et par les règles
+// Firestore. L'overlay #ldmAuth reste masqué (display:none). Les stubs
+// ci-dessous conservent les symboles encore référencés plus bas.
+async function _lValid(){ return true; }
+async function _laLogin(){ const o=document.getElementById('ldmAuth'); if(o) o.classList.add('hidden'); }
 // ══════════════════════════════════════════════════════════════
 // SECTION ARCHIVES LDM/MVT
 // ══════════════════════════════════════════════════════════════

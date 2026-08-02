@@ -45,6 +45,11 @@ exports.adminCreateUser = onCall(async (request) => {
   const role = normalizeRole(data.role);
   const permissions = Array.isArray(data.permissions) ? data.permissions : [];
   if (!username) throw new HttpsError('invalid-argument', 'Identifiant requis.');
+  // Validation stricte de l'identifiant (défense anti-XSS stocké à la source) :
+  // lettres, chiffres, espace, point, tiret bas, tiret — 40 caractères max.
+  if (!/^[A-Za-z0-9 ._-]{1,40}$/.test(username)) {
+    throw new HttpsError('invalid-argument', "Identifiant invalide : lettres, chiffres, espace, . _ - uniquement (max 40).");
+  }
   if (password.length < 6) throw new HttpsError('invalid-argument', 'Mot de passe trop court (min 6).');
   const email = usernameToEmail(username);
   let userRecord;
