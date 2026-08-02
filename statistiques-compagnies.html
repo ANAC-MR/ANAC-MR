@@ -426,9 +426,9 @@ document.addEventListener('keydown', e => {
   <div>
     <h1>
       <span style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#D4AF37,#b8962a);display:inline-flex;align-items:center;justify-content:center;font-size:20px;"></span>
-      Mauritanie Airlines
+      Statistiques par Compagnie
     </h1>
-    <div class="sub">Statistiques par Compagnie</div>
+    <div class="sub">Trafic passagers · toutes compagnies</div>
   </div>
 </header>
 
@@ -724,10 +724,13 @@ window.doExportXLSX = function(){
 
   function styMonthHdr(){ return {fill:{patternType:'solid',fgColor:BLUE},font:{name:F,color:GOLD,bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:{top:bd2,bottom:bd2,left:bd1,right:bd1}}; }
   function stySubHdr(){  return {fill:{patternType:'solid',fgColor:{rgb:'E8EDF5'}},font:{name:F,color:{rgb:'1A3A6B'},bold:true,sz:9},alignment:{horizontal:'center',vertical:'center'},border:borderAll}; }
-  function styCoName(){  return {fill:{patternType:'solid',fgColor:{rgb:'F0F4FF'}},font:{name:F,color:NAVY,bold:true,sz:11},alignment:{horizontal:'left',vertical:'center',indent:1},border:{top:bd2,bottom:bd1,left:bd2,right:bd1}}; }
-  function stySens(dep){ return {fill:{patternType:'solid',fgColor:{rgb: dep?'FFFFFF':'FAFBFD'}},font:{name:F,color:GREY,bold:true,sz:10},alignment:{horizontal:'left',vertical:'center',indent:2},border:borderAll}; }
-  function styPax(dep){  return {fill:{patternType:'solid',fgColor:{rgb: dep?'FFFFFF':'FAFBFD'}},font:{name:F,color:DARK,bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:borderAll}; }
-  function styNb(dep){   return {fill:{patternType:'solid',fgColor:{rgb: dep?'F4F7FC':'EEF2F9'}},font:{name:F,color:{rgb:'2B5A8E'},sz:9},alignment:{horizontal:'center',vertical:'center'},border:borderAll}; }
+  // Couleurs distinctes par sens : Départs = bleu clair, Arrivées = ambre clair.
+  const DEP_BG = 'E8F0FB', DEP_NB_BG = 'DCE8F7';   // départs (bleuté)
+  const ARR_BG = 'FBF3E2', ARR_NB_BG = 'F5E9CC';   // arrivées (ambré)
+  function styCoName(){  return {fill:{patternType:'solid',fgColor:{rgb: DEP_BG}},font:{name:F,color:NAVY,bold:true,sz:11},alignment:{horizontal:'left',vertical:'center',indent:1},border:{top:bd2,bottom:bd1,left:bd2,right:bd1}}; }
+  function stySens(dep){ return {fill:{patternType:'solid',fgColor:{rgb: dep?DEP_BG:ARR_BG}},font:{name:F,color:{rgb: dep?'1A3A6B':'8A6D1D'},bold:true,sz:10},alignment:{horizontal:'left',vertical:'center',indent:2},border:borderAll}; }
+  function styPax(dep){  return {fill:{patternType:'solid',fgColor:{rgb: dep?DEP_BG:ARR_BG}},font:{name:F,color:DARK,bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:borderAll}; }
+  function styNb(dep){   return {fill:{patternType:'solid',fgColor:{rgb: dep?DEP_NB_BG:ARR_NB_BG}},font:{name:F,color:{rgb: dep?'2B5A8E':'9A7B1E'},sz:9},alignment:{horizontal:'center',vertical:'center'},border:borderAll}; }
   function styTotCell(){ return {fill:{patternType:'solid',fgColor:{rgb:'FBF3D6'}},font:{name:F,color:NAVY,bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:{top:bd1,bottom:bd1,left:bd2,right:bd1}}; }
   function styTotRow(){  return {fill:{patternType:'solid',fgColor:{rgb:'D4AF37'}},font:{name:F,color:NAVY,bold:true,sz:11},alignment:{horizontal:'center',vertical:'center'},border:{top:bd2,bottom:bd2,left:bd1,right:bd1}}; }
   function styTotLabel(){return {fill:{patternType:'solid',fgColor:{rgb:'D4AF37'}},font:{name:F,color:NAVY,bold:true,sz:12},alignment:{horizontal:'left',vertical:'center',indent:1},border:{top:bd2,bottom:bd2,left:bd2,right:bd1}}; }
@@ -746,13 +749,7 @@ window.doExportXLSX = function(){
   // Largeur totale : 1 (compagnie/sens) + months*nSub + total*nSub
   const totalCols = 1 + months.length*nSub + nSub;
 
-  // Ligne 0 : Titre
-  ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:'STATISTIQUES PAR COMPAGNIE — '+currentYear, s:styTitle() };
-  merges.push({s:{r:R,c:0},e:{r:R,c:totalCols-1}});
-  R++;
-  // Ligne 1 : vide (respiration)
-  R++;
-
+  // Le tableau commence directement par les en-têtes (pas de ligne titre).
   // Ligne d'en-tête 1 : mois (fusionné sur nSub colonnes) + Total
   const hdrRow1 = R, hdrRow2 = R+1;
   ws[XLSX.utils.encode_cell({r:hdrRow1,c:0})] = { v:'Compagnie', s:styMonthHdr() };
@@ -835,7 +832,6 @@ window.doExportXLSX = function(){
   ws['!cols'] = cols;
   // Hauteur de lignes (aération)
   ws['!rows'] = [];
-  ws['!rows'][0] = {hpt:26};        // titre
   ws['!rows'][hdrRow1] = {hpt:20};
   ws['!rows'][hdrRow2] = {hpt:16};
 
