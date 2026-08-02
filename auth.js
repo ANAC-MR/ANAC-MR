@@ -82,11 +82,32 @@ export const ROLES = {
 // ── Firebase setup ───────────────────────────────────────────────
 let _app = null, _db = null, _auth = null, _functions = null;
 
+// ── App Check (reCAPTCHA v3, invisible) ──────────────────────────
+// Protège les API Firebase (Firestore/Functions) contre les appels
+// n'émanant pas de l'app. Initialisé UNE fois par instance Firebase,
+// de façon centralisée via getApp() et ensureAuthed() — ainsi toutes
+// les pages/instances sont couvertes automatiquement.
+const APPCHECK_SITE_KEY = '6Lf6XHItAAAAALi1dOQTaJQRMG2zFm6JL10zA-CN';
+const _appCheckDone = new WeakSet();
+async function _ensureAppCheck(app) {
+  if (!app || _appCheckDone.has(app)) return;
+  _appCheckDone.add(app);   // marquer AVANT l'await : évite une double init concurrente
+  try {
+    const { initializeAppCheck, ReCaptchaV3Provider } =
+      await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js');
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(APPCHECK_SITE_KEY),
+      isTokenAutoRefreshEnabled: true
+    });
+  } catch(e) { console.warn('App Check init (' + (app && app.name) + '):', e && e.message); }
+}
+
 async function getApp() {
   if (_app) return _app;
   const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
   const apps = getApps();
   _app = apps.find(a => a.name === 'anac-auth') || initializeApp(FB_CONFIG, 'anac-auth');
+  await _ensureAppCheck(_app);   // App Check sur l'app d'authentification
   return _app;
 }
 async function getDB() {
@@ -462,6 +483,7 @@ const _authedApps = new WeakSet();
 
 export async function ensureAuthed(app) {
   if (!app) return false;
+  await _ensureAppCheck(app);   // App Check sur CHAQUE instance Firebase des pages
   if (_authedApps.has(app)) return true;
 
   const A = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
