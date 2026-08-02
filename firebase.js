@@ -9,7 +9,7 @@ const firebaseConfig = {
   projectId: "anacmr-67835",
   storageBucket: "anacmr-67835.firebasestorage.app",
   messagingSenderId: "906668222910",
-  appId: "1:906668222910:web:0231614b880df3196e26cf",
+  appId: "1:906668222910:web:19d92b627f155bd2dbb1ef",
   measurementId: "G-99SRWB16J8"
 };
 
