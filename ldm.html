@@ -1562,10 +1562,17 @@ window.restoreIgnored = async function() {
   if (!_ignored.size) { toast('Aucun email ignoré','warn'); return; }
   _ignored.clear();
   emails.forEach(e => { e._ignored = false; });
-  renderEmails();
-  updateStats();
-  saveIgnored();
-  toast('↩ Emails ignorés réaffichés','ok');
+  await saveIgnored();
+  // Les emails ignorés ne sont plus téléchargés lors de la lecture : il faut
+  // refaire une lecture pour les récupérer depuis Gmail.
+  if (accessToken) {
+    toast('↩ Réaffichage — relecture des emails…','ok');
+    await readEmails();
+  } else {
+    renderEmails();
+    updateStats();
+    toast('↩ Emails ignorés réaffichés','ok');
+  }
 };
 
 // Cache: N° vol → authorizationNumber (dernier connu dans Firebase)
@@ -1747,6 +1754,14 @@ async function readEmails() {
       } catch(qe) { console.warn('Query failed:', qstr, qe && qe.message); }
     }
 
+    // Charger la liste des emails IGNORÉS AVANT tout : on ne re-télécharge PAS
+    // leur contenu (gros gain de vitesse) et ils ne réapparaissent plus.
+    try { await loadIgnored(); } catch(e) { /* non bloquant */ }
+    const _beforeIgn = allMessages.length;
+    allMessages = allMessages.filter(m => !_ignored.has(m.id));
+    const _skipIgn = _beforeIgn - allMessages.length;
+    if (_skipIgn > 0) console.log('LDM: ' + _skipIgn + ' email(s) ignoré(s) non retéléchargés.');
+
     const listData = { messages: allMessages };
 
     if (!listData.messages || listData.messages.length === 0) {
@@ -1805,8 +1820,7 @@ async function readEmails() {
     } catch(e) {
       console.warn('checkImportedFromFirebase failed:', e);
     }
-    // Charger la liste des emails ignorés manuellement (masqués)
-    try { await loadIgnored(); } catch(e) { /* non bloquant */ }
+    // (Les emails ignorés ont déjà été chargés + exclus AVANT le fetch.)
     const dups = emails.filter(e=>e._imported).length;
     setStatus('active',`${emails.length} email(s) — ${dups} déjà dans le système`);
 
