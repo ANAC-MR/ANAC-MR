@@ -53,6 +53,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── Config publique des aéroports (coordonnées/villes) ─────────────
+    // Document unique lu par la carte publique (session anonyme) pour placer
+    // les aéroports. Données non sensibles. Le reste de la collection flights
+    // reste protégé par la règle générale ci-dessous.
+    match /flights/cfg-airports {
+      allow read:  if signedIn();   // inclut l'anonyme de la carte publique
+      allow write: if isAdmin();
+    }
+
     // ── Données métier : lecture (admin/reader/operator), écriture ADMIN ─
     match /flights/{doc} {
       allow read:  if canRead();
