@@ -637,6 +637,8 @@ window.renderAll = function(){
   // Totaux par mois (toutes compagnies, tous sens confondus)
   const colPax = Array(12).fill(0), colNb = Array(12).fill(0);
 
+  // Sécurité : échappement HTML des données de base (anti-XSS stocké)
+  const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let html = '<table class="data-table"><thead><tr><th>Compagnie</th>';
   for(let m=0;m<12;m++) html += '<th>'+MOIS[m]+'</th>';
   html += '<th>Total</th></tr></thead><tbody>';
@@ -649,7 +651,7 @@ window.renderAll = function(){
       const label = sens==='DEP' ? 'Départs' : 'Arrivées';
       const isFirst = sens==='DEP';
       html += '<tr class="route-row">';
-      html += '<td>'+(isFirst?'<strong>'+co+'</strong> · ':'&nbsp;&nbsp;&nbsp;')+'<span style="color:#64748b;font-size:11px;">'+label+'</span></td>';
+      html += '<td>'+(isFirst?'<strong>'+esc(co)+'</strong> · ':'&nbsp;&nbsp;&nbsp;')+'<span style="color:#64748b;font-size:11px;">'+label+'</span></td>';
       let rowPax=0, rowNb=0;
       for(let m=0;m<12;m++){
         html += '<td>'+_cell(pax[m], nb[m], showPax, showNb)+'</td>';

@@ -1,0 +1,126 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ANAC SGV — Règles de sécurité Firestore
+//  ───────────────────────────────────────────────────────────────────────────
+//  ⚠️  IMPORTANT — CE FICHIER EST UNE RECONSTRUCTION.
+//      Il a été rédigé d'après le COMPORTEMENT OBSERVÉ des règles réellement
+//      déployées dans la console Firebase (audit de sécurité), et NON copié
+//      depuis la console. Avant tout `firebase deploy --only firestore:rules` :
+//        1. Ouvrir la console → Firestore → Règles
+//        2. Comparer ligne à ligne avec ce fichier
+//        3. Corriger ce fichier pour qu'il corresponde EXACTEMENT à l'existant
+//           (en y intégrant seulement les durcissements souhaités)
+//      Déployer une version erronée peut casser l'accès des utilisateurs
+//      légitimes OU affaiblir la sécurité.
+//
+//  Modèle observé pendant l'audit :
+//   • Sans authentification            → aucune lecture (403 partout)
+//   • Session anonyme (carte publique) → lecture de `schedules` uniquement
+//   • Compte auto-inscrit (sans profil)→ aucun accès aux données sensibles
+//   • L'écriture anonyme est refusée partout
+//   • L'écriture d'un profil admin par soi-même est refusée (pas d'escalade)
+//   • `anac_activity_log` : création possible par tout compte connecté
+//     (⚠️ durci ci-dessous : réservé aux comptes disposant d'un profil)
+// ═══════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Fonctions utilitaires ────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    // Compte réel (non anonyme) — le mode carte publique utilise l'anonyme.
+    function isReal() {
+      return isSignedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    // Possède un document de profil dans anac_users (créé par une Cloud
+    // Function admin) → seul critère qui distingue un utilisateur légitime
+    // d'un compte auto-inscrit.
+    function hasProfile() {
+      return isReal()
+        && exists(/databases/$(database)/documents/anac_users/$(request.auth.uid));
+    }
+    function myProfile() {
+      return get(/databases/$(database)/documents/anac_users/$(request.auth.uid)).data;
+    }
+    function isActive() {
+      return hasProfile() && myProfile().disabled != true;
+    }
+    // Rôle porté par le custom claim (posé côté serveur par les Cloud Functions).
+    function isAdmin() {
+      return isReal() && request.auth.token.role == 'admin';
+    }
+
+    // ── schedules : données publiques de la carte des vols ────────────────
+    // Lecture autorisée à toute session (y compris anonyme). Écriture réservée
+    // aux comptes légitimes actifs.
+    match /schedules/{doc} {
+      allow read:  if isSignedIn();
+      allow write: if isActive();
+    }
+
+    // ── anac_users : profils / rôles / permissions ───────────────────────
+    // Chacun lit UNIQUEMENT son propre document (utilisé par loadProfileByUid).
+    // La liste complète est réservée aux admins. Toute écriture passe par les
+    // Cloud Functions (SDK Admin, qui contourne ces règles) → écriture client
+    // interdite pour empêcher l'escalade de privilège.
+    match /anac_users/{uid} {
+      allow get:    if isReal() && (request.auth.uid == uid || isAdmin());
+      allow list:   if isAdmin();
+      allow write:  if false;
+    }
+
+    // ── anac_activity_log : journal d'audit ──────────────────────────────
+    // DURCISSEMENT (audit) : la création était possible pour tout compte
+    // connecté, rendant le journal falsifiable/floodable. On la réserve aux
+    // comptes disposant d'un profil. La lecture reste réservée aux admins.
+    // La modification / suppression est interdite (journal immuable).
+    match /anac_activity_log/{doc} {
+      allow read:   if isAdmin();
+      allow create: if hasProfile();
+      allow update, delete: if false;
+    }
+
+    // ── Données métier (vols et référentiels) ────────────────────────────
+    // Lecture réservée aux comptes légitimes actifs ; l'écriture directe
+    // (ajout / édition / suppression de vols) se fait via le SDK client, donc
+    // autorisée pour les comptes actifs. NB : le contrôle fin par permission
+    // (add/edit/delete) n'est PAS applicable ici de façon fiable — envisager
+    // de router les écritures sensibles par Cloud Functions.
+    match /flights/{doc} {
+      allow read:  if isActive();
+      allow write: if isActive();
+    }
+    match /programme_vols/{doc} {
+      allow read:  if isActive();
+      allow write: if isActive();
+    }
+    match /aircraft/{doc} {
+      allow read:  if isActive();
+      allow write: if isActive();
+    }
+    match /ldm_archive/{doc} {
+      allow read:  if isActive();
+      allow write: if isActive();
+    }
+    match /vol_pairs/{doc} {
+      allow read:  if isActive();
+      allow write: if isActive();
+    }
+    match /flight_numbers/{doc} {
+      allow read:  if isActive();
+      allow write: if isActive();
+    }
+    match /airlines/{doc} {
+      allow read:  if isActive();
+      allow write: if isActive();
+    }
+
+    // ── Refus par défaut (tout le reste) ─────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

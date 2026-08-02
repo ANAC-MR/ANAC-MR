@@ -1,0 +1,22 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ANAC SGV — Règles de sécurité Cloud Storage
+//  ───────────────────────────────────────────────────────────────────────────
+//  ⚠️  RECONSTRUCTION / VALEUR PAR DÉFAUT PRUDENTE.
+//      L'usage de Cloud Storage par l'application n'a pas pu être confirmé
+//      pendant l'audit. Ce fichier applique un REFUS TOTAL par défaut.
+//      → Si l'application NE stocke aucun fichier : conserver tel quel.
+//      → Si elle utilise Storage (uploads) : comparer avec la console
+//        (Storage → Règles) et ouvrir uniquement les chemins nécessaires,
+//        réservés aux comptes légitimes, AVANT de déployer.
+// ═══════════════════════════════════════════════════════════════════════════
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Refus par défaut : aucun accès public.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

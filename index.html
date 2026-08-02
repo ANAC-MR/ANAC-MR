@@ -1546,6 +1546,13 @@ document.addEventListener('keydown', e => {
 
 <script>
 // ══════════════════════════════════════════
+// SÉCURITÉ — échappement HTML (anti-XSS stocké)
+// Toute donnée issue de la base (compagnie, ville, etc.) injectée
+// dans innerHTML DOIT passer par esc().
+// ══════════════════════════════════════════
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ══════════════════════════════════════════
 // TABS
 // ══════════════════════════════════════════
 function switchTab(tab) {
@@ -2960,15 +2967,16 @@ function renderDestCards(flt){
         return;
     }
     const maxV=sorted[0][1].vols;
+    window._destSorted=sorted;
     document.getElementById('destCards').innerHTML=sorted.map(([city,info],i)=>{
         const pct=Math.round(info.vols/maxV*100);
         const color=PALETTE[i%PALETTE.length];
-        return `<div onclick="showDestDetail('${city.replace(/'/g,"\\'")}',this)"
+        return `<div onclick="showDestDetail(${i},this)"
             style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;
             padding:12px 16px;cursor:pointer;transition:all .15s;min-width:130px;flex:1;max-width:185px;" class="dest-card"
             onmouseover="this.style.borderColor='${color}66';this.style.background='rgba(255,255,255,.07)'"
             onmouseout="if(!this.classList.contains('dc-active')){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';}">
-            <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">${city}</div>
+            <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">${esc(city)}</div>
             <div style="font-size:11px;color:#5A7A9A;margin-bottom:7px;">${info.vols} vols · ${info.pax.toLocaleString('fr-FR')} pax</div>
             <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;">
               <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;"></div>
@@ -2979,7 +2987,11 @@ function renderDestCards(flt){
     document.getElementById('destDetail').style.display='none';
 }
 
-window.showDestDetail=function(city,cardEl){
+window.showDestDetail=function(idx,cardEl){
+    // idx = index dans window._destSorted (évite d'injecter une chaîne
+    // contrôlée par l'utilisateur dans un attribut HTML onclick).
+    const entry=window._destSorted?window._destSorted[idx]:null;
+    const city=entry?entry[0]:'';
     document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('dc-active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';});
     const info=window._destData?window._destData[city]:undefined;
     if(!info)return;
@@ -2989,7 +3001,7 @@ window.showDestDetail=function(city,cardEl){
     const detail=document.getElementById('destDetail');
     detail.style.display='';
     detail.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div><span style="font-size:15px;font-weight:800;color:#e2e8f0;">${city}</span>
+        <div><span style="font-size:15px;font-weight:800;color:#e2e8f0;">${esc(city)}</span>
         <span style="font-size:12px;color:#5A7A9A;margin-left:10px;">${total} vols · ${info.pax.toLocaleString('fr-FR')} pax</span></div>
         <button onclick="document.getElementById('destDetail').style.display='none';document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('dc-active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';})"
             style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">✕</button>
@@ -2999,7 +3011,7 @@ window.showDestDetail=function(city,cardEl){
         const color=PALETTE[i%PALETTE.length],share=Math.round(s.vols/total*100),pct=Math.round(s.vols/maxV*100);
         return `<div style="background:rgba(255,255,255,.03);border-radius:9px;padding:10px 14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-size:13px;font-weight:600;color:#e2e8f0;">${co}</span>
+                <span style="font-size:13px;font-weight:600;color:#e2e8f0;">${esc(co)}</span>
                 <div style="display:flex;gap:10px;">
                     <span style="font-size:13px;font-weight:700;color:${color};">${s.vols} vol${s.vols>1?'s':''}</span>
                     <span style="font-size:11px;color:#5A7A9A;">${s.pax.toLocaleString('fr-FR')} pax</span>
@@ -3129,7 +3141,7 @@ function runComparison() {
     res.innerHTML = `
         <div class="compare-grid">
             <div class="compare-kpi a">
-                <div class="ck-name">${a}</div>
+                <div class="ck-name">${esc(a)}</div>
                 <div class="ck-val">${sA.vols}</div>
                 <div class="ck-label">Vols totaux</div>
                 ${winner(sA.vols,sB.vols)==='a'?'<span class="winner-badge">LEADER</span>':''}
@@ -3141,7 +3153,7 @@ function runComparison() {
                 <div style="font-size:11px;color:#a0aec0;">Immat: ${sA.imm} / ${sB.imm}</div>
             </div>
             <div class="compare-kpi b">
-                <div class="ck-name">${b}</div>
+                <div class="ck-name">${esc(b)}</div>
                 <div class="ck-val">${sB.vols}</div>
                 <div class="ck-label">Vols totaux</div>
                 ${winner(sA.vols,sB.vols)==='b'?'<span class="winner-badge">LEADER</span>':''}
@@ -3405,10 +3417,10 @@ function fctPopulateAirlines() {
     const div = document.getElementById('fctAirlines');
     div.innerHTML = airlines.map(a => `
         <label class="fact-airline-card">
-            <input type="checkbox" class="fact-airline-card-cb" data-airline="${a}" checked>
+            <input type="checkbox" class="fact-airline-card-cb" data-airline="${esc(a)}" checked>
             <span class="fact-airline-card-inner">
                 <span class="fact-airline-dot"></span>
-                <span class="fact-airline-name">${a}</span>
+                <span class="fact-airline-name">${esc(a)}</span>
                 <span class="fact-airline-tick">✓</span>
             </span>
         </label>`).join('');
@@ -3518,7 +3530,7 @@ window.fctGenApercu = function() {
 
     const thCols  = cols.map(c => `<th>${COL_LBL[c]}</th>`).join('');
     const dataTr  = rows.map(r =>
-        `<tr><td>${r.name}</td>${cols.map(c => `<td>${(r[c]||0).toLocaleString('fr-FR')}</td>`).join('')}</tr>`
+        `<tr><td>${esc(r.name)}</td>${cols.map(c => `<td>${(r[c]||0).toLocaleString('fr-FR')}</td>`).join('')}</tr>`
     ).join('');
     const totTr   = `<tr class="tbl-total"><td>Total</td>${cols.map(c => `<td>${(totals[c]||0).toLocaleString('fr-FR')}</td>`).join('')}</tr>`;
 
