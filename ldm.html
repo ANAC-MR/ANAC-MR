@@ -1438,19 +1438,31 @@ async function dedupAndEnrich(list) {
       if (info.from)     p.from     = info.from;
       if (info.to)       p.to       = info.to;
       if (info.company)  p.company  = info.company;
-      if (info.stopover) p.stopover = info.stopover;
       if (info.type)     p.type     = info.type;   // DEP/ARR officiel (écrase la déduction LDM/MVT)
       p._routeFromList = true;   // marqueur : trajet déduit de la liste
-      // ── Répartition PAX escale (MAI) : le PAX de la ville d'escale vient du message ──
+      // ── Escale : la fiche flight_numbers fait FOI (présence ET absence) ──
+      // Si la fiche déclare une escale → on l'applique. Si elle N'EN déclare
+      // AUCUNE → on EFFACE toute escale déduite de l'e-mail (ex. station à
+      // 0 PAX comme TUN sur L6300). Ainsi, décocher l'escale dans
+      // Admin → Numéros de vol la supprime partout, de façon fiable.
       const _isMAI = (p.company||'').toUpperCase().includes('MAURITANIA') || (p.company||'').toUpperCase()==='L6';
-      if (_isMAI && info.stopover && p._stationPax) {
-        const stopIata = _toIataLDM(info.stopover);
-        const stopIcao = (info.stopover||'').toUpperCase();
-        // Chercher le PAX de la station d'escale (en IATA ou ICAO)
-        const sd = p._stationPax[stopIata] || p._stationPax[stopIcao] || null;
-        if (sd) { p.stopoverPax = sd.pax; p.stopoverBabies = sd.babies; }
-        else { p.stopoverPax = 0; p.stopoverBabies = 0; }
-        p.hasStopover = true;
+      if (info.stopover) {
+        p.stopover = info.stopover;
+        // Répartition PAX escale (MAI) : le PAX de la ville d'escale vient du message.
+        if (_isMAI && p._stationPax) {
+          const stopIata = _toIataLDM(info.stopover);
+          const stopIcao = (info.stopover||'').toUpperCase();
+          const sd = p._stationPax[stopIata] || p._stationPax[stopIcao] || null;
+          if (sd) { p.stopoverPax = sd.pax; p.stopoverBabies = sd.babies; }
+          else { p.stopoverPax = 0; p.stopoverBabies = 0; }
+          p.hasStopover = true;
+        }
+      } else {
+        // Aucune escale enregistrée → purger toute escale déduite de l'e-mail.
+        p.stopover = '';
+        p.hasStopover = false;
+        p.stopoverPax = 0;
+        p.stopoverBabies = 0;
       }
     } else {
       p._routeFromList = false;
