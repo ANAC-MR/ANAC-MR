@@ -680,7 +680,12 @@ document.addEventListener('keydown', e => {
       <div id="archSubConfig" style="display:none;">
         <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
           <span style="font-size:13px;font-weight:700;color:#D4AF37;">Configuration des paires DEP / ARR</span>
-          <button onclick="showAddPairForm()" style="background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.4);color:#00c98d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Ajouter une paire</button>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <select id="pairCompanyFilter" onchange="onPairFilterChange()" style="background:#1e293b;border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:6px 12px;color:#e2e8f0;font-size:12px;min-width:180px;">
+              <option value="">— Choisir une compagnie —</option>
+            </select>
+            <button onclick="showAddPairForm()" style="background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.4);color:#00c98d;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Ajouter une paire</button>
+          </div>
         </div>
 
         <!-- Formulaire ajout/édition paire -->
@@ -3295,12 +3300,47 @@ async function loadPairs() {
     const snap = await getDocs(query(collection(db,'vol_pairs'), orderBy('company')));
     _volPairs  = snap.docs.map(d => ({id: d.id, ...d.data()}));
 
-    if (!_volPairs.length) {
-      listEl.innerHTML = '<div style="color:#64748b;font-size:13px;text-align:center;padding:20px;">Aucune paire configurée — cliquez sur "+ Ajouter une paire"</div>';
-      return;
-    }
+    // Charger la liste des compagnies puis remplir le filtre
+    await _loadPairOptions();
+    _fillPairFilter();
+    _renderPairList();
+  } catch(e) {
+    listEl.innerHTML = `<div style="color:#fc8181;font-size:13px;text-align:center;padding:16px;">Erreur: ${e.message}</div>`;
+  }
+}
 
-    listEl.innerHTML = _volPairs.map(p => `
+// Remplit le menu déroulant de filtre avec toutes les compagnies connues.
+function _fillPairFilter() {
+  const sel = document.getElementById('pairCompanyFilter');
+  if (!sel) return;
+  const cur = sel.value;
+  const set = new Set(_pairCompanies || []);
+  _volPairs.forEach(p => { if (p.company) set.add(p.company); });
+  const cos = [...set].sort();
+  sel.innerHTML = '<option value="">— Choisir une compagnie —</option>';
+  cos.forEach(co => {
+    const o = document.createElement('option');
+    o.value = co; o.textContent = co;
+    if (co === cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+// Affiche uniquement les paires de la compagnie sélectionnée dans le filtre.
+function _renderPairList() {
+  const listEl = document.getElementById('pairList');
+  if (!listEl) return;
+  const filterCo = (document.getElementById('pairCompanyFilter') || {}).value || '';
+  if (!filterCo) {
+    listEl.innerHTML = '<div style="color:#64748b;font-size:13px;text-align:center;padding:20px;">Choisissez une compagnie ci-dessus pour voir et ajouter ses paires.</div>';
+    return;
+  }
+  const pairs = _volPairs.filter(p => p.company === filterCo);
+  if (!pairs.length) {
+    listEl.innerHTML = '<div style="color:#64748b;font-size:13px;text-align:center;padding:20px;">Aucune paire pour ' + esc(filterCo) + ' — cliquez sur « + Ajouter une paire ».</div>';
+    return;
+  }
+  listEl.innerHTML = pairs.map(p => `
       <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <span style="font-size:12px;font-weight:700;color:#94a3b8;min-width:140px;">${esc(p.company||'—')}</span>
         <span style="font-size:13px;font-weight:800;color:#60a5fa;">${esc(p.dep||'—')}</span>
@@ -3313,10 +3353,10 @@ async function loadPairs() {
           <button onclick="deletePair('${p.id}')" style="background:rgba(229,62,62,0.08);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✕</button>
         </div>
       </div>`).join('');
-  } catch(e) {
-    listEl.innerHTML = `<div style="color:#fc8181;font-size:13px;text-align:center;padding:16px;">Erreur: ${e.message}</div>`;
-  }
 }
+
+function onPairFilterChange() { _renderPairList(); }
+window.onPairFilterChange = onPairFilterChange;
 
 // Cache des compagnies et numéros de vols depuis Firebase
 let _pairCompanies = [];
@@ -3403,8 +3443,10 @@ async function showAddPairForm() {
   await _loadPairOptions();
   document.getElementById('pairFormTitle').textContent = 'Nouvelle paire';
   document.getElementById('pairEditId').value = '';
-  _fillCompanySelect('');
-  _fillFlightSelects('', '', '');
+  // Pré-sélectionner la compagnie choisie dans le filtre (gain de temps).
+  const filterCo = (document.getElementById('pairCompanyFilter') || {}).value || '';
+  _fillCompanySelect(filterCo);
+  _fillFlightSelects(filterCo, '', '');
   document.getElementById('pairForm').style.display = '';
 }
 
@@ -3442,6 +3484,8 @@ async function savePair() {
       toast('Paire ajoutée','ok');
     }
     cancelPairForm();
+    const filt = document.getElementById('pairCompanyFilter');
+    if (filt) filt.value = company;   // afficher la compagnie qu'on vient d'éditer
     await loadPairs();
   } catch(e) { toast('Erreur: '+e.message,'err'); }
 }
