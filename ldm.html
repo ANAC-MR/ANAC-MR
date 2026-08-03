@@ -691,7 +691,7 @@ document.addEventListener('keydown', e => {
         <!-- Formulaire ajout/édition paire -->
         <div id="pairForm" style="display:none;background:rgba(255,255,255,0.04);border:1px solid rgba(212,175,55,0.3);border-radius:10px;padding:14px;margin-bottom:14px;">
           <div style="font-size:12px;font-weight:700;color:#D4AF37;margin-bottom:10px;" id="pairFormTitle">Nouvelle paire</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;flex-wrap:wrap;">
             <div>
               <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">Compagnie</label>
               <select id="pairCompany" onchange="onPairCompanyChange()" style="width:100%;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;">
@@ -708,6 +708,15 @@ document.addEventListener('keydown', e => {
               <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">N° vol ARRIVÉE <span style="color:#475569;font-weight:400;">(vide = solo)</span></label>
               <select id="pairArr" style="width:100%;background:#1e293b;border:1px solid rgba(0,201,141,0.3);border-radius:6px;padding:6px 10px;color:#00c98d;font-size:12px;font-weight:700;">
                 <option value="">— Solo (pas de paire) —</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px;">Décalage départ</label>
+              <select id="pairOffset" style="width:100%;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:12px;">
+                <option value="0">Même jour</option>
+                <option value="1">Départ = Arrivée +1 j</option>
+                <option value="2">+2 jours</option>
+                <option value="auto">Variable (auto)</option>
               </select>
             </div>
             <div style="display:flex;gap:6px;">
@@ -3348,6 +3357,7 @@ function _renderPairList() {
         <span style="font-size:14px;color:#475569;">↔</span>
         <span style="font-size:11px;color:#00c98d;">ARR</span>
         <span style="font-size:13px;font-weight:800;color:#00c98d;">${p.arr ? esc(p.arr) : '<em style="color:#475569;font-weight:400;">solo</em>'}</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;background:rgba(212,175,55,0.12);color:#D4AF37;">${p.offset==='auto'?'auto':(p.offset&&p.offset!=='0'?('J+'+p.offset):'même jour')}</span>
         <div style="margin-left:auto;display:flex;gap:6px;">
           <button onclick="editPair('${p.id}')" style="background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.3);color:#D4AF37;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✎ Modifier</button>
           <button onclick="deletePair('${p.id}')" style="background:rgba(229,62,62,0.08);border:1px solid rgba(229,62,62,0.3);color:#fc8181;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">✕</button>
@@ -3447,6 +3457,7 @@ async function showAddPairForm() {
   const filterCo = (document.getElementById('pairCompanyFilter') || {}).value || '';
   _fillCompanySelect(filterCo);
   _fillFlightSelects(filterCo, '', '');
+  const offEl = document.getElementById('pairOffset'); if (offEl) offEl.value = '0';
   document.getElementById('pairForm').style.display = '';
 }
 
@@ -3458,6 +3469,7 @@ async function editPair(id) {
   document.getElementById('pairEditId').value = id;
   _fillCompanySelect(p.company || '');
   _fillFlightSelects(p.company || '', p.dep || '', p.arr || '');
+  const offEl = document.getElementById('pairOffset'); if (offEl) offEl.value = p.offset || '0';
   document.getElementById('pairForm').style.display = '';
 }
 
@@ -3470,12 +3482,13 @@ async function savePair() {
   const company = document.getElementById('pairCompany').value;
   const dep     = document.getElementById('pairDep').value.toUpperCase();
   const arr     = document.getElementById('pairArr').value.toUpperCase();
+  const offset  = (document.getElementById('pairOffset') || {}).value || '0';
   const editId  = document.getElementById('pairEditId').value;
   if (!company || !dep) { toast('Compagnie et N° vol DEP requis','warn'); return; }
   try {
     const { collection, doc, setDoc, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     const db   = await _getPairsDB();
-    const data = { company, dep, arr: arr||'', solo: !arr, updatedAt: new Date().toISOString() };
+    const data = { company, dep, arr: arr||'', solo: !arr, offset: offset, updatedAt: new Date().toISOString() };
     if (editId) {
       await setDoc(doc(db,'vol_pairs',editId), data, {merge:true});
       toast('Paire mise à jour','ok');
