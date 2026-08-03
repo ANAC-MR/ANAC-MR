@@ -745,6 +745,16 @@ window.doExportXLSX = function(){
   if(showNb)  subCols.push('nb');
   const nSub = subCols.length;
 
+  // Totaux en FORMULES Excel (=SUM) → recalcul auto si on modifie les données.
+  function _sumRowRefs(rowR, subName){
+    const k = subCols.indexOf(subName);
+    const refs = months.map((m,mi)=> XLSX.utils.encode_cell({r:rowR, c: 1 + mi*nSub + k}));
+    return 'SUM(' + refs.join(',') + ')';
+  }
+  function _sumColRange(colC, firstR, lastR){
+    return 'SUM(' + XLSX.utils.encode_cell({r:firstR,c:colC}) + ':' + XLSX.utils.encode_cell({r:lastR,c:colC}) + ')';
+  }
+
   const ws = {};
   const merges = [];
   let R = 0;
@@ -801,28 +811,31 @@ window.doExportXLSX = function(){
         rowPax+=pax[m]; rowNb+=nb[m];
         colPax[m]+=pax[m]; colNb[m]+=nb[m];
       });
-      // Total ligne
+      // Total ligne (formule =SUM des mois → recalcul auto)
       subCols.forEach(sc=>{
-        if(sc==='pax') ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:rowPax, t:'n', s:styTotCell() };
-        else           ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:rowNb,  t:'n', s:styTotCell() };
+        if(sc==='pax') ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { t:'n', f:_sumRowRefs(R,'pax'), v:rowPax, s:styTotCell() };
+        else           ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { t:'n', f:_sumRowRefs(R,'nb'),  v:rowNb,  s:styTotCell() };
       });
       R++;
     });
   });
 
-  // Ligne TOTAL générale
+  // Ligne TOTAL générale (formules =SUM verticales sur les lignes de données)
   ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:'TOTAL GÉNÉRAL', s:styTotLabel() };
+  const _firstDR = hdrRow2+1, _lastDR = R-1;
   let cc=1, gPax=0, gNb=0;
   months.forEach(m=>{
     subCols.forEach(sc=>{
-      if(sc==='pax') ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:colPax[m], t:'n', s:styTotRow() };
-      else           ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:colNb[m],  t:'n', s:styTotRow() };
+      const _c=cc++;
+      const v = sc==='pax'?colPax[m]:colNb[m];
+      ws[XLSX.utils.encode_cell({r:R,c:_c})] = { t:'n', f:_sumColRange(_c,_firstDR,_lastDR), v:v, s:styTotRow() };
     });
     gPax+=colPax[m]; gNb+=colNb[m];
   });
   subCols.forEach(sc=>{
-    if(sc==='pax') ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:gPax, t:'n', s:styTotRow() };
-    else           ws[XLSX.utils.encode_cell({r:R,c:cc++})] = { v:gNb,  t:'n', s:styTotRow() };
+    const _c=cc++;
+    const v = sc==='pax'?gPax:gNb;
+    ws[XLSX.utils.encode_cell({r:R,c:_c})] = { t:'n', f:_sumColRange(_c,_firstDR,_lastDR), v:v, s:styTotRow() };
   });
   R++;
 

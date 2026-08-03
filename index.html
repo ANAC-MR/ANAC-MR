@@ -1748,11 +1748,127 @@ const EXPORT_COLS=[
     {key:'babies',              label:'Bébés',             def:true},
 ];
 
-function exportSuiviExcel(){
-    const tbody=document.getElementById('flightTableBody');
-    if(!tbody||!tbody.querySelectorAll('tr').length){alert('Aucun vol à exporter.');return;}
-    // Ouvrir le modal de sélection des colonnes
-    document.getElementById('exportModal').style.display='flex';
+// ═══════════════════════════════════════════════════════════════
+//  EXPORT EXCEL — format Arrivées / Départs appariés (par compagnie,
+//  par mois). Appairage via vol_pairs + décalage de date. Totaux Pax
+//  en formules =SUM (recalcul auto dans Excel).
+// ═══════════════════════════════════════════════════════════════
+function _expDateKey(d){ return (d||'').toString().slice(0,10); }
+function _expAddDays(dstr,n){ const dt=new Date(_expDateKey(dstr)+'T00:00:00'); dt.setDate(dt.getDate()+n); return dt.toISOString().slice(0,10); }
+function _expNormFN(s){ return (s||'').toString().toUpperCase().replace(/[-\s.]/g,'').replace(/^([A-Z]+)0*(\d)/,'$1$2'); }
+function _expNormImmat(s){ return (s||'').toString().toUpperCase().replace(/[-\s.]/g,''); }
+function _expIsMAI(co){ const c=(co||'').toUpperCase(); return /MAURITAN/.test(c)||c==='MAI'||c==='L6'; }
+function _expMonthName(m){ return ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][m]||('Mois'+(m+1)); }
+function _expFmtDate(d){ const p=_expDateKey(d).split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:_expDateKey(d); }
+
+async function _loadVolPairsForExport(){
+  try{
+    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const snap = await getDocs(collection(window.db,'vol_pairs'));
+    return snap.docs.map(d=>d.data());
+  }catch(e){ console.warn('vol_pairs (export):', e && e.message); return []; }
+}
+
+// Trouve la paire configurée pour un n° de vol primaire.
+function _expFindPair(pairs, company, primaryFN, isMAI){
+  const co=(company||'').toUpperCase().trim(), pfn=_expNormFN(primaryFN);
+  for(const p of pairs){
+    if((p.company||'').toUpperCase().trim()!==co) continue;
+    if(!isMAI && _expNormFN(p.arr)===pfn) return {offset:p.offset||'0', _secFN:p.dep};
+    if(isMAI  && _expNormFN(p.dep)===pfn) return {offset:p.offset||'0', _secFN:p.arr};
+  }
+  return null;
+}
+
+// Cherche le vol secondaire (départ pour normales, arrivée pour MAI).
+function _expFindMatch(primary, secondaries, pair){
+  const wantFN = pair && pair._secFN ? _expNormFN(pair._secFN) : null;
+  const off = pair ? (pair.offset||'0') : 'auto';
+  const pimm = _expNormImmat(primary.registration), pdate=_expDateKey(primary.date);
+  const cand = secondaries.filter(s=>!s._used
+      && (!wantFN || _expNormFN(s.flightNumber)===wantFN)
+      && _expNormImmat(s.registration)===pimm);
+  let m = cand.find(s=>_expDateKey(s.date)===pdate);           // même jour d'abord
+  if(!m && off!=='0'){
+    if(off==='1') m = cand.find(s=>_expDateKey(s.date)===_expAddDays(pdate,1));
+    else if(off==='2') m = cand.find(s=>_expDateKey(s.date)===_expAddDays(pdate,1)) || cand.find(s=>_expDateKey(s.date)===_expAddDays(pdate,2));
+    else { const fwd=cand.filter(s=>_expDateKey(s.date)>=pdate).sort((a,b)=>_expDateKey(a.date).localeCompare(_expDateKey(b.date))); m=fwd[0]; }
+  }
+  if(m) m._used=true;
+  return m||null;
+}
+
+function _expBuildSheet(monthRows, isMAI){
+  const leftLabel = isMAI?'DÉPART':'ARRIVÉE', rightLabel = isMAI?'ARRIVÉE':'DÉPART';
+  const data=[];
+  data.push([leftLabel,'','','', rightLabel,'','','']);
+  data.push(['Date','Vol','Pax','Immatriculation','Date','Vol','Pax','Immatriculation']);
+  monthRows.forEach(r=>{
+    const L = isMAI?r.dep:r.arr, R = isMAI?r.arr:r.dep;
+    data.push([
+      L?_expFmtDate(L.date):'', L?(L.flightNumber||''):'', L?(+L.passengers||0):'', L?(L.registration||''):'',
+      R?_expFmtDate(R.date):'', R?(R.flightNumber||''):'', R?(+R.passengers||0):'', R?(R.registration||''):'',
+    ]);
+  });
+  const nData = monthRows.length;
+  data.push(['TOTAL','','','','TOTAL','','','']);
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!merges'] = [ {s:{r:0,c:0},e:{r:0,c:3}}, {s:{r:0,c:4},e:{r:0,c:7}} ];
+  if(nData>0){
+    const totalRow = 3+nData;   // ligne Excel (1-based) du TOTAL
+    ws['C'+totalRow] = { t:'n', f:`SUM(C3:C${2+nData})` };   // Pax gauche
+    ws['G'+totalRow] = { t:'n', f:`SUM(G3:G${2+nData})` };   // Pax droite
+  }
+  ws['!cols'] = [{wch:12},{wch:10},{wch:8},{wch:16},{wch:12},{wch:10},{wch:8},{wch:16}];
+  return ws;
+}
+
+function _expBuildCompanyFile(company, coFlights, pairs){
+  const isMAI=_expIsMAI(company);
+  coFlights.forEach(f=>{ delete f._used; });
+  const arrivals   = coFlights.filter(f=>f.type==='ARR'||f.type==='TRANSIT');
+  const departures = coFlights.filter(f=>f.type==='DEP');
+  const primaries   = isMAI?departures:arrivals;
+  const secondaries = isMAI?arrivals:departures;
+  primaries.sort((a,b)=>_expDateKey(a.date).localeCompare(_expDateKey(b.date)));
+
+  const rows=[];
+  primaries.forEach(P=>{
+    const pair=_expFindPair(pairs, company, P.flightNumber, isMAI);
+    const M=_expFindMatch(P, secondaries, pair);
+    rows.push(isMAI?{dep:P,arr:M,date:_expDateKey(P.date)}:{arr:P,dep:M,date:_expDateKey(P.date)});
+  });
+  // orphelins du côté secondaire
+  secondaries.filter(s=>!s._used).forEach(S=>{
+    rows.push(isMAI?{dep:null,arr:S,date:_expDateKey(S.date)}:{arr:null,dep:S,date:_expDateKey(S.date)});
+  });
+  if(!rows.length) return;
+
+  const byMonth={};
+  rows.forEach(r=>{ const k=(r.date||'').slice(0,7); (byMonth[k]=byMonth[k]||[]).push(r); });
+  const months=Object.keys(byMonth).filter(Boolean).sort();
+
+  const wb=XLSX.utils.book_new();
+  let year='';
+  months.forEach(mk=>{
+    const [y,mm]=mk.split('-'); year=y;
+    const mrows=byMonth[mk].sort((a,b)=>a.date.localeCompare(b.date));
+    XLSX.utils.book_append_sheet(wb, _expBuildSheet(mrows,isMAI), (_expMonthName(parseInt(mm,10)-1)+' '+y).slice(0,31));
+  });
+  if(!wb.SheetNames.length) return;
+  const safeCo=(company||'Compagnie').replace(/[^\w -]/g,'').trim().slice(0,40)||'Compagnie';
+  XLSX.writeFile(wb, safeCo+(year?('-'+year):'')+'.xlsx');
+}
+
+async function exportSuiviExcel(){
+  const flights = window._filteredSorted || (window.app && window.app.filterFlights && window.app.filterFlights()) || window.appFlights || [];
+  if(!flights.length){ alert('Aucun vol à exporter.'); return; }
+  let pairs=[]; try{ pairs=await _loadVolPairsForExport(); }catch(e){}
+  const byCo={};
+  flights.forEach(f=>{ const co=f.company||'Sans compagnie'; (byCo[co]=byCo[co]||[]).push(f); });
+  const cos=Object.keys(byCo);
+  if(cos.length>1 && !confirm(cos.length+' compagnies → '+cos.length+' fichiers Excel seront téléchargés. Continuer ?')) return;
+  cos.forEach(co=>{ try{ _expBuildCompanyFile(co, byCo[co], pairs); }catch(e){ console.error('Export '+co+':', e); } });
 }
 window.exportSuiviExcel=exportSuiviExcel;
 
