@@ -1883,7 +1883,19 @@ function _expBuildCompanyFile(company, coFlights, pairs){
   let year='';
   months.forEach(mk=>{
     const [y,mm]=mk.split('-'); year=y;
-    const mrows=byMonth[mk].sort((a,b)=>a.date.localeCompare(b.date));
+    // Tri : d'abord par la date de la colonne GAUCHE, puis par celle de DROITE
+    // (les deux côtés deviennent chronologiques). Gauche = arrivée (normales)
+    // ou départ (MAI) ; droite = l'autre. Les orphelins se placent par leur
+    // seule date connue.
+    const mrows=byMonth[mk].sort((a,b)=>{
+      const aL=isMAI?a.dep:a.arr, aR=isMAI?a.arr:a.dep;
+      const bL=isMAI?b.dep:b.arr, bR=isMAI?b.arr:b.dep;
+      const aLd=aL?_expDateKey(aL.date):(aR?_expDateKey(aR.date):'');
+      const bLd=bL?_expDateKey(bL.date):(bR?_expDateKey(bR.date):'');
+      if(aLd!==bLd) return aLd.localeCompare(bLd);
+      const aRd=aR?_expDateKey(aR.date):aLd, bRd=bR?_expDateKey(bR.date):bLd;
+      return aRd.localeCompare(bRd);
+    });
     XLSX.utils.book_append_sheet(wb, _expBuildSheet(mrows,isMAI), (_expMonthName(parseInt(mm,10)-1)+' '+y).slice(0,31));
   });
   if(!wb.SheetNames.length) return;
