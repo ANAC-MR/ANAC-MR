@@ -8,7 +8,7 @@
     <title>ANAC Mauritanie – Accueil</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" integrity="sha384-OUW9euuUyxyHcAhTqbhI+Iyb8LMssXt/cpz0yXhs9UWG2/R/uaWdakx/4cfww7Vb" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
     // CDN de repli : si cdnjs est inaccessible (DNS/réseau), recharger les
@@ -20,8 +20,8 @@
           urls: ['https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
                  'https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js'] },
         { test: function(){ return typeof window.XLSX !== 'undefined'; },
-          urls: ['https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-                 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'] },
+          urls: ['https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
+                 'https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js'] },
         { test: function(){ return typeof window.jspdf !== 'undefined'; },
           urls: ['https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
                  'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'] }
@@ -1781,45 +1781,76 @@ function _expFindPair(pairs, company, primaryFN, isMAI){
 }
 
 // Cherche le vol secondaire (départ pour normales, arrivée pour MAI).
+// RÈGLE : le secondaire vient TOUJOURS APRÈS le primaire (arrivée avant
+// départ pour les compagnies étrangères ; départ avant arrivée pour la MAI).
+// Même immatriculation obligatoire. On prend le décalage configuré s'il
+// existe, sinon le plus proche vol suivant (même jour, J+1, J+2…).
 function _expFindMatch(primary, secondaries, pair){
   const wantFN = pair && pair._secFN ? _expNormFN(pair._secFN) : null;
-  const off = pair ? (pair.offset||'0') : 'auto';
+  const off = pair ? (pair.offset||'') : '';
   const pimm = _expNormImmat(primary.registration), pdate=_expDateKey(primary.date);
   const cand = secondaries.filter(s=>!s._used
       && (!wantFN || _expNormFN(s.flightNumber)===wantFN)
-      && _expNormImmat(s.registration)===pimm);
-  let m = cand.find(s=>_expDateKey(s.date)===pdate);           // même jour d'abord
-  if(!m && off!=='0'){
-    if(off==='1') m = cand.find(s=>_expDateKey(s.date)===_expAddDays(pdate,1));
-    else if(off==='2') m = cand.find(s=>_expDateKey(s.date)===_expAddDays(pdate,1)) || cand.find(s=>_expDateKey(s.date)===_expAddDays(pdate,2));
-    else { const fwd=cand.filter(s=>_expDateKey(s.date)>=pdate).sort((a,b)=>_expDateKey(a.date).localeCompare(_expDateKey(b.date))); m=fwd[0]; }
+      && _expNormImmat(s.registration)===pimm
+      && _expDateKey(s.date) >= pdate)              // secondaire APRÈS (ou même jour que) le primaire
+    .sort((a,b)=>_expDateKey(a.date).localeCompare(_expDateKey(b.date)));
+  let m = null;
+  if(off==='0'||off==='1'||off==='2'){              // décalage configuré → priorité à ce jour exact
+    const want = _expAddDays(pdate, parseInt(off,10));
+    m = cand.find(s=>_expDateKey(s.date)===want);
   }
+  if(!m) m = cand[0];                               // sinon : le plus proche vol suivant
   if(m) m._used=true;
   return m||null;
 }
 
 function _expBuildSheet(monthRows, isMAI){
   const leftLabel = isMAI?'DÉPART':'ARRIVÉE', rightLabel = isMAI?'ARRIVÉE':'DÉPART';
-  const data=[];
-  data.push([leftLabel,'','','', rightLabel,'','','']);
-  data.push(['Date','Vol','Pax','Immatriculation','Date','Vol','Pax','Immatriculation']);
-  monthRows.forEach(r=>{
-    const L = isMAI?r.dep:r.arr, R = isMAI?r.arr:r.dep;
-    data.push([
-      L?_expFmtDate(L.date):'', L?(L.flightNumber||''):'', L?(+L.passengers||0):'', L?(L.registration||''):'',
-      R?_expFmtDate(R.date):'', R?(R.flightNumber||''):'', R?(+R.passengers||0):'', R?(R.registration||''):'',
-    ]);
+  // ── Palette (couleurs ANAC) ──
+  const NAVY={rgb:'0F1E3D'}, BLUE={rgb:'1A3A6B'}, GOLD={rgb:'D4AF37'}, WHITE={rgb:'FFFFFF'}, DARK={rgb:'1A2D45'};
+  const bd={style:'thin',color:{rgb:'C8D2E0'}}; const border={top:bd,bottom:bd,left:bd,right:bd};
+  const F='Calibri';
+  const stBand={fill:{patternType:'solid',fgColor:NAVY},font:{name:F,bold:true,sz:12,color:GOLD},alignment:{horizontal:'center',vertical:'center'},border:border};
+  const stHdr ={fill:{patternType:'solid',fgColor:BLUE},font:{name:F,bold:true,sz:10,color:WHITE},alignment:{horizontal:'center',vertical:'center'},border:border};
+  const stTxt ={font:{name:F,sz:10,color:DARK},alignment:{horizontal:'center',vertical:'center'},border:border};
+  const stTxtL={font:{name:F,sz:10,color:DARK},alignment:{horizontal:'left',vertical:'center'},border:border};
+  const stTxtZ={...stTxt, fill:{patternType:'solid',fgColor:{rgb:'EEF3FA'}}};
+  const stTxtLZ={...stTxtL, fill:{patternType:'solid',fgColor:{rgb:'EEF3FA'}}};
+  const stTot ={fill:{patternType:'solid',fgColor:NAVY},font:{name:F,bold:true,sz:11,color:GOLD},alignment:{horizontal:'center',vertical:'center'},border:border};
+  const stTotL={fill:{patternType:'solid',fgColor:NAVY},font:{name:F,bold:true,sz:11,color:WHITE},alignment:{horizontal:'left',vertical:'center'},border:border};
+
+  const ws={};
+  const set=(r,c,cell)=>{ ws[XLSX.utils.encode_cell({r,c})]=cell; };
+  // Bandeaux fusionnés
+  set(0,0,{v:leftLabel,t:'s',s:stBand}); for(let c=1;c<4;c++) set(0,c,{v:'',t:'s',s:stBand});
+  set(0,4,{v:rightLabel,t:'s',s:stBand}); for(let c=5;c<8;c++) set(0,c,{v:'',t:'s',s:stBand});
+  // Sous-en-têtes
+  ['Date','Vol','Pax','Immatriculation','Date','Vol','Pax','Immatriculation'].forEach((h,c)=> set(1,c,{v:h,t:'s',s:stHdr}));
+  // Données
+  monthRows.forEach((r,i)=>{
+    const R=2+i, L=isMAI?r.dep:r.arr, Rr=isMAI?r.arr:r.dep;
+    const cd=(i%2===1)?stTxtZ:stTxt, cl=(i%2===1)?stTxtLZ:stTxtL;
+    set(R,0,{v:L?_expFmtDate(L.date):'',t:'s',s:cl});
+    set(R,1,{v:L?(L.flightNumber||''):'',t:'s',s:cd});
+    set(R,2, L?{v:+L.passengers||0,t:'n',s:cd}:{v:'',t:'s',s:cd});
+    set(R,3,{v:L?(L.registration||''):'',t:'s',s:cd});
+    set(R,4,{v:Rr?_expFmtDate(Rr.date):'',t:'s',s:cl});
+    set(R,5,{v:Rr?(Rr.flightNumber||''):'',t:'s',s:cd});
+    set(R,6, Rr?{v:+Rr.passengers||0,t:'n',s:cd}:{v:'',t:'s',s:cd});
+    set(R,7,{v:Rr?(Rr.registration||''):'',t:'s',s:cd});
   });
-  const nData = monthRows.length;
-  data.push(['TOTAL','','','','TOTAL','','','']);
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!merges'] = [ {s:{r:0,c:0},e:{r:0,c:3}}, {s:{r:0,c:4},e:{r:0,c:7}} ];
-  if(nData>0){
-    const totalRow = 3+nData;   // ligne Excel (1-based) du TOTAL
-    ws['C'+totalRow] = { t:'n', f:`SUM(C3:C${2+nData})` };   // Pax gauche
-    ws['G'+totalRow] = { t:'n', f:`SUM(G3:G${2+nData})` };   // Pax droite
-  }
-  ws['!cols'] = [{wch:12},{wch:10},{wch:8},{wch:16},{wch:12},{wch:10},{wch:8},{wch:16}];
+  const nData=monthRows.length, totR=2+nData;
+  set(totR,0,{v:'TOTAL',t:'s',s:stTotL}); set(totR,1,{v:'',t:'s',s:stTot});
+  set(totR,2, nData>0?{t:'n',f:`SUM(C3:C${2+nData})`,s:stTot}:{v:'',t:'s',s:stTot});
+  set(totR,3,{v:'',t:'s',s:stTot});
+  set(totR,4,{v:'TOTAL',t:'s',s:stTotL}); set(totR,5,{v:'',t:'s',s:stTot});
+  set(totR,6, nData>0?{t:'n',f:`SUM(G3:G${2+nData})`,s:stTot}:{v:'',t:'s',s:stTot});
+  set(totR,7,{v:'',t:'s',s:stTot});
+
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:totR,c:7}});
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:0,c:4},e:{r:0,c:7}}];
+  ws['!cols']=[{wch:12},{wch:10},{wch:8},{wch:16},{wch:12},{wch:10},{wch:8},{wch:16}];
+  ws['!rows']=[{hpt:20},{hpt:16}];
   return ws;
 }
 
