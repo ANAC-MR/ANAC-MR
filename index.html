@@ -1279,8 +1279,12 @@ document.addEventListener('keydown', e => {
                         <span class="fact-chip-inner"><span></span><span>PAX Arrivées</span><span class="fact-chip-check">✓</span></span>
                     </label>
                     <label class="fact-chip">
-                        <input type="checkbox" class="fact-chip-cb" data-col="vols">
-                        <span class="fact-chip-inner"><span></span><span>Nombre de vols</span><span class="fact-chip-check">✓</span></span>
+                        <input type="checkbox" class="fact-chip-cb" data-col="vols_dep">
+                        <span class="fact-chip-inner"><span></span><span>Nb vols départs</span><span class="fact-chip-check">✓</span></span>
+                    </label>
+                    <label class="fact-chip">
+                        <input type="checkbox" class="fact-chip-cb" data-col="vols_arr">
+                        <span class="fact-chip-inner"><span></span><span>Nb vols arrivées</span><span class="fact-chip-check">✓</span></span>
                     </label>
                 </div>
             </div>
@@ -3729,10 +3733,10 @@ function fctBuildRows() {
         const arr  = af.filter(f => f.type === 'ARR');
         const paxDep = dep.reduce((s, f) => s + (+f.passengers || 0), 0);
         const paxArr = arr.reduce((s, f) => s + (+f.passengers || 0), 0);
-        const vols   = af.length;
+        const volsDep = dep.length, volsArr = arr.length, vols = af.length;
         // N'inclure que si au moins une valeur > 0
         if (paxDep + paxArr + vols === 0) return;
-        rows.push({ name: airline, pax_dep: paxDep, pax_arr: paxArr, vols });
+        rows.push({ name: airline, pax_dep: paxDep, pax_arr: paxArr, vols_dep: volsDep, vols_arr: volsArr, vols });
     });
     // Tri : compagnie avec le plus de passagers en haut (puis nb de vols)
     rows.sort((a, b) => ((b.pax_dep + b.pax_arr) - (a.pax_dep + a.pax_arr)) || (b.vols - a.vols));
@@ -3774,7 +3778,7 @@ window.fctGenApercu = function() {
     const dateRaw = document.getElementById('fctDate').value;
     const dateFmt = dateRaw ? new Date(dateRaw).toLocaleDateString('fr-FR') : '…';
 
-    const COL_LBL = { pax_dep: 'PAX Départs', pax_arr: 'PAX Arrivées', vols: 'Nb Vols' };
+    const COL_LBL = { pax_dep: 'PAX Départs', pax_arr: 'PAX Arrivées', vols_dep: 'Nb Vols Départs', vols_arr: 'Nb Vols Arrivées', vols: 'Nb Vols' };
     const totals  = {};
     cols.forEach(c => totals[c] = rows.reduce((s, r) => s + (r[c] || 0), 0));
 
@@ -3824,8 +3828,8 @@ window.fctTelecharger = async function() {
     const dateRaw = document.getElementById('fctDate').value;
     const dateFmt = dateRaw ? new Date(dateRaw).toLocaleDateString('fr-FR') : '';
 
-    const COL_LBL = { pax_dep: 'PAX Départs', pax_arr: 'PAX Arrivées', vols: 'Nb Vols' };
-    const COL_W   = { pax_dep: 1500, pax_arr: 1500, vols: 1300 };
+    const COL_LBL = { pax_dep: 'PAX Départs', pax_arr: 'PAX Arrivées', vols_dep: 'Nb Vols Départs', vols_arr: 'Nb Vols Arrivées', vols: 'Nb Vols' };
+    const COL_W   = { pax_dep: 1500, pax_arr: 1500, vols_dep: 1400, vols_arr: 1400, vols: 1300 };
     const totals  = {};
     cols.forEach(c => totals[c] = rows.reduce((s, r) => s + (r[c] || 0), 0));
 
