@@ -1911,6 +1911,7 @@ function _expBuildSheet(rows, leftLabel, rightLabel){
   set(0,6,{v:'Immatriculation',t:'s',s:stBand});
   ['Date','Vol','Pax','Date','Vol','Pax'].forEach((h,c)=> set(1,c,{v:h,t:'s',s:stHdr}));
   set(1,6,{v:'',t:'s',s:stBand});
+  const merges=[{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:0,c:3},e:{r:0,c:5}},{s:{r:0,c:6},e:{r:1,c:6}}];
   rows.forEach((r,i)=>{
     const R=2+i;
     if(r.blank){ for(let c=0;c<7;c++) set(R,c,{v:'',t:'s',s:stTxt}); return; }
@@ -1923,6 +1924,7 @@ function _expBuildSheet(rows, leftLabel, rightLabel){
     set(R,4,{v:r.rVol||'',t:'s',s:cd});
     set(R,5,num(r.rPax));
     set(R,6,{v:r.immat||'',t:'s',s:cd});
+    if(r.immatSpan && r.immatSpan>1) merges.push({s:{r:R,c:6},e:{r:R+r.immatSpan-1,c:6}});   // fusion verticale de l'immatriculation
   });
   const n=rows.length, totR=2+n;
   set(totR,0,{v:'TOTAL',t:'s',s:stTotL}); set(totR,1,{v:'',t:'s',s:stTot});
@@ -1931,7 +1933,7 @@ function _expBuildSheet(rows, leftLabel, rightLabel){
   set(totR,5, n>0?{t:'n',f:'SUM(F3:F'+(2+n)+')',s:stTot}:{v:'',t:'s',s:stTot});
   set(totR,6,{v:'',t:'s',s:stTot});
   ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:totR,c:6}});
-  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:0,c:3},e:{r:0,c:5}},{s:{r:0,c:6},e:{r:1,c:6}}];
+  ws['!merges']=merges;
   ws['!cols']=[{wch:12},{wch:18},{wch:8},{wch:12},{wch:18},{wch:8},{wch:14}];
   ws['!rows']=[{hpt:20},{hpt:16}];
   return ws;
@@ -1954,9 +1956,8 @@ function _expBuildCompanyFile(company, coFlights, pairs){
         const arrSegs=_expChainLegs(b.arr).flatMap(_expSegments);
         const h=Math.max(depSegs.length, arrSegs.length);
         for(let i=0;i<h;i++){ const L=depSegs[i], R=arrSegs[i];
-          rows.push({ lDate:L?L.date:'', lVol:L?L.vol:'', lPax:L?L.px:'', rDate:R?R.date:'', rVol:R?R.vol:'', rPax:R?R.px:'', immat:i===0?b.immat:'' });
+          rows.push({ lDate:L?L.date:'', lVol:L?L.vol:'', lPax:L?L.px:'', rDate:R?R.date:'', rVol:R?R.vol:'', rPax:R?R.px:'', immat:i===0?b.immat:'', immatSpan:i===0?h:0 });
         }
-        if(bi<mblocks.length-1) rows.push({blank:true});
       });
       if(rows.length) byMonth[mk]=rows;
     });
