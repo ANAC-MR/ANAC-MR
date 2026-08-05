@@ -1805,9 +1805,36 @@ function _expFindMatch(primary, secondaries, pair){
 }
 
 // ── Helpers MAI : IATA, détection mauritanien, tronçons, enchaînement ──
-const _EXP_MR_IATA=new Set(['NKC','NDB','OUZ','ATR','EMN','KFA','AEO','TIY','THT','OTL','SEY','KED','BGH','MBR','LEG','TMD','EGD','ZLG','THI','MOM','TKT']);
-function _expToIata(code){ return (code||'').trim().toUpperCase(); }   // données déjà en IATA
-function _expIsMR(code){ const c=_expToIata(code); return c.startsWith('GQ')||_EXP_MR_IATA.has(c); }
+const _EXP_IATA2ICAO={
+  'NKC':'GQNO','NDB':'GQPP','OUZ':'GQPZ','EMN':'GQNI','KFA':'GQPF','ATR':'GQPA','TMD':'GQNT','AEO':'GQNA','THI':'GQND','MOM':'GQNK',
+  'ALG':'DAAG','TUN':'DTTA','CMN':'GMMN','RAK':'GMMX','TNG':'GMTT','OUD':'GMFO','FEZ':'GMFF','AGA':'GMAD','NDR':'GMMH','TFN':'GCXO',
+  'TFS':'GCTS','LPA':'GCLP','ACE':'GCRR','FUE':'GCFV','PMI':'LEPA','CAI':'HECA','SSH':'HESH','HRG':'HEGN','LXR':'HELX','ASW':'HESN',
+  'TRP':'HLLT','BEN':'HLLB','MJI':'HLMI','DSS':'GOBD','DKR':'GOOY','BJL':'GBYD','OXB':'GGOV','CKY':'GUCY','FNA':'GFLL','ABJ':'DIAP',
+  'ACC':'DGAA','LFW':'DXXX','BKO':'GABS','COO':'DBBB','LOS':'DNMM','ABV':'DNAA','ZIG':'GOGG','CSK':'GOGS','KDA':'GOOK',
+  'LBV':'FOOL','DLA':'FKKD','NSI':'FKYS','BGF':'FEFF','BZV':'FCBB','NBO':'HKJK','ADD':'HAAB','DAR':'HTDA','EBB':'HUEN',
+  'CDG':'LFPG','ORY':'LFPO','NCE':'LFMN','LYS':'LFLL','MRS':'LFML','TLS':'LFBO','BOD':'LFBD','NTE':'LFRS','LHR':'EGLL',
+  'MAD':'LEMD','BCN':'LEBL','FCO':'LIRF','MXP':'LIMC','ZRH':'LSZH','GVA':'LSGG','LIS':'LPPT','IST':'LTFM','SVO':'UUEE',
+  'DXB':'OMDB','DOH':'OTHH','JED':'OEJD','MED':'OEMA','AMM':'OJAI','BEY':'OLBA','TLV':'LLBG'
+};
+const _EXP_MR_IATA=new Set(['NKC','NDB','OUZ','EMN','KFA','ATR','TMD','AEO','THI','MOM','TIY','THT','OTL','SEY','KED','BGH','MBR','LEG','EGD','ZLG','TKT']);
+let _EXP_ICAO2IATA=null;
+function _expToIata(code){
+  const c=(code||'').trim().toUpperCase();
+  if(c.length<=3) return c;
+  if(!_EXP_ICAO2IATA){ _EXP_ICAO2IATA={}; Object.keys(_EXP_IATA2ICAO).forEach(ia=>{ _EXP_ICAO2IATA[_EXP_IATA2ICAO[ia]]=ia; }); }
+  return _EXP_ICAO2IATA[c] || c;
+}
+function _expIsMR(code){ const raw=(code||'').trim().toUpperCase(); if(raw.startsWith('GQ')) return true; const c=_expToIata(raw); return _EXP_MR_IATA.has(c); }
+
+// Numéro de vol de l'arrivée appariée : via vol_pairs, sinon convention MAI +1
+// (L6010→L6011, L6220→L6221…).
+function _expPairedArrFN(dep, pairs){
+  const p=_expFindPair(pairs, dep.company, dep.flightNumber, true);
+  if(p && p._secFN) return p._secFN;
+  const m=(dep.flightNumber||'').toUpperCase().replace(/[-\s.]/g,'').match(/^([A-Z]*)(\d+)$/);
+  if(m){ const n=(parseInt(m[2],10)+1).toString().padStart(m[2].length,'0'); return m[1]+n; }
+  return null;
+}
 
 // Décompose un vol en tronçons {vol, px, date}. Escale domestique = 3 tronçons,
 // escale internationale = 2, direct = 1. PAX par tronçon.
@@ -1834,23 +1861,35 @@ function _expChainLegs(legs){
   return out;
 }
 
-// Blocs MAI : par immatriculation, une série de DÉPARTS suivie d'une série
-// d'ARRIVÉES = une rotation (aller + retour).
-function _expBuildMAIBlocks(flights){
-  const byImm={};
-  flights.forEach(f=>{ const k=_expNormImmat(f.registration)||'?'; (byImm[k]=byImm[k]||[]).push(f); });
-  const blocks=[];
-  Object.values(byImm).forEach(list=>{
-    list.sort((a,b)=>{ const d=_expDateKey(a.date).localeCompare(_expDateKey(b.date)); return d||((a.type==='DEP'?0:1)-(b.type==='DEP'?0:1)); });
-    let cur=null;
-    list.forEach(f=>{
-      const isDep=f.type==='DEP';
-      if(isDep){ if(!cur||cur.arr.length){ cur={dep:[],arr:[],immat:f.registration||'',date:_expDateKey(f.date)}; blocks.push(cur); } cur.dep.push(f); }
-      else { if(!cur){ cur={dep:[],arr:[],immat:f.registration||'',date:_expDateKey(f.date)}; blocks.push(cur); } cur.arr.push(f); }
-    });
+// Rotations MAI : chaque DÉPART est apparié à son ARRIVÉE (via vol_pairs ou
+// convention +1) par même immatriculation et date ≥. Les legs solo (ex. L6014
+// sans arrivée) sont rattachés à la rotation qu'ils alimentent (routing :
+// arrivée du leg = départ du vol suivant).
+function _expBuildMAIRotations(flights, pairs){
+  const deps=flights.filter(f=>f.type==='DEP');
+  const arrs=flights.filter(f=>f.type==='ARR'||f.type==='TRANSIT');
+  deps.forEach(f=>{delete f._used; delete f._paired;}); arrs.forEach(f=>{delete f._used;});
+  deps.sort((a,b)=>_expDateKey(a.date).localeCompare(_expDateKey(b.date)));
+  const rot=[];
+  // 1) apparier chaque départ à son arrivée
+  deps.forEach(dep=>{
+    const arrFN=_expPairedArrFN(dep, pairs); if(!arrFN) return;
+    const fn=_expNormFN(arrFN), im=_expNormImmat(dep.registration), dd=_expDateKey(dep.date);
+    const arr=arrs.filter(a=>!a._used && _expNormFN(a.flightNumber)===fn && _expNormImmat(a.registration)===im && _expDateKey(a.date)>=dd)
+                  .sort((a,b)=>_expDateKey(a.date).localeCompare(_expDateKey(b.date)))[0];
+    if(arr){ arr._used=true; dep._paired=true; rot.push({mains:[dep], arr:[arr], date:dd, immat:dep.registration||''}); }
   });
-  blocks.sort((a,b)=>a.date.localeCompare(b.date));
-  return blocks;
+  // 2) legs solo (départs non appariés) → rattachés par routing + immat
+  deps.filter(d=>!d._paired).forEach(solo=>{
+    const im=_expNormImmat(solo.registration), st=_expToIata(solo.to);
+    const r=rot.find(x=>x.mains.length && _expNormImmat(x.mains[0].registration)===im && _expToIata(x.mains[0].from)===st);
+    if(r){ r.mains.unshift(solo); if(_expDateKey(solo.date)<r.date) r.date=_expDateKey(solo.date); }
+    else rot.push({mains:[solo], arr:[], date:_expDateKey(solo.date), immat:solo.registration||''});
+  });
+  // 3) arrivées non appariées → orphelines
+  arrs.filter(a=>!a._used).forEach(a=>{ rot.push({mains:[], arr:[a], date:_expDateKey(a.date), immat:a.registration||''}); });
+  rot.sort((a,b)=>a.date.localeCompare(b.date));
+  return rot;
 }
 
 // Feuille : 7 colonnes (Gauche Date/Vol/Pax | Droite Date/Vol/Pax | Immatriculation).
@@ -1906,12 +1945,12 @@ function _expBuildCompanyFile(company, coFlights, pairs){
 
   if(isMAI){
     // ── MAI : blocs (aller multi-tronçons + retour), par immatriculation ──
-    const blocks=_expBuildMAIBlocks(coFlights);
+    const blocks=_expBuildMAIRotations(coFlights, pairs);
     const bm={}; blocks.forEach(b=>{ const k=(b.date||'').slice(0,7); (bm[k]=bm[k]||[]).push(b); });
     Object.keys(bm).forEach(mk=>{
       const rows=[]; const mblocks=bm[mk].sort((a,b)=>a.date.localeCompare(b.date));
       mblocks.forEach((b,bi)=>{
-        const depSegs=_expChainLegs(b.dep).flatMap(_expSegments);
+        const depSegs=_expChainLegs(b.mains).flatMap(_expSegments);
         const arrSegs=_expChainLegs(b.arr).flatMap(_expSegments);
         const h=Math.max(depSegs.length, arrSegs.length);
         for(let i=0;i<h;i++){ const L=depSegs[i], R=arrSegs[i];
