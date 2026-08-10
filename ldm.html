@@ -1730,17 +1730,36 @@ async function checkImportedFromFirebase() {
 function getImported() { return _fbImported; }
 
 // ── GOOGLE SIGN IN ──
-function signIn() {
-  const client = google.accounts.oauth2.initTokenClient({
+// Client de jeton GARDÉ en mémoire : permet de renouveler le jeton (qui expire
+// au bout d'~1 h) sans redemander à l'utilisateur de se reconnecter.
+let _gTokenClient = null, _gTokenResolve = null;
+function _initGTokenClient() {
+  if (_gTokenClient) return;
+  _gTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
     callback: (resp) => {
-      if (resp.error) { toast('Erreur connexion: '+resp.error,'err'); return; }
-      accessToken = resp.access_token;
-      onSignedIn();
+      const ok = !resp.error && !!resp.access_token;
+      if (ok) accessToken = resp.access_token;
+      else if (resp.error) toast('Erreur connexion: '+resp.error,'err');
+      const r = _gTokenResolve; _gTokenResolve = null; if (r) r(ok);
     }
   });
-  client.requestAccessToken();
+}
+function signIn() {
+  _initGTokenClient();
+  _gTokenResolve = (ok) => { if (ok) onSignedIn(); };
+  _gTokenClient.requestAccessToken();            // consentement affiché la 1re fois
+}
+// Renouvelle le jeton Gmail SILENCIEUSEMENT (sans popup si déjà autorisé).
+function _refreshGmailToken() {
+  return new Promise((resolve) => {
+    if (typeof google === 'undefined' || !google.accounts) { resolve(false); return; }
+    _initGTokenClient();
+    _gTokenResolve = resolve;
+    try { _gTokenClient.requestAccessToken({ prompt: '' }); }
+    catch(e) { _gTokenResolve = null; resolve(false); }
+  });
 }
 
 function onSignedIn() {
@@ -1791,10 +1810,11 @@ async function readEmails() {
     for (const qstr of queries) {
       try {
         const query = encodeURIComponent(qstr);
-        const r = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
+        const _url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=100`;
+        let r = await fetch(_url, { headers: { Authorization: `Bearer ${accessToken}` } });
+        if (r.status === 401) {                       // jeton expiré → renouveler + réessayer
+          if (await _refreshGmailToken()) r = await fetch(_url, { headers: { Authorization: `Bearer ${accessToken}` } });
+        }
         const d = await r.json();
         if (d.messages) {
           for (const m of d.messages) {
@@ -1900,6 +1920,10 @@ async function fetchEmail(id) {
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
+      if (r.status === 401) {                          // jeton expiré → renouveler + réessayer
+        if (await _refreshGmailToken()) continue;
+        return null;
+      }
       if (r.status === 429) {
         await new Promise(res => setTimeout(res, 800 * (attempt + 1)));
         continue;
