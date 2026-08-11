@@ -65,6 +65,11 @@ thead th{background:#0c1d33;color:var(--gold);font-weight:700;padding:11px 9px;t
 tbody td{padding:8px 9px;border:1px solid var(--border);text-align:center;color:var(--text);vertical-align:middle;}
 .day-cell{font-weight:700;color:var(--gold);background:rgba(212,175,55,0.04);white-space:nowrap;}
 .co-cell{font-weight:700;color:var(--blue);white-space:nowrap;}
+.srch{background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+.srch .fld{display:flex;flex-direction:column;gap:4px;}
+.srch label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;}
+.srch input{background:#0a1626;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font);outline:none;min-width:130px;}
+.srch input:focus{border-color:var(--gold);}
 .fn-cell{font-family:var(--mono);font-weight:600;}
 .route-cell{font-family:var(--mono);color:#bcd2ea;}
 .type-cell{font-size:11.5px;color:#c7d6e8;text-align:left;}
@@ -462,9 +467,24 @@ document.addEventListener('keydown', e => {
         <button class="btn" onclick="thisWeek()">Cette semaine</button>
         <button class="btn" onclick="nextWeek()">7 j →</button>
       </div>
+      <div class="tb-group">
+        <button class="btn" onclick="toggleSearch()">Recherche</button>
+      </div>
       <div class="spacer"></div>
       <button class="btn btn-gold" id="exportBtn" data-perm="export_flights" onclick="exportExcel()">↓ Télécharger Excel</button>
     </div>
+
+    <div id="searchPanel" class="srch hidden">
+      <div class="fld"><label>Du</label><input type="date" id="sDu"></div>
+      <div class="fld"><label>Au</label><input type="date" id="sAu"></div>
+      <div class="fld"><label>Compagnie</label><input type="text" id="sCo" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Route (ex. TUN-NKC)</label><input type="text" id="sRoute" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Immatriculation</label><input type="text" id="sReg" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>N° de vol</label><input type="text" id="sVol" oninput="this.value=this.value.toUpperCase()"></div>
+      <button class="btn btn-gold" onclick="runSearch()">Rechercher</button>
+      <button class="btn" onclick="resetSearch()">Réinitialiser</button>
+    </div>
+
     <div class="rep-head">
       <div class="rep-title">SUIVI HEBDOMADAIRE DU TRAFIC AÉRIEN</div>
       <div class="rep-week" id="weekLabel">—</div>
@@ -811,6 +831,71 @@ async function loadWeek(startStr){
   renderSummary(flights);
 }
 
+// ── Recherche par période / route / immatriculation / n° de vol ──
+// Charge les vols d'une plage de dates puis les enrichit (comme la semaine).
+async function loadRange(du, au){
+  _dayOrder={};
+  const d0=parseDateInput(du), d1=parseDateInput(au);
+  let i=0;
+  for(let d=new Date(d0); d<=d1; d.setDate(d.getDate()+1)){ _dayOrder[fmtDateLocal(d)]=i++; }
+  let flights=[];
+  try{
+    const q=query(collection(db,'flights'), where('date','>=',du), where('date','<=',au));
+    const snap=await getDocs(q);
+    snap.forEach(dd=>{ if(dd.id.startsWith('cfg-')) return; const x=dd.data(); if(x.date) flights.push(x); });
+  }catch(e){
+    const snap=await getDocs(collection(db,'flights'));
+    snap.forEach(dd=>{ if(dd.id.startsWith('cfg-')) return; const x=dd.data(); if(x.date && x.date>=du && x.date<=au) flights.push(x); });
+  }
+  return flights.map(f=>enrich(f)).sort(sortFlights);
+}
+
+function toggleSearch(){
+  const p=document.getElementById('searchPanel');
+  const opening=p.classList.contains('hidden');
+  p.classList.toggle('hidden');
+  if(opening){
+    const s=document.getElementById('startPicker').value;
+    if(s && !document.getElementById('sDu').value) document.getElementById('sDu').value=s;
+  }
+}
+
+async function runSearch(){
+  const du=document.getElementById('sDu').value, au=document.getElementById('sAu').value;
+  if(!du || !au){ alert('Choisissez une période : Du et Au.'); return; }
+  if(du>au){ alert('La date de début est postérieure à la date de fin.'); return; }
+  const co=document.getElementById('sCo').value.trim().toUpperCase();
+  const rt=document.getElementById('sRoute').value.trim().toUpperCase().replace(/\s/g,'');
+  const rg=document.getElementById('sReg').value.trim().toUpperCase().replace(/[\s.\-]/g,'');
+  const vl=normFN(document.getElementById('sVol').value.trim());
+  document.getElementById('suiviBody').innerHTML='<tr class="empty-row"><td colspan="9">Recherche…</td></tr>';
+  const flights=await loadRange(du, au);
+  const res=flights.filter(f=>{
+    if(co && !(f.company||'').toUpperCase().includes(co)) return false;
+    if(rt && !((f.route||'').toUpperCase().replace(/\s/g,'').includes(rt))) return false;
+    if(rg && !((f.registration||'').toUpperCase().replace(/[\s.\-]/g,'').includes(rg))) return false;
+    if(vl && !normFN(f.flightNumberRaw||'').includes(vl)) return false;
+    return true;
+  });
+  _weekFlights=res;
+  renderTable(res); renderSummary(res);
+  const crit=[];
+  if(co) crit.push('compagnie « '+co+' »');
+  if(rt) crit.push('route « '+rt+' »');
+  if(rg) crit.push('immat « '+rg+' »');
+  if(vl) crit.push('vol « '+vl+' »');
+  document.getElementById('weekLabel').textContent =
+    'Recherche du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))
+    +(crit.length?' — '+crit.join(', '):'')+' · '+res.length+' vol(s)';
+}
+
+function resetSearch(){
+  ['sCo','sRoute','sReg','sVol'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('searchPanel').classList.add('hidden');
+  thisWeek();
+}
+window.toggleSearch=toggleSearch; window.runSearch=runSearch; window.resetSearch=resetSearch;
+
 function enrich(f){
   const reg=normReg(f.registration||f.immat||'');
   const ac=_aircraft[reg]||null;
@@ -881,6 +966,7 @@ function enrich(f){
     flightType,
     flightNumber:fnDisplay,
     flightNumberRaw:fnum,
+    registration:rawReg,
     route, typeDisp,
     capacity:cap, passengers:pax,
     isCharter:charterFromFlight(f),
@@ -998,7 +1084,7 @@ function renderTable(flights){
   const expanded=flights.map(f=>({ f, lines:suiviFlightLines(f) }));
   // Compter le nombre TOTAL de lignes par jour (pour le rowspan de la cellule jour)
   const dayCount={};
-  for(const e of expanded){ dayCount[e.f.dayName]=(dayCount[e.f.dayName]||0)+e.lines.length; }
+  for(const e of expanded){ dayCount[e.f.date]=(dayCount[e.f.date]||0)+e.lines.length; }
 
   let html='';
   let lastDay=null, lastCo=null;
@@ -1006,9 +1092,9 @@ function renderTable(flights){
     const f=e.f;
     const lines=e.lines;
     const hasEscale = lines.length>1;
-    const showDay = f.dayName!==lastDay;
+    const showDay = f.date!==lastDay;
     const showCo  = showDay || f.company!==lastCo;
-    lastDay=f.dayName; lastCo=f.company;
+    lastDay=f.date; lastCo=f.company;
     const capCell = f.capacity!=null ? f.capacity : '<span class="cap-empty">—</span>';
     // Total PAX (somme de toutes les lignes affichées)
     const totalPax = lines.reduce((s,l)=>s+(Number(l.pax)||0),0);
@@ -1020,7 +1106,7 @@ function renderTable(flights){
     const rateCell = mainRate!=null ? `<span class="rate-cell ${rateClass(mainRate)}">${(mainRate*100).toFixed(1)}%</span>` : '—';
     // Cellule jour fusionnée : rowspan = nb total de lignes du jour
     const dayTd = showDay
-      ? `<td class="day-cell" rowspan="${dayCount[f.dayName]}">${esc(f.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(f.dayDate)}</span></td>`
+      ? `<td class="day-cell" rowspan="${dayCount[f.date]}">${esc(f.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(f.dayDate)}</span></td>`
       : '';
 
     const mainPaxCell = main.pax!=null ? main.pax : '—';
