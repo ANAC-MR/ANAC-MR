@@ -68,8 +68,8 @@ tbody td{padding:8px 9px;border:1px solid var(--border);text-align:center;color:
 .srch{background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
 .srch .fld{display:flex;flex-direction:column;gap:4px;}
 .srch label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;}
-.srch input{background:#0a1626;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font);outline:none;min-width:130px;}
-.srch input:focus{border-color:var(--gold);}
+.srch input,.srch select{background:#0a1626;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 10px;font-size:13px;font-family:var(--font);outline:none;min-width:150px;}
+.srch input:focus,.srch select:focus{border-color:var(--gold);}
 .fn-cell{font-family:var(--mono);font-weight:600;}
 .route-cell{font-family:var(--mono);color:#bcd2ea;}
 .type-cell{font-size:11.5px;color:#c7d6e8;text-align:left;}
@@ -477,8 +477,8 @@ document.addEventListener('keydown', e => {
     <div id="searchPanel" class="srch hidden">
       <div class="fld"><label>Du</label><input type="date" id="sDu"></div>
       <div class="fld"><label>Au</label><input type="date" id="sAu"></div>
-      <div class="fld"><label>Compagnie</label><input type="text" id="sCo" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="fld"><label>Route (ex. TUN-NKC)</label><input type="text" id="sRoute" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Compagnie</label><select id="sCo" onchange="buildDestOptions()"><option value="">Toutes</option></select></div>
+      <div class="fld"><label>Destination</label><select id="sRoute"><option value="">Toutes</option></select></div>
       <div class="fld"><label>Immatriculation</label><input type="text" id="sReg" oninput="this.value=this.value.toUpperCase()"></div>
       <div class="fld"><label>N° de vol</label><input type="text" id="sVol" oninput="this.value=this.value.toUpperCase()"></div>
       <button class="btn btn-gold" onclick="runSearch()">Rechercher</button>
@@ -687,8 +687,9 @@ async function loadAirlines(){
 // ── Table ICAO → IATA (depuis flights/cfg-airports) ──
 let _icaoToIata = {};
 let _iataToIcao = {};
+let _iataName = {};
 async function loadAirports(){
-  _icaoToIata={}; _iataToIcao={};
+  _icaoToIata={}; _iataToIcao={}; _iataName={};
   try{
     const snap=await getDoc(doc(db,'flights','cfg-airports'));
     if(snap.exists()){
@@ -699,6 +700,7 @@ async function loadAirports(){
         if(iata) _icaoToIata[iata]=iata; // si déjà en IATA, on garde
         if(iata&&icao) _iataToIcao[iata]=icao;
         if(icao) _iataToIcao[icao]=icao;
+        if(iata && (a.city||a.name)) _iataName[iata]=a.city||a.name;
       });
     }
   }catch(e){ console.warn('loadAirports:',e&&e.message); }
@@ -850,11 +852,38 @@ async function loadRange(du, au){
   return flights.map(f=>enrich(f)).sort(sortFlights);
 }
 
+// Remplit la liste des compagnies.
+function populateSearchCompanies(){
+  const sel=document.getElementById('sCo'); if(!sel) return;
+  const cur=sel.value;
+  const list=(_airlines&&_airlines.length)?_airlines.slice().sort((a,b)=>a.localeCompare(b,'fr')):[];
+  sel.innerHTML='<option value="">Toutes</option>'+list.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+// Remplit les destinations : celles de la compagnie choisie, ou toutes si aucune.
+function buildDestOptions(){
+  const sel=document.getElementById('sRoute'); if(!sel) return;
+  const co=(document.getElementById('sCo').value||'').trim().toUpperCase();
+  const cur=sel.value; const set=new Set();
+  Object.values(_flightNumInfo).forEach(v=>{
+    if(co && (v.company||'').toUpperCase()!==co) return;
+    [v.from, v.to].forEach(code=>{ const c=toIATA(code); if(c && c!=='NKC') set.add(c); });
+  });
+  const dests=[...set].sort();
+  sel.innerHTML='<option value="">Toutes</option>'+dests.map(c=>{
+    const nm=_iataName[c]?(' — '+_iataName[c]):'';
+    return `<option value="${esc(c)}">${esc(c+nm)}</option>`;
+  }).join('');
+  sel.value=(cur && dests.includes(cur))?cur:'';
+}
+window.buildDestOptions=buildDestOptions;
+
 function toggleSearch(){
   const p=document.getElementById('searchPanel');
   const opening=p.classList.contains('hidden');
   p.classList.toggle('hidden');
   if(opening){
+    populateSearchCompanies(); buildDestOptions();
     const s=document.getElementById('startPicker').value;
     if(s && !document.getElementById('sDu').value) document.getElementById('sDu').value=s;
   }
@@ -864,15 +893,15 @@ async function runSearch(){
   const du=document.getElementById('sDu').value, au=document.getElementById('sAu').value;
   if(!du || !au){ alert('Choisissez une période : Du et Au.'); return; }
   if(du>au){ alert('La date de début est postérieure à la date de fin.'); return; }
-  const co=document.getElementById('sCo').value.trim().toUpperCase();
-  const rt=document.getElementById('sRoute').value.trim().toUpperCase().replace(/\s/g,'');
+  const co=document.getElementById('sCo').value.trim();
+  const dest=document.getElementById('sRoute').value.trim().toUpperCase();
   const rg=document.getElementById('sReg').value.trim().toUpperCase().replace(/[\s.\-]/g,'');
   const vl=normFN(document.getElementById('sVol').value.trim());
   document.getElementById('suiviBody').innerHTML='<tr class="empty-row"><td colspan="9">Recherche…</td></tr>';
   const flights=await loadRange(du, au);
   const res=flights.filter(f=>{
-    if(co && !(f.company||'').toUpperCase().includes(co)) return false;
-    if(rt && !((f.route||'').toUpperCase().replace(/\s/g,'').includes(rt))) return false;
+    if(co && !(f.company||'').toUpperCase().includes(co.toUpperCase())) return false;
+    if(dest && !(f.route||'').toUpperCase().split('-').includes(dest)) return false;
     if(rg && !((f.registration||'').toUpperCase().replace(/[\s.\-]/g,'').includes(rg))) return false;
     if(vl && !normFN(f.flightNumberRaw||'').includes(vl)) return false;
     return true;
@@ -881,7 +910,7 @@ async function runSearch(){
   renderTable(res); renderSummary(res);
   const crit=[];
   if(co) crit.push('compagnie « '+co+' »');
-  if(rt) crit.push('route « '+rt+' »');
+  if(dest) crit.push('destination « '+dest+' »');
   if(rg) crit.push('immat « '+rg+' »');
   if(vl) crit.push('vol « '+vl+' »');
   document.getElementById('weekLabel').textContent =
