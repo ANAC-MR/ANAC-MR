@@ -1141,7 +1141,8 @@ function renderTable(flights){
     const mainPaxCell = main.pax!=null ? main.pax : '—';
     const totalBadge = hasEscale
       ? ` <span style="display:inline-block;background:#0f1e3d;color:#D4AF37;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:6px;">Σ ${totalPax}</span>` : '';
-    const pilgRow = f.isCharter ? ' style="background:#fce4ec;"' : '';
+    // Les vols charter s'affichent comme les vols normaux (pas de fond distinct).
+    const pilgRow = '';
     html+=`<tr class="${showDay?'day-start':''}"${pilgRow}>
       ${dayTd}
       <td class="co-cell">${showCo?esc(f.company):''}</td>
