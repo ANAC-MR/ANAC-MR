@@ -1483,6 +1483,8 @@ async function dedupAndEnrich(list) {
       p._routeFromList = false;
       if (p.flightNumber) _notFound.push(p.flightNumber);
     }
+    // FRET (kg) calculé une fois compagnie/type/destination connus.
+    p.fret = _computeFret(p);
   }
   if (_notFound.length) {
     console.warn('Numéros de vol ABSENTS de la liste (destination NON corrigée) : ' + [...new Set(_notFound)].join(', '));
@@ -2016,6 +2018,16 @@ function extractFields(text, dateReceived) {
 
   // Détecter si c'est un MVT ou LDM
   const isMVT = upper.includes('MVT') && !upper.includes('LDM');
+  // ── FRET (kg) : lignes station "VILLE … FRE <n> …" (LDM uniquement) ──
+  // Ex. "NDB TRA 0 FRE 0 BAG 480 POS 0" ou "SI NKC BAG 3353 FRE 5523 POS 0".
+  p._freMap = {};
+  if(!isMVT){
+    lines.forEach(l=>{
+      const nl=l.replace(/[ ]+/g,' ').replace(/\s+/g,' ').trim();
+      const m=nl.match(/^(?:SI\s+)?([A-Z]{3})\b.*?\bFRE\s+(\d+)\b/);
+      if(m) p._freMap[m[1]]=(p._freMap[m[1]]||0)+parseInt(m[2],10);
+    });
+  }
   const BASE      = 'GQNO'; // ICAO Nouakchott
   const BASE_IATA = 'NKC';  // IATA Nouakchott (utilisé dans les messages LDM/MVT)
 
@@ -2333,6 +2345,7 @@ function renderEmails() {
             <div class="pf"><label>Arrivée</label><input id="p${i}-to" value="${esc(p.to||'')}" oninput="this.value=this.value.toUpperCase()"></div>
             <div class="pf"><label>PAX (adultes+enfants)</label><input type="number" id="p${i}-px" value="${p.totalPax||p.paxAdults||0}" min="0"></div>
             <div class="pf"><label>Bébés</label><input type="number" id="p${i}-bb" value="${p.paxBabies||0}" min="0"></div>
+            ${em.type==='LDM' ? `<div class="pf"><label>Fret (kg)</label><input type="number" id="p${i}-fret" value="${Number(p.fret||0)}" min="0"></div>` : ''}
 
           </div>
           ${_escaleIsMAI(p.company) ? `<div style="margin-top:6px;display:flex;justify-content:flex-end;"><label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e2e8f0;background:rgba(252,228,236,0.08);border:1px solid #f3b6cd;border-radius:8px;padding:7px 12px;"><input type="checkbox" id="p${i}-charter" ${p.isCharter?'checked':''} onchange="if(emails[${i}]&&emails[${i}].parsed)emails[${i}].parsed.isCharter=this.checked" style="accent-color:#e58bad;"> Charter Flight</label></div>` : ''}
@@ -2360,6 +2373,20 @@ function renderEmails() {
 
 // Génère l'aperçu des lignes d'escale (MAI) dans la carte d'import.
 function _escaleIsMAI(co){ const c=(co||'').toUpperCase(); return c.includes('MAURITANIA')||c==='MAI'||c==='L6'; }
+// ── FRET (kg) d'un vol, à partir des lignes FRE par station (p._freMap) ──
+// MAI : somme de toutes les stations. Air France : NKC (arrivée) / CDG (départ).
+// Turkish : NKC (arrivée) / IST (départ). Autres : ligne de la destination du
+// n° de vol (NKC si arrivée, sinon la ville d'arrivée du vol).
+function _computeFret(p){
+  const fre=(p&&p._freMap)||{}; const keys=Object.keys(fre);
+  if(!keys.length) return 0;
+  const co=(p.company||'').toUpperCase(), type=(p.type||'').toUpperCase();
+  const get=(city)=>{ const c=_toIataLDM(city); return (fre[c]!=null)?fre[c]:(fre[(city||'').toUpperCase()]||0); };
+  if(_escaleIsMAI(co)) return keys.reduce((s,k)=>s+(fre[k]||0),0);
+  if(co.includes('AIR FRANCE')||co==='AF') return get(type==='ARR'?'NKC':'CDG');
+  if(co.includes('TURKISH')||co==='TK')   return get(type==='ARR'?'NKC':'IST');
+  return get(type==='ARR'?'NKC':(p.to||''));
+}
 function _escaleIsMauritanian(code){
   const c=(code||'').toUpperCase();
   if(c.startsWith('GQ')) return true;
@@ -2432,6 +2459,8 @@ async function importFlight(i, force) {
   const mlb = Number(_pEsc.midLegBabies||0);
   const px  = parseInt(document.getElementById(`p${i}-px`).value) || 0;
   const bb  = parseInt(document.getElementById(`p${i}-bb`).value) || 0;
+  const _fretEl = document.getElementById(`p${i}-fret`);   // présent uniquement pour les LDM
+  const fret = _fretEl ? (parseInt(_fretEl.value,10)||0) : null;
 
   if (!fn || !dt) { toast('N° vol et date obligatoires','warn'); return; }
 
@@ -2505,6 +2534,7 @@ async function importFlight(i, force) {
       midLegPax: mlp,
       midLegBabies: mlb,
       passengers: px, babies: bb,
+      ...(fret!=null ? { fret } : {}),
       company: _finalCompany,
       isCharter: _isCharter,
       authorizationNumber: authEl ? authEl.value.trim().toUpperCase() : '',
