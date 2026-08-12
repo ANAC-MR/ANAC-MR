@@ -461,6 +461,18 @@ document.addEventListener('keydown', e => {
     <div style="width:1px;height:40px;background:#e5e7eb;"></div>
 
     <div>
+      <div class="lbl" style="margin-bottom:6px;">Sens</div>
+      <select id="sensMode" onchange="renderAll()"
+        style="padding:8px 12px;font-size:13px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#1b2430;font-family:inherit;font-weight:600;cursor:pointer;">
+        <option value="both">Départs + Arrivées</option>
+        <option value="dep">Départs seulement</option>
+        <option value="arr">Arrivées seulement</option>
+      </select>
+    </div>
+
+    <div style="width:1px;height:40px;background:#e5e7eb;"></div>
+
+    <div>
       <div class="lbl" style="margin-bottom:6px;">Mauritania Airlines</div>
       <select id="maMode" onchange="renderAll()"
         style="padding:8px 12px;font-size:13px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#1b2430;font-family:inherit;font-weight:600;cursor:pointer;">
@@ -644,13 +656,16 @@ window.renderAll = function(){
   for(let m=0;m<12;m++) html += '<th>'+MOIS[m]+'</th>';
   html += '<th>Total</th></tr></thead><tbody>';
 
+  const sensMode = (document.getElementById('sensMode')||{}).value || 'both';
+  const sensList = sensMode==='dep' ? ['DEP'] : sensMode==='arr' ? ['ARR'] : ['DEP','ARR'];
+
   companies.forEach(co=>{
     const d = data[co];
-    ['DEP','ARR'].forEach(sens=>{
+    sensList.forEach((sens, si)=>{
       const pax = sens==='DEP'? d.DEP : d.ARR;
       const nb  = sens==='DEP'? d.DEPn : d.ARRn;
       const label = sens==='DEP' ? 'Départs' : 'Arrivées';
-      const isFirst = sens==='DEP';
+      const isFirst = si===0;   // 1re ligne visible de la compagnie → porte le nom
       html += '<tr class="route-row">';
       html += '<td>'+(isFirst?'<strong>'+esc(co)+'</strong> · ':'&nbsp;&nbsp;&nbsp;')+'<span style="color:#64748b;font-size:11px;">'+label+'</span></td>';
       let rowPax=0, rowNb=0;
@@ -785,22 +800,22 @@ window.doExportXLSX = function(){
   });
   R = hdrRow2+1;
 
-  // Corps : 2 lignes par compagnie
+  // Corps : 1 ou 2 lignes par compagnie selon le sens choisi
+  const sensModeX = (document.getElementById('sensMode')||{}).value || 'both';
+  const sensListX = sensModeX==='dep' ? ['DEP'] : sensModeX==='arr' ? ['ARR'] : ['DEP','ARR'];
   const colPax=Array(12).fill(0), colNb=Array(12).fill(0);
   companies.forEach(co=>{
     const d = data[co];
-    ['DEP','ARR'].forEach((sens,si)=>{
+    sensListX.forEach((sens,si)=>{
       const dep = sens==='DEP';
       const pax = dep? d.DEP : d.ARR;
       const nb  = dep? d.DEPn: d.ARRn;
-      // Colonne A : nom compagnie (ligne DEP) puis sens
-      if(dep){
-        ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:co, s:styCoName() };
-        // fusion verticale du nom sur 2 lignes ? Non : on met le nom sur DEP, et 'Arrivées' en dessous.
-        // Pour clarté, on met "Compagnie — Départs" et "— Arrivées"
-        ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:co+'  ·  Départs', s:styCoName() };
+      const label = dep ? 'Départs' : 'Arrivées';
+      // Colonne A : la 1re ligne visible porte le nom, la 2e le sens seul
+      if(si===0){
+        ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:co+'  ·  '+label, s:styCoName() };
       } else {
-        ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:'        Arrivées', s:stySens(false) };
+        ws[XLSX.utils.encode_cell({r:R,c:0})] = { v:'        '+label, s:stySens(false) };
       }
       let cc = 1, rowPax=0, rowNb=0;
       months.forEach(m=>{
@@ -854,7 +869,8 @@ window.doExportXLSX = function(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Compagnies '+currentYear);
   const modeLabel = {all:'',dom:'_domestique',int:'_international',none:'_sansMA'}[document.getElementById('maMode').value]||'';
-  XLSX.writeFile(wb, 'Statistiques_Compagnies_'+currentYear+modeLabel+'.xlsx');
+  const sensLabel = {both:'',dep:'_departs',arr:'_arrivees'}[sensModeX]||'';
+  XLSX.writeFile(wb, 'Statistiques_Compagnies_'+currentYear+modeLabel+sensLabel+'.xlsx');
   closeExportDialog();
 };
 
