@@ -1115,10 +1115,10 @@ document.addEventListener('keydown', e => {
                         <div class="field-group">
                             <label>Longueur du numéro</label>
                             <select id="fmtLength" onchange="updateFormatPreview()">
-                                <option value="3">3 chiffres – ex: 001</option>
-                                <option value="4" selected>4 chiffres – ex: 0001</option>
-                                <option value="5">5 chiffres – ex: 00001</option>
-                                <option value="6">6 chiffres – ex: 000001</option>
+                                <option value="3">3 chiffres</option>
+                                <option value="4" selected>4 chiffres</option>
+                                <option value="5">5 chiffres</option>
+                                <option value="6">6 chiffres</option>
                             </select>
                         </div>
                         <div class="field-group">
@@ -1731,8 +1731,8 @@ document.addEventListener('keydown', e => {
                 </div>
             </div>
             <div class="field-group form-full" style="background:rgba(251,191,36,0.04);border:1px solid rgba(251,191,36,0.15);border-radius:10px;padding:12px 14px;">
-                <div style="font-size:12px;font-weight:700;color:#a05a12;margin-bottom:6px;">Plage 2 — optionnel (ex: Hiver à cheval sur 2 années)</div>
-                <div style="font-size:11px;color:#5a6572;margin-bottom:10px;">Si les autorisations changent de préfixe SNA en cours de saison (ex: SNA25-XXX → SNA26-YYY)</div>
+                <div style="font-size:12px;font-weight:700;color:#a05a12;margin-bottom:6px;">Plage 2 — optionnel</div>
+                <div style="font-size:11px;color:#5a6572;margin-bottom:10px;">Si les autorisations changent de préfixe SNA en cours de saison.</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div>
                         <label style="font-size:12px;color:#5a6572;">Premier N° auth (plage 2)</label>
@@ -1803,7 +1803,7 @@ document.addEventListener('keydown', e => {
                 <select id="airlineHub" style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text-main);font-size:13px;width:100%;">
                     <option value="">— Choisir l'aéroport Hub —</option>
                 </select>
-                <span class="hint">L'aéroport d'origine de cette compagnie (ex: Tunis pour Tunisair). NKC est automatiquement la base ANAC.</span>
+                <span class="hint">L'aéroport d'origine de cette compagnie. NKC est automatiquement la base ANAC.</span>
             </div>
 
             <!-- Destinations -->
@@ -1964,7 +1964,7 @@ document.addEventListener('keydown', e => {
             <div style="grid-column:1/-1;">
                 <label style="font-size:11px;color:#5a6572;display:block;margin-bottom:4px;">JOURS D'OPÉRATION</label>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <label style="font-size:11px;color:#5a6572;margin-bottom:4px;display:block;">Format IATA ex: J1---J5-- (Lun à Ven) ou cocher ci-dessous :</label>
+                    <label style="font-size:11px;color:#5a6572;margin-bottom:4px;display:block;">Format IATA J1---J5-- (Lun à Ven), ou cocher ci-dessous :</label>
                 </div>
                 <div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap;" id="schedDayBtns">
                     <button type="button" class="sday-btn" data-d="1" onclick="_schedToggleDay(this)">Lun</button>
@@ -2699,7 +2699,7 @@ function updateImmatCount() {
 function updateImmPrefixHint() {
     const val = document.getElementById('airlineImmPrefix').value;
     const el = document.getElementById('immatPrefixHint');
-    if (el) el.textContent = val ? `→ ex: ${val}CLX` : '';
+    if (el) el.textContent = val ? `→ ${val}CLX` : '';
 }
 
 function updateImmatLockUI() {
@@ -4281,7 +4281,7 @@ window._applyMapping = function() {
         const withDate = parsed.filter(p=>p.date).length;
         const withVol  = parsed.filter(p=>p.vol).length;
         const withAuth = parsed.filter(p=>p.auth).length;
-        const sample   = parsed[0] ? ' · Ex: '+parsed[0].auth+' | '+parsed[0].vol+' | '+parsed[0].date : '';
+        const sample   = parsed[0] ? ' · Aperçu : '+parsed[0].auth+' | '+parsed[0].vol+' | '+parsed[0].date : '';
         res.innerHTML =
             '<span style="color:#34d399;font-weight:700;">'+parsed.length+' lignes</span>'+
             ' · <span style="color:#2b5a8e;">'+withVol+' vols</span>'+
@@ -4334,7 +4334,7 @@ window.saveProgImport = async function() {
     if (!company) { showNotif('Choisissez une compagnie','error'); return; }
     if (!first||!last) { showNotif('Entrez le premier et dernier N° autorisation (plage 1)','error'); return; }
     const range = buildAuthRangeFull(first, last, first2, last2);
-    if (!range) { showNotif('Format invalide — ex: SNA25-0001. Vérifiez que chaque plage a le même préfixe SNA','error'); return; }
+    if (!range) { showNotif('Format invalide — attendu SNA25-0001. Vérifiez que chaque plage a le même préfixe SNA','error'); return; }
     status.style.color='#2b5a8e'; status.textContent='Enregistrement...';
     try {
         const parsedRows = window._parsedProgRows || [];
@@ -5982,7 +5982,7 @@ async function _secLoadUsers() {
         <div style="background:rgba(20,48,79,0.03);border:1px solid rgba(20,48,79,0.06);border-left:3px solid ${color};border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
-              <span style="font-weight:700;color:#1b2430;font-size:14px;letter-spacing:0.3px;">${u.username}</span>
+              <span style="font-weight:700;color:#1b2430;font-size:14px;letter-spacing:0.3px;">${esc(u.username)}</span>
               <span style="font-size:10px;color:${color};background:${color}22;padding:2px 8px;border-radius:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">${roleLabels[role]||role}</span>
               ${isOnline ? '<span style="font-size:10px;color:#22c55e;background:#22c55e22;padding:2px 8px;border-radius:10px;font-weight:700;">● EN LIGNE</span>' : ''}
               ${u.disabled ? '<span style="font-size:10px;color:#ef4444;background:#ef444422;padding:2px 8px;border-radius:10px;font-weight:700;">DÉSACTIVÉ</span>' : ''}
@@ -6269,7 +6269,7 @@ window._secRenderActivity = function() {
     const actionColor = isFailed ? '#b3362b' : a.action === 'delete_flight' ? '#b3362b' : a.action === 'login_success' ? '#86efac' : '#e2e8f0';
     html += `<tr style="background:${bg};border-bottom:1px solid rgba(20,48,79,0.04);">
       <td style="padding:10px;color:#5a6572;font-family:monospace;font-size:11px;white-space:nowrap;">${dateStr}</td>
-      <td style="padding:10px;color:#1b2430;font-weight:600;">${a.username||'—'}</td>
+      <td style="padding:10px;color:#1b2430;font-weight:600;">${esc(a.username||'—')}</td>
       <td style="padding:10px;color:${actionColor};font-weight:600;">${actionLabel}</td>
       <td style="padding:10px;color:#3d4854;">${(a.details||a.target||'').slice(0,80)}</td>
     </tr>`;

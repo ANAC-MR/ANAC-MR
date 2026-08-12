@@ -3051,17 +3051,17 @@ async function loadArchives() {
             onmouseout="this.style.background='rgba(255,255,255,0.03)'">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <span style="background:${typeColor}22;color:${typeColor};border:1px solid ${typeColor}44;border-radius:6px;padding:2px 9px;font-size:11px;font-weight:800;">${a.type}</span>
-              <span style="font-size:13px;font-weight:700;color:#e2e8f0;">${a.flightNumber}</span>
-              <span style="font-size:12px;color:#64748b;">${a.date}</span>
+              <span style="font-size:13px;font-weight:700;color:#e2e8f0;">${escArch(a.flightNumber)}</span>
+              <span style="font-size:12px;color:#64748b;">${escArch(a.date)}</span>
               <span style="font-size:11px;color:#94a3b8;">${(CITY_NAMES_ARCH[a.from]||CITY_NAMES_ARCH[ICAO_TO_IATA[a.from]]||a.from||'?')} → ${(CITY_NAMES_ARCH[a.to]||CITY_NAMES_ARCH[ICAO_TO_IATA[a.to]]||a.to||'?')}</span>
               <span style="font-size:10px;color:#64748b;margin-left:auto;">${srcBadge}</span>
-              ${a.authorizationNumber ? `<span style="font-size:16px;font-weight:800;color:#D4AF37;letter-spacing:.04em;">${a.authorizationNumber}</span>` : ''}
+              ${a.authorizationNumber ? `<span style="font-size:16px;font-weight:800;color:#D4AF37;letter-spacing:.04em;">${escArch(a.authorizationNumber)}</span>` : ''}
               ${a.flightType === 'DEP' ? `<span style="font-size:10px;font-weight:700;color:#60a5fa;background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.3);border-radius:4px;padding:1px 6px;">DEP</span>` : a.flightType === 'ARR' ? `<span style="font-size:10px;font-weight:700;color:#00c98d;background:rgba(0,201,141,0.12);border:1px solid rgba(0,201,141,0.3);border-radius:4px;padding:1px 6px;">ARR</span>` : ''}
             </div>
             <div id="arch-detail-${a.id}" style="display:none;margin-top:12px;">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);">
-                <span style="font-size:12px;color:#94a3b8;">${a.flightNumber} · ${a.date}</span>
-                ${a.authorizationNumber ? `<span style="font-size:20px;font-weight:900;color:#fff;letter-spacing:.05em;font-family:'JetBrains Mono',monospace;">${a.authorizationNumber}</span>` : ''}
+                <span style="font-size:12px;color:#94a3b8;">${escArch(a.flightNumber)} · ${escArch(a.date)}</span>
+                ${a.authorizationNumber ? `<span style="font-size:20px;font-weight:900;color:#fff;letter-spacing:.05em;font-family:'JetBrains Mono',monospace;">${escArch(a.authorizationNumber)}</span>` : ''}
               </div>
               <pre style="background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:14px;font-size:12px;font-family:'JetBrains Mono',monospace;color:#e2e8f0;white-space:pre-wrap;overflow-x:auto;line-height:1.6;">${escArch(a.source==='GENERATED' ? a.generatedText||'' : a.rawText||a.generatedText||'')}</pre>
               <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">

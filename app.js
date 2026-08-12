@@ -931,7 +931,7 @@ function validateForm() {
     
     // Validate authorization number format
     if (elements.fAuthNumber.value.trim() && !validateAuthNumber(elements.fAuthNumber.value.trim())) {
-        showFieldError(elements.fAuthNumber, 'Format invalide. Utilisez: SNA25-XXXX ou SNA26-XXXX (ex: SNA26-0001)');
+        showFieldError(elements.fAuthNumber, 'Format invalide. Utilisez SNA25-0001 ou SNA26-0001.');
         isValid = false;
     }
     
