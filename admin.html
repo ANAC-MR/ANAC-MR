@@ -964,6 +964,9 @@ document.addEventListener('keydown', e => {
             <div class="nav-item" onclick="showSection('schedules')" data-section="schedules">
                 <span class="icon">HV</span> Horaires & Vols
             </div>
+            <div class="nav-item" onclick="showSection('fret')" data-section="fret">
+                <span class="icon">FR</span> FRET
+            </div>
         </nav>
 
         <!-- Main Content -->
@@ -1436,6 +1439,67 @@ document.addEventListener('keydown', e => {
                 </div>
             </div>
 
+            <!-- ─── FRET ─── -->
+            <div class="section-page" id="section-fret">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>FRET (kg)</h2>
+                    </div>
+                    <button class="btn-primary" onclick="_fretOpenAdd()">+ Ajouter fret</button>
+                </div>
+
+                <!-- Filtres -->
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+                    <input type="month" id="fretMonth" onchange="_fretRefresh()"
+                        style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;">
+                    <select id="fretCompanyFilter" onchange="_fretRefresh()"
+                        style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;min-width:220px;">
+                        <option value="">Toutes les compagnies</option>
+                    </select>
+                    <span id="fretCount" style="font-size:12px;color:#5a6572;"></span>
+                </div>
+
+                <!-- Vue synthèse (par compagnie) -->
+                <div class="card" id="fretSummary" style="padding:0;overflow:hidden;">
+                    <table class="fn-table" style="font-size:12px;">
+                        <thead>
+                            <tr style="background:rgba(20,48,79,0.04);">
+                                <th style="padding:10px 14px;">Compagnie</th>
+                                <th style="padding:10px 14px;width:150px;text-align:right;">Fret départs (kg)</th>
+                                <th style="padding:10px 14px;width:150px;text-align:right;">Fret arrivées (kg)</th>
+                                <th style="padding:10px 14px;width:130px;text-align:right;">Total (kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fretSummaryBody">
+                            <tr><td colspan="4" style="text-align:center;padding:40px;color:#5a6572;">Chargement…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Vue détail (par vol) -->
+                <div id="fretDetail" style="display:none;">
+                    <div style="margin-bottom:12px;">
+                        <a href="#" onclick="_fretShowSummary();return false;" style="font-size:13px;color:#14304f;text-decoration:none;">← Toutes les compagnies</a>
+                    </div>
+                    <h3 id="fretDetailTitle" style="margin:0 0 12px;color:#14304f;font-size:16px;"></h3>
+                    <div class="card" style="padding:0;overflow:hidden;">
+                        <table class="fn-table" style="font-size:12px;">
+                            <thead>
+                                <tr style="background:rgba(20,48,79,0.04);">
+                                    <th style="padding:10px 14px;width:110px;">Date</th>
+                                    <th style="padding:10px 14px;">Compagnie</th>
+                                    <th style="padding:10px 14px;width:90px;">N° vol</th>
+                                    <th style="padding:10px 14px;">Route</th>
+                                    <th style="padding:10px 14px;width:90px;">Type</th>
+                                    <th style="padding:10px 14px;width:110px;text-align:right;">FRET (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fretDetailBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 </div>
@@ -1501,6 +1565,35 @@ document.addEventListener('keydown', e => {
         <div class="modal-footer">
             <button class="btn-secondary" onclick="closeModal('flightNumModal')">Annuler</button>
             <button class="btn-primary" onclick="saveFlightNum()">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajout Fret -->
+<div class="modal-overlay" id="fretAddModal">
+    <div class="modal-box" style="max-width:440px;">
+        <div class="modal-header">
+            <h3>Ajouter du fret à un vol</h3>
+            <button class="modal-close" onclick="closeModal('fretAddModal')">×</button>
+        </div>
+        <div class="form-grid">
+            <div class="field-group form-full">
+                <label>Date *</label>
+                <input type="date" id="fretAddDate">
+            </div>
+            <div class="field-group form-full">
+                <label>Numéro de vol *</label>
+                <input type="text" id="fretAddFN" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="field-group form-full">
+                <label>Fret (kg) *</label>
+                <input type="number" id="fretAddKg" min="0">
+            </div>
+        </div>
+        <div id="fretAddInfo" style="font-size:12px;color:#5a6572;margin-top:8px;"></div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('fretAddModal')">Annuler</button>
+            <button class="btn-primary" onclick="_fretSaveAdd()">Enregistrer</button>
         </div>
     </div>
 </div>
@@ -4344,6 +4437,7 @@ window.showSection = function(name) {
     if (name === 'programme')  loadProgramme();
     if (name === 'chargement') _chgInit();
     if (name === 'schedules')  _schedInit();
+    if (name === 'fret')       _fretInit();
 };
 
 // ────────────────────────────────────────
@@ -6232,6 +6326,185 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }, 800);
 });
+
+// ════════════════════════════════════════════════════════════
+// FRET (kg) — suivi du fret (source : LDM) + ajout manuel par vol
+// Lecture/écriture du seul champ `fret` sur des vols existants.
+// Aucun nouveau document de vol n'est créé ici (intégrité des stats).
+// ════════════════════════════════════════════════════════════
+let _fretFlights = [];   // vols du mois porteurs d'un champ fret
+
+function _fretCanon(s){
+  const raw=(s||'').toUpperCase().replace(/[-\s.]/g,'');
+  const m=raw.match(/^([A-Z]+)(\d+)([A-Z]*)$/);
+  if(!m) return raw;
+  const dg=(m[2].replace(/^0+/,'')||'0').padStart(4,'0');
+  return m[1]+dg+(m[3]||'');
+}
+function _fretIata(code){
+  const c=(code||'').toUpperCase().trim();
+  if(!c) return '';
+  const byIcao=(airports||[]).find(x=>(x.icao||'').toUpperCase()===c);
+  if(byIcao) return byIcao.iata||c;
+  return c; // déjà IATA (ou inconnu)
+}
+function _fretRoute(f){
+  const from=_fretIata(f.from), to=_fretIata(f.to);
+  const stop=(f.hasStopover&&f.stopover) ? _fretIata(f.stopover) : '';
+  return stop ? `${from} → ${stop} → ${to}` : `${from} → ${to}`;
+}
+function _fretIsArr(t){ return String(t||'').toUpperCase().startsWith('A'); }
+function _fretKg(n){ return (Number(n)||0).toLocaleString('fr-FR'); }
+
+async function _fretLoad(){
+  const m=(document.getElementById('fretMonth')||{}).value||'';
+  _fretFlights=[];
+  if(!m) return;
+  const start=m+'-01', end=m+'-31';
+  const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const snap=await getDocs(query(collection(window._db,'flights'),
+      where('date','>=',start), where('date','<=',end)));
+  _fretFlights=snap.docs.map(d=>({id:d.id,...d.data()}))
+      .filter(f=>f.fret!=null && f.fret!=='');
+}
+
+function _fretFillCompanies(){
+  const sel=document.getElementById('fretCompanyFilter');
+  if(!sel) return;
+  const cur=sel.value;
+  const names=[...new Set((airlines||[]).map(a=>a.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML='<option value="">Toutes les compagnies</option>'+
+     names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+
+window._fretInit = async function(){
+  const mel=document.getElementById('fretMonth');
+  if(mel && !mel.value){
+    const now=new Date();
+    mel.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  }
+  _fretFillCompanies();
+  await _fretRefresh();
+};
+
+window._fretRefresh = async function(){
+  try{
+    await _fretLoad();
+  }catch(e){
+    const b=document.getElementById('fretSummaryBody');
+    if(b) b.innerHTML=`<tr><td colspan="4" style="color:#b3362b;padding:12px;">${esc(e.message||String(e))}</td></tr>`;
+    return;
+  }
+  const co=(document.getElementById('fretCompanyFilter')||{}).value||'';
+  if(co) _fretShowDetail(co); else _fretShowSummary();
+};
+
+window._fretShowSummary = function(){
+  const sel=document.getElementById('fretCompanyFilter');
+  if(sel) sel.value='';
+  document.getElementById('fretDetail').style.display='none';
+  document.getElementById('fretSummary').style.display='';
+  const body=document.getElementById('fretSummaryBody');
+  const map={};
+  _fretFlights.forEach(f=>{
+    const co=f.company||'—';
+    if(!map[co]) map[co]={dep:0,arr:0};
+    const v=Number(f.fret)||0;
+    if(_fretIsArr(f.type)) map[co].arr+=v; else map[co].dep+=v;
+  });
+  const cos=Object.keys(map).sort((a,b)=>a.localeCompare(b));
+  const cnt=document.getElementById('fretCount');
+  if(cnt) cnt.textContent=_fretFlights.length+' vol(s) avec fret';
+  if(!cos.length){
+    body.innerHTML='<tr><td colspan="4" style="text-align:center;padding:40px;color:#5a6572;">Aucune donnée de fret pour ce mois</td></tr>';
+    return;
+  }
+  let td=0,ta=0;
+  body.innerHTML=cos.map(co=>{
+    const s=map[co]; td+=s.dep; ta+=s.arr;
+    return `<tr style="cursor:pointer;" onclick="_fretShowDetail('${esc(co).replace(/'/g,"\\'")}')">
+      <td style="padding:9px 14px;font-weight:600;color:#14304f;">${esc(co)}</td>
+      <td style="padding:9px 14px;text-align:right;">${_fretKg(s.dep)}</td>
+      <td style="padding:9px 14px;text-align:right;">${_fretKg(s.arr)}</td>
+      <td style="padding:9px 14px;text-align:right;font-weight:600;">${_fretKg(s.dep+s.arr)}</td>
+    </tr>`;
+  }).join('') +
+    `<tr style="background:rgba(20,48,79,0.04);font-weight:700;">
+      <td style="padding:10px 14px;color:#14304f;">TOTAL</td>
+      <td style="padding:10px 14px;text-align:right;">${_fretKg(td)}</td>
+      <td style="padding:10px 14px;text-align:right;">${_fretKg(ta)}</td>
+      <td style="padding:10px 14px;text-align:right;">${_fretKg(td+ta)}</td>
+    </tr>`;
+};
+
+window._fretShowDetail = function(co){
+  const sel=document.getElementById('fretCompanyFilter');
+  if(sel && sel.value!==co) sel.value=co;
+  document.getElementById('fretSummary').style.display='none';
+  document.getElementById('fretDetail').style.display='';
+  document.getElementById('fretDetailTitle').textContent=co;
+  const list=_fretFlights.filter(f=>(f.company||'—')===co)
+      .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')) ||
+                   _fretCanon(a.flightNumber).localeCompare(_fretCanon(b.flightNumber)));
+  const cnt=document.getElementById('fretCount');
+  if(cnt) cnt.textContent=list.length+' vol(s) avec fret';
+  const body=document.getElementById('fretDetailBody');
+  if(!list.length){
+    body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:#5a6572;">Aucun vol avec fret pour cette compagnie</td></tr>';
+    return;
+  }
+  let tot=0;
+  body.innerHTML=list.map(f=>{
+    tot+=Number(f.fret)||0;
+    return `<tr>
+      <td style="padding:9px 14px;">${esc(f.date||'')}</td>
+      <td style="padding:9px 14px;">${esc(f.company||'')}</td>
+      <td style="padding:9px 14px;font-weight:600;">${esc(f.flightNumber||'')}</td>
+      <td style="padding:9px 14px;">${esc(_fretRoute(f))}</td>
+      <td style="padding:9px 14px;">${_fretIsArr(f.type)?'Arrivée':'Départ'}</td>
+      <td style="padding:9px 14px;text-align:right;">${_fretKg(f.fret)}</td>
+    </tr>`;
+  }).join('') +
+    `<tr style="background:rgba(20,48,79,0.04);font-weight:700;">
+      <td colspan="5" style="padding:10px 14px;text-align:right;color:#14304f;">Total</td>
+      <td style="padding:10px 14px;text-align:right;">${_fretKg(tot)}</td>
+    </tr>`;
+};
+
+window._fretOpenAdd = function(){
+  document.getElementById('fretAddDate').value='';
+  document.getElementById('fretAddFN').value='';
+  document.getElementById('fretAddKg').value='';
+  document.getElementById('fretAddInfo').textContent='';
+  openModal('fretAddModal');
+};
+
+window._fretSaveAdd = async function(){
+  const date=(document.getElementById('fretAddDate').value||'').trim();
+  const fnRaw=(document.getElementById('fretAddFN').value||'').trim();
+  const kgVal=document.getElementById('fretAddKg').value;
+  const kg=parseInt(kgVal,10);
+  if(!date || !fnRaw || kgVal==='' || isNaN(kg) || kg<0){
+    showNotif('Date, n° de vol et fret (kg) obligatoires','error'); return;
+  }
+  const canon=_fretCanon(fnRaw);
+  try{
+    const { collection, query, where, getDocs, updateDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const snap=await getDocs(query(collection(window._db,'flights'), where('date','==',date)));
+    const match=snap.docs.find(d=>_fretCanon((d.data().flightNumber)||'')===canon);
+    if(!match){
+      showNotif('Aucun vol '+fnRaw+' trouvé le '+date+'. Importez d’abord le vol (LDM/MVT).','error');
+      return;
+    }
+    await updateDoc(doc(window._db,'flights',match.id), { fret: kg, fretUpdatedAt: new Date().toISOString() });
+    showNotif('Fret enregistré : '+fnRaw+' = '+kg+' kg','success');
+    closeModal('fretAddModal');
+    await _fretRefresh();
+  }catch(e){
+    showNotif('Erreur: '+(e.message||e),'error');
+  }
+};
 </script>
 
 </body>
