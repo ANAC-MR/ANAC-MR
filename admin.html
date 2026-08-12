@@ -6333,6 +6333,22 @@ document.addEventListener('DOMContentLoaded', () => {
 // Aucun nouveau document de vol n'est créé ici (intégrité des stats).
 // ════════════════════════════════════════════════════════════
 let _fretFlights = [];   // vols du mois porteurs d'un champ fret
+let _fretAirlines = [], _fretAirports = [];   // configs chargées localement (module isolé)
+
+function esc(s){
+  if(s==null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+async function _fretLoadConfigs(){
+  try{
+    const [al,ap]=await Promise.all([
+      window._getDoc(window._doc(window._db,'flights','cfg-airlines')),
+      window._getDoc(window._doc(window._db,'flights','cfg-airports'))
+    ]);
+    _fretAirlines=(al.exists()&&al.data().list)||[];
+    _fretAirports=(ap.exists()&&ap.data().list)||[];
+  }catch(e){ /* configs indisponibles : listes vides, la page reste fonctionnelle */ }
+}
 
 function _fretCanon(s){
   const raw=(s||'').toUpperCase().replace(/[-\s.]/g,'');
@@ -6344,7 +6360,7 @@ function _fretCanon(s){
 function _fretIata(code){
   const c=(code||'').toUpperCase().trim();
   if(!c) return '';
-  const byIcao=(airports||[]).find(x=>(x.icao||'').toUpperCase()===c);
+  const byIcao=(_fretAirports||[]).find(x=>(x.icao||'').toUpperCase()===c);
   if(byIcao) return byIcao.iata||c;
   return c; // déjà IATA (ou inconnu)
 }
@@ -6372,7 +6388,7 @@ function _fretFillCompanies(){
   const sel=document.getElementById('fretCompanyFilter');
   if(!sel) return;
   const cur=sel.value;
-  const names=[...new Set((airlines||[]).map(a=>a.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const names=[...new Set((_fretAirlines||[]).map(a=>a.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
   sel.innerHTML='<option value="">Toutes les compagnies</option>'+
      names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
   if(cur) sel.value=cur;
@@ -6384,6 +6400,7 @@ window._fretInit = async function(){
     const now=new Date();
     mel.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   }
+  await _fretLoadConfigs();
   _fretFillCompanies();
   await _fretRefresh();
 };
