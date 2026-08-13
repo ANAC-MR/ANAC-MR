@@ -6623,7 +6623,7 @@ window._fretReadFile = async function(input){
         const date=_fretNormDate(row[di]);
         const fnRaw=String(row[vi]==null?'':row[vi]).trim();
         const kgRaw=String(row[fi]==null?'':row[fi]).replace(',','.').replace(/[^\d.]/g,'');
-        if(!date && !fnRaw && kgRaw==='') continue;   // ligne vide → ignorée
+        if(!fnRaw) continue;   // ligne vide ou ligne TOTAL (sans numéro de vol) → ignorée
         const kg=parseInt(parseFloat(kgRaw),10);
         rows.push({ date, fnRaw, canon:_fretCanon(fnRaw), kg:(isNaN(kg)?null:kg) });
       }
