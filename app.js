@@ -1809,41 +1809,39 @@ function filterFlights() {
         return true;
     });
 
-    // ── Mode TRONÇON : De ET Vers précisés → n'afficher que le segment demandé,
-    // avec SES propres PAX/bébés (et non ceux du vol complet). Pour un vol à escale,
-    // generateFlightLines fournit le découpage par segment ; pour un vol direct, le
-    // segment = le vol lui-même.
-    if (fromFilter !== 'ALL' && toFilter !== 'ALL' && typeof generateFlightLines === 'function') {
+    // ── Mode TRONÇON : dès qu'un aéroport (De et/ou Vers) est précisé, on n'affiche
+    // que le(s) segment(s) demandé(s), avec LEURS propres PAX/bébés (pas ceux du vol
+    // complet). generateFlightLines fournit le découpage par segment (vols MAI à
+    // escale) ; pour un vol direct, le segment = le vol lui-même.
+    if ((fromFilter !== 'ALL' || toFilter !== 'ALL') && typeof generateFlightLines === 'function') {
+        const _seg = (l) =>
+            (fromFilter === 'ALL' || l.from === fromFilter) &&
+            (toFilter   === 'ALL' || l.to   === toFilter);
+        const _mk = (from, to, pax, bab, f) => Object.assign({}, f, {
+            from, to,
+            passengers: Number(pax) || 0,
+            babies: Number(bab) || 0,
+            // Le segment s'affiche comme un trajet simple (pas de re-découpage).
+            hasStopover: false, stopover: '',
+            stopoverPax: 0, stopoverBabies: 0, midLegPax: 0, midLegBabies: 0,
+            _troncon: true
+        });
         const segs = [];
         _filtered.forEach(f => {
             let lines;
             try { lines = generateFlightLines(f); } catch(e) { lines = null; }
             let matched = false;
             (lines || []).forEach(l => {
-                if (l.from === fromFilter && l.to === toFilter) {
-                    matched = true;
-                    segs.push(Object.assign({}, f, {
-                        from: l.from, to: l.to,
-                        passengers: Number(l.passengers) || 0,
-                        babies: Number(l.babies) || 0,
-                        // Le segment s'affiche comme un trajet simple (pas de re-découpage).
-                        hasStopover: false, stopover: '',
-                        stopoverPax: 0, stopoverBabies: 0, midLegPax: 0, midLegBabies: 0,
-                        _troncon: true
-                    }));
-                }
+                if (_seg(l)) { matched = true; segs.push(_mk(l.from, l.to, l.passengers, l.babies, f)); }
             });
             // Repli : le vol correspond au filtre mais n'est pas décomposé
             // (vol direct, ou compagnie non-MAI) → afficher le tronçon avec les PAX du vol.
             if (!matched) {
-                segs.push(Object.assign({}, f, {
-                    from: fromFilter, to: toFilter,
-                    passengers: Number(f.passengers) || 0,
-                    babies: Number(f.babies) || 0,
-                    hasStopover: false, stopover: '',
-                    stopoverPax: 0, stopoverBabies: 0, midLegPax: 0, midLegBabies: 0,
-                    _troncon: true
-                }));
+                segs.push(_mk(
+                    fromFilter !== 'ALL' ? fromFilter : f.from,
+                    toFilter   !== 'ALL' ? toFilter   : f.to,
+                    f.passengers, f.babies, f
+                ));
             }
         });
         return segs;
