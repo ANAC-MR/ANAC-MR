@@ -2627,15 +2627,17 @@ async function _doExportPDF(JsPDF, hiResImages) {
 
     // Lire les données depuis window._destData si dispo, sinon les recalculer
     const destData = window._destData || (function() {
-        const all  = getFlights();
-        const flt  = filterFlights(all);
+        const flt  = filterFlights();
         const dc   = {};
         flt.forEach(f => {
-            const city = cityName(getDestCity(f)||'');
-            if (!city || city === 'Nouakchott' || city === '' || city === 'undefined') return;
-            if (!dc[city]) dc[city] = { vols:0, pax:0 };
-            dc[city].vols++;
-            dc[city].pax += (+f.passengers||0) + (+f.babies||0);
+            // Par tronçon (escales incluses), cohérent avec la carte à l'écran.
+            _troncons(f).forEach(t => {
+                const city = t.city;
+                if (!city || city === 'Nouakchott' || city === '' || city === 'undefined') return;
+                if (!dc[city]) dc[city] = { vols:0, pax:0 };
+                dc[city].vols++;
+                dc[city].pax += t.pax;
+            });
         });
         return dc;
     })();
@@ -2879,14 +2881,17 @@ async function _doExportPDF(JsPDF, hiResImages) {
             const dc = getDestCity(f);
             return dc && destCodes.includes(dc);
         };
-        const filtered = all.filter(f => rFilter(f) && routeMatches(f));
-
+        // Comptage par TRONÇON (escales incluses) desservant la ville choisie.
+        const _codeSet = {}; destCodes.forEach(c => { _codeSet[c] = 1; });
         const byCompany = {};
-        filtered.forEach(f => {
-            if (!f.company) return;
-            if (!byCompany[f.company]) byCompany[f.company] = { vols:0, pax:0 };
-            byCompany[f.company].vols++;
-            byCompany[f.company].pax += (+f.passengers||0) + (+f.babies||0);
+        all.forEach(f => {
+            if (!rFilter(f) || !f.company) return;
+            _troncons(f).forEach(t => {
+                if (!_codeSet[t.code]) return;
+                if (!byCompany[f.company]) byCompany[f.company] = { vols:0, pax:0 };
+                byCompany[f.company].vols++;
+                byCompany[f.company].pax += t.pax;
+            });
         });
         const sorted = Object.entries(byCompany).sort((a,b) => b[1].vols - a[1].vols);
 
