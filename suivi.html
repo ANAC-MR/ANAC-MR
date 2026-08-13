@@ -867,7 +867,8 @@ function buildDestOptions(){
   const cur=sel.value; const set=new Set();
   Object.values(_flightNumInfo).forEach(v=>{
     if(co && (v.company||'').toUpperCase()!==co) return;
-    [v.from, v.to].forEach(code=>{ const c=toIATA(code); if(c && c!=='NKC') set.add(c); });
+    // Inclure les escales : on peut chercher un tronçon vers une ville d'escale.
+    [v.from, v.to, v.stopover].forEach(code=>{ const c=toIATA(code); if(c && c!=='NKC') set.add(c); });
   });
   const dests=[...set].sort();
   sel.innerHTML='<option value="">Toutes</option>'+dests.map(c=>{
@@ -899,13 +900,29 @@ async function runSearch(){
   const vl=normFN(document.getElementById('sVol').value.trim());
   document.getElementById('suiviBody').innerHTML='<tr class="empty-row"><td colspan="9">Recherche…</td></tr>';
   const flights=await loadRange(du, au);
-  const res=flights.filter(f=>{
+  let res=flights.filter(f=>{
     if(co && !(f.company||'').toUpperCase().includes(co.toUpperCase())) return false;
-    if(dest && !(f.route||'').toUpperCase().split('-').includes(dest)) return false;
     if(rg && !((f.registration||'').toUpperCase().replace(/[\s.\-]/g,'').includes(rg))) return false;
     if(vl && !normFN(f.flightNumberRaw||'').includes(vl)) return false;
     return true;
   });
+  // ── Recherche par DESTINATION → on ne garde que le TRONÇON concerné (segment),
+  // avec ses PAX propres, au lieu du vol complet. Escales incluses.
+  if(dest){
+    const segs=[];
+    res.forEach(f=>{
+      suiviFlightLines(f).forEach(l=>{
+        const ends=(l.routeTxt||'').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+        if(ends.includes(dest)){
+          segs.push(Object.assign({}, f, {
+            route:l.routeTxt, passengers:l.pax, babies:l.babies,
+            _hasStop:false, _stop:'', _troncon:true
+          }));
+        }
+      });
+    });
+    res=segs;
+  }
   _weekFlights=res;
   renderTable(res); renderSummary(res);
   const crit=[];
