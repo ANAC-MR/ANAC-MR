@@ -478,7 +478,8 @@ document.addEventListener('keydown', e => {
       <div class="fld"><label>Du</label><input type="date" id="sDu"></div>
       <div class="fld"><label>Au</label><input type="date" id="sAu"></div>
       <div class="fld"><label>Compagnie</label><select id="sCo" onchange="buildDestOptions()"><option value="">Toutes</option></select></div>
-      <div class="fld"><label>Destination</label><select id="sRoute"><option value="">Toutes</option></select></div>
+      <div class="fld"><label>De</label><select id="sFrom"><option value="">Toutes</option></select></div>
+      <div class="fld"><label>À</label><select id="sTo"><option value="">Toutes</option></select></div>
       <div class="fld"><label>Immatriculation</label><input type="text" id="sReg" oninput="this.value=this.value.toUpperCase()"></div>
       <div class="fld"><label>N° de vol</label><input type="text" id="sVol" oninput="this.value=this.value.toUpperCase()"></div>
       <button class="btn btn-gold" onclick="runSearch()">Rechercher</button>
@@ -862,20 +863,24 @@ function populateSearchCompanies(){
 }
 // Remplit les destinations : celles de la compagnie choisie, ou toutes si aucune.
 function buildDestOptions(){
-  const sel=document.getElementById('sRoute'); if(!sel) return;
+  const selF=document.getElementById('sFrom'), selT=document.getElementById('sTo');
+  if(!selF || !selT) return;
   const co=(document.getElementById('sCo').value||'').trim().toUpperCase();
-  const cur=sel.value; const set=new Set();
+  const set=new Set(['NKC']);   // NKC (la base) doit rester sélectionnable comme De/À
   Object.values(_flightNumInfo).forEach(v=>{
     if(co && (v.company||'').toUpperCase()!==co) return;
-    // Inclure les escales : on peut chercher un tronçon vers une ville d'escale.
-    [v.from, v.to, v.stopover].forEach(code=>{ const c=toIATA(code); if(c && c!=='NKC') set.add(c); });
+    // Inclure les escales : on peut choisir un tronçon impliquant une ville d'escale.
+    [v.from, v.to, v.stopover].forEach(code=>{ const c=toIATA(code); if(c) set.add(c); });
   });
-  const dests=[...set].sort();
-  sel.innerHTML='<option value="">Toutes</option>'+dests.map(c=>{
+  const villes=[...set].sort();
+  const opts='<option value="">Toutes</option>'+villes.map(c=>{
     const nm=_iataName[c]?(' — '+_iataName[c]):'';
     return `<option value="${esc(c)}">${esc(c+nm)}</option>`;
   }).join('');
-  sel.value=(cur && dests.includes(cur))?cur:'';
+  const curF=selF.value, curT=selT.value;
+  selF.innerHTML=opts; selT.innerHTML=opts;
+  selF.value=(curF && villes.includes(curF))?curF:'';
+  selT.value=(curT && villes.includes(curT))?curT:'';
 }
 window.buildDestOptions=buildDestOptions;
 
@@ -895,7 +900,8 @@ async function runSearch(){
   if(!du || !au){ alert('Choisissez une période : Du et Au.'); return; }
   if(du>au){ alert('La date de début est postérieure à la date de fin.'); return; }
   const co=document.getElementById('sCo').value.trim();
-  const dest=document.getElementById('sRoute').value.trim().toUpperCase();
+  const deFrom=(document.getElementById('sFrom').value||'').trim().toUpperCase();
+  const deTo=(document.getElementById('sTo').value||'').trim().toUpperCase();
   const rg=document.getElementById('sReg').value.trim().toUpperCase().replace(/[\s.\-]/g,'');
   const vl=normFN(document.getElementById('sVol').value.trim());
   document.getElementById('suiviBody').innerHTML='<tr class="empty-row"><td colspan="9">Recherche…</td></tr>';
@@ -906,19 +912,21 @@ async function runSearch(){
     if(vl && !normFN(f.flightNumberRaw||'').includes(vl)) return false;
     return true;
   });
-  // ── Recherche par DESTINATION → on ne garde que le TRONÇON concerné (segment),
+  // ── Recherche par TRONÇON (De → À) → on ne garde que le segment concerné,
   // avec ses PAX propres, au lieu du vol complet. Escales incluses.
-  if(dest){
+  //   • De + À  → le tronçon exact (De→À)
+  //   • De seul → segments partant de De ; À seul → segments arrivant à À
+  // Une recherche par n° de vol garde le vol complet (pas de découpage).
+  if((deFrom || deTo) && !vl){
     const segs=[];
     res.forEach(f=>{
       suiviFlightLines(f).forEach(l=>{
-        const ends=(l.routeTxt||'').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
-        if(ends.includes(dest)){
-          segs.push(Object.assign({}, f, {
-            route:l.routeTxt, passengers:l.pax, babies:l.babies,
-            _hasStop:false, _stop:'', _troncon:true
-          }));
-        }
+        if(deFrom && (l.from||'').toUpperCase()!==deFrom) return;
+        if(deTo   && (l.to||'').toUpperCase()!==deTo)   return;
+        segs.push(Object.assign({}, f, {
+          route:l.routeTxt, passengers:l.pax, babies:l.babies,
+          _hasStop:false, _stop:'', _troncon:true
+        }));
       });
     });
     res=segs;
@@ -927,16 +935,17 @@ async function runSearch(){
   renderTable(res); renderSummary(res);
   const crit=[];
   if(co) crit.push('compagnie « '+co+' »');
-  if(dest) crit.push('destination « '+dest+' »');
+  if(deFrom || deTo) crit.push('tronçon « '+(deFrom||'…')+' → '+(deTo||'…')+' »');
   if(rg) crit.push('immat « '+rg+' »');
   if(vl) crit.push('vol « '+vl+' »');
+  const unite=((deFrom||deTo)&&!vl)?'tronçon(s)':'vol(s)';
   document.getElementById('weekLabel').textContent =
     'Recherche du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))
-    +(crit.length?' — '+crit.join(', '):'')+' · '+res.length+' vol(s)';
+    +(crit.length?' — '+crit.join(', '):'')+' · '+res.length+' '+unite;
 }
 
 function resetSearch(){
-  ['sCo','sRoute','sReg','sVol'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['sCo','sFrom','sTo','sReg','sVol'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   document.getElementById('searchPanel').classList.add('hidden');
   thisWeek();
 }
@@ -1033,7 +1042,7 @@ function suiviIsMAI(co){ const c=(co||'').toUpperCase(); return c.includes('MAUR
 // Renvoie un tableau de lignes {routeTxt, pax, babies, isMain, isMidLeg} en IATA.
 function suiviFlightLines(f){
   if(!f._hasStop || !suiviIsMAI(f.company) || !f._stop){
-    return [{ routeTxt:f.route, pax:f.passengers, babies:f.babies, isMain:true, isMidLeg:false }];
+    return [{ from:toIATA(f._from), to:toIATA(f._to), routeTxt:f.route, pax:f.passengers, babies:f.babies, isMain:true, isMidLeg:false }];
   }
   const dep=toIATA(f._from), stop=toIATA(f._stop), arr=toIATA(f._to);
   const paxStop=f._stopPax, babStop=f._stopBab;
@@ -1044,18 +1053,18 @@ function suiviFlightLines(f){
   if(isMauritanianAny(f._stop)){
     // Escale mauritanienne → 3 lignes : principale (dep-arr), dep-stop, stop-arr
     return [
-      { routeTxt:`${dep}-${arr}`,  pax:paxArr,  babies:babArr,  isMain:true,  isMidLeg:false },
-      { routeTxt:`${dep}-${stop}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false },
-      { routeTxt:`${stop}-${arr}`, pax:midPax,  babies:midBab,  isMain:false, isMidLeg:true  }
+      { from:dep,  to:arr,  routeTxt:`${dep}-${arr}`,  pax:paxArr,  babies:babArr,  isMain:true,  isMidLeg:false },
+      { from:dep,  to:stop, routeTxt:`${dep}-${stop}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false },
+      { from:stop, to:arr,  routeTxt:`${stop}-${arr}`, pax:midPax,  babies:midBab,  isMain:false, isMidLeg:true  }
     ];
   }
   // Escale étrangère → 2 lignes. Sens de la 2e ligne selon le type :
   //   DÉPART : NKC→escale (dep-stop) ; ARRIVÉE : escale→NKC (stop-arr)
   const sec = isArr
-    ? { routeTxt:`${stop}-${arr}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false }
-    : { routeTxt:`${dep}-${stop}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false };
+    ? { from:stop, to:arr,  routeTxt:`${stop}-${arr}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false }
+    : { from:dep,  to:stop, routeTxt:`${dep}-${stop}`, pax:paxStop, babies:babStop, isMain:false, isMidLeg:false };
   return [
-    { routeTxt:`${dep}-${arr}`, pax:paxArr, babies:babArr, isMain:true, isMidLeg:false },
+    { from:dep, to:arr, routeTxt:`${dep}-${arr}`, pax:paxArr, babies:babArr, isMain:true, isMidLeg:false },
     sec
   ];
 }
