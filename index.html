@@ -1661,6 +1661,30 @@ function getDestCity(f){
     return to||from||null;
 }
 
+// ── Tronçons desservis par un vol (escales incluses) ──
+// Renvoie, pour chaque segment reliant NKC à une autre ville, la ville
+// (hors NKC), les PAX de CE segment, le sens (DEP/ARR) et si c'est une escale.
+// Un vol NKC→NDB→OUZ produit donc 2 entrées : NDB (escale) et OUZ (final).
+function _troncons(f){
+    const gen = window.generateFlightLines;
+    const lines = gen ? gen(f) : [{from:f.from,to:f.to,passengers:f.passengers,babies:f.babies,isVirtual:false}];
+    const out = [];
+    lines.forEach(l=>{
+        const fNk = isNKC(l.from), tNk = isNKC(l.to);
+        if (fNk === tNk) return;                 // NKC→NKC (anomalie) ou segment interne sans NKC → ignorer
+        const code = fNk ? l.to : l.from;        // le côté hors NKC
+        if (!code) return;
+        out.push({
+            code, city: cityName(code),
+            pax: (+l.passengers||0) + (+l.babies||0),
+            babies: (+l.babies||0),
+            dir: fNk ? 'DEP' : 'ARR',
+            isEscale: !!l.isVirtual
+        });
+    });
+    return out;
+}
+
 function getFlights(){
   const all = window.appFlights||[];
   // Charter Flights exclus des diagrammes/rapports sauf si la case est cochée.
@@ -3128,7 +3152,8 @@ function refreshCharts(){
 
     const pax=flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
     const comp=new Set(flt.map(f=>f.company).filter(Boolean));
-    const dest=new Set(flt.map(f=>cityName(getDestCity(f)||'')).filter(d=>d&&d!=='Nouakchott'&&d!==''&&d!=='undefined'));
+    const dest=new Set();
+    flt.forEach(f=>_troncons(f).forEach(t=>{ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined') dest.add(t.city); }));
     const babies=flt.reduce((s,f)=>s+(+f.babies||0),0);
 
     document.getElementById('kpi-vols').textContent=flt.length.toLocaleString('fr-FR');
@@ -3204,16 +3229,20 @@ function refreshCharts(){
 function renderDestCards(flt){
     const dc={};
     flt.forEach(f=>{
-        const dest=getDestCity(f);
-        if(!dest)return;
-        const city=cityName(dest);
-        if(!dc[city])dc[city]={vols:0,pax:0,companies:{}};
-        dc[city].vols++;
-        dc[city].pax+=(+f.passengers||0)+(+f.babies||0);
         const co=f.company||'?';
-        if(!dc[city].companies[co])dc[city].companies[co]={vols:0,pax:0};
-        dc[city].companies[co].vols++;
-        dc[city].companies[co].pax+=(+f.passengers||0)+(+f.babies||0);
+        // Compter chaque tronçon (escales incluses) et non la seule destination finale.
+        _troncons(f).forEach(t=>{
+            const city=t.city;
+            if(!city||city==='Nouakchott'||city===''||city==='undefined')return;
+            if(!dc[city])dc[city]={vols:0,pax:0,dep:{vols:0,pax:0},arr:{vols:0,pax:0},asEscale:0,asFinal:0,companies:{}};
+            const b=dc[city];
+            b.vols++; b.pax+=t.pax;
+            const dk=t.dir==='ARR'?'arr':'dep';
+            b[dk].vols++; b[dk].pax+=t.pax;
+            if(t.isEscale)b.asEscale++; else b.asFinal++;
+            if(!b.companies[co])b.companies[co]={vols:0,pax:0,dep:0,arr:0};
+            b.companies[co].vols++; b.companies[co].pax+=t.pax; b.companies[co][dk]++;
+        });
     });
     const sorted=Object.entries(dc).sort((a,b)=>b[1].vols-a[1].vols).slice(0,16);
     if(!sorted.length){
@@ -3254,21 +3283,36 @@ window.showDestDetail=function(idx,cardEl){
     const maxV=(sorted[0]&&sorted[0][1])?sorted[0][1].vols||1:1,total=sorted.reduce((s,[,v])=>s+v.vols,0);
     const detail=document.getElementById('destDetail');
     detail.style.display='';
+    const avg=total?Math.round(info.pax/total):0;
+    const _n=x=>x.toLocaleString('fr-FR');
+    const stat=(lbl,val,sub,col)=>`<div style="flex:1;min-width:110px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:9px 12px;">
+        <div style="font-size:10px;color:#5A7A9A;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">${lbl}</div>
+        <div style="font-size:17px;font-weight:800;color:${col||'#e2e8f0'};">${val}</div>
+        <div style="font-size:10px;color:#5A7A9A;margin-top:1px;">${sub}</div></div>`;
     detail.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div><span style="font-size:15px;font-weight:800;color:#e2e8f0;">${esc(city)}</span>
-        <span style="font-size:12px;color:#5A7A9A;margin-left:10px;">${total} vols · ${info.pax.toLocaleString('fr-FR')} pax</span></div>
+        <span style="font-size:12px;color:#5A7A9A;margin-left:10px;">${total} vols · ${_n(info.pax)} pax · ${avg} pax/vol</span></div>
         <button onclick="document.getElementById('destDetail').style.display='none';document.querySelectorAll('.dest-card').forEach(c=>{c.classList.remove('dc-active');c.style.borderColor='rgba(255,255,255,.08)';c.style.background='rgba(255,255,255,.04)';})"
             style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">✕</button>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        ${stat('Départs NKC→', _n(info.dep.vols)+' vols', _n(info.dep.pax)+' pax', '#4A9EFF')}
+        ${stat('Arrivées →NKC', _n(info.arr.vols)+' vols', _n(info.arr.pax)+' pax', '#2DD4A0')}
+        ${stat('Destination finale', _n(info.asFinal), 'fois', '#D4AF37')}
+        ${stat('En escale', _n(info.asEscale), 'fois', '#FF9F43')}
+    </div>
+    <div style="font-size:11px;color:#5A7A9A;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Compagnies desservant ${esc(city)}</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
     ${sorted.map(([co,s],i)=>{
         const color=PALETTE[i%PALETTE.length],share=Math.round(s.vols/total*100),pct=Math.round(s.vols/maxV*100);
         return `<div style="background:rgba(255,255,255,.03);border-radius:9px;padding:10px 14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                 <span style="font-size:13px;font-weight:600;color:#e2e8f0;">${esc(co)}</span>
-                <div style="display:flex;gap:10px;">
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <span style="font-size:11px;color:#4A9EFF;">${s.dep||0} dép</span>
+                    <span style="font-size:11px;color:#2DD4A0;">${s.arr||0} arr</span>
                     <span style="font-size:13px;font-weight:700;color:${color};">${s.vols} vol${s.vols>1?'s':''}</span>
-                    <span style="font-size:11px;color:#5A7A9A;">${s.pax.toLocaleString('fr-FR')} pax</span>
+                    <span style="font-size:11px;color:#5A7A9A;">${_n(s.pax)} pax</span>
                     <span style="font-size:11px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:4px;color:#94a3b8;">${share}%</span>
                 </div>
             </div>
@@ -3301,12 +3345,14 @@ function populateRouteSelect(flights) {
     // Grouper par ville de destination (sans NKC), sans afficher le nombre de vols
     const dests = {};
     flights.forEach(f => {
-        const destCode = getDestCity(f);
-        if (!destCode) return;
-        const city = cityName(destCode);
-        if (!dests[city]) dests[city] = { codes: new Set(), count: 0 };
-        dests[city].codes.add(destCode);
-        dests[city].count++;
+        // Inclure les villes d'escale (tronçons), pas seulement la destination finale.
+        _troncons(f).forEach(t => {
+            const city = t.city;
+            if (!city || city === 'Nouakchott' || city === '' || city === 'undefined') return;
+            if (!dests[city]) dests[city] = { codes: new Set(), count: 0 };
+            dests[city].codes.add(t.code);
+            dests[city].count++;
+        });
     });
     const routeSel = document.getElementById('routeFilter');
     const cur = routeSel.value;
@@ -3482,36 +3528,40 @@ function runRouteComparison() {
     var destCodes = route.split('|');
     var destCity  = cityName(destCodes[0]);
 
-    var all = getFlights().filter(function(f) {
-        if (!f.date) return false;
+    // Chaque « hit » = un tronçon d'un vol qui dessert la ville choisie (escales incluses).
+    var codeSet = {}; destCodes.forEach(function(c){ codeSet[c]=1; });
+    var hits = [];
+    getFlights().forEach(function(f) {
+        if (!f.date) return;
         var ds = f.date.slice(0,10);
         var d  = new Date(f.date);
-        if (dateDeb && ds < dateDeb) return false;
-        if (dateFin && ds > dateFin) return false;
+        if (dateDeb && ds < dateDeb) return;
+        if (dateFin && ds > dateFin) return;
         if (!dateDeb && !dateFin) {
-            if (year  !== 'ALL' && d.getFullYear() !== +year)  return false;
-            if (month !== 'ALL' && d.getMonth()    !== +month) return false;
+            if (year  !== 'ALL' && d.getFullYear() !== +year)  return;
+            if (month !== 'ALL' && d.getMonth()    !== +month) return;
         }
-        var dc = getDestCity(f);
-        return dc && destCodes.includes(dc);
+        _troncons(f).forEach(function(t){ if (codeSet[t.code]) hits.push({ f:f, t:t }); });
     });
 
-    if (!all.length) {
+    if (!hits.length) {
         res.innerHTML = '<span style="color:#5A7A9A;">Aucun vol sur ce trajet pour la période sélectionnée</span>';
         return;
     }
 
+    var all = hits;   // le reste du code raisonne sur le nombre de tronçons
+
     // Déterminer si la période couvre plusieurs mois
-    var months = new Set(all.map(function(f){ return new Date(f.date).getMonth(); }));
+    var months = new Set(hits.map(function(h){ return new Date(h.f.date).getMonth(); }));
     var isMultiMonth = months.size > 1;
 
-    // Construire les stats par compagnie
+    // Construire les stats par compagnie (par tronçon)
     var byComp = {};
-    all.forEach(function(f) {
-        if (!f.company) return;
+    hits.forEach(function(h) {
+        var f = h.f; if (!f.company) return;
         if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0, byMonth:Array(12).fill(0) };
         byComp[f.company].vols++;
-        byComp[f.company].pax += (+f.passengers||0) + (+f.babies||0);
+        byComp[f.company].pax += h.t.pax;
         byComp[f.company].byMonth[new Date(f.date).getMonth()]++;
     });
 
@@ -3597,8 +3647,8 @@ function runRouteComparison() {
             });
             var datasetsPax = sorted.map(function(entry, i) {
                 var paxData = Array(12).fill(0);
-                all.filter(function(f){return f.company===entry[0];}).forEach(function(f){
-                    if(f.date) paxData[new Date(f.date).getMonth()] += (+f.passengers||0)+(+f.babies||0);
+                hits.filter(function(h){return h.f.company===entry[0];}).forEach(function(h){
+                    if(h.f.date) paxData[new Date(h.f.date).getMonth()] += h.t.pax;
                 });
                 return {
                     label: entry[0].length>18 ? entry[0].slice(0,18)+'…' : entry[0],
