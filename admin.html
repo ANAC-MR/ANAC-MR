@@ -967,6 +967,9 @@ document.addEventListener('keydown', e => {
             <div class="nav-item" onclick="showSection('fret')" data-section="fret">
                 <span class="icon">FR</span> FRET
             </div>
+            <div class="nav-item" onclick="showSection('audit')" data-section="audit">
+                <span class="icon">AU</span> Audit données
+            </div>
         </nav>
 
         <!-- Main Content -->
@@ -1519,6 +1522,56 @@ document.addEventListener('keydown', e => {
                             <tbody id="fretDetailBody"></tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <!-- ─── AUDIT DONNÉES ─── -->
+            <div class="section-page" id="section-audit">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <h2>Audit des données</h2>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn-secondary" id="auditExportBtn" onclick="_auditExport()" style="display:none;">↓ Exporter</button>
+                        <button class="btn-primary" onclick="_auditRun()">Lancer l'audit</button>
+                    </div>
+                </div>
+
+                <div style="font-size:12px;color:#5a6572;margin-bottom:12px;">
+                    Compare chaque vol à son <b>numéro de vol</b> (registre Numéros de Vol) et signale les incohérences :
+                    départ = arrivée (NKC→NKC), <b>type</b> (départ/arrivée) contraire au registre, et <b>destination</b>
+                    différente de celle du numéro. Le registre fait foi.
+                </div>
+
+                <div style="display:flex;gap:16px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#1b2430;cursor:pointer;">
+                        <input type="checkbox" id="auditIgnoreCharter" checked onchange="_auditRender()" style="width:14px;height:14px;accent-color:#D4AF37;">
+                        Ignorer les vols charter
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#1b2430;cursor:pointer;">
+                        <input type="checkbox" id="auditShowUnknown" onchange="_auditRender()" style="width:14px;height:14px;accent-color:#D4AF37;">
+                        Inclure les numéros inconnus au registre
+                    </label>
+                    <span id="auditSummary" style="font-size:13px;font-weight:600;color:#5a6572;"></span>
+                </div>
+
+                <div class="card" style="padding:0;overflow:auto;max-height:62vh;">
+                    <table class="fn-table" style="font-size:12px;">
+                        <thead>
+                            <tr style="background:rgba(20,48,79,0.04);">
+                                <th style="padding:9px 12px;width:100px;">Date</th>
+                                <th style="padding:9px 12px;width:80px;">N° vol</th>
+                                <th style="padding:9px 12px;">Compagnie</th>
+                                <th style="padding:9px 12px;width:110px;">Route (vol)</th>
+                                <th style="padding:9px 12px;width:70px;">Type</th>
+                                <th style="padding:9px 12px;">Anomalie</th>
+                                <th style="padding:9px 12px;width:90px;">Source</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditBody">
+                            <tr><td colspan="7" style="text-align:center;padding:40px;color:#5a6572;">Cliquez sur « Lancer l'audit ».</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -6783,6 +6836,136 @@ window._fretApplyImport = async function(){
     showNotif('Erreur pendant l’import : '+(e.message||e),'error');
     btn.disabled=false; btn.textContent='Appliquer';
   }
+};
+
+// ════════════════════════════════════════════════════════════
+// AUDIT DES DONNÉES — conformité vol ↔ numéro de vol
+// Lecture seule (flights + flight_numbers) : securité-neutre.
+// ════════════════════════════════════════════════════════════
+let _auditAll=[];   // vols porteurs d'au moins une anomalie (ou numéro inconnu)
+
+const _AUDIT_NKC=new Set(['GQNO','GQNN','NKC','NOUAKCHOTT']);
+function _auditIsNkc(c){ return !!c && _AUDIT_NKC.has(String(c).toUpperCase().trim()); }
+function _auditType(t){ const s=String(t||'').toUpperCase(); return s.startsWith('A')?'ARR':(s.startsWith('D')?'DEP':''); }
+// Ville non-NKC (en IATA) d'un couple from/to.
+function _auditCity(from,to){
+  const F=_fretIata(from), T=_fretIata(to);
+  if(_auditIsNkc(from)||F==='NKC') return T;
+  if(_auditIsNkc(to)  ||T==='NKC') return F;
+  return T||F;
+}
+
+window._auditRun = async function(){
+  const body=document.getElementById('auditBody');
+  if(body) body.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;color:#5a6572;">Analyse en cours…</td></tr>';
+  try{
+    await _fretLoadConfigs();
+    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const [flSnap, fnSnap] = await Promise.all([
+      getDocs(collection(window._db,'flights')),
+      getDocs(collection(window._db,'flight_numbers'))
+    ]);
+    // Registre : numéro canonique → {from,to,type} normalisés en IATA.
+    const reg={};
+    fnSnap.forEach(d=>{ const x=d.data(); const k=_fretCanon(x.number||x.flightNumber||''); if(!k) return;
+      reg[k]={ from:_fretIata(x.from), to:_fretIata(x.to), type:_auditType(x.type) }; });
+
+    _auditAll=[];
+    flSnap.forEach(d=>{
+      if(d.id.startsWith('cfg-')) return;
+      const f=d.data(); if(!f.flightNumber && !f.date) return;
+      const canon=_fretCanon(f.flightNumber||'');
+      const aType=_auditType(f.type);
+      const r=reg[canon];
+      const issues=[];
+      let unknown=false;
+
+      if(_auditIsNkc(f.from) && _auditIsNkc(f.to)) issues.push('NKC→NKC (départ = arrivée)');
+
+      if(!r){ unknown=true; }
+      else {
+        if(r.type && aType && r.type!==aType) issues.push('Type '+aType+' au lieu de '+r.type+' (registre)');
+        // Destination : compare la ville (hors NKC) du vol à celle du numéro.
+        if(!(_auditIsNkc(f.from) && _auditIsNkc(f.to))){
+          const rCity = (_auditIsNkc(r.from)||r.from==='NKC') ? r.to
+                      : ((_auditIsNkc(r.to)||r.to==='NKC') ? r.from : (r.to||r.from));
+          const aCity = _auditCity(f.from,f.to);
+          if(rCity && aCity && rCity!==aCity) issues.push('Destination '+aCity+' au lieu de '+rCity+' (registre)');
+        }
+      }
+
+      if(issues.length || unknown){
+        _auditAll.push({
+          date:f.date||'', vol:f.flightNumber||'', co:f.company||'',
+          from:_fretIata(f.from), to:_fretIata(f.to), type:aType||(f.type||''),
+          source:f.source||'', isCharter:!!f.isCharter, id:d.id,
+          issues, unknown
+        });
+      }
+    });
+    document.getElementById('auditExportBtn').style.display='';
+    _auditRender();
+  }catch(e){
+    if(body) body.innerHTML='<tr><td colspan="7" style="color:#b3362b;padding:14px;">Erreur : '+esc(e.message||String(e))+'</td></tr>';
+  }
+};
+
+function _auditVisible(){
+  const ignoreCharter=(document.getElementById('auditIgnoreCharter')||{}).checked;
+  const showUnknown=(document.getElementById('auditShowUnknown')||{}).checked;
+  let rows=_auditAll.filter(a=> a.issues.length>0 || (showUnknown && a.unknown));
+  if(ignoreCharter) rows=rows.filter(a=>!a.isCharter);
+  return rows;
+}
+
+window._auditRender = function(){
+  const body=document.getElementById('auditBody');
+  if(!body) return;
+  const rows=_auditVisible();
+  // Compteurs par catégorie.
+  const cN=rows.filter(a=>a.issues.some(i=>i.startsWith('NKC'))).length;
+  const cT=rows.filter(a=>a.issues.some(i=>i.startsWith('Type'))).length;
+  const cD=rows.filter(a=>a.issues.some(i=>i.startsWith('Destination'))).length;
+  const cU=rows.filter(a=>a.issues.length===0 && a.unknown).length;
+  const sum=document.getElementById('auditSummary');
+  if(sum) sum.innerHTML = rows.length+' à vérifier — '+
+    `<span style="color:#b3362b;">${cN} NKC→NKC</span> · `+
+    `<span style="color:#b45309;">${cT} type</span> · `+
+    `<span style="color:#8a5a00;">${cD} destination</span>`+
+    (cU?` · <span style="color:#5a6572;">${cU} n° inconnu</span>`:'');
+  if(!rows.length){
+    body.innerHTML='<tr><td colspan="7" style="text-align:center;padding:40px;color:#15803d;">Aucune anomalie détectée.</td></tr>';
+    return;
+  }
+  rows.sort((a,b)=> String(a.date).localeCompare(String(b.date)) || String(a.vol).localeCompare(String(b.vol)));
+  body.innerHTML=rows.map(a=>{
+    const issueTxt = a.issues.length ? a.issues.join(' ; ') : 'Numéro inconnu au registre';
+    const chip = a.isCharter ? ' <span style="font-size:10px;background:#fce4ec;color:#a03a5f;border-radius:4px;padding:1px 5px;">charter</span>' : '';
+    return `<tr>
+      <td style="padding:8px 12px;">${esc(a.date)}</td>
+      <td style="padding:8px 12px;font-weight:600;">${esc(a.vol)}</td>
+      <td style="padding:8px 12px;">${esc(a.co)}${chip}</td>
+      <td style="padding:8px 12px;">${esc((a.from||'?')+' → '+(a.to||'?'))}</td>
+      <td style="padding:8px 12px;">${esc(a.type||'')}</td>
+      <td style="padding:8px 12px;color:#b3362b;">${esc(issueTxt)}</td>
+      <td style="padding:8px 12px;color:#5a6572;">${esc(a.source||'')}</td>
+    </tr>`;
+  }).join('');
+};
+
+window._auditExport = function(){
+  const rows=_auditVisible();
+  if(!rows.length){ showNotif('Rien à exporter','error'); return; }
+  if(typeof XLSX==='undefined'){ showNotif('Bibliothèque Excel non chargée','error'); return; }
+  const aoa=[['Date','N° vol','Compagnie','From','To','Type','Anomalie','Charter','Source','ID']];
+  rows.forEach(a=>aoa.push([a.date,a.vol,a.co,a.from,a.to,a.type,
+    (a.issues.length?a.issues.join(' ; '):'Numéro inconnu au registre'),
+    a.isCharter?'oui':'', a.source, a.id]));
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:12},{wch:10},{wch:20},{wch:8},{wch:8},{wch:7},{wch:44},{wch:8},{wch:12},{wch:22}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Anomalies');
+  XLSX.writeFile(wb, 'Audit_anomalies_vols.xlsx');
 };
 </script>
 
