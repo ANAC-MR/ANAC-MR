@@ -534,7 +534,7 @@ document.addEventListener('keydown', e => {
 <!-- ═══════════ LOGIQUE STATISTIQUES PAR COMPAGNIE ═══════════ -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, onSnapshot, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, onSnapshot, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const FB_CONFIG = {
   apiKey:"AIzaSyCHzrNNRL1MrBCCqxc-1wso9gcBwBztO40",
@@ -545,7 +545,9 @@ const FB_CONFIG = {
   appId:"1:906668222910:web:19d92b627f155bd2dbb1ef"
 };
 const app = initializeApp(FB_CONFIG);
-const db = getFirestore(app);
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch(_e){ db = getFirestore(app); }   // repli si cache indisponible
 
 const MOIS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
 const MOIS_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];

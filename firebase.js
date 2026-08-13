@@ -17,7 +17,7 @@ const firebaseConfig = {
 // FIREBASE SERVICES INITIALIZATION
 // ============================================
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, where, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // Initialize Firebase
 let app;
@@ -40,7 +40,15 @@ async function initializeFirebase() {
         // Initialize Firebase app
         app = initializeApp(firebaseConfig);
         window._fbApp = app;   // exposé pour la ré-authentification du listener
-        db = getFirestore(app);
+        // Cache local persistant (IndexedDB) : les visites suivantes s'affichent
+        // instantanément et Firestore ne re-télécharge que les vols modifiés.
+        // Repli automatique si le cache est indisponible (navigation privée,
+        // multi-onglets non supporté, instance déjà créée) → aucun risque.
+        try {
+            db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+        } catch(_cacheErr) {
+            db = getFirestore(app);
+        }
         window.db = db; // Exposé globalement pour autoFill etc.
         flightsCollection = collection(db, 'flights');
 
