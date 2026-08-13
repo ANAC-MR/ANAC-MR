@@ -1453,18 +1453,23 @@ document.addEventListener('keydown', e => {
                 </div>
 
                 <!-- Filtres -->
-                <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-                    <label style="font-size:12px;color:#5a6572;font-weight:600;">De</label>
-                    <input type="month" id="fretMonthFrom" onchange="_fretRefresh()"
-                        style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;">
-                    <label style="font-size:12px;color:#5a6572;font-weight:600;">à</label>
-                    <input type="month" id="fretMonthTo" onchange="_fretRefresh()"
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+                    <label style="font-size:12px;color:#5a6572;font-weight:600;">Mois</label>
+                    <input type="month" id="fretMonth" onchange="_fretRefresh()"
                         style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;">
                     <select id="fretCompanyFilter" onchange="_fretRefresh()"
                         style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;min-width:220px;">
                         <option value="">Toutes les compagnies</option>
                     </select>
                     <span id="fretCount" style="font-size:12px;color:#5a6572;"></span>
+                </div>
+
+                <!-- Filtre multi-mois (cases à cocher) : quand au moins un mois est coché,
+                     il prend le pas sur le sélecteur "Mois" ci-dessus. Année = celle du sélecteur "Mois". -->
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;background:#f7f9fb;border:1px solid #e6eaef;border-radius:8px;padding:8px 12px;">
+                    <span style="font-size:12px;color:#5a6572;font-weight:600;">Plusieurs mois (année <b id="fretYearLbl">—</b>) :</span>
+                    <div id="fretMonthChecks" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
+                    <button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="_fretClearMonths()">Tout décocher</button>
                 </div>
 
                 <!-- Vue synthèse (par compagnie) -->
@@ -6412,22 +6417,29 @@ function _fretRoute(f){
 function _fretIsArr(t){ return String(t||'').toUpperCase().startsWith('A'); }
 function _fretKg(n){ return (Number(n)||0).toLocaleString('fr-FR'); }
 
+// Détermine la liste des mois 'AAAA-MM' à afficher :
+//  • si des cases mois sont cochées → ces mois, dans l'année du sélecteur "Mois" ;
+//  • sinon → le seul mois du sélecteur "Mois".
+function _fretSelectedMonths(){
+  const inp=(document.getElementById('fretMonth')||{}).value||'';
+  const year=inp ? inp.slice(0,4) : String(new Date().getFullYear());
+  const checked=[...document.querySelectorAll('.fretMonthCb:checked')].map(c=>c.value);
+  if(checked.length) return checked.map(mm=>year+'-'+mm).sort();
+  return inp ? [inp] : [];
+}
+
 async function _fretLoad(){
-  let mf=(document.getElementById('fretMonthFrom')||{}).value||'';
-  let mt=(document.getElementById('fretMonthTo')||{}).value||'';
   _fretFlights=[];
-  // Un seul mois renseigné → on prend celui-là pour les deux bornes.
-  if(!mf && mt) mf=mt;
-  if(!mt && mf) mt=mf;
-  if(!mf) return;
-  // Ordre : si De > À, on inverse pour rester cohérent.
-  if(mf>mt){ const t=mf; mf=mt; mt=t; }
-  const start=mf+'-01', end=mt+'-31';
+  const months=_fretSelectedMonths();
+  if(!months.length) return;
+  const set=new Set(months);
+  const start=months[0]+'-01', end=months[months.length-1]+'-31';
   const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
   const snap=await getDocs(query(collection(window._db,'flights'),
       where('date','>=',start), where('date','<=',end)));
+  // Une seule requête (plage min→max), puis filtre sur les mois réellement cochés.
   _fretFlights=snap.docs.map(d=>({id:d.id,...d.data()}))
-      .filter(f=>f.fret!=null && f.fret!=='');
+      .filter(f=>f.fret!=null && f.fret!=='' && set.has(String(f.date||'').slice(0,7)));
 }
 
 function _fretFillCompanies(){
@@ -6440,19 +6452,41 @@ function _fretFillCompanies(){
   if(cur) sel.value=cur;
 }
 
+const _FRET_MOIS=['Janv','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+function _fretBuildMonthChecks(){
+  const box=document.getElementById('fretMonthChecks');
+  if(!box || box.dataset.built) return;
+  box.innerHTML=_FRET_MOIS.map((lbl,i)=>{
+    const mm=String(i+1).padStart(2,'0');
+    return `<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#1b2430;cursor:pointer;">
+      <input type="checkbox" class="fretMonthCb" value="${mm}" onchange="_fretRefresh()" style="width:14px;height:14px;accent-color:#D4AF37;cursor:pointer;">${lbl}</label>`;
+  }).join('');
+  box.dataset.built='1';
+}
+function _fretUpdateYearLbl(){
+  const inp=(document.getElementById('fretMonth')||{}).value||'';
+  const y=inp ? inp.slice(0,4) : String(new Date().getFullYear());
+  const el=document.getElementById('fretYearLbl'); if(el) el.textContent=y;
+}
+window._fretClearMonths = function(){
+  document.querySelectorAll('.fretMonthCb:checked').forEach(c=>c.checked=false);
+  _fretRefresh();
+};
+
 window._fretInit = async function(){
   const now=new Date();
   const cur=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  const mfrom=document.getElementById('fretMonthFrom');
-  const mto=document.getElementById('fretMonthTo');
-  if(mfrom && !mfrom.value) mfrom.value=cur;
-  if(mto && !mto.value) mto.value=cur;
+  const mel=document.getElementById('fretMonth');
+  if(mel && !mel.value) mel.value=cur;
+  _fretBuildMonthChecks();
+  _fretUpdateYearLbl();
   await _fretLoadConfigs();
   _fretFillCompanies();
   await _fretRefresh();
 };
 
 window._fretRefresh = async function(){
+  _fretUpdateYearLbl();
   try{
     await _fretLoad();
   }catch(e){
