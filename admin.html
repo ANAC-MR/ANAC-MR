@@ -1453,23 +1453,32 @@ document.addEventListener('keydown', e => {
                 </div>
 
                 <!-- Filtres -->
-                <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+                <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
                     <label style="font-size:12px;color:#5a6572;font-weight:600;">Mois</label>
                     <input type="month" id="fretMonth" onchange="_fretRefresh()"
                         style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;">
+
+                    <!-- Liste déroulante multi-mois : quand au moins un mois est coché, elle prend
+                         le pas sur le sélecteur "Mois". Année = celle du sélecteur "Mois". -->
+                    <div style="position:relative;" id="fretMonthDdWrap">
+                        <button type="button" id="fretMonthDdBtn" onclick="_fretToggleMonthDd(event)"
+                            style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;cursor:pointer;min-width:180px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <span id="fretMonthDdLabel">Plusieurs mois…</span><span style="color:#5a6572;">▾</span>
+                        </button>
+                        <div id="fretMonthDdPanel" style="display:none;position:absolute;z-index:50;top:calc(100% + 4px);left:0;background:#fff;border:1px solid #cdd5df;border-radius:8px;box-shadow:0 8px 24px rgba(15,30,61,0.18);padding:10px;min-width:220px;">
+                            <div style="font-size:11px;color:#5a6572;font-weight:600;margin-bottom:8px;">Année <b id="fretYearLbl">—</b></div>
+                            <div id="fretMonthChecks" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;"></div>
+                            <div style="border-top:1px solid #eef1f5;margin-top:8px;padding-top:8px;text-align:right;">
+                                <button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="_fretClearMonths()">Tout décocher</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <select id="fretCompanyFilter" onchange="_fretRefresh()"
                         style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;min-width:220px;">
                         <option value="">Toutes les compagnies</option>
                     </select>
                     <span id="fretCount" style="font-size:12px;color:#5a6572;"></span>
-                </div>
-
-                <!-- Filtre multi-mois (cases à cocher) : quand au moins un mois est coché,
-                     il prend le pas sur le sélecteur "Mois" ci-dessus. Année = celle du sélecteur "Mois". -->
-                <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;background:#f7f9fb;border:1px solid #e6eaef;border-radius:8px;padding:8px 12px;">
-                    <span style="font-size:12px;color:#5a6572;font-weight:600;">Plusieurs mois (année <b id="fretYearLbl">—</b>) :</span>
-                    <div id="fretMonthChecks" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
-                    <button class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="_fretClearMonths()">Tout décocher</button>
                 </div>
 
                 <!-- Vue synthèse (par compagnie) -->
@@ -6472,6 +6481,25 @@ window._fretClearMonths = function(){
   document.querySelectorAll('.fretMonthCb:checked').forEach(c=>c.checked=false);
   _fretRefresh();
 };
+window._fretToggleMonthDd = function(ev){
+  if(ev) ev.stopPropagation();
+  const p=document.getElementById('fretMonthDdPanel');
+  if(p) p.style.display = (p.style.display==='none' || !p.style.display) ? 'block' : 'none';
+};
+// Fermer la liste déroulante au clic en dehors.
+document.addEventListener('click', function(e){
+  const wrap=document.getElementById('fretMonthDdWrap');
+  const p=document.getElementById('fretMonthDdPanel');
+  if(p && wrap && p.style.display==='block' && !wrap.contains(e.target)) p.style.display='none';
+});
+function _fretUpdateMonthDdLabel(){
+  const el=document.getElementById('fretMonthDdLabel'); if(!el) return;
+  const checked=[...document.querySelectorAll('.fretMonthCb:checked')].map(c=>+c.value).sort((a,b)=>a-b);
+  if(!checked.length){ el.textContent='Plusieurs mois…'; return; }
+  el.textContent = checked.length<=3
+    ? checked.map(i=>_FRET_MOIS[i-1]).join(', ')
+    : (checked.length+' mois sélectionnés');
+}
 
 window._fretInit = async function(){
   const now=new Date();
@@ -6487,6 +6515,7 @@ window._fretInit = async function(){
 
 window._fretRefresh = async function(){
   _fretUpdateYearLbl();
+  _fretUpdateMonthDdLabel();
   try{
     await _fretLoad();
   }catch(e){
