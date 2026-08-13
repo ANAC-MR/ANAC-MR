@@ -1431,10 +1431,17 @@ async function dedupAndEnrich(list) {
     const paxPrev = Number(pPrev.totalPax || 0) > 0;
 
     let keep;
-    if (paxNew && !paxPrev)      keep = em;     // le nouveau a les PAX
+    const isLdmNew  = (em.type   || '').toUpperCase() === 'LDM';
+    const isLdmPrev = (prev.type || '').toUpperCase() === 'LDM';
+    if (isLdmNew !== isLdmPrev) {
+      // PRIORITÉ ABSOLUE au LDM sur le MVT pour un même vol (date+numéro).
+      // Le LDM porte les PAX et le fret : il fait toujours foi face à un MVT.
+      keep = isLdmNew ? em : prev;
+    }
+    else if (paxNew && !paxPrev)      keep = em;     // le nouveau a les PAX
     else if (!paxNew && paxPrev) keep = prev;   // l'ancien a les PAX
     else {
-      // Les deux ont (ou n'ont pas) les PAX → garder le plus récent.
+      // Même type, PAX équivalents → garder le plus récent.
       const tNew  = Number(em._ts   || 0);
       const tPrev = Number(prev._ts || 0);
       keep = (tNew >= tPrev) ? em : prev;
