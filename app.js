@@ -1762,14 +1762,21 @@ function filterFlights() {
             return false;
         }
         
-        // From airport filter
-        if (fromFilter !== 'ALL' && flight.from !== fromFilter) {
-            return false;
-        }
-        
-        // To airport filter
-        if (toFilter !== 'ALL' && flight.to !== toFilter) {
-            return false;
+        // Filtre De / Vers — par TRONÇON (segment), escales incluses.
+        // Un vol NKC→NDB→OUZ contient les tronçons NKC→NDB et NDB→OUZ :
+        // il est trouvé aussi bien par "De: NDB / Vers: OUZ" que par la route complète.
+        if (fromFilter !== 'ALL' || toFilter !== 'ALL') {
+            const _st = (flight.hasStopover || flight.stopover) ? flight.stopover : '';
+            const legs = _st ? [[flight.from, _st], [_st, flight.to]] : [[flight.from, flight.to]];
+            let _ok;
+            if (fromFilter !== 'ALL' && toFilter !== 'ALL') {
+                _ok = legs.some(l => l[0] === fromFilter && l[1] === toFilter);   // tronçon exact
+            } else if (fromFilter !== 'ALL') {
+                _ok = legs.some(l => l[0] === fromFilter);                        // départ d'un tronçon
+            } else {
+                _ok = legs.some(l => l[1] === toFilter);                         // arrivée d'un tronçon
+            }
+            if (!_ok) return false;
         }
         
         // Date range filter
