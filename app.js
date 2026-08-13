@@ -1813,7 +1813,9 @@ function filterFlights() {
     // que le(s) segment(s) demandé(s), avec LEURS propres PAX/bébés (pas ceux du vol
     // complet). generateFlightLines fournit le découpage par segment (vols MAI à
     // escale) ; pour un vol direct, le segment = le vol lui-même.
-    if ((fromFilter !== 'ALL' || toFilter !== 'ALL') && typeof generateFlightLines === 'function') {
+    // EXCEPTION : une recherche par NUMÉRO DE VOL montre toujours le vol COMPLET
+    // (le total), même si un filtre De/Vers est encore actif → pas de découpage.
+    if (!volFilter && (fromFilter !== 'ALL' || toFilter !== 'ALL') && typeof generateFlightLines === 'function') {
         const _seg = (l) =>
             (fromFilter === 'ALL' || l.from === fromFilter) &&
             (toFilter   === 'ALL' || l.to   === toFilter);
