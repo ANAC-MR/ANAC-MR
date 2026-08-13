@@ -1445,7 +1445,11 @@ document.addEventListener('keydown', e => {
                     <div class="page-header-left">
                         <h2>FRET (kg)</h2>
                     </div>
-                    <button class="btn-primary" onclick="_fretOpenAdd()">+ Ajouter fret</button>
+                    <div style="display:flex;gap:8px;">
+                        <input type="file" id="fretImportFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="_fretReadFile(this)">
+                        <button class="btn-secondary" onclick="document.getElementById('fretImportFile').click()">↑ Importer Excel</button>
+                        <button class="btn-primary" onclick="_fretOpenAdd()">+ Ajouter fret</button>
+                    </div>
                 </div>
 
                 <!-- Filtres -->
@@ -1594,6 +1598,38 @@ document.addEventListener('keydown', e => {
         <div class="modal-footer">
             <button class="btn-secondary" onclick="closeModal('fretAddModal')">Annuler</button>
             <button class="btn-primary" onclick="_fretSaveAdd()">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Import Fret (Excel) -->
+<div class="modal-overlay" id="fretImportModal">
+    <div class="modal-box" style="max-width:720px;max-height:90vh;overflow-y:auto;">
+        <div class="modal-header">
+            <h3>Importer du fret depuis Excel</h3>
+            <button class="modal-close" onclick="closeModal('fretImportModal')">×</button>
+        </div>
+        <div style="font-size:12px;color:#5a6572;margin-bottom:10px;">
+            Colonnes attendues : <b>Date</b>, <b>N° vol</b>, <b>Fret</b> (kg). Le fret est appliqué aux vols
+            déjà enregistrés (correspondance date + numéro de vol). Les vols non trouvés sont listés et ignorés.
+        </div>
+        <div id="fretImportSummary" style="font-size:13px;font-weight:600;margin-bottom:8px;"></div>
+        <div class="card" style="padding:0;overflow:auto;max-height:46vh;">
+            <table class="fn-table" style="font-size:12px;">
+                <thead>
+                    <tr style="background:rgba(20,48,79,0.04);">
+                        <th style="padding:8px 12px;width:110px;">Date</th>
+                        <th style="padding:8px 12px;width:100px;">N° vol</th>
+                        <th style="padding:8px 12px;width:90px;text-align:right;">Fret (kg)</th>
+                        <th style="padding:8px 12px;">Statut</th>
+                    </tr>
+                </thead>
+                <tbody id="fretImportBody"></tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal('fretImportModal')">Annuler</button>
+            <button class="btn-primary" id="fretImportApplyBtn" onclick="_fretApplyImport()">Appliquer</button>
         </div>
     </div>
 </div>
@@ -6520,6 +6556,152 @@ window._fretSaveAdd = async function(){
     await _fretRefresh();
   }catch(e){
     showNotif('Erreur: '+(e.message||e),'error');
+  }
+};
+
+// ── Import Excel (colonnes Date · N° vol · Fret) ──────────────
+let _fretImportRows = [];   // [{date, fnRaw, canon, kg, matchId, status}]
+
+function _fretPad2(n){ return String(n).padStart(2,'0'); }
+// Normalise une valeur de date (objet Date, série Excel, ou texte) → 'AAAA-MM-JJ'.
+function _fretNormDate(v){
+  if(v==null || v==='') return '';
+  if(v instanceof Date && !isNaN(v.getTime())){
+    return v.getFullYear()+'-'+_fretPad2(v.getMonth()+1)+'-'+_fretPad2(v.getDate());
+  }
+  const s=String(v).trim();
+  let m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);         // AAAA-MM-JJ
+  if(m) return m[1]+'-'+_fretPad2(m[2])+'-'+_fretPad2(m[3]);
+  m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/);            // JJ/MM/AAAA
+  if(m) return m[3]+'-'+_fretPad2(m[2])+'-'+_fretPad2(m[1]);
+  m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2})$/);            // JJ/MM/AA
+  if(m) return '20'+m[3]+'-'+_fretPad2(m[2])+'-'+_fretPad2(m[1]);
+  const n=parseFloat(s);                                          // série Excel
+  if(!isNaN(n) && n>20000 && n<80000 && window.XLSX && XLSX.SSF && XLSX.SSF.parse_date_code){
+    const dc=XLSX.SSF.parse_date_code(n);
+    if(dc && dc.y) return dc.y+'-'+_fretPad2(dc.m)+'-'+_fretPad2(dc.d);
+  }
+  return '';
+}
+// Repère la colonne (date / vol / fret) dans une ligne d'en-tête.
+function _fretColIdx(cells, kind){
+  for(let i=0;i<cells.length;i++){
+    const h=String(cells[i]==null?'':cells[i]).toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(!h) continue;
+    if(kind==='date' && /(DATE|JOUR)/.test(h)) return i;
+    if(kind==='vol'  && /(VOL|FLIGHT|NVOL|NUMVOL|NUMEROVOL)/.test(h)) return i;
+    if(kind==='fret' && /(FRET|CARGO|POIDS|^KG$|KG$)/.test(h)) return i;
+  }
+  return -1;
+}
+
+window._fretReadFile = async function(input){
+  const file = input && input.files && input.files[0];
+  input.value=''; // permet de réimporter le même fichier
+  if(!file) return;
+  if(typeof XLSX==='undefined'){ showNotif('Bibliothèque Excel non chargée, réessayez','error'); return; }
+  try{
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(new Uint8Array(buf), { type:'array', cellDates:true });
+    const rows = [];
+    (wb.SheetNames||[]).forEach(name=>{
+      const ws = wb.Sheets[name];
+      if(!ws) return;
+      const grid = XLSX.utils.sheet_to_json(ws, { header:1, defval:'', raw:true });
+      // Trouver la ligne d'en-tête (contient Date + Vol + Fret)
+      let hIdx=-1, cD=-1, cV=-1, cF=-1;
+      for(let r=0; r<Math.min(grid.length,8); r++){
+        const d=_fretColIdx(grid[r],'date'), v=_fretColIdx(grid[r],'vol'), f=_fretColIdx(grid[r],'fret');
+        if(d>=0 && v>=0 && f>=0){ hIdx=r; cD=d; cV=v; cF=f; break; }
+      }
+      let dataStart, di, vi, fi;
+      if(hIdx>=0){ dataStart=hIdx+1; di=cD; vi=cV; fi=cF; }
+      else if(grid.length && (grid[0]||[]).length>=3){ dataStart=0; di=0; vi=1; fi=2; } // sans en-tête : Date, Vol, Fret
+      else return;
+      for(let r=dataStart; r<grid.length; r++){
+        const row=grid[r]||[];
+        const date=_fretNormDate(row[di]);
+        const fnRaw=String(row[vi]==null?'':row[vi]).trim();
+        const kgRaw=String(row[fi]==null?'':row[fi]).replace(',','.').replace(/[^\d.]/g,'');
+        if(!date && !fnRaw && kgRaw==='') continue;   // ligne vide → ignorée
+        const kg=parseInt(parseFloat(kgRaw),10);
+        rows.push({ date, fnRaw, canon:_fretCanon(fnRaw), kg:(isNaN(kg)?null:kg) });
+      }
+    });
+    if(!rows.length){ showNotif('Aucune ligne exploitable. Vérifiez les colonnes Date, N° vol, Fret.','error'); return; }
+    await _fretMatchImport(rows);
+  }catch(e){
+    showNotif('Lecture Excel impossible : '+(e.message||e),'error');
+  }
+};
+
+// Rapproche chaque ligne d'un vol existant (date + numéro canonique).
+async function _fretMatchImport(rows){
+  const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  const dates=[...new Set(rows.map(r=>r.date).filter(Boolean))];
+  const byDate={};
+  for(const d of dates){
+    const snap=await getDocs(query(collection(window._db,'flights'), where('date','==',d)));
+    byDate[d]=snap.docs.map(x=>({ id:x.id, canon:_fretCanon((x.data().flightNumber)||'') }));
+  }
+  rows.forEach(r=>{
+    if(!r.date || !r.canon){ r.status='invalid'; r.matchId=null; return; }
+    if(r.kg==null){ r.status='nofret'; r.matchId=null; return; }
+    const hit=(byDate[r.date]||[]).find(f=>f.canon===r.canon);
+    if(hit){ r.status='ok'; r.matchId=hit.id; }
+    else { r.status='notfound'; r.matchId=null; }
+  });
+  _fretImportRows=rows;
+  _fretRenderImportPreview();
+}
+
+function _fretRenderImportPreview(){
+  const rows=_fretImportRows;
+  const ok=rows.filter(r=>r.status==='ok').length;
+  const nf=rows.filter(r=>r.status==='notfound').length;
+  const bad=rows.filter(r=>r.status==='invalid'||r.status==='nofret').length;
+  const sum=document.getElementById('fretImportSummary');
+  sum.innerHTML = `<span style="color:#15803d;">${ok} vol(s) à mettre à jour</span>`+
+    (nf?` · <span style="color:#b45309;">${nf} non trouvé(s)</span>`:'')+
+    (bad?` · <span style="color:#b3362b;">${bad} ligne(s) invalide(s)</span>`:'');
+  const badge={
+    ok:'<span style="color:#15803d;font-weight:600;">✓ vol trouvé</span>',
+    notfound:'<span style="color:#b45309;">✗ vol introuvable</span>',
+    invalid:'<span style="color:#b3362b;">date ou n° vol illisible</span>',
+    nofret:'<span style="color:#b3362b;">fret manquant</span>'
+  };
+  document.getElementById('fretImportBody').innerHTML = rows.map(r=>`<tr>
+      <td style="padding:7px 12px;">${esc(r.date||'—')}</td>
+      <td style="padding:7px 12px;font-weight:600;">${esc(r.fnRaw||'—')}</td>
+      <td style="padding:7px 12px;text-align:right;">${r.kg==null?'—':_fretKg(r.kg)}</td>
+      <td style="padding:7px 12px;">${badge[r.status]||''}</td>
+    </tr>`).join('');
+  const btn=document.getElementById('fretImportApplyBtn');
+  btn.disabled = ok===0;
+  btn.style.opacity = ok===0 ? '0.5' : '';
+  btn.textContent = ok>0 ? ('Appliquer ('+ok+')') : 'Appliquer';
+  openModal('fretImportModal');
+}
+
+window._fretApplyImport = async function(){
+  const todo=_fretImportRows.filter(r=>r.status==='ok' && r.matchId);
+  if(!todo.length){ showNotif('Aucune ligne à appliquer','error'); return; }
+  const btn=document.getElementById('fretImportApplyBtn');
+  btn.disabled=true; btn.textContent='Application…';
+  try{
+    const { updateDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const stamp=new Date().toISOString();
+    let done=0;
+    for(const r of todo){
+      await updateDoc(doc(window._db,'flights',r.matchId), { fret:r.kg, fretUpdatedAt:stamp });
+      done++;
+    }
+    closeModal('fretImportModal');
+    showNotif(done+' vol(s) mis à jour avec le fret','success');
+    await _fretRefresh();
+  }catch(e){
+    showNotif('Erreur pendant l’import : '+(e.message||e),'error');
+    btn.disabled=false; btn.textContent='Appliquer';
   }
 };
 </script>
