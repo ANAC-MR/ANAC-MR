@@ -1454,7 +1454,11 @@ document.addEventListener('keydown', e => {
 
                 <!-- Filtres -->
                 <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
-                    <input type="month" id="fretMonth" onchange="_fretRefresh()"
+                    <label style="font-size:12px;color:#5a6572;font-weight:600;">De</label>
+                    <input type="month" id="fretMonthFrom" onchange="_fretRefresh()"
+                        style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;">
+                    <label style="font-size:12px;color:#5a6572;font-weight:600;">à</label>
+                    <input type="month" id="fretMonthTo" onchange="_fretRefresh()"
                         style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;">
                     <select id="fretCompanyFilter" onchange="_fretRefresh()"
                         style="background:#ffffff;border:1px solid #b9c2cc;border-radius:3px;padding:7px 12px;color:#1b2430;font-size:13px;min-width:220px;">
@@ -6409,10 +6413,16 @@ function _fretIsArr(t){ return String(t||'').toUpperCase().startsWith('A'); }
 function _fretKg(n){ return (Number(n)||0).toLocaleString('fr-FR'); }
 
 async function _fretLoad(){
-  const m=(document.getElementById('fretMonth')||{}).value||'';
+  let mf=(document.getElementById('fretMonthFrom')||{}).value||'';
+  let mt=(document.getElementById('fretMonthTo')||{}).value||'';
   _fretFlights=[];
-  if(!m) return;
-  const start=m+'-01', end=m+'-31';
+  // Un seul mois renseigné → on prend celui-là pour les deux bornes.
+  if(!mf && mt) mf=mt;
+  if(!mt && mf) mt=mf;
+  if(!mf) return;
+  // Ordre : si De > À, on inverse pour rester cohérent.
+  if(mf>mt){ const t=mf; mf=mt; mt=t; }
+  const start=mf+'-01', end=mt+'-31';
   const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
   const snap=await getDocs(query(collection(window._db,'flights'),
       where('date','>=',start), where('date','<=',end)));
@@ -6431,11 +6441,12 @@ function _fretFillCompanies(){
 }
 
 window._fretInit = async function(){
-  const mel=document.getElementById('fretMonth');
-  if(mel && !mel.value){
-    const now=new Date();
-    mel.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  }
+  const now=new Date();
+  const cur=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const mfrom=document.getElementById('fretMonthFrom');
+  const mto=document.getElementById('fretMonthTo');
+  if(mfrom && !mfrom.value) mfrom.value=cur;
+  if(mto && !mto.value) mto.value=cur;
   await _fretLoadConfigs();
   _fretFillCompanies();
   await _fretRefresh();
