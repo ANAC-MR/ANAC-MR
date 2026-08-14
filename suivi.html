@@ -76,6 +76,8 @@ tbody td{padding:8px 9px;border:1px solid var(--border);text-align:center;color:
 .cap-empty{color:var(--red);font-style:italic;font-size:11px;}
 .rate-cell{font-weight:700;font-family:var(--mono);}
 .rate-hi{color:var(--green);} .rate-mid{color:var(--gold);} .rate-lo{color:var(--red);}
+/* Taux >= 100% : avertissement (badge rouge plein), a l'ecran uniquement. */
+.rate-over{color:#fff;background:var(--red);padding:2px 7px;border-radius:6px;}
 tbody tr:hover td{background:rgba(255,255,255,0.02);}
 /* ── Permission manage_aircraft absente : gestion des immatriculations masquée ── */
 body.no-manage-aircraft #acFormPanel,
@@ -1107,7 +1109,7 @@ function sortFlights(a,b){
   return (a.flightNumberRaw||a.flightNumber).localeCompare(b.flightNumberRaw||b.flightNumber);
 }
 
-function rateClass(r){ if(r==null) return ''; if(r>=0.75) return 'rate-hi'; if(r>=0.5) return 'rate-mid'; return 'rate-lo'; }
+function rateClass(r){ if(r==null) return ''; if(r>=1) return 'rate-over'; if(r>=0.75) return 'rate-hi'; if(r>=0.5) return 'rate-mid'; return 'rate-lo'; }
 
 // ── Charter Flights (vols MAI hors programme régulier) ──
 // Coloration basée sur le champ isCharter du vol. Migration douce : les anciens
@@ -1252,7 +1254,7 @@ function renderSummary(flights){
     const coColor=companyColor(co);
     const dot=coColor?`<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#${coColor};margin-right:7px;vertical-align:middle;"></span>`:'';
     const rateTxt=avg!=null?(avg*100).toFixed(1)+'%':'—';
-    const rateCls=avg==null?'':(avg>=0.75?'rate-hi':(avg>=0.5?'rate-mid':'rate-lo'));
+    const rateCls=avg==null?'':(avg>=1?'rate-over':(avg>=0.75?'rate-hi':(avg>=0.5?'rate-mid':'rate-lo')));
     rows+=`<tr>
       <td style="text-align:left;">${dot}${esc(co)}</td>
       <td>${d.vols}</td>
