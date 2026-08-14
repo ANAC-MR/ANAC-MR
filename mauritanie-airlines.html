@@ -1259,7 +1259,7 @@ const coll = collection(db, 'flights');
     renderAll();
   }, err => {
     console.error('Firebase error:', err);
-    document.getElementById('domTableWrap').innerHTML = '<div class="empty-state"><h3>Erreur de chargement</h3><p>'+err.message+'</p></div>';
+    document.getElementById('domTableWrap').innerHTML = '<div class="empty-state"><h3>Erreur de chargement des données</h3><p>Vérifiez votre connexion internet, puis rechargez la page.</p><button onclick="location.reload()" style="margin-top:12px;padding:8px 16px;background:#0f1e3d;color:#D4AF37;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-family:inherit;">↻ Recharger</button></div>';
     document.getElementById('intTableWrap').innerHTML = '';
   });
 })();

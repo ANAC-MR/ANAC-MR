@@ -405,6 +405,7 @@ function startRealtimeListener() {
                 }, 2500);
             } else {
                 showNotification('Erreur de synchronisation des données — actualisez la page', 'error');
+                _showFlightsError();
             }
         });
         
@@ -417,6 +418,23 @@ function startRealtimeListener() {
         if (_rtRetries <= 10) setTimeout(startRealtimeListener, 2500);
     }
 }
+
+// État d'erreur visible dans le tableau des vols (après échec des reconnexions).
+function _showFlightsError() {
+    const body = document.getElementById('flightTableBody');
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#b3362b;">'
+        + '<div style="font-weight:700;margin-bottom:6px;">Impossible de charger les vols</div>'
+        + '<div style="font-size:13px;color:#5a6572;margin-bottom:12px;">Vérifiez votre connexion internet, puis réessayez.</div>'
+        + '<button onclick="window._retryFlights && window._retryFlights()" style="padding:8px 16px;background:#14304f;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit;">↻ Réessayer</button>'
+        + '</td></tr>';
+}
+window._retryFlights = function() {
+    _rtRetries = 0;
+    const body = document.getElementById('flightTableBody');
+    if (body) body.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:30px;color:#5a6572;">Reconnexion…</td></tr>';
+    startRealtimeListener();
+};
 
 /**
  * Stop real-time listener
