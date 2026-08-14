@@ -2526,6 +2526,12 @@ async function importFlight(i, force) {
       if (_info.company) finalCo = _info.company;
     }
     const _finalCompany = finalCo || detectCompany(fn);
+    // ── Garde-fou : refuser un vol NKC → NKC (départ = arrivée) ──
+    const _NKC_ICAO = ['GQNO','GQNN'];
+    if (_NKC_ICAO.includes((finalFrom||'').toUpperCase()) && _NKC_ICAO.includes((finalTo||'').toUpperCase())) {
+      alert('Vol non importé : départ et arrivée identiques (Nouakchott → Nouakchott). Vérifiez le trajet du vol '+_canonFN(fn)+'.');
+      return;
+    }
     // Charter Flight (MAI uniquement) — case à cocher de la carte
     const _isCharter = !!(_escaleIsMAI(_finalCompany) && _charterChecked);
     await addDoc(collection(db,'flights'), {

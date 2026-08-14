@@ -963,7 +963,39 @@ function validateForm() {
             isValid = false;
         }
     }
-    
+
+    // ── Garde-fou de conformité (vol ↔ numéro de vol) ──
+    // Bloque les incohérences que l'on retrouve sinon dans l'Audit.
+    const _NKC = ['GQNO','GQNN','NKC','NOUAKCHOTT'];
+    const _isNkc = c => _NKC.includes((c||'').toUpperCase().trim());
+    const _from = (elements.fFrom.value||'').toUpperCase().trim();
+    const _to   = (elements.fTo.value||'').toUpperCase().trim();
+    const _type = (elements.fType.value||'').toUpperCase();
+    // 1) Départ = arrivée (NKC → NKC) : impossible.
+    if (_from && _to && _isNkc(_from) && _isNkc(_to)) {
+        showFieldError(elements.fTo, 'Départ et arrivée identiques (Nouakchott → Nouakchott) : impossible.');
+        isValid = false;
+    }
+    // 2) Conformité au numéro de vol enregistré (le registre fait foi).
+    const _reg = (window._flightNumCache||{})[fNum];
+    if (_reg) {
+        const _rType = (_reg.type||'').toUpperCase();
+        if (_rType && _type && _rType !== _type) {
+            showFieldError(elements.fType,
+                `Ce numéro est enregistré comme ${_rType==='ARR'?'Arrivée':'Départ'} (Numéros de vol). Corrigez le type ou le numéro.`);
+            isValid = false;
+        }
+        // Destination (ville hors NKC) : doit correspondre au numéro enregistré.
+        const _cityOf = (a,b) => _isNkc(a) ? b : (_isNkc(b) ? a : (b||a));
+        const _rCity = _cityOf(_reg.from, _reg.to);
+        const _fCity = _cityOf(_from, _to);
+        if (_rCity && _fCity && !_isNkc(_rCity) && !_isNkc(_fCity) && _rCity !== _fCity) {
+            showFieldError(elements.fTo,
+                `Destination incohérente avec le numéro de vol (attendu ${_rCity}). Corrigez le trajet ou le numéro.`);
+            isValid = false;
+        }
+    }
+
     return isValid;
 }
 
