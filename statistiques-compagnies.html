@@ -531,6 +531,8 @@ document.addEventListener('keydown', e => {
 });
 </script>
 
+<!-- Référentiel géographique partagé (source de vérité) -->
+<script src="anac-geo.js"></script>
 <!-- ═══════════ LOGIQUE STATISTIQUES PAR COMPAGNIE ═══════════ -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -551,23 +553,15 @@ catch(_e){ db = getFirestore(app); }   // repli si cache indisponible
 
 const MOIS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
 const MOIS_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const MA_NAMES = ['mauritania airlines','mauritanie airlines','l6','mauritania airlines international','mai','mauritania'];
-const MR_IATA = ['NKC','NDB','OUZ','ATR','KFA','SEY','TIY','AJJ','KED','EMN','AEO','LEG','BGH','MOM','THT','TMD','OTL'];
+// Référentiel partagé (anac-geo.js) — plus de duplication des listes/tests.
+const MA_NAMES = window.ANAC_GEO.MA_NAMES;
+const MR_IATA  = window.ANAC_GEO.MR_IATA;
 
 let allFlights = [];
 let currentYear = null;
 
-function isMauritanieAirport(code){
-  if(!code) return false;
-  const c = code.toUpperCase().trim();
-  if (c.startsWith('GQ')) return true;
-  return MR_IATA.includes(c);
-}
-function isMauritanieAirlines(company){
-  if(!company) return false;
-  const c = company.toLowerCase().trim();
-  return MA_NAMES.some(n => c === n || c.includes(n));
-}
+const isMauritanieAirport  = window.ANAC_GEO.isMauritanieAirport;
+const isMauritanieAirlines = window.ANAC_GEO.isMauritanieAirlines;
 // Nom de compagnie canonique pour l'affichage (fusionne les variantes de casse).
 function canonCompany(raw){
   const v = (raw==null?'':String(raw)).trim();

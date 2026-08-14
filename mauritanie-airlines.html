@@ -499,6 +499,8 @@ document.addEventListener('keydown', e => {
 
 </div>
 
+<!-- Référentiel géographique partagé (source de vérité) -->
+<script src="anac-geo.js"></script>
 <script type="module">
 // ══════════════════════════════════════════════════════════════════
 // MAURITANIE AIRLINES — Tableau croisé PAX par destination
@@ -563,8 +565,8 @@ const CITY_NAMES = {
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 
-// Noms possibles pour Mauritanie Airlines
-const MA_NAMES = ['mauritania airlines','mauritanie airlines','l6','mauritania airlines international','mai','mauritania'];
+// Noms possibles pour Mauritanie Airlines — référentiel partagé (anac-geo.js)
+const MA_NAMES = window.ANAC_GEO.MA_NAMES;
 
 // ══════════════════════════════════════════════════════════════════
 // ETAT
@@ -580,20 +582,10 @@ function cityName(code){
   return CITY_NAMES[upper] || upper;
 }
 
-// Codes IATA des aéroports mauritaniens (leurs ICAO commencent par GQ)
-const MR_IATA = ['NKC','NDB','OUZ','ATR','KFA','SEY','TIY','AJJ','KED','EMN','AEO','LEG','BGH','MOM','THT','TMD','OTL'];
-function isMauritanieAirport(code){
-  if(!code) return false;
-  const c = code.toUpperCase().trim();
-  if (c.startsWith('GQ')) return true;      // ICAO mauritanien
-  return MR_IATA.includes(c);               // IATA mauritanien (ex: NDB)
-}
-
-function isMauritanieAirlines(company){
-  if(!company) return false;
-  const c = company.toLowerCase().trim();
-  return MA_NAMES.some(n => c === n || c.includes(n));
-}
+// Codes/tests mauritaniens — référentiel partagé (anac-geo.js)
+const MR_IATA = window.ANAC_GEO.MR_IATA;
+const isMauritanieAirport  = window.ANAC_GEO.isMauritanieAirport;
+const isMauritanieAirlines = window.ANAC_GEO.isMauritanieAirlines;
 
 // ── Charter Flights (vols MAI hors programme régulier) ──
 // Comptage basé sur le champ isCharter. Migration douce : les anciens vols
