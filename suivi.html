@@ -7,6 +7,7 @@
 <title>Suivi Hebdomadaire du Trafic — ANAC Mauritanie</title>
 <link rel="icon" type="image/png" href="assets/ANAC-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -478,6 +479,7 @@ document.addEventListener('keydown', e => {
       </div>
       <div class="tb-group">
         <button class="btn" onclick="toggleSearch()">Recherche</button>
+        <button class="btn" onclick="toggleCompare()">Comparer</button>
       </div>
       <div class="spacer"></div>
       <button class="btn btn-gold" id="exportBtn" data-perm="export_flights" onclick="exportExcel()">↓ Télécharger Excel</button>
@@ -495,18 +497,26 @@ document.addEventListener('keydown', e => {
       <button class="btn" onclick="resetSearch()">Réinitialiser</button>
     </div>
 
-    <!-- Comparaison de deux numéros de vol (section Recherche uniquement) -->
-    <div id="cmpVolPanel" class="srch hidden" style="flex-direction:column;align-items:stretch;">
+    <!-- ══════════ SECTION COMPARER (séparée de la Recherche) ══════════ -->
+    <div id="comparePanel" class="srch hidden" style="flex-direction:column;align-items:stretch;">
       <div style="font-weight:700;color:var(--gold);font-size:13px;letter-spacing:.03em;text-transform:uppercase;">Comparer deux numéros de vol</div>
-      <div style="font-size:11px;color:var(--dim);margin:-4px 0 6px;">Sur la période « Du / Au » ci-dessus. Choisissez la compagnie, puis les deux vols.</div>
+      <div style="font-size:11px;color:var(--dim);margin:-4px 0 8px;">Choisissez une période, puis un vol A et un vol B (compagnies différentes autorisées).</div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
-        <div class="fld"><label>Compagnie</label><select id="cmpCo" onchange="cmpBuildVolOptions()"><option value="">Choisir…</option></select></div>
-        <div class="fld"><label>Vol A</label><select id="cmpVolA"><option value="">—</option></select></div>
-        <div class="fld"><label>Vol B</label><select id="cmpVolB"><option value="">—</option></select></div>
+        <div class="fld"><label>Du</label><input type="date" id="cDu"></div>
+        <div class="fld"><label>Au</label><input type="date" id="cAu"></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:10px;">
+        <div class="fld"><label><span style="color:#D4AF37;">●</span> Compagnie A</label><select id="cCoA" onchange="cmpBuildVolOptions('A')"><option value="">Choisir…</option></select></div>
+        <div class="fld"><label>Vol A</label><select id="cVolA"><option value="">—</option></select></div>
+        <div class="fld"><label><span style="color:#4A9EFF;">●</span> Compagnie B</label><select id="cCoB" onchange="cmpBuildVolOptions('B')"><option value="">Choisir…</option></select></div>
+        <div class="fld"><label>Vol B</label><select id="cVolB"><option value="">—</option></select></div>
         <button class="btn btn-gold" onclick="runVolCompare()">Comparer</button>
       </div>
-      <div id="cmpVolResult" style="margin-top:14px;"></div>
+      <div id="cmpVolResult" style="margin-top:16px;"></div>
     </div>
+
+    <!-- Graphiques de la recherche (remplis après une recherche) -->
+    <div id="searchCharts" style="margin-bottom:14px;"></div>
 
     <div class="rep-head">
       <div class="rep-title">SUIVI HEBDOMADAIRE DU TRAFIC AÉRIEN</div>
@@ -813,6 +823,9 @@ function scheduleFor(flightNumber, dateStr){
 // ── Chargement des vols de la période (début libre + 7 jours) ──
 async function loadWeek(startStr){
   const body=document.getElementById('suiviBody');
+  // Vue hebdomadaire : on retire les graphiques propres à la Recherche.
+  if(typeof _searchDestroyCharts==='function') _searchDestroyCharts();
+  const _sc=document.getElementById('searchCharts'); if(_sc) _sc.innerHTML='';
   body.innerHTML='<tr class="empty-row"><td colspan="9"><span class="spin"></span> Chargement des vols…</td></tr>';
   const start=parseDateInput(startStr);
   if(!start){ body.innerHTML='<tr class="empty-row"><td colspan="9">Date invalide</td></tr>'; return; }
@@ -910,108 +923,146 @@ function toggleSearch(){
   const p=document.getElementById('searchPanel');
   const opening=p.classList.contains('hidden');
   p.classList.toggle('hidden');
-  const cp=document.getElementById('cmpVolPanel');
-  if(cp) cp.classList.toggle('hidden', !opening);
   if(opening){
-    populateSearchCompanies(); buildDestOptions(); cmpPopulateCompanies();
+    populateSearchCompanies(); buildDestOptions();
     const s=document.getElementById('startPicker').value;
     if(s && !document.getElementById('sDu').value) document.getElementById('sDu').value=s;
   }
 }
 
-// ── Comparaison de deux numéros de vol (section Recherche uniquement) ──
-function cmpPopulateCompanies(){
-  const sel=document.getElementById('cmpCo'); if(!sel) return;
-  const cur=sel.value;
-  const list=(_airlines&&_airlines.length)?_airlines.slice().sort((a,b)=>a.localeCompare(b,'fr')):[];
-  sel.innerHTML='<option value="">Choisir…</option>'+list.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
-  if(cur) sel.value=cur;
+// ══════════ SECTION COMPARER (séparée) ══════════
+function toggleCompare(){
+  const p=document.getElementById('comparePanel');
+  const opening=p.classList.contains('hidden');
+  p.classList.toggle('hidden');
+  if(opening){
+    cmpPopulateCompanies();
+    const s=document.getElementById('startPicker').value;
+    if(s && !document.getElementById('cDu').value) document.getElementById('cDu').value=s;
+  }
 }
-window.cmpBuildVolOptions=function(){
-  const co=(document.getElementById('cmpCo').value||'').trim().toUpperCase();
+window.toggleCompare=toggleCompare;
+
+function cmpPopulateCompanies(){
+  const list=(_airlines&&_airlines.length)?_airlines.slice().sort((a,b)=>a.localeCompare(b,'fr')):[];
+  ['cCoA','cCoB'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Choisir…</option>'+list.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    if(cur) sel.value=cur;
+  });
+}
+window.cmpBuildVolOptions=function(side){
+  const coSel=document.getElementById(side==='B'?'cCoB':'cCoA');
+  const volSel=document.getElementById(side==='B'?'cVolB':'cVolA');
+  if(!coSel||!volSel) return;
+  const co=(coSel.value||'').trim().toUpperCase();
   const nums=Object.keys(_flightNumInfo).filter(k=>{
-    const v=_flightNumInfo[k]; return co ? (v.company||'').toUpperCase()===co : true;
+    const v=_flightNumInfo[k]; return co ? (v.company||'').toUpperCase()===co : false;
   }).sort();
-  const opts='<option value="">—</option>'+nums.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
-  const a=document.getElementById('cmpVolA'), b=document.getElementById('cmpVolB');
-  const ca=a.value, cb=b.value;
-  a.innerHTML=opts; b.innerHTML=opts;
-  if(nums.includes(ca)) a.value=ca;
-  if(nums.includes(cb)) b.value=cb;
+  const cur=volSel.value;
+  volSel.innerHTML='<option value="">—</option>'+nums.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(nums.includes(cur)) volSel.value=cur;
 };
+
+function _cmpStat(flights, vn){
+  const key=normFN(vn);
+  const list=flights.filter(f=>normFN(f.flightNumberRaw||f.flightNumber||'')===key);
+  let pax=0, rateSum=0, rateN=0; const byDate={};
+  list.forEach(f=>{
+    const p=(Number(f.passengers)||0)+(Number(f.babies)||0);
+    pax+=p; byDate[f.date]=(byDate[f.date]||0)+p;
+    if(f.capacity>0){ rateSum+=p/f.capacity; rateN++; }
+  });
+  return { n:list.length, pax, avg:list.length?Math.round(pax/list.length):0, rate:rateN?rateSum/rateN:null, byDate };
+}
+
 window.runVolCompare=async function(){
-  const du=document.getElementById('sDu').value, au=document.getElementById('sAu').value;
-  if(!du||!au){ alert('Choisissez d’abord la période (Du / Au) en haut.'); return; }
+  const du=document.getElementById('cDu').value, au=document.getElementById('cAu').value;
+  if(!du||!au){ alert('Choisissez la période (Du / Au).'); return; }
   if(du>au){ alert('La date de début est postérieure à la date de fin.'); return; }
-  const va=(document.getElementById('cmpVolA').value||'').trim();
-  const vb=(document.getElementById('cmpVolB').value||'').trim();
+  const va=(document.getElementById('cVolA').value||'').trim();
+  const vb=(document.getElementById('cVolB').value||'').trim();
   if(!va||!vb){ alert('Choisissez les deux numéros de vol.'); return; }
-  if(normFN(va)===normFN(vb)){ alert('Choisissez deux numéros différents.'); return; }
   const box=document.getElementById('cmpVolResult');
   box.innerHTML='<div style="color:var(--dim);padding:10px;">Calcul…</div>';
   const flights=await loadRange(du,au);
-  const stat=(vn)=>{
-    const key=normFN(vn);
-    const list=flights.filter(f=>normFN(f.flightNumberRaw||f.flightNumber||'')===key);
-    let pax=0, rateSum=0, rateN=0; const byDate={};
-    list.forEach(f=>{
-      const p=(Number(f.passengers)||0)+(Number(f.babies)||0);
-      pax+=p; byDate[f.date]=(byDate[f.date]||0)+p;
-      if(f.capacity>0){ rateSum+=p/f.capacity; rateN++; }
-    });
-    return { n:list.length, pax, avg:list.length?Math.round(pax/list.length):0, rate:rateN?rateSum/rateN:null, byDate };
-  };
-  _cmpRender(va, vb, stat(va), stat(vb));
+  _cmpRender(va, vb, _cmpStat(flights,va), _cmpStat(flights,vb));
 };
+
+let _cmpCharts={};
+function _cmpDestroy(){ Object.values(_cmpCharts).forEach(c=>{try{c.destroy();}catch(e){}}); _cmpCharts={}; }
+
 function _cmpRender(va,vb,A,B){
   const box=document.getElementById('cmpVolResult');
   const cA='#D4AF37', cB='#4A9EFF';
-  const n=v=>(Number(v)||0).toLocaleString('fr-FR');
-  const pctf=v=>v==null?'—':(v*100).toFixed(1)+'%';
+  _cmpDestroy();
   if(!A.n && !B.n){ box.innerHTML='<div style="color:var(--dim);padding:10px;">Aucun vol pour ces deux numéros sur la période.</div>'; return; }
-  const legend=(c,txt,st)=>`<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text);"><span style="width:12px;height:12px;border-radius:3px;background:${c};display:inline-block;"></span>${esc(txt)} <span style="color:var(--dim);">(${st.n} vol${st.n>1?'s':''})</span></span>`;
-  const bar=(val,max,color)=>{const w=(max>0&&val!=null)?Math.round(val/max*100):0;return `<div style="flex:1;background:rgba(255,255,255,.06);border-radius:5px;height:14px;overflow:hidden;"><div style="height:100%;width:${w}%;background:${color};"></div></div>`;};
-  const kpis=[
-    {lbl:'Nombre de vols', a:A.n, b:B.n, fmt:n},
-    {lbl:'PAX total', a:A.pax, b:B.pax, fmt:n},
-    {lbl:'PAX moyen par vol', a:A.avg, b:B.avg, fmt:n},
-    {lbl:'Taux de remplissage moyen', a:A.rate, b:B.rate, fmt:pctf}
-  ];
-  const kpiHtml=kpis.map(k=>{
-    const max=Math.max(k.a||0, k.b||0);
-    return `<div style="margin-bottom:11px;">
-      <div style="font-size:11px;color:var(--dim);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em;">${k.lbl}</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">${bar(k.a,max,cA)}<span style="min-width:72px;text-align:right;font-weight:700;color:${cA};font-size:12px;">${k.fmt(k.a)}</span></div>
-      <div style="display:flex;align-items:center;gap:8px;">${bar(k.b,max,cB)}<span style="min-width:72px;text-align:right;font-weight:700;color:${cB};font-size:12px;">${k.fmt(k.b)}</span></div>
-    </div>`;
-  }).join('');
-  // Évolution PAX dans le temps (SVG barres groupées)
+  const card='background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:10px 12px;';
+  const ct='font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;';
+  box.innerHTML=`
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;">
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:${cA};"><span style="width:12px;height:12px;border-radius:3px;background:${cA};"></span>${esc(va)} <span style="color:var(--dim);font-weight:400;">(${A.n} vol${A.n>1?'s':''})</span></span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:${cB};"><span style="width:12px;height:12px;border-radius:3px;background:${cB};"></span>${esc(vb)} <span style="color:var(--dim);font-weight:400;">(${B.n} vol${B.n>1?'s':''})</span></span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px;">
+      <div style="${card}"><div style="${ct}">Taux de remplissage moyen</div><div style="position:relative;height:160px;"><canvas id="cmpC1"></canvas></div></div>
+      <div style="${card}"><div style="${ct}">PAX moyen par vol</div><div style="position:relative;height:160px;"><canvas id="cmpC2"></canvas></div></div>
+      <div style="${card}"><div style="${ct}">Nombre de vols</div><div style="position:relative;height:160px;"><canvas id="cmpC3"></canvas></div></div>
+    </div>
+    <div style="${card}"><div style="${ct}">Évolution des PAX dans le temps</div><div style="position:relative;height:220px;"><canvas id="cmpC4"></canvas></div></div>`;
+  if(typeof Chart==='undefined'){ box.insertAdjacentHTML('beforeend','<div style="color:var(--red);padding:8px;">Bibliothèque de graphiques non chargée.</div>'); return; }
+  const labels=[va,vb], grid='rgba(255,255,255,.08)', tick='#8a97a8';
+  const opt=(fmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.parsed.y)}}},
+    scales:{x:{ticks:{color:tick,font:{size:12}},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick,font:{size:10},callback:fmt},grid:{color:grid}}}});
+  const mkBar=(id,data,fmt)=>{ const el=document.getElementById(id); if(!el)return;
+    _cmpCharts[id]=new Chart(el,{type:'bar',data:{labels,datasets:[{data,backgroundColor:[cA,cB],borderRadius:6,maxBarThickness:70}]},options:opt(fmt)}); };
+  mkBar('cmpC1',[A.rate!=null?+(A.rate*100).toFixed(1):0, B.rate!=null?+(B.rate*100).toFixed(1):0], v=>Math.round(v*10)/10+' %');
+  mkBar('cmpC2',[A.avg,B.avg], v=>Math.round(v));
+  mkBar('cmpC3',[A.n,B.n], v=>Math.round(v));
   const dates=[...new Set([...Object.keys(A.byDate),...Object.keys(B.byDate)])].sort();
-  let svg='';
-  if(dates.length){
-    const H=140, padB=24, padL=6, padT=10;
-    const bw=Math.max(4,Math.min(16,Math.floor(620/(dates.length*2.4))));
-    const gap=Math.max(2,Math.floor(bw*0.35)), grp=bw*2+gap, step=grp+Math.max(7,gap*2);
-    const W=Math.max(300, dates.length*step+padL*2);
-    const maxV=Math.max(1,...dates.map(d=>Math.max(A.byDate[d]||0,B.byDate[d]||0)));
-    const yof=v=>padT+(H-padT-padB)*(1-v/maxV);
-    const every=dates.length<=16?1:Math.ceil(dates.length/12);
-    let rects='';
-    dates.forEach((d,i)=>{
-      const x=padL+i*step;
-      const av=A.byDate[d]||0, bv=B.byDate[d]||0;
-      rects+=`<rect x="${x}" y="${yof(av)}" width="${bw}" height="${(H-padB)-yof(av)}" fill="${cA}" rx="1"></rect>`;
-      rects+=`<rect x="${x+bw+gap}" y="${yof(bv)}" width="${bw}" height="${(H-padB)-yof(bv)}" fill="${cB}" rx="1"></rect>`;
-      if(i%every===0){ const lbl=d.slice(8,10)+'/'+d.slice(5,7);
-        rects+=`<text x="${x+bw}" y="${H-9}" font-size="8" fill="#8a97a8" text-anchor="middle">${lbl}</text>`; }
-    });
-    svg=`<div style="margin-top:6px;"><div style="font-size:11px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em;">Évolution des PAX dans le temps</div>
-      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:none;">
-      <line x1="${padL}" y1="${H-padB}" x2="${W-padL}" y2="${H-padB}" stroke="rgba(255,255,255,.12)"></line>${rects}</svg></div></div>`;
+  const el4=document.getElementById('cmpC4');
+  if(el4 && dates.length){
+    _cmpCharts.cmpC4=new Chart(el4,{type:'bar',data:{labels:dates.map(d=>d.slice(8,10)+'/'+d.slice(5,7)),datasets:[
+      {label:va,data:dates.map(d=>A.byDate[d]||0),backgroundColor:cA,borderRadius:3},
+      {label:vb,data:dates.map(d=>B.byDate[d]||0),backgroundColor:cB,borderRadius:3}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#cdd6e2'}}},
+      scales:{x:{ticks:{color:tick,font:{size:9},maxRotation:0,autoSkip:true},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick},grid:{color:grid}}}}});
   }
-  box.innerHTML=`<div style="background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:14px;">
-    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;">${legend(cA,va,A)} ${legend(cB,vb,B)}</div>
-    ${kpiHtml}${svg}</div>`;
+}
+
+// ── Graphiques de synthèse de la Recherche ──
+let _searchCharts={};
+function _searchDestroyCharts(){ Object.values(_searchCharts).forEach(c=>{try{c.destroy();}catch(e){}}); _searchCharts={}; }
+function _renderSearchCharts(res){
+  const box=document.getElementById('searchCharts'); if(!box) return;
+  _searchDestroyCharts();
+  if(!res || !res.length || typeof Chart==='undefined'){ box.innerHTML=''; return; }
+  const byCo={}, byDate={};
+  res.forEach(f=>{
+    const p=(Number(f.passengers)||0)+(Number(f.babies)||0);
+    const c=f.company||'—';
+    if(!byCo[c]) byCo[c]={pax:0,rateSum:0,rateN:0};
+    byCo[c].pax+=p;
+    if(f.capacity>0){ byCo[c].rateSum+=p/f.capacity; byCo[c].rateN++; }
+    byDate[f.date]=(byDate[f.date]||0)+p;
+  });
+  const cos=Object.keys(byCo).sort((a,b)=>byCo[b].pax-byCo[a].pax);
+  const dates=Object.keys(byDate).sort();
+  const PAL=['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#38bdf8','#f472b6','#a3e635'];
+  const card='background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:10px 12px;';
+  const ct='font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;';
+  box.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+    <div style="${card}"><div style="${ct}">PAX par compagnie</div><div style="position:relative;height:200px;"><canvas id="scCo"></canvas></div></div>
+    <div style="${card}"><div style="${ct}">PAX par jour</div><div style="position:relative;height:200px;"><canvas id="scDay"></canvas></div></div>
+    <div style="${card}"><div style="${ct}">Taux de remplissage moyen par compagnie</div><div style="position:relative;height:200px;"><canvas id="scRate"></canvas></div></div>
+  </div>`;
+  const tick='#8a97a8', grid='rgba(255,255,255,.08)';
+  const opt=(fmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.parsed.y)}}},
+    scales:{x:{ticks:{color:tick,font:{size:9},maxRotation:0,autoSkip:true},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick,callback:fmt},grid:{color:grid}}}});
+  _searchCharts.scCo=new Chart(document.getElementById('scCo'),{type:'bar',data:{labels:cos,datasets:[{data:cos.map(c=>byCo[c].pax),backgroundColor:cos.map((_,i)=>PAL[i%PAL.length]),borderRadius:5}]},options:opt(v=>Math.round(v))});
+  _searchCharts.scDay=new Chart(document.getElementById('scDay'),{type:'bar',data:{labels:dates.map(d=>d.slice(8,10)+'/'+d.slice(5,7)),datasets:[{data:dates.map(d=>byDate[d]),backgroundColor:'#4A9EFF',borderRadius:3}]},options:opt(v=>Math.round(v))});
+  _searchCharts.scRate=new Chart(document.getElementById('scRate'),{type:'bar',data:{labels:cos,datasets:[{data:cos.map(c=>byCo[c].rateN?+(byCo[c].rateSum/byCo[c].rateN*100).toFixed(1):0),backgroundColor:cos.map((_,i)=>PAL[i%PAL.length]),borderRadius:5}]},options:opt(v=>Math.round(v*10)/10+' %')});
 }
 
 async function runSearch(){
@@ -1051,7 +1102,7 @@ async function runSearch(){
     res=segs;
   }
   _weekFlights=res;
-  renderTable(res); renderSummary(res);
+  renderTable(res); renderSummary(res); _renderSearchCharts(res);
   const crit=[];
   if(co) crit.push('compagnie « '+co+' »');
   if(deFrom || deTo) crit.push('tronçon « '+(deFrom||'…')+' → '+(deTo||'…')+' »');
@@ -1064,10 +1115,10 @@ async function runSearch(){
 }
 
 function resetSearch(){
-  ['sCo','sFrom','sTo','sReg','sVol','cmpCo','cmpVolA','cmpVolB'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-  const _cr=document.getElementById('cmpVolResult'); if(_cr) _cr.innerHTML='';
+  ['sCo','sFrom','sTo','sReg','sVol'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  _searchDestroyCharts();
+  const sc=document.getElementById('searchCharts'); if(sc) sc.innerHTML='';
   document.getElementById('searchPanel').classList.add('hidden');
-  const cp=document.getElementById('cmpVolPanel'); if(cp) cp.classList.add('hidden');
   thisWeek();
 }
 window.toggleSearch=toggleSearch; window.runSearch=runSearch; window.resetSearch=resetSearch;
