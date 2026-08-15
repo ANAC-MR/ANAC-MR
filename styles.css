@@ -604,14 +604,23 @@ tfoot td {
     min-width: 150px;
   }
   
+  /* Mobile : le grand tableau défile DANS sa boîte (pas de débordement de page). */
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-wrapper table {
+    min-width: 720px;   /* garde les colonnes lisibles ; on fait défiler horizontalement */
+  }
+
   table {
     font-size: 12px;
   }
-  
+
   th, td {
     padding: 8px 6px;
   }
-  
+
   th {
     font-size: 11px;
   }

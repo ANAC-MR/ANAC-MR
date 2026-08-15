@@ -326,6 +326,13 @@ tbody tr.day-start td{border-top:3px solid var(--gold);}
 
 @media (max-width: 640px) {
   .anac-menu-panel { width: calc(100vw - 32px); max-width: 320px; }
+  /* Mobile : panneau de recherche en colonnes empilées, champs pleine largeur. */
+  .wrap { padding: 12px 12px 44px; }
+  .srch { gap: 8px; padding: 10px 12px; }
+  .srch .fld { flex: 1 1 100%; }
+  .srch input, .srch select { width: 100%; min-width: 0; box-sizing: border-box; }
+  .srch .btn { flex: 1 1 100%; }
+  .rep-title { font-size: 15px; }
 }
 </style>
 
