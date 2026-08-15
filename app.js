@@ -986,12 +986,21 @@ function validateForm() {
             isValid = false;
         }
         // Destination (ville hors NKC) : doit correspondre au numéro enregistré.
+        // Le formulaire utilise l'ICAO (DXXX) et le registre l'IATA (LFW) :
+        // on normalise les deux vers l'ICAO avant de comparer (évite les faux positifs).
+        const _apList = (typeof adminConfig!=='undefined' && adminConfig && adminConfig.airports) ? adminConfig.airports : [];
+        const _toIcaoCode = c => {
+            c = (c||'').toUpperCase().trim(); if(!c) return c;
+            const ap = _apList.find(a => (a.icao||'').toUpperCase()===c || (a.iata||'').toUpperCase()===c);
+            return ap ? (ap.icao||c).toUpperCase() : c;
+        };
         const _cityOf = (a,b) => _isNkc(a) ? b : (_isNkc(b) ? a : (b||a));
-        const _rCity = _cityOf(_reg.from, _reg.to);
-        const _fCity = _cityOf(_from, _to);
+        const _rCity = _toIcaoCode(_cityOf(_reg.from, _reg.to));
+        const _fCity = _toIcaoCode(_cityOf(_from, _to));
         if (_rCity && _fCity && !_isNkc(_rCity) && !_isNkc(_fCity) && _rCity !== _fCity) {
+            const _attendu = _cityOf(_reg.from, _reg.to);   // code du registre (tel qu'enregistré)
             showFieldError(elements.fTo,
-                `Destination incohérente avec le numéro de vol (attendu ${_rCity}). Corrigez le trajet ou le numéro.`);
+                `Destination incohérente avec le numéro de vol (attendu ${_attendu}). Corrigez le trajet ou le numéro.`);
             isValid = false;
         }
     }
