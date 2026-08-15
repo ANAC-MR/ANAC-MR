@@ -511,6 +511,7 @@ document.addEventListener('keydown', e => {
         <div class="fld"><label><span style="color:#4A9EFF;">●</span> Compagnie B</label><select id="cCoB" onchange="cmpBuildVolOptions('B')"><option value="">Choisir…</option></select></div>
         <div class="fld"><label>Vol B</label><select id="cVolB"><option value="">—</option></select></div>
         <button class="btn btn-gold" onclick="runVolCompare()">Comparer</button>
+        <button class="btn" onclick="resetCompare()">Réinitialiser</button>
       </div>
       <div id="cmpVolResult" style="margin-top:16px;"></div>
     </div>
@@ -965,16 +966,23 @@ window.cmpBuildVolOptions=function(side){
   if(nums.includes(cur)) volSel.value=cur;
 };
 
+// Libellé de mois : 'AAAA-MM' → 'Mmm AA' (ex. Août 26)
+const _MOIS3=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+function _moLabel(ym){ const p=(ym||'').split('-'); if(p.length<2) return ym; return _MOIS3[(+p[1])-1]+' '+p[0].slice(2); }
+
 function _cmpStat(flights, vn){
   const key=normFN(vn);
   const list=flights.filter(f=>normFN(f.flightNumberRaw||f.flightNumber||'')===key);
-  let pax=0, rateSum=0, rateN=0; const byDate={};
+  let pax=0, rateSum=0, rateN=0; const byMonth={};
   list.forEach(f=>{
     const p=(Number(f.passengers)||0)+(Number(f.babies)||0);
-    pax+=p; byDate[f.date]=(byDate[f.date]||0)+p;
-    if(f.capacity>0){ rateSum+=p/f.capacity; rateN++; }
+    pax+=p;
+    const mo=String(f.date||'').slice(0,7);
+    if(!byMonth[mo]) byMonth[mo]={pax:0,rateSum:0,rateN:0};
+    byMonth[mo].pax+=p;
+    if(f.capacity>0){ rateSum+=p/f.capacity; rateN++; byMonth[mo].rateSum+=p/f.capacity; byMonth[mo].rateN++; }
   });
-  return { n:list.length, pax, avg:list.length?Math.round(pax/list.length):0, rate:rateN?rateSum/rateN:null, byDate };
+  return { list, n:list.length, pax, avg:list.length?Math.round(pax/list.length):0, rate:rateN?rateSum/rateN:null, byMonth };
 }
 
 window.runVolCompare=async function(){
@@ -987,7 +995,23 @@ window.runVolCompare=async function(){
   const box=document.getElementById('cmpVolResult');
   box.innerHTML='<div style="color:var(--dim);padding:10px;">Calcul…</div>';
   const flights=await loadRange(du,au);
-  _cmpRender(va, vb, _cmpStat(flights,va), _cmpStat(flights,vb));
+  const A=_cmpStat(flights,va), B=_cmpStat(flights,vb);
+  _cmpRender(va, vb, A, B);
+  // Le tableau du bas reflète la comparaison active (les 2 vols sur la période).
+  const res=[...A.list, ...B.list].sort(sortFlights);
+  _weekFlights=res;
+  renderTable(res); renderSummary(res); _searchDestroyCharts();
+  const _sc=document.getElementById('searchCharts'); if(_sc) _sc.innerHTML='';
+  document.getElementById('weekLabel').textContent =
+    'Comparaison '+esc(va)+' vs '+esc(vb)+' — du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))+' · '+res.length+' vol(s)';
+};
+
+window.resetCompare=function(){
+  ['cCoA','cVolA','cCoB','cVolB'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  _cmpDestroy();
+  const box=document.getElementById('cmpVolResult'); if(box) box.innerHTML='';
+  document.getElementById('comparePanel').classList.add('hidden');
+  thisWeek();
 };
 
 let _cmpCharts={};
@@ -1010,7 +1034,8 @@ function _cmpRender(va,vb,A,B){
       <div style="${card}"><div style="${ct}">PAX moyen par vol</div><div style="position:relative;height:160px;"><canvas id="cmpC2"></canvas></div></div>
       <div style="${card}"><div style="${ct}">Nombre de vols</div><div style="position:relative;height:160px;"><canvas id="cmpC3"></canvas></div></div>
     </div>
-    <div style="${card}"><div style="${ct}">Évolution des PAX dans le temps</div><div style="position:relative;height:220px;"><canvas id="cmpC4"></canvas></div></div>`;
+    <div style="${card};margin-bottom:14px;"><div style="${ct}">PAX par mois</div><div style="position:relative;height:240px;"><canvas id="cmpC4"></canvas></div></div>
+    <div style="${card}"><div style="${ct}">Taux de remplissage par mois</div><div style="position:relative;height:240px;"><canvas id="cmpC5"></canvas></div></div>`;
   if(typeof Chart==='undefined'){ box.insertAdjacentHTML('beforeend','<div style="color:var(--red);padding:8px;">Bibliothèque de graphiques non chargée.</div>'); return; }
   const labels=[va,vb], grid='rgba(255,255,255,.08)', tick='#8a97a8';
   const opt=(fmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.parsed.y)}}},
@@ -1020,14 +1045,27 @@ function _cmpRender(va,vb,A,B){
   mkBar('cmpC1',[A.rate!=null?+(A.rate*100).toFixed(1):0, B.rate!=null?+(B.rate*100).toFixed(1):0], v=>Math.round(v*10)/10+' %');
   mkBar('cmpC2',[A.avg,B.avg], v=>Math.round(v));
   mkBar('cmpC3',[A.n,B.n], v=>Math.round(v));
-  const dates=[...new Set([...Object.keys(A.byDate),...Object.keys(B.byDate)])].sort();
+  // Mois couverts (union), triés chronologiquement
+  const months=[...new Set([...Object.keys(A.byMonth),...Object.keys(B.byMonth)])].sort();
+  const mLabels=months.map(_moLabel);
+  const monthlyOpt=(fmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#cdd6e2'}},tooltip:{callbacks:{label:c=>c.dataset.label+' : '+fmt(c.parsed.y)}}},
+    scales:{x:{ticks:{color:tick,font:{size:11}},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick,callback:fmt},grid:{color:grid}}}});
+  // PAX par mois (barres groupées A/B)
   const el4=document.getElementById('cmpC4');
-  if(el4 && dates.length){
-    _cmpCharts.cmpC4=new Chart(el4,{type:'bar',data:{labels:dates.map(d=>d.slice(8,10)+'/'+d.slice(5,7)),datasets:[
-      {label:va,data:dates.map(d=>A.byDate[d]||0),backgroundColor:cA,borderRadius:3},
-      {label:vb,data:dates.map(d=>B.byDate[d]||0),backgroundColor:cB,borderRadius:3}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#cdd6e2'}}},
-      scales:{x:{ticks:{color:tick,font:{size:9},maxRotation:0,autoSkip:true},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick},grid:{color:grid}}}}});
+  if(el4 && months.length){
+    _cmpCharts.cmpC4=new Chart(el4,{type:'bar',data:{labels:mLabels,datasets:[
+      {label:va,data:months.map(m=>A.byMonth[m]?A.byMonth[m].pax:0),backgroundColor:cA,borderRadius:5,maxBarThickness:46},
+      {label:vb,data:months.map(m=>B.byMonth[m]?B.byMonth[m].pax:0),backgroundColor:cB,borderRadius:5,maxBarThickness:46}
+    ]},options:monthlyOpt(v=>Math.round(v))});
+  }
+  // Taux de remplissage par mois (%)
+  const el5=document.getElementById('cmpC5');
+  const rateOf=(st,m)=>{ const b=st.byMonth[m]; return (b&&b.rateN)?+(b.rateSum/b.rateN*100).toFixed(1):0; };
+  if(el5 && months.length){
+    _cmpCharts.cmpC5=new Chart(el5,{type:'bar',data:{labels:mLabels,datasets:[
+      {label:va,data:months.map(m=>rateOf(A,m)),backgroundColor:cA,borderRadius:5,maxBarThickness:46},
+      {label:vb,data:months.map(m=>rateOf(B,m)),backgroundColor:cB,borderRadius:5,maxBarThickness:46}
+    ]},options:monthlyOpt(v=>Math.round(v*10)/10+' %')});
   }
 }
 
@@ -1038,31 +1076,32 @@ function _renderSearchCharts(res){
   const box=document.getElementById('searchCharts'); if(!box) return;
   _searchDestroyCharts();
   if(!res || !res.length || typeof Chart==='undefined'){ box.innerHTML=''; return; }
-  const byCo={}, byDate={};
+  const byCo={}, byMonth={};
   res.forEach(f=>{
     const p=(Number(f.passengers)||0)+(Number(f.babies)||0);
     const c=f.company||'—';
     if(!byCo[c]) byCo[c]={pax:0,rateSum:0,rateN:0};
     byCo[c].pax+=p;
     if(f.capacity>0){ byCo[c].rateSum+=p/f.capacity; byCo[c].rateN++; }
-    byDate[f.date]=(byDate[f.date]||0)+p;
+    const mo=String(f.date||'').slice(0,7);
+    byMonth[mo]=(byMonth[mo]||0)+p;
   });
   const cos=Object.keys(byCo).sort((a,b)=>byCo[b].pax-byCo[a].pax);
-  const dates=Object.keys(byDate).sort();
+  const months=Object.keys(byMonth).sort();
   const PAL=['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#38bdf8','#f472b6','#a3e635'];
   const card='background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:10px 12px;';
   const ct='font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;';
-  box.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
-    <div style="${card}"><div style="${ct}">PAX par compagnie</div><div style="position:relative;height:200px;"><canvas id="scCo"></canvas></div></div>
-    <div style="${card}"><div style="${ct}">PAX par jour</div><div style="position:relative;height:200px;"><canvas id="scDay"></canvas></div></div>
-    <div style="${card}"><div style="${ct}">Taux de remplissage moyen par compagnie</div><div style="position:relative;height:200px;"><canvas id="scRate"></canvas></div></div>
+  box.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
+    <div style="${card}"><div style="${ct}">PAX par compagnie</div><div style="position:relative;height:220px;"><canvas id="scCo"></canvas></div></div>
+    <div style="${card}"><div style="${ct}">PAX par mois</div><div style="position:relative;height:220px;"><canvas id="scMonth"></canvas></div></div>
+    <div style="${card}"><div style="${ct}">Taux de remplissage moyen par compagnie</div><div style="position:relative;height:220px;"><canvas id="scRate"></canvas></div></div>
   </div>`;
   const tick='#8a97a8', grid='rgba(255,255,255,.08)';
   const opt=(fmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.parsed.y)}}},
-    scales:{x:{ticks:{color:tick,font:{size:9},maxRotation:0,autoSkip:true},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick,callback:fmt},grid:{color:grid}}}});
-  _searchCharts.scCo=new Chart(document.getElementById('scCo'),{type:'bar',data:{labels:cos,datasets:[{data:cos.map(c=>byCo[c].pax),backgroundColor:cos.map((_,i)=>PAL[i%PAL.length]),borderRadius:5}]},options:opt(v=>Math.round(v))});
-  _searchCharts.scDay=new Chart(document.getElementById('scDay'),{type:'bar',data:{labels:dates.map(d=>d.slice(8,10)+'/'+d.slice(5,7)),datasets:[{data:dates.map(d=>byDate[d]),backgroundColor:'#4A9EFF',borderRadius:3}]},options:opt(v=>Math.round(v))});
-  _searchCharts.scRate=new Chart(document.getElementById('scRate'),{type:'bar',data:{labels:cos,datasets:[{data:cos.map(c=>byCo[c].rateN?+(byCo[c].rateSum/byCo[c].rateN*100).toFixed(1):0),backgroundColor:cos.map((_,i)=>PAL[i%PAL.length]),borderRadius:5}]},options:opt(v=>Math.round(v*10)/10+' %')});
+    scales:{x:{ticks:{color:tick,font:{size:11},maxRotation:0,autoSkip:true},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick,callback:fmt},grid:{color:grid}}}});
+  _searchCharts.scCo=new Chart(document.getElementById('scCo'),{type:'bar',data:{labels:cos,datasets:[{data:cos.map(c=>byCo[c].pax),backgroundColor:cos.map((_,i)=>PAL[i%PAL.length]),borderRadius:5,maxBarThickness:60}]},options:opt(v=>Math.round(v))});
+  _searchCharts.scMonth=new Chart(document.getElementById('scMonth'),{type:'bar',data:{labels:months.map(_moLabel),datasets:[{data:months.map(m=>byMonth[m]),backgroundColor:'#4A9EFF',borderRadius:5,maxBarThickness:46}]},options:opt(v=>Math.round(v))});
+  _searchCharts.scRate=new Chart(document.getElementById('scRate'),{type:'bar',data:{labels:cos,datasets:[{data:cos.map(c=>byCo[c].rateN?+(byCo[c].rateSum/byCo[c].rateN*100).toFixed(1):0),backgroundColor:cos.map((_,i)=>PAL[i%PAL.length]),borderRadius:5,maxBarThickness:60}]},options:opt(v=>Math.round(v*10)/10+' %')});
 }
 
 async function runSearch(){
