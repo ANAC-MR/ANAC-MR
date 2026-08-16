@@ -1037,11 +1037,23 @@ document.addEventListener('keydown', e => {
       <option value="ALL">Toutes les années</option>
     </select>
     <select id="chartMonthFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;">
-      <option value="ALL">Tous les mois</option>
-      <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
-      <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
-      <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
-      <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
+      <option value="ALL">Toute l'année</option>
+      <optgroup label="Semestres">
+        <option value="S1">S1 · Janvier–Juin</option>
+        <option value="S2">S2 · Juillet–Décembre</option>
+      </optgroup>
+      <optgroup label="Trimestres">
+        <option value="T1">T1 · Jan–Mar</option>
+        <option value="T2">T2 · Avr–Juin</option>
+        <option value="T3">T3 · Juil–Sep</option>
+        <option value="T4">T4 · Oct–Déc</option>
+      </optgroup>
+      <optgroup label="Mois">
+        <option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
+        <option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
+        <option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
+        <option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
+      </optgroup>
     </select>
     <select id="chartCompanyFilter" onchange="refreshCharts()" style="background:#1a2d45;border:1px solid rgba(74,158,255,.4);border-radius:8px;padding:7px 11px;color:#e2e8f0;font-size:12px;font-family:inherit;min-width:160px;">
       <option value="ALL">Toutes les compagnies</option>
@@ -1702,6 +1714,28 @@ function getFlights(){
   return all.filter(function(f){ return !(f && f.isCharter); });
 }
 
+// Période Diagrammes → liste de mois (0-11). null = toute l'année.
+function _chartPeriodMonths(m){
+    switch(m){
+        case 'S1': return [0,1,2,3,4,5];
+        case 'S2': return [6,7,8,9,10,11];
+        case 'T1': return [0,1,2];
+        case 'T2': return [3,4,5];
+        case 'T3': return [6,7,8];
+        case 'T4': return [9,10,11];
+        case 'ALL': case '': case undefined: case null: return null;
+        default: { const n=parseInt(m,10); return isNaN(n)?null:[n]; }
+    }
+}
+function _chartInPeriod(monthIdx, m){ const a=_chartPeriodMonths(m); return !a || a.indexOf(monthIdx)!==-1; }
+// Libellé lisible de la période choisie.
+function _chartPeriodLabel(m){
+    const L={S1:'Janvier–Juin',S2:'Juillet–Décembre',T1:'1er trimestre',T2:'2e trimestre',T3:'3e trimestre',T4:'4e trimestre'};
+    if(L[m]) return L[m];
+    if(m==='ALL'||m==null||m==='') return 'Toute l\'année';
+    const n=parseInt(m,10); return isNaN(n)?'Toute l\'année':MONTHS_LONG[n];
+}
+
 function filterFlights(flights){
     const y  = document.getElementById('chartYearFilter').value;
     const m  = document.getElementById('chartMonthFilter').value;
@@ -1715,10 +1749,10 @@ function filterFlights(flights){
         // Filtre période saison (prioritaire)
         if(deb && ds < deb) return false;
         if(fin && ds > fin) return false;
-        // Filtres année/mois seulement si pas de période saison
+        // Filtres année/période seulement si pas de période saison
         if(!deb && !fin){
             if(y!=='ALL'&&d.getFullYear()!==+y) return false;
-            if(m!=='ALL'&&d.getMonth()!==+m)    return false;
+            if(!_chartInPeriod(d.getMonth(), m)) return false;
         }
         if(co!=='ALL'&&f.company!==co) return false;
         return true;
@@ -2362,134 +2396,213 @@ window.generateAnalyticalReport = async function() {
   const _lbl = btn ? btn.innerHTML : '';
   try {
     if (btn) { btn.disabled = true; btn.innerHTML = 'Génération…'; }
-    const y = (document.getElementById('chartYearFilter')||{}).value || 'ALL';
-    const m = (document.getElementById('chartMonthFilter')||{}).value || 'ALL';
-    let flt = (typeof getFlights === 'function' ? getFlights() : (window.appFlights||[])).filter(f => f && f.date);
-    if (y !== 'ALL') flt = flt.filter(f => new Date(f.date).getFullYear() === +y);
-    if (m !== 'ALL') flt = flt.filter(f => new Date(f.date).getMonth() === +m);
-    if (!flt.length) { alert('Aucune donnée pour la période sélectionnée dans Diagrammes.'); if (btn){btn.disabled=false;btn.innerHTML=_lbl;} return; }
+    const y  = (document.getElementById('chartYearFilter')||{}).value || 'ALL';
+    const m  = (document.getElementById('chartMonthFilter')||{}).value || 'ALL';
+    const coF= (document.getElementById('chartCompanyFilter')||{}).value || 'ALL';
+    // Le rapport reflète EXACTEMENT le filtre appliqué (année + période + compagnie).
+    const flt = (getFlights()||[]).filter(f=>{
+      if(!f||!f.date) return false;
+      const d=new Date(f.date);
+      if(y!=='ALL' && d.getFullYear()!==+y) return false;
+      if(!_chartInPeriod(d.getMonth(), m)) return false;
+      if(coF!=='ALL' && f.company!==coF) return false;
+      return true;
+    });
+    if (!flt.length) { alert('Aucune donnée pour le filtre sélectionné dans Diagrammes.'); if (btn){btn.disabled=false;btn.innerHTML=_lbl;} return; }
 
     const num = n => (Number(n)||0).toLocaleString('fr-FR');
+    const pc1 = v => (Math.round(v*10)/10).toString().replace('.',',');
     const isDEP = f => (f.type||'').toUpperCase().startsWith('D');
+    const pxOf = f => (+f.passengers||0)+(+f.babies||0);
 
     // ── Agrégats ──
     const movements = flt.length;
-    let paxTotal = 0, paxDepTot = 0, paxArrTot = 0;
-    const monPax = Array(12).fill(0), monMov = Array(12).fill(0);
-    const co = {};
+    let paxTotal=0, paxDepTot=0, paxArrTot=0, babies=0;
+    const monPax=Array(12).fill(0), monMov=Array(12).fill(0);
+    const co={};
     flt.forEach(f => {
-      const px = (+f.passengers||0) + (+f.babies||0);
-      paxTotal += px;
-      const mo = new Date(f.date).getMonth();
-      monPax[mo] += px; monMov[mo] += 1;
-      const c = f.company || 'Inconnue';
-      if (!co[c]) co[c] = { paxDep:0, paxArr:0, movDep:0, movArr:0 };
-      if (isDEP(f)) { co[c].paxDep += px; co[c].movDep++; paxDepTot += px; }
-      else          { co[c].paxArr += px; co[c].movArr++; paxArrTot += px; }
+      const px=pxOf(f); paxTotal+=px; babies+=(+f.babies||0);
+      const mo=new Date(f.date).getMonth(); monPax[mo]+=px; monMov[mo]+=1;
+      const c=f.company||'Inconnue';
+      if(!co[c]) co[c]={paxDep:0,paxArr:0,movDep:0,movArr:0};
+      if(isDEP(f)){ co[c].paxDep+=px; co[c].movDep++; paxDepTot+=px; }
+      else        { co[c].paxArr+=px; co[c].movArr++; paxArrTot+=px; }
     });
-    const coRows = Object.entries(co).map(([name,s]) => ({
-      name, pax: s.paxDep+s.paxArr, paxDep:s.paxDep, paxArr:s.paxArr, mov:s.movDep+s.movArr
-    })).sort((a,b)=> b.pax - a.pax);
+    const coRows = Object.entries(co).map(([name,s])=>({name,pax:s.paxDep+s.paxArr,paxDep:s.paxDep,paxArr:s.paxArr,mov:s.movDep+s.movArr}))
+      .sort((a,b)=>b.pax-a.pax);
+    const monthsPresent = monMov.map((v,i)=>({i,pax:monPax[i],mov:v})).filter(x=>x.mov>0);
 
-    // Destinations par tronçon (escales incluses)
-    const dc = {};
-    flt.forEach(f => (typeof _troncons==='function'?_troncons(f):[]).forEach(t => {
-      const city = t.city; if (!city || city === 'Nouakchott') return;
-      if (!dc[city]) dc[city] = { vols:0, pax:0 };
-      dc[city].vols++; dc[city].pax += t.pax;
+    // Destinations par tronçon
+    const dcAll={};
+    flt.forEach(f => (typeof _troncons==='function'?_troncons(f):[]).forEach(t=>{
+      const city=t.city; if(!city||city==='Nouakchott') return;
+      if(!dcAll[city]) dcAll[city]={vols:0,pax:0}; dcAll[city].vols++; dcAll[city].pax+=t.pax;
     }));
-    const destRows = Object.entries(dc).map(([city,s])=>({city, vols:s.vols, pax:s.pax})).sort((a,b)=>b.vols-a.vols).slice(0,12);
+    const destRows = Object.entries(dcAll).map(([city,s])=>({city,vols:s.vols,pax:s.pax})).sort((a,b)=>b.vols-a.vols);
+    const destTop = destRows.slice(0,12);
 
-    // Mauritania Airlines : domestique vs international
-    let maDom=0, maInt=0, maPax=0;
-    flt.filter(f => (typeof isMAIcompany==='function') && isMAIcompany(f.company)).forEach(f => {
-      const px=(+f.passengers||0)+(+f.babies||0); maPax+=px;
-      const dom = (typeof isMauritanianAirport==='function') && isMauritanianAirport(f.from) && isMauritanianAirport(f.to);
-      if (dom) maDom+=px; else maInt+=px;
+    // Mauritania Airlines : domestique / international + top destinations
+    let maDom=0, maInt=0, maPax=0; const maDest={};
+    flt.filter(f=>(typeof isMAIcompany==='function')&&isMAIcompany(f.company)).forEach(f=>{
+      const px=pxOf(f); maPax+=px;
+      const dom=(typeof isMauritanianAirport==='function')&&isMauritanianAirport(f.from)&&isMauritanianAirport(f.to);
+      if(dom) maDom+=px; else maInt+=px;
+      (typeof _troncons==='function'?_troncons(f):[]).forEach(t=>{ if(t.city&&t.city!=='Nouakchott'){ maDest[t.city]=(maDest[t.city]||0)+t.pax; } });
     });
+    const maTop = Object.entries(maDest).map(([c,p])=>({c,p})).sort((a,b)=>b.p-a.p).slice(0,5);
 
-    // Points saillants (factuels)
-    const leader = coRows[0];
-    const peakMo = monPax.indexOf(Math.max(...monPax));
-    const topDest = destRows[0];
-    const highlights = [];
-    if (leader) highlights.push(`${leader.name} est en tête avec ${num(leader.pax)} passagers, soit ${(leader.pax/paxTotal*100).toFixed(1)} % du trafic.`);
-    if (monPax.some(v=>v>0)) highlights.push(`Le mois le plus chargé est ${MONTHS_LONG[peakMo]} (${num(monPax[peakMo])} passagers).`);
-    if (topDest) highlights.push(`La destination la plus fréquentée est ${topDest.city} (${topDest.vols} tronçons, ${num(topDest.pax)} passagers).`);
-    highlights.push(`Départs : ${num(paxDepTot)} passagers · Arrivées : ${num(paxArrTot)} passagers.`);
-    if (maPax) highlights.push(`Mauritania Airlines : ${num(maPax)} passagers, dont ${(maDom/maPax*100).toFixed(1)} % sur le réseau intérieur.`);
+    // ── Libellés période / compagnie ──
+    const perLabel = (typeof _chartPeriodLabel==='function') ? _chartPeriodLabel(m) : 'Toute l\'année';
+    const yLabel = (y==='ALL') ? 'toutes années confondues' : y;
+    const scopeCompany = (coF!=='ALL') ? coF : null;
+    const subtitle = 'Aéroport de Nouakchott — '+perLabel+(y!=='ALL'?' '+y:'')+(scopeCompany?' — '+scopeCompany:'');
 
-    const periodeLabel = (y==='ALL' && m==='ALL') ? 'Toutes périodes'
-      : (y!=='ALL' && m!=='ALL') ? (MONTHS_LONG[+m]+' '+y)
-      : (m!=='ALL' ? MONTHS_LONG[+m] : y);
+    // ── Narratif (rédigé pour se lire naturellement) ──
+    const leader = coRows[0], second = coRows[1];
+    const share = r => r ? pc1(r.pax/paxTotal*100) : '0';
+    const ecart = paxDepTot - paxArrTot;
+    const senstxt = (Math.abs(ecart) < paxTotal*0.03)
+      ? `Départs et arrivées s'équilibrent presque (${num(paxDepTot)} contre ${num(paxArrTot)} passagers).`
+      : (ecart>0
+          ? `Les départs l'emportent : ${num(paxDepTot)} passagers au départ contre ${num(paxArrTot)} à l'arrivée, soit ${num(Math.abs(ecart))} de plus.`
+          : `Les arrivées dépassent les départs : ${num(paxArrTot)} passagers à l'arrivée contre ${num(paxDepTot)} au départ, soit ${num(Math.abs(ecart))} de plus.`);
+
+    const synthese = [];
+    synthese.push(scopeCompany
+      ? `Ce rapport porte sur ${scopeCompany} à Nouakchott, sur ${perLabel.toLowerCase()}${y!=='ALL'?' '+y:''}. La compagnie a réalisé ${num(movements)} mouvements pour ${num(paxTotal)} passagers.`
+      : `Sur ${perLabel.toLowerCase()}${y!=='ALL'?' '+y:''}, Nouakchott a enregistré ${num(movements)} mouvements et ${num(paxTotal)} passagers, dont ${num(babies)} bébés.`);
+    synthese.push(senstxt);
+    if (movements>0) synthese.push(`En moyenne, chaque mouvement transporte ${num(Math.round(paxTotal/movements))} passagers.`);
+
+    // Analyse mensuelle (seulement si plusieurs mois)
+    const monthTxt = [];
+    if (monthsPresent.length>1){
+      const pk = monthsPresent.reduce((a,b)=>b.pax>a.pax?b:a);
+      const lo = monthsPresent.reduce((a,b)=>b.pax<a.pax?b:a);
+      monthTxt.push(`Le trafic varie d'un mois à l'autre. ${MONTHS_LONG[pk.i]} est le plus chargé avec ${num(pk.pax)} passagers, ${MONTHS_LONG[lo.i]} le plus calme avec ${num(lo.pax)}.`);
+      const first=monthsPresent[0], last=monthsPresent[monthsPresent.length-1];
+      if (first.i!==last.i && first.pax>0){
+        const evo=(last.pax-first.pax)/first.pax*100;
+        monthTxt.push(Math.abs(evo)<3
+          ? `Entre ${MONTHS_LONG[first.i]} et ${MONTHS_LONG[last.i]}, le niveau reste stable.`
+          : `Entre ${MONTHS_LONG[first.i]} et ${MONTHS_LONG[last.i]}, le trafic ${evo>0?'progresse':'recule'} de ${pc1(Math.abs(evo))} %.`);
+      }
+    }
+
+    // Compagnies
+    const compaTxt=[];
+    if (!scopeCompany && leader){
+      compaTxt.push(`${leader.name} arrive en tête avec ${num(leader.pax)} passagers, soit ${share(leader)} % du total.`);
+      if (second){
+        const top2=(leader.pax+second.pax)/paxTotal*100;
+        compaTxt.push(`${second.name} suit avec ${num(second.pax)} passagers (${share(second)} %). À elles deux, ces compagnies portent ${pc1(top2)} % du trafic.`);
+      }
+      compaTxt.push(`${coRows.length} compagnie${coRows.length>1?'s':''} au total sont présentes sur la période.`);
+    } else if (scopeCompany && leader){
+      compaTxt.push(`${leader.name} a transporté ${num(leader.paxDep)} passagers au départ et ${num(leader.paxArr)} à l'arrivée, pour ${num(leader.mov)} mouvements.`);
+    }
+
+    // Destinations
+    const destTxt=[];
+    if (destTop.length){
+      const d1=destTop[0], d2=destTop[1], d3=destTop[2];
+      let s=`${d1.city} est la destination la plus desservie : ${num(d1.pax)} passagers sur ${d1.vols} tronçons.`;
+      if (d2) s+=` Viennent ensuite ${d2.city} (${num(d2.pax)} passagers)`;
+      if (d3) s+=` et ${d3.city} (${num(d3.pax)})`;
+      s+='.';
+      destTxt.push(s);
+      destTxt.push(`Le comptage se fait par tronçon : un vol à escale compte pour chacune des villes qu'il dessert.`);
+    }
+
+    // Mauritania Airlines
+    const maTxt=[];
+    if (maPax){
+      maTxt.push(`Mauritania Airlines transporte ${num(maPax)} passagers sur la période. Le réseau intérieur en représente ${pc1(maDom/maPax*100)} %, l'international ${pc1(maInt/maPax*100)} %.`);
+      maTxt.push(`C'est la seule compagnie à relier entre elles les villes mauritaniennes.`);
+      if (maTop.length){
+        maTxt.push('Ses principales destinations : '+maTop.map(d=>`${d.c} (${num(d.p)})`).join(', ')+'.');
+      }
+    }
+
+    // Points saillants
+    const highlights=[];
+    if (leader && !scopeCompany) highlights.push(`${leader.name} concentre ${share(leader)} % du trafic (${num(leader.pax)} passagers).`);
+    if (monthsPresent.length){ const pk=monthsPresent.reduce((a,b)=>b.pax>a.pax?b:a); highlights.push(`Mois le plus chargé : ${MONTHS_LONG[pk.i]} (${num(pk.pax)} passagers).`); }
+    if (destTop[0]) highlights.push(`Destination principale : ${destTop[0].city} (${num(destTop[0].pax)} passagers).`);
+    highlights.push(`Départs ${num(paxDepTot)} · Arrivées ${num(paxArrTot)}.`);
+    if (maPax && !scopeCompany) highlights.push(`Mauritania Airlines : ${pc1(maDom/maPax*100)} % de son trafic sur le réseau intérieur.`);
 
     // ── Word ──
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-            AlignmentType, BorderStyle, WidthType, HeadingLevel, ShadingType }
-      = await import('https://esm.sh/docx@9.5.3');
-
+            AlignmentType, BorderStyle, WidthType, ShadingType } = await import('https://esm.sh/docx@9.5.3');
     const NAVY='0F1E3D', GOLD='D4AF37';
-    const bd={style:BorderStyle.SINGLE,size:4,color:'C8D2E0'};
-    const allBd={top:bd,bottom:bd,left:bd,right:bd};
-    const P=(text,{bold=false,size=22,color,after=100,before=0,align}={})=>new Paragraph({
-      alignment:align, spacing:{before,after},
-      children:[new TextRun({text,font:'Calibri',size,bold,color})]});
-    const H=(text)=>new Paragraph({spacing:{before:220,after:90},
-      children:[new TextRun({text,font:'Calibri',size:28,bold:true,color:NAVY})]});
-    const hc=(t,w)=>new TableCell({borders:allBd,width:{size:w,type:WidthType.DXA},shading:{fill:NAVY,type:ShadingType.CLEAR},margins:{top:60,bottom:60,left:90,right:90},
-      children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:t,font:'Calibri',size:18,bold:true,color:GOLD})]})]});
-    const dc2=(t,w,{bold=false,left=false,fill}={})=>new TableCell({borders:allBd,width:{size:w,type:WidthType.DXA},shading:fill?{fill,type:ShadingType.CLEAR}:undefined,margins:{top:50,bottom:50,left:90,right:90},
-      children:[new Paragraph({alignment:left?AlignmentType.LEFT:AlignmentType.RIGHT,children:[new TextRun({text:t,font:'Calibri',size:19,bold})]})]});
-
+    const bd={style:BorderStyle.SINGLE,size:4,color:'C8D2E0'}; const allBd={top:bd,bottom:bd,left:bd,right:bd};
+    const P=(text,{bold=false,size=22,color,after=120,before=0,align}={})=>new Paragraph({alignment:align,spacing:{before,after},children:[new TextRun({text,font:'Calibri',size,bold,color})]});
+    const H=(text)=>new Paragraph({spacing:{before:240,after:100},children:[new TextRun({text,font:'Calibri',size:28,bold:true,color:NAVY})]});
+    const bullets=(arr)=>arr.map(h=>new Paragraph({bullet:{level:0},spacing:{after:60},children:[new TextRun({text:h,font:'Calibri',size:22})]}));
+    const hc=(t,w)=>new TableCell({borders:allBd,width:{size:w,type:WidthType.DXA},shading:{fill:NAVY,type:ShadingType.CLEAR},margins:{top:60,bottom:60,left:90,right:90},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:t,font:'Calibri',size:18,bold:true,color:GOLD})]})]});
+    const dc2=(t,w,{bold=false,left=false,fill}={})=>new TableCell({borders:allBd,width:{size:w,type:WidthType.DXA},shading:fill?{fill,type:ShadingType.CLEAR}:undefined,margins:{top:50,bottom:50,left:90,right:90},children:[new Paragraph({alignment:left?AlignmentType.LEFT:AlignmentType.RIGHT,children:[new TextRun({text:t,font:'Calibri',size:19,bold})]})]});
     const W=9600;
-    // Table compagnies
     const cW=[3200,1300,1300,1400,1200,1200];
     const coTable=new Table({width:{size:W,type:WidthType.DXA},columnWidths:cW,rows:[
       new TableRow({children:[hc('Compagnie',cW[0]),hc('PAX départs',cW[1]),hc('PAX arrivées',cW[2]),hc('Total PAX',cW[3]),hc('Mouvements',cW[4]),hc('Part',cW[5])]}),
-      ...coRows.map(r=>new TableRow({children:[
-        dc2(r.name,cW[0],{left:true,bold:true}),dc2(num(r.paxDep),cW[1]),dc2(num(r.paxArr),cW[2]),dc2(num(r.pax),cW[3]),dc2(num(r.mov),cW[4]),dc2((r.pax/paxTotal*100).toFixed(1)+' %',cW[5])]})),
+      ...coRows.map(r=>new TableRow({children:[dc2(r.name,cW[0],{left:true,bold:true}),dc2(num(r.paxDep),cW[1]),dc2(num(r.paxArr),cW[2]),dc2(num(r.pax),cW[3]),dc2(num(r.mov),cW[4]),dc2(pc1(r.pax/paxTotal*100)+' %',cW[5])]})),
       new TableRow({children:[dc2('TOTAL',cW[0],{left:true,bold:true,fill:'F0E6C8'}),dc2(num(paxDepTot),cW[1],{bold:true,fill:'F0E6C8'}),dc2(num(paxArrTot),cW[2],{bold:true,fill:'F0E6C8'}),dc2(num(paxTotal),cW[3],{bold:true,fill:'F0E6C8'}),dc2(num(movements),cW[4],{bold:true,fill:'F0E6C8'}),dc2('100 %',cW[5],{bold:true,fill:'F0E6C8'})]})
     ]});
-    // Table destinations
     const dW=[4400,2600,2600];
     const destTable=new Table({width:{size:W,type:WidthType.DXA},columnWidths:dW,rows:[
       new TableRow({children:[hc('Destination (tronçon)',dW[0]),hc('Tronçons',dW[1]),hc('Passagers',dW[2])]}),
-      ...destRows.map(r=>new TableRow({children:[dc2(r.city,dW[0],{left:true}),dc2(num(r.vols),dW[1]),dc2(num(r.pax),dW[2])]}))
+      ...destTop.map(r=>new TableRow({children:[dc2(r.city,dW[0],{left:true}),dc2(num(r.vols),dW[1]),dc2(num(r.pax),dW[2])]}))
     ]});
+    // Table mensuelle (si plusieurs mois)
+    const mChildren=[];
+    if (monthsPresent.length>1){
+      const mW=[3000,3300,3300];
+      const monthTable=new Table({width:{size:W,type:WidthType.DXA},columnWidths:mW,rows:[
+        new TableRow({children:[hc('Mois',mW[0]),hc('Mouvements',mW[1]),hc('Passagers',mW[2])]}),
+        ...monthsPresent.map(x=>new TableRow({children:[dc2(MONTHS_LONG[x.i],mW[0],{left:true}),dc2(num(x.mov),mW[1]),dc2(num(x.pax),mW[2])]}))
+      ]});
+      mChildren.push(H('3. Répartition mensuelle'));
+      monthTxt.forEach(t=>mChildren.push(P(t)));
+      mChildren.push(monthTable);
+    }
 
-    const doc=new Document({styles:{default:{document:{run:{font:'Calibri',size:22}}}},sections:[{
-      properties:{page:{size:{width:11906,height:16838},margin:{top:1000,right:1134,bottom:1134,left:1134}}},
-      children:[
-        new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:60},children:[new TextRun({text:"Rapport analytique du trafic aérien",font:'Calibri',size:40,bold:true,color:NAVY})]}),
-        new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:240},children:[new TextRun({text:"Aéroport de Nouakchott — "+periodeLabel,font:'Calibri',size:24,color:'44556A'})]}),
+    const body=[
+      new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:60},children:[new TextRun({text:'Rapport analytique du trafic aérien',font:'Calibri',size:40,bold:true,color:NAVY})]}),
+      new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:240},children:[new TextRun({text:subtitle,font:'Calibri',size:24,color:'44556A'})]}),
+      H('1. Synthèse'),
+      ...synthese.map(t=>P(t)),
+    ];
+    // 2. Trafic par compagnie (ou détail de la compagnie)
+    body.push(H('2. '+(scopeCompany?('Activité de '+scopeCompany):'Trafic par compagnie')));
+    compaTxt.forEach(t=>body.push(P(t)));
+    body.push(coTable);
+    // 3. Répartition mensuelle (optionnelle)
+    body.push(...mChildren);
+    // 4. Destinations
+    body.push(H((monthsPresent.length>1?'4':'3')+'. Destinations les plus fréquentées'));
+    destTxt.forEach(t=>body.push(P(t)));
+    body.push(destTable);
+    // 5. Mauritania Airlines (si non filtré sur une autre compagnie)
+    if (!scopeCompany || (typeof isMAIcompany==='function' && isMAIcompany(scopeCompany))){
+      body.push(H((monthsPresent.length>1?'5':'4')+'. Mauritania Airlines'));
+      if (maTxt.length) maTxt.forEach(t=>body.push(P(t))); else body.push(P('Aucun vol Mauritania Airlines sur la période.'));
+    }
+    // 6. Points saillants
+    body.push(H((monthsPresent.length>1?'6':'5')+'. Points saillants'));
+    body.push(...bullets(highlights));
+    body.push(P(' ',{after:160}));
+    body.push(P('Rapport établi à partir des données enregistrées dans ANAC SGV, selon le filtre sélectionné dans Diagrammes & Rapports. Les commentaires peuvent être complétés ou ajustés avant diffusion.',{size:16,color:'8592A3'}));
 
-        H("1. Synthèse"),
-        P(`Sur la période retenue, l'aéroport de Nouakchott a traité ${num(paxTotal)} passagers pour ${num(movements)} mouvements. Les départs représentent ${num(paxDepTot)} passagers et les arrivées ${num(paxArrTot)}. Les chiffres ci-dessous correspondent aux mouvements enregistrés à Nouakchott.`),
+    const doc=new Document({styles:{default:{document:{run:{font:'Calibri',size:22}}}},
+      sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1000,right:1134,bottom:1134,left:1134}}},children:body}]});
 
-        H("2. Trafic par compagnie"),
-        coTable,
-
-        H("3. Destinations les plus fréquentées"),
-        P("Comptage par tronçon (les escales sont incluses).",{size:18,color:'44556A',after:120}),
-        destTable,
-
-        H("4. Mauritania Airlines"),
-        P(maPax ? `Mauritania Airlines totalise ${num(maPax)} passagers sur la période. Le réseau intérieur (vols entre villes mauritaniennes) pèse ${(maDom/maPax*100).toFixed(1)} % de ce trafic, contre ${(maInt/maPax*100).toFixed(1)} % pour l'international. La compagnie est la seule à opérer des liaisons intérieures.` : "Aucun vol Mauritania Airlines sur la période."),
-
-        H("5. Points saillants"),
-        ...highlights.map(h=>new Paragraph({bullet:{level:0},spacing:{after:60},children:[new TextRun({text:h,font:'Calibri',size:22})]})),
-
-        P(" ",{after:200}),
-        P("Document généré automatiquement à partir des données ANAC SGV. À compléter/éditer selon les besoins d'analyse.",{size:16,color:'8592A3'})
-      ]
-    }]});
-
-    const blob = await Packer.toBlob(doc);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'Rapport-analytique-'+String(periodeLabel).replace(/\s+/g,'-')+'.docx';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    const blob=await Packer.toBlob(doc);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const fname='Rapport-analytique-'+(scopeCompany?scopeCompany.replace(/\s+/g,'')+'-':'')+String(perLabel).replace(/[^\wÀ-ÿ]+/g,'-')+(y!=='ALL'?'-'+y:'')+'.docx';
+    a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
   } catch(e) {
     console.error('Rapport analytique:', e);
     alert('Erreur lors de la génération du rapport : ' + (e.message||e));
@@ -2546,7 +2659,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
     const m  = document.getElementById('chartMonthFilter').value;
     const co = document.getElementById('chartCompanyFilter').value;
     const yearLabel  = y  === 'ALL' ? 'Toutes les années' : y;
-    const monthLabel = m  === 'ALL' ? 'Tous les mois'     : MONTHS_LONG[+m];
+    const monthLabel = _chartPeriodLabel(m);
     const coLabel    = co === 'ALL' ? 'Toutes compagnies' : co;
     const dateExport = new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
 
@@ -2612,8 +2725,8 @@ async function _doExportPDF(JsPDF, hiResImages) {
     let periodPart;
     if (y === 'ALL' && m === 'ALL') periodPart = 'toutes les périodes';
     else if (y !== 'ALL' && m === 'ALL') periodPart = "l'année " + y;
-    else if (y === 'ALL' && m !== 'ALL') periodPart = 'le mois de ' + MONTHS_LONG[+m];
-    else periodPart = MONTHS_LONG[+m] + ' ' + y;
+    else if (y === 'ALL' && m !== 'ALL') periodPart = _chartPeriodLabel(m);
+    else periodPart = _chartPeriodLabel(m) + ' ' + y;
 
     const companyPart = co === 'ALL' ? 'toutes les compagnies' : co;
     const summaryText = 'Rapport de ' + companyPart + ' pour ' + periodPart + '.';
@@ -3200,7 +3313,7 @@ function exportExcel(){
     const y=document.getElementById('chartYearFilter').value;
     const m=document.getElementById('chartMonthFilter').value;
     const co=document.getElementById('chartCompanyFilter').value;
-    const mn=m!=='ALL'?['Jan','Fev','Mar','Avr','Mai','Jun','Jul','Aou','Sep','Oct','Nov','Dec'][+m]:'';
+    const mn=m!=='ALL'?(/^[ST]/.test(m)?m:['Jan','Fev','Mar','Avr','Mai','Jun','Jul','Aou','Sep','Oct','Nov','Dec'][+m]):'';
     const parts=['ANAC-Vols'];
     if(y!=='ALL')parts.push(y);
     if(mn)parts.push(mn);
@@ -3326,7 +3439,7 @@ function refreshCharts(){
 
     const y=document.getElementById('chartYearFilter').value;
     const m=document.getElementById('chartMonthFilter').value;
-    const mn=m!=='ALL'?MONTHS_LONG[+m]:'';
+    const mn=m!=='ALL'?_chartPeriodLabel(m):'';
     const _sub3 = document.getElementById('chartsSubtitle'); if (_sub3) _sub3.textContent=`${flt.length.toLocaleString('fr-FR')} vol(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
 
     // Vols/mois
@@ -4390,7 +4503,7 @@ window._hasPerm = function(perm) {
 
     if (y !== 'ALL' || m !== 'ALL') {
       let lbl = '';
-      if (m !== 'ALL') lbl = MONTHS_FR[+m] + ' ';
+      if (m !== 'ALL') lbl = _chartPeriodLabel(m) + ' ';
       lbl += (y !== 'ALL') ? y : 'toutes années';
       chips.push({ id:'period', icon:'', text: lbl.trim() });
     }
