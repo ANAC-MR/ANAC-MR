@@ -2404,6 +2404,36 @@ async function _loadAircraftCap(){
   window._acCap=map; return map;
 }
 
+// dataURL PNG → octets (pour ImageRun docx)
+function _dataUrlToBytes(durl){
+  const b64=(durl||'').split(',')[1]||''; const bin=atob(b64);
+  const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u;
+}
+// Rend un graphique Chart.js hors-écran (thème clair) → octets PNG.
+async function _reportChartImg(config, wpx, hpx){
+  if (typeof Chart==='undefined') return null;
+  const cont=document.createElement('div');
+  cont.style.cssText='position:fixed;left:-99999px;top:-99999px;width:'+wpx+'px;height:'+hpx+'px;';
+  const cv=document.createElement('canvas'); cv.width=wpx; cv.height=hpx; cont.appendChild(cv); document.body.appendChild(cont);
+  try{
+    const ctx=cv.getContext('2d'); ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,wpx,hpx);
+    config.options=config.options||{}; config.options.animation=false; config.options.responsive=false; config.options.maintainAspectRatio=false; config.options.devicePixelRatio=1;
+    const ch=new Chart(cv, config);
+    await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,60)));
+    const durl=cv.toDataURL('image/png');
+    ch.destroy();
+    return _dataUrlToBytes(durl);
+  }catch(e){ console.warn('Graphique rapport:', e&&e.message); return null; }
+  finally{ cont.remove(); }
+}
+// Options Chart.js thème clair pour les images du rapport.
+function _reportChartOpts(pctAxis){
+  const T='#1a2d45', G='#e2e8f0';
+  return {plugins:{legend:{display:false},tooltip:{enabled:false}},
+    scales:{x:{ticks:{color:T,font:{size:13}},grid:{display:false}},
+            y:{beginAtZero:true,ticks:{color:T,font:{size:12},callback:v=>pctAxis?(Math.round(v)+' %'):Math.round(v)},grid:{color:G}}}};
+}
+
 window.generateAnalyticalReport = async function() {
   const btn = document.getElementById('btnAnalReport');
   const _lbl = btn ? btn.innerHTML : '';
@@ -2434,19 +2464,23 @@ window.generateAnalyticalReport = async function() {
 
     // ── Agrégats ──
     const movements = flt.length;
-    let paxTotal=0, paxDepTot=0, paxArrTot=0, babies=0, rateSum=0, rateN=0;
+    let paxTotal=0, paxDepTot=0, paxArrTot=0, rateSum=0, rateN=0;
     const monPax=Array(12).fill(0), monMov=Array(12).fill(0);
-    const co={};
+    const co={}, coMonth={};
+    const monDepRS=Array(12).fill(0), monDepRN=Array(12).fill(0);
+    const monArrRS=Array(12).fill(0), monArrRN=Array(12).fill(0);
     flt.forEach(f => {
-      const px=pxOf(f); paxTotal+=px; babies+=(+f.babies||0);
+      const px=pxOf(f); paxTotal+=px;
       const mo=new Date(f.date).getMonth(); monPax[mo]+=px; monMov[mo]+=1;
       const cap=capOf(f); const r=(cap>0)?px/cap:null;
       if(r!=null){ rateSum+=r; rateN++; }
       const c=f.company||'Inconnue';
       if(!co[c]) co[c]={paxDep:0,paxArr:0,movDep:0,movArr:0,rateSum:0,rateN:0};
+      if(!coMonth[c]) coMonth[c]=Array.from({length:12},()=>({mov:0,pax:0}));
+      coMonth[c][mo].mov++; coMonth[c][mo].pax+=px;
       if(r!=null){ co[c].rateSum+=r; co[c].rateN++; }
-      if(isDEP(f)){ co[c].paxDep+=px; co[c].movDep++; paxDepTot+=px; }
-      else        { co[c].paxArr+=px; co[c].movArr++; paxArrTot+=px; }
+      if(isDEP(f)){ co[c].paxDep+=px; co[c].movDep++; paxDepTot+=px; if(r!=null){monDepRS[mo]+=r;monDepRN[mo]++;} }
+      else        { co[c].paxArr+=px; co[c].movArr++; paxArrTot+=px; if(r!=null){monArrRS[mo]+=r;monArrRN[mo]++;} }
     });
     const avgRate = rateN ? rateSum/rateN : null;   // moyenne globale (0..1)
     const coRows = Object.entries(co).map(([name,s])=>({name,pax:s.paxDep+s.paxArr,paxDep:s.paxDep,paxArr:s.paxArr,mov:s.movDep+s.movArr,rate:s.rateN?s.rateSum/s.rateN:null}))
@@ -2491,10 +2525,10 @@ window.generateAnalyticalReport = async function() {
     const synthese = [];
     synthese.push(scopeCompany
       ? `Ce rapport porte sur ${scopeCompany} à Nouakchott, sur ${perLabel.toLowerCase()}${y!=='ALL'?' '+y:''}. La compagnie a réalisé ${num(movements)} mouvements pour ${num(paxTotal)} passagers.`
-      : `Sur ${perLabel.toLowerCase()}${y!=='ALL'?' '+y:''}, Nouakchott a enregistré ${num(movements)} mouvements et ${num(paxTotal)} passagers, dont ${num(babies)} bébés.`);
+      : `Sur ${perLabel.toLowerCase()}${y!=='ALL'?' '+y:''}, Nouakchott a enregistré ${num(movements)} mouvements pour ${num(paxTotal)} passagers.`);
     synthese.push(senstxt);
     if (movements>0) synthese.push(`En moyenne, chaque mouvement transporte ${num(Math.round(paxTotal/movements))} passagers.`);
-    if (avgRate!=null) synthese.push(`Le taux de remplissage moyen s'établit à ${pc1(avgRate*100)} % (calculé sur les vols dont la capacité de l'appareil est connue).`);
+    if (avgRate!=null) synthese.push(`Le taux de remplissage moyen s'établit à ${pc1(avgRate*100)} %.`);
 
     // Analyse mensuelle (seulement si plusieurs mois)
     const monthTxt = [];
@@ -2528,23 +2562,63 @@ window.generateAnalyticalReport = async function() {
     const destTxt=[];
     if (destTop.length){
       const d1=destTop[0], d2=destTop[1], d3=destTop[2];
-      let s=`${d1.city} est la destination la plus desservie : ${num(d1.pax)} passagers sur ${d1.vols} tronçons.`;
+      let s=`${d1.city} est la destination la plus desservie, avec ${num(d1.pax)} passagers sur ${num(d1.vols)} vols.`;
       if (d2) s+=` Viennent ensuite ${d2.city} (${num(d2.pax)} passagers)`;
       if (d3) s+=` et ${d3.city} (${num(d3.pax)})`;
       s+='.';
       destTxt.push(s);
-      destTxt.push(`Le comptage se fait par tronçon : un vol à escale compte pour chacune des villes qu'il dessert.`);
     }
 
     // Mauritania Airlines
     const maTxt=[];
     if (maPax){
       maTxt.push(`Mauritania Airlines transporte ${num(maPax)} passagers sur la période. Le réseau intérieur en représente ${pc1(maDom/maPax*100)} %, l'international ${pc1(maInt/maPax*100)} %.`);
-      maTxt.push(`C'est la seule compagnie à relier entre elles les villes mauritaniennes.`);
       if (maTop.length){
         maTxt.push('Ses principales destinations : '+maTop.map(d=>`${d.c} (${num(d.p)})`).join(', ')+'.');
       }
     }
+
+    // ── Conclusions (comparaisons concrètes) ──
+    const conclusions=[];
+    const mi = monthsPresent.map(x=>x.i);   // mois présents, ordre chronologique
+    const rateAt=(rs,rn,i)=> rn[i]?rs[i]/rn[i]:null;
+    if (mi.length>=2){
+      // Évolution des vols par compagnie (dernier mois vs mois précédent)
+      coRows.slice(0,4).forEach(r=>{
+        const arr=coMonth[r.name]; if(!arr) return;
+        const pres=mi.filter(i=>arr[i].mov>0);
+        if(pres.length>=2){
+          const last=pres[pres.length-1], prev=pres[pres.length-2];
+          const dv=arr[last].mov-arr[prev].mov;
+          if(dv>0)      conclusions.push(`${r.name} a augmenté ses vols en ${MONTHS_LONG[last]} par rapport à ${MONTHS_LONG[prev]} (${arr[prev].mov} → ${arr[last].mov}).`);
+          else if(dv<0) conclusions.push(`${r.name} a réduit ses vols en ${MONTHS_LONG[last]} par rapport à ${MONTHS_LONG[prev]} (${arr[prev].mov} → ${arr[last].mov}).`);
+          else          conclusions.push(`${r.name} maintient le même nombre de vols entre ${MONTHS_LONG[prev]} et ${MONTHS_LONG[last]} (${arr[last].mov}).`);
+        }
+      });
+      // Tendance du taux de remplissage, départs et arrivées
+      const f0=mi[0], fN=mi[mi.length-1];
+      const dep0=rateAt(monDepRS,monDepRN,f0), depN=rateAt(monDepRS,monDepRN,fN);
+      if(dep0!=null && depN!=null){
+        const d=(depN-dep0)*100;
+        conclusions.push(`Le taux de remplissage des départs ${d>=0?'progresse':'recule'} de ${pc1(Math.abs(d))} points entre ${MONTHS_LONG[f0]} (${pc1(dep0*100)} %) et ${MONTHS_LONG[fN]} (${pc1(depN*100)} %).`);
+      }
+      const arr0=rateAt(monArrRS,monArrRN,f0), arrN=rateAt(monArrRS,monArrRN,fN);
+      if(arr0!=null && arrN!=null){
+        const d=(arrN-arr0)*100;
+        conclusions.push(`Le taux de remplissage des arrivées ${d>=0?'progresse':'recule'} de ${pc1(Math.abs(d))} points entre ${MONTHS_LONG[f0]} (${pc1(arr0*100)} %) et ${MONTHS_LONG[fN]} (${pc1(arrN*100)} %).`);
+      }
+    } else {
+      // Période d'un seul mois : comparaison départs / arrivées
+      const dR = monDepRN.reduce((s,n,i)=>s+monDepRS[i],0)/(monDepRN.reduce((s,n)=>s+n,0)||1);
+      const aR = monArrRN.reduce((s,n,i)=>s+monArrRS[i],0)/(monArrRN.reduce((s,n)=>s+n,0)||1);
+      const dN = monDepRN.reduce((s,n)=>s+n,0), aN = monArrRN.reduce((s,n)=>s+n,0);
+      if(dN && aN){
+        conclusions.push(dR>=aR
+          ? `Les vols au départ se remplissent mieux que les arrivées (${pc1(dR*100)} % contre ${pc1(aR*100)} %).`
+          : `Les vols à l'arrivée se remplissent mieux que les départs (${pc1(aR*100)} % contre ${pc1(dR*100)} %).`);
+      }
+    }
+    if (destTop[0]) conclusions.push(`${destTop[0].city} reste la liaison la plus chargée avec ${num(destTop[0].pax)} passagers.`);
 
     // Points saillants
     const highlights=[];
@@ -2557,7 +2631,7 @@ window.generateAnalyticalReport = async function() {
 
     // ── Word ──
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-            AlignmentType, BorderStyle, WidthType, ShadingType } = await import('https://esm.sh/docx@9.5.3');
+            AlignmentType, BorderStyle, WidthType, ShadingType, ImageRun } = await import('https://esm.sh/docx@9.5.3');
     const NAVY='0F1E3D', GOLD='D4AF37';
     const bd={style:BorderStyle.SINGLE,size:4,color:'C8D2E0'}; const allBd={top:bd,bottom:bd,left:bd,right:bd};
     const P=(text,{bold=false,size=22,color,after=120,before=0,align}={})=>new Paragraph({alignment:align,spacing:{before,after},children:[new TextRun({text,font:'Calibri',size,bold,color})]});
@@ -2575,48 +2649,73 @@ window.generateAnalyticalReport = async function() {
     ]});
     const dW=[4400,2600,2600];
     const destTable=new Table({width:{size:W,type:WidthType.DXA},columnWidths:dW,rows:[
-      new TableRow({children:[hc('Destination (tronçon)',dW[0]),hc('Tronçons',dW[1]),hc('Passagers',dW[2])]}),
+      new TableRow({children:[hc('Destination',dW[0]),hc('Vols',dW[1]),hc('Passagers',dW[2])]}),
       ...destTop.map(r=>new TableRow({children:[dc2(r.city,dW[0],{left:true}),dc2(num(r.vols),dW[1]),dc2(num(r.pax),dW[2])]}))
     ]});
     // Table mensuelle (si plusieurs mois)
-    const mChildren=[];
+    let monthTable=null;
     if (monthsPresent.length>1){
       const mW=[3000,3300,3300];
-      const monthTable=new Table({width:{size:W,type:WidthType.DXA},columnWidths:mW,rows:[
+      monthTable=new Table({width:{size:W,type:WidthType.DXA},columnWidths:mW,rows:[
         new TableRow({children:[hc('Mois',mW[0]),hc('Mouvements',mW[1]),hc('Passagers',mW[2])]}),
         ...monthsPresent.map(x=>new TableRow({children:[dc2(MONTHS_LONG[x.i],mW[0],{left:true}),dc2(num(x.mov),mW[1]),dc2(num(x.pax),mW[2])]}))
       ]});
-      mChildren.push(H('3. Répartition mensuelle'));
-      monthTxt.forEach(t=>mChildren.push(P(t)));
-      mChildren.push(monthTable);
     }
 
+    // ── Graphiques (rendus en images, thème clair) ──
+    const PALc=['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#38bdf8','#f472b6','#a3e635','#f59e0b'];
+    const barImg=(labels,data,pct,color)=>_reportChartImg({type:'bar',data:{labels,datasets:[{data,backgroundColor:color||labels.map((_,i)=>PALc[i%PALc.length]),borderRadius:6,maxBarThickness:80}]},options:_reportChartOpts(pct)},1100,460);
+    const imgPaxCo  = await barImg(coRows.map(r=>r.name), coRows.map(r=>r.pax), false);
+    const imgRateCo = (avgRate!=null) ? await barImg(coRows.map(r=>r.name), coRows.map(r=>r.rate!=null?+(r.rate*100).toFixed(1):0), true) : null;
+    let imgPaxMonth=null, imgRateDA=null;
+    if (monthsPresent.length>1){
+      imgPaxMonth = await barImg(monthsPresent.map(x=>MONTHS_LONG[x.i]), monthsPresent.map(x=>x.pax), false, '#4A9EFF');
+      const depD=monthsPresent.map(x=>monDepRN[x.i]?+(monDepRS[x.i]/monDepRN[x.i]*100).toFixed(1):0);
+      const arrD=monthsPresent.map(x=>monArrRN[x.i]?+(monArrRS[x.i]/monArrRN[x.i]*100).toFixed(1):0);
+      if (depD.some(v=>v>0)||arrD.some(v=>v>0)){
+        imgRateDA = await _reportChartImg({type:'bar',data:{labels:monthsPresent.map(x=>MONTHS_LONG[x.i]),datasets:[
+          {label:'Départs',data:depD,backgroundColor:'#4A9EFF',borderRadius:5},
+          {label:'Arrivées',data:arrD,backgroundColor:'#2DD4A0',borderRadius:5}
+        ]},options:{plugins:{legend:{display:true,labels:{color:'#1a2d45',font:{size:13}}},tooltip:{enabled:false}},scales:{x:{ticks:{color:'#1a2d45',font:{size:13}},grid:{display:false}},y:{beginAtZero:true,ticks:{color:'#1a2d45',callback:v=>Math.round(v)+' %'},grid:{color:'#e2e8f0'}}}}},1100,460);
+      }
+    }
+    const fig=(bytes,cap)=> bytes ? [
+      new Paragraph({spacing:{before:80,after:20},alignment:AlignmentType.CENTER,children:[new ImageRun({data:bytes,type:'png',transformation:{width:560,height:234}})]}),
+      new Paragraph({spacing:{after:140},alignment:AlignmentType.CENTER,children:[new TextRun({text:cap,font:'Calibri',size:16,italics:true,color:'8592A3'})]})
+    ] : [];
+
+    // ── Assemblage du document ──
+    let sn=0; const S=()=>(++sn)+'. ';
     const body=[
       new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:60},children:[new TextRun({text:'Rapport analytique du trafic aérien',font:'Calibri',size:40,bold:true,color:NAVY})]}),
       new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:240},children:[new TextRun({text:subtitle,font:'Calibri',size:24,color:'44556A'})]}),
-      H('1. Synthèse'),
-      ...synthese.map(t=>P(t)),
+      H(S()+'Synthèse'), ...synthese.map(t=>P(t)),
     ];
-    // 2. Trafic par compagnie (ou détail de la compagnie)
-    body.push(H('2. '+(scopeCompany?('Activité de '+scopeCompany):'Trafic par compagnie')));
+    body.push(H(S()+(scopeCompany?('Activité de '+scopeCompany):'Trafic par compagnie')));
     compaTxt.forEach(t=>body.push(P(t)));
     body.push(coTable);
-    // 3. Répartition mensuelle (optionnelle)
-    body.push(...mChildren);
-    // 4. Destinations
-    body.push(H((monthsPresent.length>1?'4':'3')+'. Destinations les plus fréquentées'));
+    body.push(...fig(imgPaxCo,'Passagers par compagnie'));
+    if (imgRateCo) body.push(...fig(imgRateCo,'Taux de remplissage moyen par compagnie'));
+    if (monthTable){
+      body.push(H(S()+'Répartition mensuelle'));
+      monthTxt.forEach(t=>body.push(P(t)));
+      body.push(monthTable);
+      body.push(...fig(imgPaxMonth,'Passagers par mois'));
+      if (imgRateDA) body.push(...fig(imgRateDA,'Taux de remplissage des départs et des arrivées, par mois'));
+    }
+    body.push(H(S()+'Destinations les plus fréquentées'));
     destTxt.forEach(t=>body.push(P(t)));
     body.push(destTable);
-    // 5. Mauritania Airlines (si non filtré sur une autre compagnie)
     if (!scopeCompany || (typeof isMAIcompany==='function' && isMAIcompany(scopeCompany))){
-      body.push(H((monthsPresent.length>1?'5':'4')+'. Mauritania Airlines'));
+      body.push(H(S()+'Mauritania Airlines'));
       if (maTxt.length) maTxt.forEach(t=>body.push(P(t))); else body.push(P('Aucun vol Mauritania Airlines sur la période.'));
     }
-    // 6. Points saillants
-    body.push(H((monthsPresent.length>1?'6':'5')+'. Points saillants'));
+    if (conclusions.length){
+      body.push(H(S()+'Conclusions'));
+      body.push(...bullets(conclusions));
+    }
+    body.push(H(S()+'Points saillants'));
     body.push(...bullets(highlights));
-    body.push(P(' ',{after:160}));
-    body.push(P('Rapport établi à partir des données enregistrées dans ANAC SGV, selon le filtre sélectionné dans Diagrammes & Rapports. Les commentaires peuvent être complétés ou ajustés avant diffusion.',{size:16,color:'8592A3'}));
 
     const doc=new Document({styles:{default:{document:{run:{font:'Calibri',size:22}}}},
       sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1000,right:1134,bottom:1134,left:1134}}},children:body}]});
@@ -3457,7 +3556,7 @@ function refreshCharts(){
     document.getElementById('kpi-comp').textContent=comp.size;
     document.getElementById('kpi-dest').textContent=dest.size;
     document.getElementById('kpi-vols-sub').textContent='vols enregistrés';
-    document.getElementById('kpi-pax-sub').textContent=`dont ${babies} bébés`;
+    document.getElementById('kpi-pax-sub').textContent='passagers transportés';
     document.getElementById('kpi-comp-sub').textContent=[...comp].slice(0,2).join(', ')+(comp.size>2?'…':'');
     document.getElementById('kpi-dest-sub').textContent='destinations actives';
 
