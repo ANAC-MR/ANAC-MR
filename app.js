@@ -1897,7 +1897,7 @@ function filterFlights() {
 // RENDER FUNCTIONS
 // ============================================
 // Variables globales pour la pagination
-window._currentPage = window._currentPage || 1;
+window._currentPage = window._currentPage || 'LAST';   // ouvrir sur la dernière page par défaut
 window._pageSize    = 50;
 
 function render() {
@@ -1936,7 +1936,10 @@ function render() {
 
     // Ajuster la page courante si hors limites (ex: après filtre)
     const totalPages = Math.max(1, Math.ceil(mainSet.length / window._pageSize));
+    // 'LAST' = ouvrir sur la dernière page (les vols les plus récents).
+    if (window._currentPage === 'LAST') window._currentPage = totalPages;
     if (window._currentPage > totalPages) window._currentPage = totalPages;
+    if (!(window._currentPage >= 1)) window._currentPage = 1;
 
     renderTableWithPagination(mainSet);
     renderTotals(mainSet);
@@ -2042,7 +2045,7 @@ window._goNextPage = function() {
 };
 
 // Reset à la page 1 quand un filtre change
-window._resetPage = function() { window._currentPage = 1; };
+window._resetPage = function() { window._currentPage = 'LAST'; };   // filtre → revenir à la dernière page
 
 function renderTable(filteredFlights, offset) {
     elements.flightTableBody.innerHTML = '';
@@ -2461,9 +2464,19 @@ window.updateMidLegRow = function updateMidLegRow() {
     const segMain = document.getElementById('segMainLabel');
     const segStop = document.getElementById('segStopLabel');
     const segMid  = document.getElementById('segMidLabel');
+    const _typeVal = (document.getElementById('fType')||{}).value || '';
+    const isArr = _typeVal.toUpperCase() === 'ARR';
     if (segMain) segMain.textContent = `${dep||'?'} → ${arr||'?'}`;
-    if (segStop) segStop.textContent = `${dep||'?'} → ${stop||'?'}`;
-    if (segMid)  segMid.textContent  = `${stop||'?'} → ${arr||'?'}`;
+    if (mauri) {
+        // Escale domestique (mauritanienne) → 3 tronçons : départ→escale et escale→arrivée.
+        if (segStop) segStop.textContent = `${dep||'?'} → ${stop||'?'}`;
+        if (segMid)  segMid.textContent  = `${stop||'?'} → ${arr||'?'}`;
+    } else {
+        // Escale étrangère → 1 seul tronçon d'escale, dont le sens suit le vol :
+        //   ARRIVÉE : escale → arrivée (ex L6213 : DSS → NKC) ;
+        //   DÉPART  : départ → escale (ex L6104 : NKC → DKR).
+        if (segStop) segStop.textContent = isArr ? `${stop||'?'} → ${arr||'?'}` : `${dep||'?'} → ${stop||'?'}`;
+    }
 
     // Ligne du milieu (escale→arrivée) seulement si escale mauritanienne
     if (midRow) midRow.style.display = mauri ? 'flex' : 'none';
