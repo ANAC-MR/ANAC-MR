@@ -489,27 +489,25 @@ document.addEventListener('keydown', e => {
       <div class="fld"><label>Du</label><input type="date" id="sDu"></div>
       <div class="fld"><label>Au</label><input type="date" id="sAu"></div>
       <div class="fld"><label>Compagnie</label><select id="sCo" onchange="buildDestOptions()"><option value="">Toutes</option></select></div>
-      <div class="fld"><label>De</label><select id="sFrom"><option value="">Toutes</option></select></div>
-      <div class="fld"><label>À</label><select id="sTo"><option value="">Toutes</option></select></div>
+      <div class="fld"><label>Destination</label><select id="sDest"><option value="">Toutes</option></select></div>
       <div class="fld"><label>Immatriculation</label><input type="text" id="sReg" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="fld"><label>N° de vol</label><input type="text" id="sVol" oninput="this.value=this.value.toUpperCase()"></div>
       <button class="btn btn-gold" onclick="runSearch()">Rechercher</button>
       <button class="btn" onclick="resetSearch()">Réinitialiser</button>
     </div>
 
     <!-- ══════════ SECTION COMPARER (séparée de la Recherche) ══════════ -->
     <div id="comparePanel" class="srch hidden" style="flex-direction:column;align-items:stretch;">
-      <div style="font-weight:700;color:var(--gold);font-size:13px;letter-spacing:.03em;text-transform:uppercase;">Comparer deux numéros de vol</div>
-      <div style="font-size:11px;color:var(--dim);margin:-4px 0 8px;">Choisissez une période, puis un vol A et un vol B (compagnies différentes autorisées).</div>
+      <div style="font-weight:700;color:var(--gold);font-size:13px;letter-spacing:.03em;text-transform:uppercase;">Comparer deux destinations</div>
+      <div style="font-size:11px;color:var(--dim);margin:-4px 0 8px;">Choisissez une période, puis une destination A et une destination B (compagnies différentes autorisées). Chaque destination regroupe ses rotations (départ + arrivée).</div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
         <div class="fld"><label>Du</label><input type="date" id="cDu"></div>
         <div class="fld"><label>Au</label><input type="date" id="cAu"></div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-top:10px;">
-        <div class="fld"><label><span style="color:#D4AF37;">●</span> Compagnie A</label><select id="cCoA" onchange="cmpBuildVolOptions('A')"><option value="">Choisir…</option></select></div>
-        <div class="fld"><label>Vol A</label><select id="cVolA"><option value="">—</option></select></div>
-        <div class="fld"><label><span style="color:#4A9EFF;">●</span> Compagnie B</label><select id="cCoB" onchange="cmpBuildVolOptions('B')"><option value="">Choisir…</option></select></div>
-        <div class="fld"><label>Vol B</label><select id="cVolB"><option value="">—</option></select></div>
+        <div class="fld"><label><span style="color:#D4AF37;">●</span> Compagnie A</label><select id="cCoA" onchange="cmpBuildDestOptions('A')"><option value="">Choisir…</option></select></div>
+        <div class="fld"><label>Destination A</label><select id="cDestA"><option value="">—</option></select></div>
+        <div class="fld"><label><span style="color:#4A9EFF;">●</span> Compagnie B</label><select id="cCoB" onchange="cmpBuildDestOptions('B')"><option value="">Choisir…</option></select></div>
+        <div class="fld"><label>Destination B</label><select id="cDestB"><option value="">—</option></select></div>
         <button class="btn btn-gold" onclick="runVolCompare()">Comparer</button>
         <button class="btn" onclick="resetCompare()">Réinitialiser</button>
       </div>
@@ -897,28 +895,98 @@ function populateSearchCompanies(){
   sel.innerHTML='<option value="">Toutes</option>'+list.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
   if(cur) sel.value=cur;
 }
-// Remplit les destinations : celles de la compagnie choisie, ou toutes si aucune.
-function buildDestOptions(){
-  const selF=document.getElementById('sFrom'), selT=document.getElementById('sTo');
-  if(!selF || !selT) return;
-  const co=(document.getElementById('sCo').value||'').trim().toUpperCase();
-  const set=new Set(['NKC']);   // NKC (la base) doit rester sélectionnable comme De/À
+// Liste des destinations (villes hors NKC) desservies par une compagnie.
+function _destinationsFor(companyUpper){
+  const set=new Set();
   Object.values(_flightNumInfo).forEach(v=>{
-    if(co && (v.company||'').toUpperCase()!==co) return;
-    // Inclure les escales : on peut choisir un tronçon impliquant une ville d'escale.
-    [v.from, v.to, v.stopover].forEach(code=>{ const c=toIATA(code); if(c) set.add(c); });
+    if(companyUpper && (v.company||'').toUpperCase()!==companyUpper) return;
+    [v.from, v.to, v.stopover].forEach(code=>{ const c=toIATA(code); if(c && c!=='NKC') set.add(c); });
   });
-  const villes=[...set].sort();
-  const opts='<option value="">Toutes</option>'+villes.map(c=>{
+  return [...set].sort();
+}
+function _destOptsHtml(companyUpper){
+  return '<option value="">Toutes</option>'+_destinationsFor(companyUpper).map(c=>{
     const nm=_iataName[c]?(' — '+_iataName[c]):'';
     return `<option value="${esc(c)}">${esc(c+nm)}</option>`;
   }).join('');
-  const curF=selF.value, curT=selT.value;
-  selF.innerHTML=opts; selT.innerHTML=opts;
-  selF.value=(curF && villes.includes(curF))?curF:'';
-  selT.value=(curT && villes.includes(curT))?curT:'';
+}
+function buildDestOptions(){
+  const sel=document.getElementById('sDest'); if(!sel) return;
+  const co=(document.getElementById('sCo').value||'').trim().toUpperCase();
+  const cur=sel.value; const list=_destinationsFor(co);
+  sel.innerHTML=_destOptsHtml(co);
+  sel.value=(cur && list.includes(cur))?cur:'';
 }
 window.buildDestOptions=buildDestOptions;
+
+// ══════════ MOTEUR DE ROTATIONS (appariement départ/arrivée par destination) ══════════
+function _isNKCcode(c){ const u=(c||'').toUpperCase().trim(); return u==='NKC'||u==='GQNO'||u==='GQNN'||toIATA(c)==='NKC'; }
+function _flightDestCity(f){
+  const fr=f._from||f.from, to=f._to||f.to;
+  if(_isNKCcode(fr)) return toIATA(to);
+  if(_isNKCcode(to)) return toIATA(fr);
+  return toIATA(to)||toIATA(fr);
+}
+function _rateOfFlight(f){ const cap=Number(f.capacity)||0; if(cap<=0) return null; return ((Number(f.passengers)||0)+(Number(f.babies)||0))/cap; }
+function _dayDiff(a,b){ const da=parseDateInput(a), db=parseDateInput(b); if(!da||!db) return 999; return Math.round((db-da)/86400000); }
+function _rotPax(f){ return (Number(f.passengers)||0)+(Number(f.babies)||0); }
+function _rotRouteTxt(f){ return toIATA(f._from||f.from)+' → '+toIATA(f._to||f.to); }
+
+// Rotations pour compagnie + destination. MAI : départ ancre (arrivée J/J+1) ;
+// étrangères : arrivée ancre (départ J/J+1). Même immatriculation.
+function _buildRotations(flights, companyName, destIATA){
+  const coU=(companyName||'').toUpperCase();
+  const rel=flights.filter(f=> (!coU || (f.company||'').toUpperCase()===coU) && _flightDestCity(f)===destIATA);
+  const byDate=(a,b)=> String(a.date).localeCompare(String(b.date));
+  const deps=rel.filter(f=>_isNKCcode(f._from||f.from)).sort(byDate);
+  const arrs=rel.filter(f=>_isNKCcode(f._to||f.to)).sort(byDate);
+  const mai=suiviIsMAI(companyName);
+  const usedD=new Set(), usedA=new Set(), rotations=[];
+  const match=(cands,used,reg,fromDate)=>{ let best=-1;
+    cands.forEach((c,i)=>{ if(used.has(i)||normReg(c.registration)!==reg) return; const dd=_dayDiff(fromDate,c.date); if(dd<0||dd>1) return; if(best<0||c.date<cands[best].date) best=i; });
+    return best; };
+  if(mai){
+    deps.forEach(d=>{ const mi=match(arrs,usedA,normReg(d.registration),d.date); let a=null; if(mi>=0){a=arrs[mi];usedA.add(mi);}
+      rotations.push({dep:d,arr:a,order:['dep','arr'],jLeg:(a&&a.date>d.date)?'arr':null,anchor:d.date}); });
+    arrs.forEach((a,i)=>{ if(!usedA.has(i)) rotations.push({dep:null,arr:a,order:['dep','arr'],jLeg:null,anchor:a.date}); });
+  } else {
+    arrs.forEach(a=>{ const mi=match(deps,usedD,normReg(a.registration),a.date); let d=null; if(mi>=0){d=deps[mi];usedD.add(mi);}
+      rotations.push({dep:d,arr:a,order:['arr','dep'],jLeg:(d&&d.date>a.date)?'dep':null,anchor:a.date}); });
+    deps.forEach((d,i)=>{ if(!usedD.has(i)) rotations.push({dep:d,arr:null,order:['arr','dep'],jLeg:null,anchor:d.date}); });
+  }
+  rotations.forEach(r=>{ const rs=[_rateOfFlight(r.dep),_rateOfFlight(r.arr)].filter(x=>x!=null); r.rate=rs.length?rs.reduce((s,x)=>s+x,0)/rs.length:null; });
+  rotations.sort((x,y)=> String(x.anchor).localeCompare(String(y.anchor)));
+  return rotations;
+}
+
+// Rendu du tableau en mode rotations (départ + arrivée appariés).
+function _renderRotations(rotations){
+  const body=document.getElementById('suiviBody'); if(!body) return;
+  if(!rotations.length){ body.innerHTML='<tr class="empty-row"><td colspan="9">Aucune rotation pour cette destination sur la période.</td></tr>'; return; }
+  let html='';
+  rotations.forEach(r=>{
+    const legs=r.order.map(k=>k==='dep'?r.dep:r.arr).filter(Boolean);
+    const rateCell = r.rate!=null ? `<span class="rate-cell ${rateClass(r.rate)}">${(r.rate*100).toFixed(1)}%</span>` : '—';
+    legs.forEach((f,i)=>{
+      const isDep=_isNKCcode(f._from||f.from);
+      const isJ = (r.jLeg==='dep'&&isDep) || (r.jLeg==='arr'&&!isDep);
+      const jbadge = isJ ? ' <span style="background:#b3362b;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:800;">J+1</span>' : '';
+      const jour = f.dayName ? `${esc(f.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(f.dayDate||'')}</span>` : esc(f.date||'');
+      html+=`<tr>
+        <td class="day-cell">${jour}</td>
+        <td class="co-cell">${i===0?esc(f.company||''):''}</td>
+        <td class="fn-cell">${esc(f.flightNumber||'')}</td>
+        <td class="route-cell">${esc(_rotRouteTxt(f))}${jbadge}</td>
+        <td class="type-cell">${isDep?'DÉPART':'ARRIVÉE'}</td>
+        <td>${f.capacity!=null?f.capacity:'—'}</td>
+        <td>${_rotPax(f)}</td>
+        ${i===0?`<td rowspan="${legs.length}">${rateCell}</td>`:''}
+        <td>${esc(f.obs||'')}</td>
+      </tr>`;
+    });
+  });
+  body.innerHTML=html;
+}
 
 function toggleSearch(){
   const p=document.getElementById('searchPanel');
@@ -953,61 +1021,63 @@ function cmpPopulateCompanies(){
     if(cur) sel.value=cur;
   });
 }
-window.cmpBuildVolOptions=function(side){
+window.cmpBuildDestOptions=function(side){
   const coSel=document.getElementById(side==='B'?'cCoB':'cCoA');
-  const volSel=document.getElementById(side==='B'?'cVolB':'cVolA');
-  if(!coSel||!volSel) return;
+  const destSel=document.getElementById(side==='B'?'cDestB':'cDestA');
+  if(!coSel||!destSel) return;
   const co=(coSel.value||'').trim().toUpperCase();
-  const nums=Object.keys(_flightNumInfo).filter(k=>{
-    const v=_flightNumInfo[k]; return co ? (v.company||'').toUpperCase()===co : false;
-  }).sort();
-  const cur=volSel.value;
-  volSel.innerHTML='<option value="">—</option>'+nums.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
-  if(nums.includes(cur)) volSel.value=cur;
+  const list=_destinationsFor(co); const cur=destSel.value;
+  destSel.innerHTML=_destOptsHtml(co);
+  destSel.value=(cur && list.includes(cur))?cur:'';
 };
 
 // Libellé de mois : 'AAAA-MM' → 'Mmm AA' (ex. Août 26)
 const _MOIS3=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
 function _moLabel(ym){ const p=(ym||'').split('-'); if(p.length<2) return ym; return _MOIS3[(+p[1])-1]+' '+p[0].slice(2); }
 
-function _cmpStat(flights, vn){
-  const key=normFN(vn);
-  const list=flights.filter(f=>normFN(f.flightNumberRaw||f.flightNumber||'')===key);
-  let pax=0, rateSum=0, rateN=0; const byMonth={};
-  list.forEach(f=>{
-    const p=(Number(f.passengers)||0)+(Number(f.babies)||0);
+// Statistiques d'une destination (rotations dép+arr) pour la comparaison.
+function _rotStat(flights, company, destIATA){
+  const rots=_buildRotations(flights, company, destIATA);
+  let pax=0, rateSum=0, rateN=0; const byMonth={}; const legs=[];
+  rots.forEach(r=>{
+    [r.dep,r.arr].filter(Boolean).forEach(f=>legs.push(f));
+    const p=[r.dep,r.arr].filter(Boolean).reduce((s,f)=>s+_rotPax(f),0);
     pax+=p;
-    const mo=String(f.date||'').slice(0,7);
+    const mo=String(r.anchor||'').slice(0,7);
     if(!byMonth[mo]) byMonth[mo]={pax:0,rateSum:0,rateN:0};
     byMonth[mo].pax+=p;
-    if(f.capacity>0){ rateSum+=p/f.capacity; rateN++; byMonth[mo].rateSum+=p/f.capacity; byMonth[mo].rateN++; }
+    if(r.rate!=null){ rateSum+=r.rate; rateN++; byMonth[mo].rateSum+=r.rate; byMonth[mo].rateN++; }
   });
-  return { list, n:list.length, pax, avg:list.length?Math.round(pax/list.length):0, rate:rateN?rateSum/rateN:null, byMonth };
+  return { rots, legs, n:rots.length, pax, avg:rots.length?Math.round(pax/rots.length):0, rate:rateN?rateSum/rateN:null, byMonth };
 }
 
 window.runVolCompare=async function(){
   const du=document.getElementById('cDu').value, au=document.getElementById('cAu').value;
   if(!du||!au){ alert('Choisissez la période (Du / Au).'); return; }
   if(du>au){ alert('La date de début est postérieure à la date de fin.'); return; }
-  const va=(document.getElementById('cVolA').value||'').trim();
-  const vb=(document.getElementById('cVolB').value||'').trim();
-  if(!va||!vb){ alert('Choisissez les deux numéros de vol.'); return; }
+  const coA=(document.getElementById('cCoA').value||'').trim();
+  const coB=(document.getElementById('cCoB').value||'').trim();
+  const dA=(document.getElementById('cDestA').value||'').trim().toUpperCase();
+  const dB=(document.getElementById('cDestB').value||'').trim().toUpperCase();
+  if(!dA||!dB){ alert('Choisissez les deux destinations.'); return; }
   const box=document.getElementById('cmpVolResult');
   box.innerHTML='<div style="color:var(--dim);padding:10px;">Calcul…</div>';
   const flights=await loadRange(du,au);
-  const A=_cmpStat(flights,va), B=_cmpStat(flights,vb);
-  _cmpRender(va, vb, A, B);
-  // Le tableau du bas reflète la comparaison active (les 2 vols sur la période).
-  const res=[...A.list, ...B.list].sort(sortFlights);
-  _weekFlights=res;
-  renderTable(res); renderSummary(res); _searchDestroyCharts();
+  const A=_rotStat(flights,coA,dA), B=_rotStat(flights,coB,dB);
+  const la=dA+(coA?(' · '+coA):''), lb=dB+(coB?(' · '+coB):'');
+  _cmpRender(la, lb, A, B);
+  // Le tableau du bas montre les rotations des deux destinations.
+  _renderRotations([...A.rots, ...B.rots]);
+  _weekFlights=[...A.legs, ...B.legs];
+  renderSummary(_weekFlights); _searchDestroyCharts();
   const _sc=document.getElementById('searchCharts'); if(_sc) _sc.innerHTML='';
   document.getElementById('weekLabel').textContent =
-    'Comparaison '+esc(va)+' vs '+esc(vb)+' — du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))+' · '+res.length+' vol(s)';
+    'Comparaison '+esc(dA)+' vs '+esc(dB)+' — du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))
+    +' · '+(A.n+B.n)+' rotation(s)';
 };
 
 window.resetCompare=function(){
-  ['cCoA','cVolA','cCoB','cVolB'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['cCoA','cDestA','cCoB','cDestB'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   _cmpDestroy();
   const box=document.getElementById('cmpVolResult'); if(box) box.innerHTML='';
   document.getElementById('comparePanel').classList.add('hidden');
@@ -1021,18 +1091,18 @@ function _cmpRender(va,vb,A,B){
   const box=document.getElementById('cmpVolResult');
   const cA='#D4AF37', cB='#4A9EFF';
   _cmpDestroy();
-  if(!A.n && !B.n){ box.innerHTML='<div style="color:var(--dim);padding:10px;">Aucun vol pour ces deux numéros sur la période.</div>'; return; }
+  if(!A.n && !B.n){ box.innerHTML='<div style="color:var(--dim);padding:10px;">Aucune rotation pour ces deux destinations sur la période.</div>'; return; }
   const card='background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:10px 12px;';
   const ct='font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;';
   box.innerHTML=`
     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;">
-      <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:${cA};"><span style="width:12px;height:12px;border-radius:3px;background:${cA};"></span>${esc(va)} <span style="color:var(--dim);font-weight:400;">(${A.n} vol${A.n>1?'s':''})</span></span>
-      <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:${cB};"><span style="width:12px;height:12px;border-radius:3px;background:${cB};"></span>${esc(vb)} <span style="color:var(--dim);font-weight:400;">(${B.n} vol${B.n>1?'s':''})</span></span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:${cA};"><span style="width:12px;height:12px;border-radius:3px;background:${cA};"></span>${esc(va)} <span style="color:var(--dim);font-weight:400;">(${A.n} rotation${A.n>1?'s':''})</span></span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:${cB};"><span style="width:12px;height:12px;border-radius:3px;background:${cB};"></span>${esc(vb)} <span style="color:var(--dim);font-weight:400;">(${B.n} rotation${B.n>1?'s':''})</span></span>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px;">
       <div style="${card}"><div style="${ct}">Taux de remplissage moyen</div><div style="position:relative;height:160px;"><canvas id="cmpC1"></canvas></div></div>
-      <div style="${card}"><div style="${ct}">PAX moyen par vol</div><div style="position:relative;height:160px;"><canvas id="cmpC2"></canvas></div></div>
-      <div style="${card}"><div style="${ct}">Nombre de vols</div><div style="position:relative;height:160px;"><canvas id="cmpC3"></canvas></div></div>
+      <div style="${card}"><div style="${ct}">PAX moyen par rotation</div><div style="position:relative;height:160px;"><canvas id="cmpC2"></canvas></div></div>
+      <div style="${card}"><div style="${ct}">Nombre de rotations</div><div style="position:relative;height:160px;"><canvas id="cmpC3"></canvas></div></div>
     </div>
     <div style="${card};margin-bottom:14px;"><div style="${ct}">PAX par mois</div><div style="position:relative;height:240px;"><canvas id="cmpC4"></canvas></div></div>
     <div style="${card}"><div style="${ct}">Taux de remplissage par mois</div><div style="position:relative;height:240px;"><canvas id="cmpC5"></canvas></div></div>`;
@@ -1109,52 +1179,43 @@ async function runSearch(){
   if(!du || !au){ alert('Choisissez une période : Du et Au.'); return; }
   if(du>au){ alert('La date de début est postérieure à la date de fin.'); return; }
   const co=document.getElementById('sCo').value.trim();
-  const deFrom=(document.getElementById('sFrom').value||'').trim().toUpperCase();
-  const deTo=(document.getElementById('sTo').value||'').trim().toUpperCase();
+  const dest=(document.getElementById('sDest').value||'').trim().toUpperCase();
   const rg=document.getElementById('sReg').value.trim().toUpperCase().replace(/[\s.\-]/g,'');
-  const vl=normFN(document.getElementById('sVol').value.trim());
   document.getElementById('suiviBody').innerHTML='<tr class="empty-row"><td colspan="9">Recherche…</td></tr>';
   const flights=await loadRange(du, au);
-  let res=flights.filter(f=>{
+
+  if(dest){
+    // ── Mode ROTATIONS : départ + arrivée appariés pour la destination ──
+    let rotations=_buildRotations(flights, co, dest);
+    if(rg) rotations=rotations.filter(r=>[r.dep,r.arr].some(f=>f && normReg(f.registration).includes(rg)));
+    _renderRotations(rotations);
+    const legs=[]; rotations.forEach(r=>{ if(r.dep) legs.push(r.dep); if(r.arr) legs.push(r.arr); });
+    _weekFlights=legs; renderSummary(legs); _renderSearchCharts(legs);
+    const nm=_iataName[dest]?(' ('+_iataName[dest]+')'):'';
+    document.getElementById('weekLabel').textContent =
+      'Destination '+esc(dest)+nm+(co?(' — '+esc(co)):'')
+      +' · du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))+' · '+rotations.length+' rotation(s)';
+    return;
+  }
+
+  // ── Sans destination : filtre simple compagnie/immatriculation ──
+  const res=flights.filter(f=>{
     if(co && !(f.company||'').toUpperCase().includes(co.toUpperCase())) return false;
     if(rg && !((f.registration||'').toUpperCase().replace(/[\s.\-]/g,'').includes(rg))) return false;
-    if(vl && !normFN(f.flightNumberRaw||'').includes(vl)) return false;
     return true;
   });
-  // ── Recherche par TRONÇON (De → À) → on ne garde que le segment concerné,
-  // avec ses PAX propres, au lieu du vol complet. Escales incluses.
-  //   • De + À  → le tronçon exact (De→À)
-  //   • De seul → segments partant de De ; À seul → segments arrivant à À
-  // Une recherche par n° de vol garde le vol complet (pas de découpage).
-  if((deFrom || deTo) && !vl){
-    const segs=[];
-    res.forEach(f=>{
-      suiviFlightLines(f).forEach(l=>{
-        if(deFrom && (l.from||'').toUpperCase()!==deFrom) return;
-        if(deTo   && (l.to||'').toUpperCase()!==deTo)   return;
-        segs.push(Object.assign({}, f, {
-          route:l.routeTxt, passengers:l.pax, babies:l.babies,
-          _hasStop:false, _stop:'', _troncon:true
-        }));
-      });
-    });
-    res=segs;
-  }
   _weekFlights=res;
   renderTable(res); renderSummary(res); _renderSearchCharts(res);
   const crit=[];
   if(co) crit.push('compagnie « '+co+' »');
-  if(deFrom || deTo) crit.push('tronçon « '+(deFrom||'…')+' → '+(deTo||'…')+' »');
   if(rg) crit.push('immat « '+rg+' »');
-  if(vl) crit.push('vol « '+vl+' »');
-  const unite=((deFrom||deTo)&&!vl)?'tronçon(s)':'vol(s)';
   document.getElementById('weekLabel').textContent =
     'Recherche du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))
-    +(crit.length?' — '+crit.join(', '):'')+' · '+res.length+' '+unite;
+    +(crit.length?' — '+crit.join(', '):'')+' · '+res.length+' vol(s)';
 }
 
 function resetSearch(){
-  ['sCo','sFrom','sTo','sReg','sVol'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['sCo','sDest','sReg'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   _searchDestroyCharts();
   const sc=document.getElementById('searchCharts'); if(sc) sc.innerHTML='';
   document.getElementById('searchPanel').classList.add('hidden');
