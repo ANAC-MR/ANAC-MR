@@ -927,7 +927,7 @@ function _flightDestCity(f){
   if(_isNKCcode(to)) return toIATA(fr);
   return toIATA(to)||toIATA(fr);
 }
-function _rateOfFlight(f){ const cap=Number(f.capacity)||0; if(cap<=0) return null; return ((Number(f.passengers)||0)+(Number(f.babies)||0))/cap; }
+function _rateOfFlight(f){ if(!f) return null; const cap=Number(f.capacity)||0; if(cap<=0) return null; return ((Number(f.passengers)||0)+(Number(f.babies)||0))/cap; }
 function _dayDiff(a,b){ const da=parseDateInput(a), db=parseDateInput(b); if(!da||!db) return 999; return Math.round((db-da)/86400000); }
 function _rotPax(f){ return (Number(f.passengers)||0)+(Number(f.babies)||0); }
 function _rotRouteTxt(f){ return toIATA(f._from||f.from)+' → '+toIATA(f._to||f.to); }
@@ -959,33 +959,48 @@ function _buildRotations(flights, companyName, destIATA){
   return rotations;
 }
 
-// Rendu du tableau en mode rotations (départ + arrivée appariés).
-function _renderRotations(rotations){
-  const body=document.getElementById('suiviBody'); if(!body) return;
-  if(!rotations.length){ body.innerHTML='<tr class="empty-row"><td colspan="9">Aucune rotation pour cette destination sur la période.</td></tr>'; return; }
+// Construit les <tr> d'un ensemble de rotations (cellules fusionnées sur la paire).
+function _rotationRowsHtml(rotations){
   let html='';
   rotations.forEach(r=>{
     const legs=r.order.map(k=>k==='dep'?r.dep:r.arr).filter(Boolean);
+    const span=legs.length;
     const rateCell = r.rate!=null ? `<span class="rate-cell ${rateClass(r.rate)}">${(r.rate*100).toFixed(1)}%</span>` : '—';
+    const first=legs[0];
+    const jour = first && first.dayName ? `${esc(first.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(first.dayDate||'')}</span>` : esc((first&&first.date)||'');
     legs.forEach((f,i)=>{
       const isDep=_isNKCcode(f._from||f.from);
       const isJ = (r.jLeg==='dep'&&isDep) || (r.jLeg==='arr'&&!isDep);
       const jbadge = isJ ? ' <span style="background:#b3362b;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:800;">J+1</span>' : '';
-      const jour = f.dayName ? `${esc(f.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(f.dayDate||'')}</span>` : esc(f.date||'');
+      // Colonnes fusionnées (Jour, Compagnie, Type d'appareil, Capacité, Taux) sur la 1re ligne.
+      const merged = (i===0) ? (
+        `<td class="day-cell" rowspan="${span}">${jour}</td>`
+        + `<td class="co-cell" rowspan="${span}">${esc(f.company||'')}</td>`
+      ) : '';
+      const mergedRight = (i===0) ? (
+        `<td class="type-cell" rowspan="${span}">${esc(f.typeDisp||'')}</td>`
+        + `<td rowspan="${span}">${f.capacity!=null?f.capacity:'—'}</td>`
+      ) : '';
+      const taux = (i===0) ? `<td rowspan="${span}">${rateCell}</td>` : '';
       html+=`<tr>
-        <td class="day-cell">${jour}</td>
-        <td class="co-cell">${i===0?esc(f.company||''):''}</td>
+        ${merged}
         <td class="fn-cell">${esc(f.flightNumber||'')}</td>
         <td class="route-cell">${esc(_rotRouteTxt(f))}${jbadge}</td>
-        <td class="type-cell">${isDep?'DÉPART':'ARRIVÉE'}</td>
-        <td>${f.capacity!=null?f.capacity:'—'}</td>
+        ${mergedRight}
         <td>${_rotPax(f)}</td>
-        ${i===0?`<td rowspan="${legs.length}">${rateCell}</td>`:''}
+        ${taux}
         <td>${esc(f.obs||'')}</td>
       </tr>`;
     });
   });
-  body.innerHTML=html;
+  return html;
+}
+
+// Rendu du tableau en mode rotations (recherche : une seule destination).
+function _renderRotations(rotations){
+  const body=document.getElementById('suiviBody'); if(!body) return;
+  if(!rotations.length){ body.innerHTML='<tr class="empty-row"><td colspan="9">Aucune rotation pour cette destination sur la période.</td></tr>'; return; }
+  body.innerHTML=_rotationRowsHtml(rotations);
 }
 
 function toggleSearch(){
@@ -1066,8 +1081,13 @@ window.runVolCompare=async function(){
   const A=_rotStat(flights,coA,dA), B=_rotStat(flights,coB,dB);
   const la=dA+(coA?(' · '+coA):''), lb=dB+(coB?(' · '+coB):'');
   _cmpRender(la, lb, A, B);
-  // Le tableau du bas montre les rotations des deux destinations.
-  _renderRotations([...A.rots, ...B.rots]);
+  // Le tableau du bas montre les rotations des deux destinations, séparées.
+  const grpHdr=(label,color)=>`<tr><td colspan="9" style="background:${color}22;border-left:4px solid ${color};color:#e6edf5;font-weight:800;padding:9px 14px;font-size:12px;letter-spacing:.02em;">${esc(label)}</td></tr>`;
+  const rowsA=_rotationRowsHtml(A.rots)||'<tr><td colspan="9" style="padding:10px;color:var(--dim);">Aucune rotation.</td></tr>';
+  const rowsB=_rotationRowsHtml(B.rots)||'<tr><td colspan="9" style="padding:10px;color:var(--dim);">Aucune rotation.</td></tr>';
+  document.getElementById('suiviBody').innerHTML =
+    grpHdr('● Destination A — '+la, '#D4AF37') + rowsA +
+    grpHdr('● Destination B — '+lb, '#4A9EFF') + rowsB;
   _weekFlights=[...A.legs, ...B.legs];
   renderSummary(_weekFlights); _searchDestroyCharts();
   const _sc=document.getElementById('searchCharts'); if(_sc) _sc.innerHTML='';
