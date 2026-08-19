@@ -985,16 +985,17 @@ function _rotLegs(r){
   if(r.legs) return r.legs.map((f,i)=>({f, role:(r.roles&&r.roles[i])||'dep'})).filter(x=>x.f);
   return r.order.map(k=>({f:(k==='dep'?r.dep:r.arr), role:k})).filter(x=>x.f);
 }
-// Lignes d'affichage d'un vol dans une rotation. Un vol marqué _rotExpand
-// (arrivée L6221 avec escale mauritanienne NDB) est éclaté en 3 tronçons ;
-// tout autre vol donne une seule ligne. La cellule N° de vol est fusionnée
-// sur les tronçons d'un même vol.
+// Lignes d'affichage d'un vol dans une rotation, via suiviFlightLines :
+//   • vol direct → 1 ligne ;
+//   • MAI escale étrangère → 2 tronçons (donc 4 lignes pour un aller-retour) ;
+//   • MAI escale domestique → 3 tronçons.
+// Les tronçons secondaires (sub) sont grisés/jaunis comme les sous-lignes.
+// La cellule N° de vol est fusionnée sur les tronçons d'un même vol. Les BÉBÉS
+// ne sont jamais comptés (suiviFlightLines renvoie déjà des passagers seuls).
 function _rotLegLines(f){
-  if(f && f._rotExpand){
-    const ls=suiviFlightLines(f);
-    if(ls.length>1) return ls.map(l=>({ routeTxt:`${l.from} → ${l.to}`, pax:(Number(l.pax)||0) }));
-  }
-  return [{ routeTxt:_rotRouteTxt(f), pax:_rotPax(f) }];
+  return suiviFlightLines(f).map((l,idx)=>({
+    routeTxt:`${l.from} → ${l.to}`, pax:(Number(l.pax)||0), sub: idx>0
+  }));
 }
 
 // Rotations pour compagnie + destination. MAI : départ ancre (arrivée J/J+1) ;
@@ -1078,15 +1079,17 @@ function _buildAllRotations(flights, coU, dest){
   return rotations;
 }
 
-// Construit les <tr> d'un ensemble de rotations (cellules fusionnées sur la paire).
-// Rotations triées PAR DATE ; la colonne Jour est fusionnée par journée
-// (toutes les rotations d'un même jour partagent une seule cellule Jour).
-// Les colonnes Compagnie / Type d'appareil / Capacité / Taux sont fusionnées
-// par rotation (départ + arrivée).
+// Construit les <tr> d'un ensemble de rotations avec fusion hiérarchique :
+//   • Jour      → fusionné par journée (toutes les rotations ancrées ce jour) ;
+//   • Compagnie → fusionné par compagnie ET par jour (plusieurs rotations d'une
+//                 même compagnie le même jour partagent une seule cellule) ;
+//   • Type / Capacité / Taux → fusionnés par rotation (départ + arrivée) ;
+//   • N° de vol → fusionné sur les tronçons d'un même vol.
+// Les tronçons secondaires d'escale sont grisés (fond jaune foncé).
 function _rotationRowsHtml(rotations){
-  // Nombre de lignes physiques d'une rotation (somme des tronçons de ses legs).
   const rotRows=r=>_rotLegs(r).reduce((s,x)=>s+_rotLegLines(x.f).length,0);
   const rots=rotations.slice().sort(_rotSort);
+  const SUB='background:#f4c430;color:#3a2c00;font-weight:700;';
   let html='', i=0;
   while(i<rots.length){
     const day=rots[i].anchor;
@@ -1095,26 +1098,35 @@ function _rotationRowsHtml(rotations){
     const fr=_rotLegs(group[0])[0].f;
     const jourHtml = fr && fr.dayName ? `${esc(fr.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(fr.dayDate||'')}</span>` : esc((fr&&fr.date)||day||'');
     let dayEmitted=false;
-    group.forEach(r=>{
-      const legs=_rotLegs(r); const span=rotRows(r);
-      const rateCell = r.rate!=null ? `<span class="rate-cell ${rateClass(r.rate)}">${(r.rate*100).toFixed(1)}%</span>` : '—';
-      let rotFirst=true;
-      legs.forEach(({f,role})=>{
-        const lines=_rotLegLines(f);
-        const isDep=(role==='dep');
-        const isJ = (r.jLeg==='dep'&&isDep) || (r.jLeg==='arr'&&!isDep);
-        lines.forEach((ln,li)=>{
-          const jbadge = (isJ && li===0) ? ' <span style="background:#b3362b;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:800;">J+1</span>' : '';
-          const jourCell = (!dayEmitted) ? `<td class="day-cell" rowspan="${dayRows}">${jourHtml}</td>` : '';
-          const coCell   = rotFirst ? `<td class="co-cell" rowspan="${span}">${esc(f.company||'')}</td>` : '';
-          const fnCell   = (li===0) ? `<td class="fn-cell" rowspan="${lines.length}">${esc(f.flightNumber||'')}</td>` : '';
-          const typeCap  = rotFirst ? (`<td class="type-cell" rowspan="${span}">${esc(f.typeDisp||'')}</td><td rowspan="${span}">${f.capacity!=null?f.capacity:'—'}</td>`) : '';
-          const taux     = rotFirst ? `<td rowspan="${span}">${rateCell}</td>` : '';
-          html+=`<tr>${jourCell}${coCell}${fnCell}<td class="route-cell">${esc(ln.routeTxt)}${jbadge}</td>${typeCap}<td>${ln.pax}</td>${taux}<td>${esc(f.obs||'')}</td></tr>`;
-          dayEmitted=true; rotFirst=false;
+    // Blocs de compagnie consécutifs dans la journée (rotations déjà triées MAI d'abord).
+    let j=0;
+    while(j<group.length){
+      const co=_rotCompany(group[j]);
+      const coBlock=[]; while(j<group.length && _rotCompany(group[j])===co){ coBlock.push(group[j]); j++; }
+      const coRows=coBlock.reduce((s,r)=>s+rotRows(r),0);
+      let coEmitted=false;
+      coBlock.forEach(r=>{
+        const legs=_rotLegs(r); const span=rotRows(r);
+        const rateCell = r.rate!=null ? `<span class="rate-cell ${rateClass(r.rate)}">${(r.rate*100).toFixed(1)}%</span>` : '—';
+        let rotFirst=true;
+        legs.forEach(({f,role})=>{
+          const lines=_rotLegLines(f);
+          const isDep=(role==='dep');
+          const isJ = (r.jLeg==='dep'&&isDep) || (r.jLeg==='arr'&&!isDep);
+          lines.forEach((ln,li)=>{
+            const st = ln.sub ? ` style="${SUB}"` : '';
+            const jbadge = (isJ && li===0) ? ' <span style="background:#b3362b;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:800;">J+1</span>' : '';
+            const jourCell = (!dayEmitted) ? `<td class="day-cell" rowspan="${dayRows}">${jourHtml}</td>` : '';
+            const coCell   = (!coEmitted) ? `<td class="co-cell" rowspan="${coRows}">${esc(f.company||'')}</td>` : '';
+            const fnCell   = (li===0) ? `<td class="fn-cell" rowspan="${lines.length}">${esc(f.flightNumber||'')}</td>` : '';
+            const typeCap  = rotFirst ? (`<td class="type-cell" rowspan="${span}">${esc(f.typeDisp||'')}</td><td rowspan="${span}">${f.capacity!=null?f.capacity:'—'}</td>`) : '';
+            const taux     = rotFirst ? `<td rowspan="${span}">${rateCell}</td>` : '';
+            html+=`<tr>${jourCell}${coCell}${fnCell}<td class="route-cell"${st}>${esc(ln.routeTxt)}${jbadge}</td>${typeCap}<td${st}>${ln.pax}</td>${taux}<td>${esc(f.obs||'')}</td></tr>`;
+            dayEmitted=true; coEmitted=true; rotFirst=false;
+          });
         });
       });
-    });
+    }
   }
   return html;
 }
@@ -1666,30 +1678,49 @@ function _exportRotationsXlsx(X){
   rows.push([ctx.period||'','','','','','','','','']);
   rows.push(['Jour','Compagnie','N° de Vol / Horaire','Prove-Destination','Type d\'Appareil','Capacité','Nbre de Passagers','Taux de remplissage','Observat.']);
   const meta=[];
-  rots.forEach(r=>{
-    const legs=_rotLegs(r); const span=rotRows(r);
-    let rotFirst=true;
-    legs.forEach(({f,role})=>{
-      const lines=_rotLegLines(f);
-      const isDep=(role==='dep');
-      const isJ=(r.jLeg==='dep'&&isDep)||(r.jLeg==='arr'&&!isDep);
-      lines.forEach((ln,li)=>{
-        rows.push([
-          li===0 ? ((f.dayName||'')+' '+(f.dayDate||'')).trim() : '',
-          rotFirst ? (f.company||'') : '',
-          li===0 ? (f.flightNumber||'') : '',
-          ln.routeTxt,
-          rotFirst ? (f.typeDisp||'') : '',
-          rotFirst ? (f.capacity!=null?f.capacity:'') : '',
-          ln.pax,
-          (rotFirst && r.rate!=null) ? r.rate : '',
-          (isJ && li===0) ? 'J+1' : ''
-        ]);
-        meta.push({ dateKey:f.date, company:f.company||'', isFirst:rotFirst, span, fnFirst:(li===0), fnSpan:lines.length });
-        rotFirst=false;
+  const anchorLabel=r=>{ const f=_rotLegs(r)[0].f; return ((f.dayName||'')+' '+(f.dayDate||'')).trim(); };
+  const anchorDay=r=>{ const f=_rotLegs(r)[0].f; return f.dayName||''; };
+  // Regroupement identique au HTML : jour (ancre) → compagnie → rotation → vol → tronçons.
+  let di=0;
+  while(di<rots.length){
+    const day=rots[di].anchor;
+    const dayGroup=[]; while(di<rots.length && rots[di].anchor===day){ dayGroup.push(rots[di]); di++; }
+    const dayRows=dayGroup.reduce((s,r)=>s+rotRows(r),0);
+    const dLabel=anchorLabel(dayGroup[0]), dName=anchorDay(dayGroup[0]);
+    let dayFirst=true, jc=0;
+    while(jc<dayGroup.length){
+      const co=_rotCompany(dayGroup[jc]);
+      const coBlock=[]; while(jc<dayGroup.length && _rotCompany(dayGroup[jc])===co){ coBlock.push(dayGroup[jc]); jc++; }
+      const coRows=coBlock.reduce((s,r)=>s+rotRows(r),0);
+      let coFirst=true;
+      coBlock.forEach(r=>{
+        const legs=_rotLegs(r); const rRows=rotRows(r);
+        let rotFirst=true;
+        legs.forEach(({f,role})=>{
+          const lines=_rotLegLines(f);
+          const isDep=(role==='dep');
+          const isJ=(r.jLeg==='dep'&&isDep)||(r.jLeg==='arr'&&!isDep);
+          lines.forEach((ln,li)=>{
+            rows.push([
+              dayFirst ? dLabel : '',
+              coFirst ? (f.company||'') : '',
+              li===0 ? (f.flightNumber||'') : '',
+              ln.routeTxt,
+              rotFirst ? (f.typeDisp||'') : '',
+              rotFirst ? (f.capacity!=null?f.capacity:'') : '',
+              ln.pax,
+              (rotFirst && r.rate!=null) ? r.rate : '',
+              (isJ && li===0) ? 'J+1' : ''
+            ]);
+            meta.push({ dName, company:f.company||'',
+              dayFirst, dayRows, coFirst, coRows,
+              rotFirst, rotRows:rRows, fnFirst:(li===0), fnRows:lines.length, sub:!!ln.sub });
+            dayFirst=false; coFirst=false; rotFirst=false;
+          });
+        });
       });
-    });
-  });
+    }
+  }
   const ws=X.utils.aoa_to_sheet(rows);
   ws['!cols']=[{wch:14},{wch:16},{wch:20},{wch:18},{wch:30},{wch:9},{wch:16},{wch:16},{wch:10}];
   ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:1,c:0},e:{r:1,c:8}}];
@@ -1697,32 +1728,28 @@ function _exportRotationsXlsx(X){
   for(let c=0;c<9;c++){ const ad=X.utils.encode_cell({r:1,c}); if(!ws[ad])ws[ad]={t:'s',v:''}; ws[ad].s={font:{name:fontName,bold:true,sz:10},alignment:center,border}; }
   for(let c=0;c<9;c++){ const ad=X.utils.encode_cell({r:2,c}); if(!ws[ad])ws[ad]={t:'s',v:''}; ws[ad].s={font:{name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}},fill:{fgColor:{rgb:'FF'+HEADER_COLS_COLOR}},alignment:center,border}; }
   for(let i=0;i<meta.length;i++){
-    const r=3+i, m=meta[i], coColor=companyColor(m.company);
+    const r=3+i, m=meta[i], coColor=companyColor(m.company), dayColor=DAY_COLORS[m.dName];
     for(let c=0;c<9;c++){
       const ad=X.utils.encode_cell({r,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
       const st={font:{name:fontName,sz:10},border,alignment:{vertical:'center',horizontal:(c===4?'left':'center'),wrapText:(c===4)}};
-      if(c>=1 && coColor) st.fill={fgColor:{rgb:'FF'+coColor}};
-      if(c===0) st.font={name:fontName,bold:true,sz:10};
+      if(c===0){ st.font={name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}}; if(dayColor) st.fill={fgColor:{rgb:'FF'+dayColor}}; }
+      else if(coColor){ st.fill={fgColor:{rgb:'FF'+coColor}}; }
+      // Tronçons secondaires d'escale : Prove-Destination (c3) et Passagers (c6) en jaune foncé.
+      if(m.sub && (c===3||c===6)){ st.fill={fgColor:{rgb:'FFF4C430'}}; st.font={name:fontName,bold:true,sz:10,color:{rgb:'FF3A2C00'}}; }
       if(c===7){
         if(ws[ad].v!=='' && ws[ad].v!=null){ ws[ad]={t:'n', v:ws[ad].v, z:'0.0%', s:st}; }
         else { ws[ad]={t:'s', v:'', s:st}; }
       } else ws[ad].s=st;
     }
   }
-  // Fusion verticale colonne "Jour" par DATE (et non par nom de jour).
-  let gS=null,gK=null;
-  for(let i=0;i<=meta.length;i++){
-    const key=(i<meta.length)?meta[i].dateKey:null;
-    if(key!==gK){ if(gK!==null&&gS!=null){ const rS=3+gS,rE=3+(i-1); if(rE>rS) ws['!merges'].push({s:{r:rS,c:0},e:{r:rE,c:0}}); } gK=key; gS=i; }
-  }
-  // Fusion Compagnie / Type / Capacité / Taux par rotation (départ + arrivée).
-  for(let i=0;i<meta.length;i++){
-    if(meta[i].isFirst && meta[i].span>1){ const rS=3+i, rE=rS+meta[i].span-1; [1,4,5,7].forEach(c=>ws['!merges'].push({s:{r:rS,c},e:{r:rE,c}})); }
-  }
-  // Fusion colonne "N° de Vol" sur les tronçons d'un même vol (ex. L6221 = 3 lignes).
-  for(let i=0;i<meta.length;i++){
-    if(meta[i].fnFirst && meta[i].fnSpan>1){ const rS=3+i, rE=rS+meta[i].fnSpan-1; ws['!merges'].push({s:{r:rS,c:2},e:{r:rE,c:2}}); }
-  }
+  // Fusion "Jour" par journée (ancre de rotation) — inclut les legs J+1.
+  for(let i=0;i<meta.length;i++){ if(meta[i].dayFirst && meta[i].dayRows>1){ const rS=3+i,rE=rS+meta[i].dayRows-1; ws['!merges'].push({s:{r:rS,c:0},e:{r:rE,c:0}}); } }
+  // Fusion "Compagnie" par compagnie ET par jour.
+  for(let i=0;i<meta.length;i++){ if(meta[i].coFirst && meta[i].coRows>1){ const rS=3+i,rE=rS+meta[i].coRows-1; ws['!merges'].push({s:{r:rS,c:1},e:{r:rE,c:1}}); } }
+  // Fusion Type / Capacité / Taux par rotation (départ + arrivée).
+  for(let i=0;i<meta.length;i++){ if(meta[i].rotFirst && meta[i].rotRows>1){ const rS=3+i,rE=rS+meta[i].rotRows-1; [4,5,7].forEach(c=>ws['!merges'].push({s:{r:rS,c},e:{r:rE,c}})); } }
+  // Fusion "N° de Vol" sur les tronçons d'un même vol (ex. L6221 = 3 lignes).
+  for(let i=0;i<meta.length;i++){ if(meta[i].fnFirst && meta[i].fnRows>1){ const rS=3+i,rE=rS+meta[i].fnRows-1; ws['!merges'].push({s:{r:rS,c:2},e:{r:rE,c:2}}); } }
   const wb=X.utils.book_new();
   X.utils.book_append_sheet(wb, ws, 'Rotations');
   X.writeFile(wb, (ctx.filename||'Suivi-rotations')+'.xlsx');
