@@ -832,6 +832,13 @@ async function loadWeek(startStr){
   if(!start){ body.innerHTML='<tr class="empty-row"><td colspan="9">Date invalide</td></tr>'; return; }
   const end=new Date(start); end.setDate(start.getDate()+6);
   const fromStr=fmtDateLocal(start), toStr=fmtDateLocal(end);
+  // Tampon ±1 jour : permet d'apparier les rotations à cheval sur minuit au bord
+  // de la semaine (départ tôt lundi ⇄ arrivée dimanche soir précédent, ou arrivée
+  // dimanche ⇄ départ J+1 le lundi suivant). Seules les rotations ANCRÉES dans la
+  // semaine seront affichées.
+  const bufS=new Date(start); bufS.setDate(start.getDate()-1);
+  const bufE=new Date(end);   bufE.setDate(end.getDate()+1);
+  const bufFromStr=fmtDateLocal(bufS), bufToStr=fmtDateLocal(bufE);
   document.getElementById('weekLabel').textContent='Du '+fmtDMY(start)+' au '+fmtDMY(end);
 
   // Ordre d'affichage des jours : selon le jour de la date de début.
@@ -844,7 +851,7 @@ async function loadWeek(startStr){
 
   let flights=[];
   try{
-    const q=query(collection(db,'flights'), where('date','>=',fromStr), where('date','<=',toStr));
+    const q=query(collection(db,'flights'), where('date','>=',bufFromStr), where('date','<=',bufToStr));
     const snap=await getDocs(q);
     snap.forEach(d=>{
       if(d.id.startsWith('cfg-')) return;
@@ -859,17 +866,21 @@ async function loadWeek(startStr){
       snap.forEach(d=>{
         if(d.id.startsWith('cfg-')) return;
         const x=d.data();
-        if(x.date && x.date>=fromStr && x.date<=toStr) flights.push(x);
+        if(x.date && x.date>=bufFromStr && x.date<=bufToStr) flights.push(x);
       });
     }catch(e2){ console.error(e2); }
   }
 
   flights=flights.map(f=>enrich(f)).sort(sortFlights);
-  _weekFlights=flights;
+  // _weekFlights = uniquement les vols de la semaine réelle (hors tampon).
+  _weekFlights=flights.filter(f=>f.date>=fromStr && f.date<=toStr);
 
   // Vue hebdomadaire en ROTATIONS (départ + arrivée appariés, cellules fusionnées),
   // comme les sections Recherche / Comparer. Toutes compagnies, toutes destinations.
-  const rotations=_buildAllRotations(flights, '', '');
+  // On construit sur l'ensemble tampon puis on ne garde que les rotations dont
+  // l'ANCRE (arrivée pour les étrangères, départ pour MAI) tombe dans la semaine.
+  const rotations=_buildAllRotations(flights, '', '')
+    .filter(r=> String(r.anchor)>=fromStr && String(r.anchor)<=toStr);
   if(!rotations.length){
     body.innerHTML='<tr class="empty-row"><td colspan="9">Aucun vol enregistré pour cette période.</td></tr>';
   } else {
