@@ -950,9 +950,11 @@ function _flightDestCity(f){
   if(_isNKCcode(to)) return toIATA(fr);
   return toIATA(to)||toIATA(fr);
 }
-function _rateOfFlight(f){ if(!f) return null; const cap=Number(f.capacity)||0; if(cap<=0) return null; return ((Number(f.passengers)||0)+(Number(f.babies)||0))/cap; }
+// Taux de remplissage = passagers / capacité. Les BÉBÉS ne sont JAMAIS comptés.
+function _rateOfFlight(f){ if(!f) return null; const cap=Number(f.capacity)||0; if(cap<=0) return null; return (Number(f.passengers)||0)/cap; }
 function _dayDiff(a,b){ const da=parseDateInput(a), db=parseDateInput(b); if(!da||!db) return 999; return Math.round((db-da)/86400000); }
-function _rotPax(f){ return (Number(f.passengers)||0)+(Number(f.babies)||0); }
+// Passagers d'un vol. Les BÉBÉS ne sont JAMAIS ajoutés aux passagers.
+function _rotPax(f){ return (Number(f.passengers)||0); }
 function _rotRouteTxt(f){ return toIATA(f._from||f.from)+' → '+toIATA(f._to||f.to); }
 
 // ── Accès générique aux legs d'une rotation ──
@@ -979,7 +981,7 @@ function _rotLegs(r){
 function _rotLegLines(f){
   if(f && f._rotExpand){
     const ls=suiviFlightLines(f);
-    if(ls.length>1) return ls.map(l=>({ routeTxt:`${l.from} → ${l.to}`, pax:(Number(l.pax)||0)+(Number(l.babies)||0) }));
+    if(ls.length>1) return ls.map(l=>({ routeTxt:`${l.from} → ${l.to}`, pax:(Number(l.pax)||0) }));
   }
   return [{ routeTxt:_rotRouteTxt(f), pax:_rotPax(f) }];
 }
@@ -1329,7 +1331,7 @@ function _renderSearchCharts(res){
   if(!res || !res.length || typeof Chart==='undefined'){ box.innerHTML=''; return; }
   const byCo={}, byMonth={};
   res.forEach(f=>{
-    const p=(Number(f.passengers)||0)+(Number(f.babies)||0);
+    const p=(Number(f.passengers)||0);   // bébés jamais comptés
     const c=f.company||'—';
     if(!byCo[c]) byCo[c]={pax:0,rateSum:0,rateN:0};
     byCo[c].pax+=p;
