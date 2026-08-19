@@ -2154,7 +2154,10 @@ function render() {
     const _tronc = (elements.fromSelect.value!=='ALL' || elements.toSelect.value!=='ALL') && !elements.searchVol.value.trim();
     let rotations;
     if (_range && !_tronc) {
-        const buffered = filterFlights({ from: _hAddDays(_range.from,-2), to: _hAddDays(_range.to,2) });
+        let buffered = filterFlights({ from: _hAddDays(_range.from,-2), to: _hAddDays(_range.to,2) });
+        // Respecter le mode Charter (Séparés / Mélangés / Charters seuls), comme mainSet.
+        if (mode === 'sep')       buffered = buffered.filter(f => !(f && f.isCharter));
+        else if (mode === 'only') buffered = buffered.filter(f =>  (f && f.isCharter));
         rotations = _hBuildAllRotations(buffered)
             .filter(r => String(r.anchor) >= _range.from && String(r.anchor) <= _range.to);
     } else {
