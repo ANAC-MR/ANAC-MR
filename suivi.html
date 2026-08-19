@@ -647,6 +647,8 @@ async function ensureAuth(){
 // ── État ──
 let _aircraft = {};   // REG normalisée → { reg, type, capacity }
 let _weekFlights = []; // vols de la semaine, enrichis
+// Contexte d'export Excel selon la section active (vue normale / rotations).
+let _exportCtx = { mode:'week' };
 const DAYS = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
 let _dayOrder={};
 
@@ -864,6 +866,7 @@ async function loadWeek(startStr){
 
   flights=flights.map(f=>enrich(f)).sort(sortFlights);
   _weekFlights=flights;
+  _exportCtx={ mode:'week' };
   renderTable(flights);
   renderSummary(flights);
 }
@@ -1110,6 +1113,10 @@ window.runVolCompare=async function(){
     ? _rotationRowsHtml(mixed)
     : '<tr class="empty-row"><td colspan="9">Aucune rotation pour ces destinations sur la période.</td></tr>';
   _weekFlights=[...A.legs, ...B.legs];
+  _exportCtx={ mode:'rotations', rotations:mixed,
+    title:'COMPARAISON — '+la+'  vs  '+lb,
+    period:'Du '+fmtDMY(parseDateInput(du))+'   au   '+fmtDMY(parseDateInput(au)),
+    filename:'Comparaison-'+dA+'-vs-'+dB };
   // Résumé SÉPARÉ par destination (pas de total mélangé).
   _renderCompareSummary(A, B, la, lb);
   _searchDestroyCharts();
@@ -1256,6 +1263,10 @@ async function runSearch(){
     const legs=[]; rotations.forEach(r=>{ if(r.dep) legs.push(r.dep); if(r.arr) legs.push(r.arr); });
     _weekFlights=legs; renderSummary(legs); _renderSearchCharts(legs);
     const nm=_iataName[dest]?(' ('+_iataName[dest]+')'):'';
+    _exportCtx={ mode:'rotations', rotations,
+      title:'SUIVI DU TRAFIC — Destination '+dest+nm+(co?(' — '+co):''),
+      period:'Du '+fmtDMY(parseDateInput(du))+'   au   '+fmtDMY(parseDateInput(au)),
+      filename:'Rotations-'+dest+(co?('-'+co.replace(/\s+/g,'')):'') };
     document.getElementById('weekLabel').textContent =
       'Destination '+esc(dest)+nm+(co?(' — '+esc(co)):'')
       +' · du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))+' · '+rotations.length+' rotation(s)';
@@ -1269,6 +1280,7 @@ async function runSearch(){
     return true;
   });
   _weekFlights=res;
+  _exportCtx={ mode:'week' };
   renderTable(res); renderSummary(res); _renderSearchCharts(res);
   const crit=[];
   if(co) crit.push('compagnie « '+co+' »');
@@ -1605,6 +1617,72 @@ function renderSummary(flights){
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 // ════ EXPORT EXCEL COLORÉ (xlsx-js-style) ════
+// Export Excel dédié au mode ROTATIONS (Recherche / Comparer par destination).
+function _exportRotationsXlsx(X){
+  const ctx=_exportCtx||{};
+  const legsOf=r=>r.order.map(k=>k==='dep'?r.dep:r.arr).filter(Boolean);
+  const rots=(ctx.rotations||[]).slice().sort((a,b)=> String(a.anchor).localeCompare(String(b.anchor)) || (a.order[0]==='dep'?-1:1));
+  const fontName='Arial';
+  const thin={style:'thin',color:{rgb:'FFBFBFBF'}}, border={top:thin,bottom:thin,left:thin,right:thin};
+  const center={horizontal:'center',vertical:'center',wrapText:true};
+  const rows=[];
+  rows.push([ctx.title||'SUIVI DU TRAFIC AÉRIEN','','','','','','','','']);
+  rows.push([ctx.period||'','','','','','','','','']);
+  rows.push(['Jour','Compagnie','N° de Vol / Horaire','Prove-Destination','Type d\'Appareil','Capacité','Nbre de Passagers','Taux de remplissage','Observat.']);
+  const meta=[];
+  rots.forEach(r=>{
+    const legs=legsOf(r);
+    legs.forEach((f,li)=>{
+      const isDep=_isNKCcode(f._from||f.from);
+      const isJ=(r.jLeg==='dep'&&isDep)||(r.jLeg==='arr'&&!isDep);
+      rows.push([
+        li===0 ? ((f.dayName||'')+' '+(f.dayDate||'')).trim() : '',
+        li===0 ? (f.company||'') : '',
+        f.flightNumber||'',
+        _rotRouteTxt(f),
+        li===0 ? (f.typeDisp||'') : '',
+        li===0 ? (f.capacity!=null?f.capacity:'') : '',
+        _rotPax(f),
+        (li===0 && r.rate!=null) ? r.rate : '',
+        isJ ? 'J+1' : ''
+      ]);
+      meta.push({ dateKey:f.date, company:f.company||'', isFirst:li===0, span:legs.length });
+    });
+  });
+  const ws=X.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:16},{wch:20},{wch:18},{wch:30},{wch:9},{wch:16},{wch:16},{wch:10}];
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:1,c:0},e:{r:1,c:8}}];
+  if(ws['A1']) ws['A1'].s={font:{name:fontName,bold:true,sz:13,color:{rgb:'FFFFFFFF'}},fill:{fgColor:{rgb:'FF'+HEADER_TITLE_COLOR}},alignment:center,border};
+  for(let c=0;c<9;c++){ const ad=X.utils.encode_cell({r:1,c}); if(!ws[ad])ws[ad]={t:'s',v:''}; ws[ad].s={font:{name:fontName,bold:true,sz:10},alignment:center,border}; }
+  for(let c=0;c<9;c++){ const ad=X.utils.encode_cell({r:2,c}); if(!ws[ad])ws[ad]={t:'s',v:''}; ws[ad].s={font:{name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}},fill:{fgColor:{rgb:'FF'+HEADER_COLS_COLOR}},alignment:center,border}; }
+  for(let i=0;i<meta.length;i++){
+    const r=3+i, m=meta[i], coColor=companyColor(m.company);
+    for(let c=0;c<9;c++){
+      const ad=X.utils.encode_cell({r,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
+      const st={font:{name:fontName,sz:10},border,alignment:{vertical:'center',horizontal:(c===4?'left':'center'),wrapText:(c===4)}};
+      if(c>=1 && coColor) st.fill={fgColor:{rgb:'FF'+coColor}};
+      if(c===0) st.font={name:fontName,bold:true,sz:10};
+      if(c===7){
+        if(ws[ad].v!=='' && ws[ad].v!=null){ ws[ad]={t:'n', v:ws[ad].v, z:'0.0%', s:st}; }
+        else { ws[ad]={t:'s', v:'', s:st}; }
+      } else ws[ad].s=st;
+    }
+  }
+  // Fusion verticale colonne "Jour" par DATE (et non par nom de jour).
+  let gS=null,gK=null;
+  for(let i=0;i<=meta.length;i++){
+    const key=(i<meta.length)?meta[i].dateKey:null;
+    if(key!==gK){ if(gK!==null&&gS!=null){ const rS=3+gS,rE=3+(i-1); if(rE>rS) ws['!merges'].push({s:{r:rS,c:0},e:{r:rE,c:0}}); } gK=key; gS=i; }
+  }
+  // Fusion Compagnie / Type / Capacité / Taux par rotation (départ + arrivée).
+  for(let i=0;i<meta.length;i++){
+    if(meta[i].isFirst && meta[i].span>1){ const rS=3+i, rE=rS+meta[i].span-1; [1,4,5,7].forEach(c=>ws['!merges'].push({s:{r:rS,c},e:{r:rE,c}})); }
+  }
+  const wb=X.utils.book_new();
+  X.utils.book_append_sheet(wb, ws, 'Rotations');
+  X.writeFile(wb, (ctx.filename||'Suivi-rotations')+'.xlsx');
+}
+
 async function exportExcel(){
   const btn=document.getElementById('exportBtn');
   btn.disabled=true; const old=btn.innerHTML; btn.innerHTML='<span class="spin"></span> Export…';
@@ -1634,6 +1712,8 @@ async function exportExcel(){
       }
     }
     const X=window.XLSX;
+    // Section Recherche / Comparer (par destination) → export dédié aux rotations.
+    if(_exportCtx && _exportCtx.mode==='rotations'){ _exportRotationsXlsx(X); return; }
     const startStr=document.getElementById('startPicker').value;
     const monday=parseDateInput(startStr)||mondayOfToday();
     const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
