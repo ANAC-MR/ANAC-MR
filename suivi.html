@@ -866,9 +866,22 @@ async function loadWeek(startStr){
 
   flights=flights.map(f=>enrich(f)).sort(sortFlights);
   _weekFlights=flights;
-  _exportCtx={ mode:'week' };
-  renderTable(flights);
-  renderSummary(flights);
+
+  // Vue hebdomadaire en ROTATIONS (départ + arrivée appariés, cellules fusionnées),
+  // comme les sections Recherche / Comparer. Toutes compagnies, toutes destinations.
+  const rotations=_buildAllRotations(flights, '', '');
+  if(!rotations.length){
+    body.innerHTML='<tr class="empty-row"><td colspan="9">Aucun vol enregistré pour cette période.</td></tr>';
+  } else {
+    body.innerHTML=_rotationRowsHtml(rotations);
+  }
+  const legs=[]; rotations.forEach(r=>_rotLegs(r).forEach(x=>legs.push(x.f)));
+  renderSummary(legs.length?legs:flights);
+  _exportCtx={ mode:'rotations', rotations,
+    title:'SUIVI DU TRAFIC AÉRIEN',
+    period:'Du '+fmtDMY(start)+'   au   '+fmtDMY(end),
+    filename:'Suivi-semaine-'+fromStr };
+  document.getElementById('weekLabel').textContent='Du '+fmtDMY(start)+' au '+fmtDMY(end)+' · '+rotations.length+' rotation(s)';
 }
 
 // ── Recherche par période / route / immatriculation / n° de vol ──
@@ -946,6 +959,15 @@ function _rotRouteTxt(f){ return toIATA(f._from||f.from)+' → '+toIATA(f._to||f
 // Rotation normale : {dep, arr, order:['dep','arr']|['arr','dep']}.
 // Rotation exceptionnelle LPA : {legs:[...], roles:['dep','dep','arr']}.
 function _rotFirstRole(r){ return (r.order? r.order[0] : (r.roles && r.roles[0])) || 'dep'; }
+function _rotCompany(r){ const l=(r.legs?r.legs:[r.dep,r.arr]).find(Boolean); return l?(l.company||''):''; }
+// Tri des rotations : par date, puis Mauritania Airlines en tête, puis compagnie,
+// puis départ avant arrivée. Utilisé par le rendu HTML et l'export Excel.
+function _rotSort(a,b){
+  const d=String(a.anchor).localeCompare(String(b.anchor)); if(d) return d;
+  const am=isMAI(_rotCompany(a))?0:1, bm=isMAI(_rotCompany(b))?0:1; if(am!==bm) return am-bm;
+  const cc=_rotCompany(a).localeCompare(_rotCompany(b)); if(cc) return cc;
+  return (_rotFirstRole(a)==='dep'?0:1)-(_rotFirstRole(b)==='dep'?0:1);
+}
 function _rotLegs(r){
   if(r.legs) return r.legs.map((f,i)=>({f, role:(r.roles&&r.roles[i])||'dep'})).filter(x=>x.f);
   return r.order.map(k=>({f:(k==='dep'?r.dep:r.arr), role:k})).filter(x=>x.f);
@@ -1027,6 +1049,22 @@ function _buildLPARotations(flights, coU, byDate){
   return out;
 }
 
+// Construit TOUTES les rotations d'un lot de vols, en appariant départ + arrivée
+// par (compagnie, destination). Filtres optionnels : compagnie (coU en MAJ) et
+// destination (IATA en MAJ). Utilisé par la vue hebdomadaire ET la Recherche.
+function _buildAllRotations(flights, coU, dest){
+  const pairs=new Map();
+  flights.forEach(f=>{
+    if(coU && (f.company||'').toUpperCase()!==coU) return;
+    const c=_flightDestCity(f); if(!c || c==='NKC') return;
+    if(dest && c!==dest) return;
+    pairs.set((f.company||'')+'||'+c, {company:f.company||'', dest:c});
+  });
+  let rotations=[];
+  pairs.forEach(p=>{ rotations=rotations.concat(_buildRotations(flights, p.company, p.dest)); });
+  return rotations;
+}
+
 // Construit les <tr> d'un ensemble de rotations (cellules fusionnées sur la paire).
 // Rotations triées PAR DATE ; la colonne Jour est fusionnée par journée
 // (toutes les rotations d'un même jour partagent une seule cellule Jour).
@@ -1035,7 +1073,7 @@ function _buildLPARotations(flights, coU, byDate){
 function _rotationRowsHtml(rotations){
   // Nombre de lignes physiques d'une rotation (somme des tronçons de ses legs).
   const rotRows=r=>_rotLegs(r).reduce((s,x)=>s+_rotLegLines(x.f).length,0);
-  const rots=rotations.slice().sort((a,b)=> String(a.anchor).localeCompare(String(b.anchor)) || (_rotFirstRole(a)==='dep'?-1:1));
+  const rots=rotations.slice().sort(_rotSort);
   let html='', i=0;
   while(i<rots.length){
     const day=rots[i].anchor;
@@ -1332,15 +1370,7 @@ async function runSearch(){
   // Sans destination précise → toutes les destinations (de la compagnie choisie
   // si précisée, sinon toutes). Chaque paire (compagnie, destination) est traitée
   // avec sa propre logique MAI / étrangère.
-  const pairs=new Map();
-  flights.forEach(f=>{
-    if(coU && (f.company||'').toUpperCase()!==coU) return;
-    const c=_flightDestCity(f); if(!c || c==='NKC') return;
-    if(dest && c!==dest) return;
-    pairs.set((f.company||'')+'||'+c, {company:f.company||'', dest:c});
-  });
-  let rotations=[];
-  pairs.forEach(p=>{ rotations=rotations.concat(_buildRotations(flights, p.company, p.dest)); });
+  let rotations=_buildAllRotations(flights, coU, dest);
   if(rg) rotations=rotations.filter(r=>_rotLegs(r).some(x=>normReg(x.f.registration).includes(rg)));
 
   _renderRotations(rotations);
@@ -1542,81 +1572,6 @@ function charterFromFlight(f){
   return suiviIsMAI(f.company) && !!_charterBaseFN(fn) && _charterSuffix(fn)!=='';
 }
 
-function renderTable(flights){
-  const body=document.getElementById('suiviBody');
-  if(!flights.length){
-    body.innerHTML='<tr class="empty-row"><td colspan="9">Aucun vol enregistré pour cette période.</td></tr>';
-    return;
-  }
-  // Coloration Charter Flights : basée sur le champ isCharter (calculé dans enrich)
-  // Pré-générer les lignes de chaque vol (escales incluses)
-  const expanded=flights.map(f=>({ f, lines:suiviFlightLines(f) }));
-  // Compter le nombre TOTAL de lignes par jour (pour le rowspan de la cellule jour)
-  const dayCount={};
-  for(const e of expanded){ dayCount[e.f.date]=(dayCount[e.f.date]||0)+e.lines.length; }
-
-  let html='';
-  let lastDay=null, lastCo=null;
-  for(const e of expanded){
-    const f=e.f;
-    const lines=e.lines;
-    const hasEscale = lines.length>1;
-    const showDay = f.date!==lastDay;
-    const showCo  = showDay || f.company!==lastCo;
-    lastDay=f.date; lastCo=f.company;
-    const capCell = f.capacity!=null ? f.capacity : '<span class="cap-empty">—</span>';
-    // Total PAX (somme de toutes les lignes affichées)
-    const totalPax = lines.reduce((s,l)=>s+(Number(l.pax)||0),0);
-    // ── Ligne principale ──
-    const main = lines[0];
-    // Taux de remplissage : UNIQUEMENT sur la ligne principale (pas le total,
-    // pas les segments). Basé sur le PAX de la ligne principale.
-    const mainRate = (f.capacity && main.pax!=null && f.capacity>0) ? (main.pax/f.capacity) : null;
-    const rateCell = mainRate!=null ? `<span class="rate-cell ${rateClass(mainRate)}">${(mainRate*100).toFixed(1)}%</span>` : '—';
-    // Cellule jour fusionnée : rowspan = nb total de lignes du jour
-    const dayTd = showDay
-      ? `<td class="day-cell" rowspan="${dayCount[f.date]}">${esc(f.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(f.dayDate)}</span></td>`
-      : '';
-
-    const mainPaxCell = main.pax!=null ? main.pax : '—';
-    const totalBadge = hasEscale
-      ? ` <span style="display:inline-block;background:#0f1e3d;color:#D4AF37;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:6px;">Σ ${totalPax}</span>` : '';
-    // Les vols charter s'affichent comme les vols normaux (pas de fond distinct).
-    const pilgRow = '';
-    html+=`<tr class="${showDay?'day-start':''}"${pilgRow}>
-      ${dayTd}
-      <td class="co-cell">${showCo?esc(f.company):''}</td>
-      <td class="fn-cell">${esc(f.flightNumber)}</td>
-      <td class="route-cell">${esc(main.routeTxt||'—')}</td>
-      <td class="type-cell">${esc(f.typeDisp||'—')}</td>
-      <td>${capCell}</td>
-      <td>${mainPaxCell}${totalBadge}</td>
-      <td>${rateCell}</td>
-      <td>${esc(f.obs||'')}</td>
-    </tr>`;
-
-    // ── Sous-lignes d'escale (jaune foncé sur Trajet + PAX) ──
-    // On affiche aussi capacité, taux de remplissage et horaire pour chaque segment.
-    for(let li=1; li<lines.length; li++){
-      const l=lines[li];
-      const secRate = (f.capacity && l.pax!=null && f.capacity>0) ? (l.pax/f.capacity) : null;
-      const secRateCell = secRate!=null ? `<span class="rate-cell ${rateClass(secRate)}">${(secRate*100).toFixed(1)}%</span>` : '—';
-      const secCap = f.capacity!=null ? f.capacity : '<span class="cap-empty">—</span>';
-      html+=`<tr${pilgRow}>
-        <td class="co-cell"></td>
-        <td class="fn-cell">${esc(f.flightNumber)}</td>
-        <td class="route-cell" style="background:#f4c430;color:#3a2c00;font-weight:700;">${esc(l.routeTxt||'—')}</td>
-        <td class="type-cell">${esc(f.typeDisp||'—')}</td>
-        <td>${secCap}</td>
-        <td style="background:#f4c430;color:#3a2c00;font-weight:700;">${l.pax!=null?l.pax:'—'}</td>
-        <td>${secRateCell}</td>
-        <td></td>
-      </tr>`;
-    }
-  }
-  body.innerHTML=html;
-}
-
 function renderSummary(flights){
   const div=document.getElementById('summary');
   const nbVols=flights.length;
@@ -1688,7 +1643,7 @@ function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;
 // Export Excel dédié au mode ROTATIONS (Recherche / Comparer par destination).
 function _exportRotationsXlsx(X){
   const ctx=_exportCtx||{};
-  const rots=(ctx.rotations||[]).slice().sort((a,b)=> String(a.anchor).localeCompare(String(b.anchor)) || (_rotFirstRole(a)==='dep'?-1:1));
+  const rots=(ctx.rotations||[]).slice().sort(_rotSort);
   const rotRows=r=>_rotLegs(r).reduce((s,x)=>s+_rotLegLines(x.f).length,0);
   const fontName='Arial';
   const thin={style:'thin',color:{rgb:'FFBFBFBF'}}, border={top:thin,bottom:thin,left:thin,right:thin};
