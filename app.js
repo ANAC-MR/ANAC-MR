@@ -1894,11 +1894,203 @@ function filterFlights() {
 }
 
 // ============================================
+// MOTEUR DE ROTATIONS (accueil) — identique au suivi.
+// Une rotation = départ + arrivée appariés par (compagnie, destination) et même
+// immatriculation. Ancre : DÉPART pour Mauritania Airlines, ARRIVÉE pour les
+// autres compagnies. Tri : par DATE puis N° de vol (pas de priorité MAI).
+// ============================================
+function _hIsNKC(c){ const u=(c||'').toUpperCase().trim(); return u==='NKC'||u==='GQNO'||u==='GQNN'||icaoToIATA(c)==='NKC'; }
+function _hNormReg(r){ return (r||'').toUpperCase().replace(/[\s.\-]/g,''); }
+function _hFnCode(f){ return String((f&&f.flightNumber)||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+function _hIsFN(f,code){ return _hFnCode(f)===code; }
+// Ville de destination (IATA) servant à apparier. Règle exceptionnelle Las Palmas :
+// L6014/L6220/L6221 rattachés à LPA (comme le suivi).
+function _hDestCity(f){
+  if(_hIsFN(f,'L6014')||_hIsFN(f,'L6220')||_hIsFN(f,'L6221')) return 'LPA';
+  const fr=f.from, to=f.to;
+  if(_hIsNKC(fr)) return icaoToIATA(to);
+  if(_hIsNKC(to)) return icaoToIATA(fr);
+  return icaoToIATA(to)||icaoToIATA(fr);
+}
+function _hDayDiff(a,b){ const da=new Date((a||'')+'T00:00:00'), db=new Date((b||'')+'T00:00:00'); if(isNaN(da)||isNaN(db)) return 999; return Math.round((db-da)/86400000); }
+
+// Rotation exceptionnelle Las Palmas : L6014 (NKC-NDB) + L6220 (NDB-LPA) au départ,
+// L6221 (LPA-NDB-NKC) à l'arrivée.
+function _hBuildLPARotations(flights, coU, byDate){
+  const co=f=> !coU || (f.company||'').toUpperCase()===coU;
+  const f20=flights.filter(f=>co(f)&&_hIsFN(f,'L6220')).sort(byDate);
+  const f14=flights.filter(f=>co(f)&&_hIsFN(f,'L6014')).sort(byDate);
+  const f21=flights.filter(f=>co(f)&&_hIsFN(f,'L6221')).sort(byDate);
+  const u14=new Set(), u21=new Set(), out=[];
+  const take=(arr,used,reg,fromDate,maxDiff)=>{ let best=-1;
+    arr.forEach((c,i)=>{ if(used.has(i)||_hNormReg(c.registration)!==reg) return; const dd=_hDayDiff(fromDate,c.date); if(dd<0||dd>maxDiff) return; if(best<0||c.date<arr[best].date) best=i; });
+    return best; };
+  f20.forEach(f=>{
+    const reg=_hNormReg(f.registration);
+    const i14=take(f14,u14,reg,f.date,0); let feeder=null; if(i14>=0){feeder=f14[i14];u14.add(i14);}
+    const i21=take(f21,u21,reg,f.date,1); let arr=null; if(i21>=0){arr=f21[i21];u21.add(i21);}
+    const legs=[], roles=[];
+    if(feeder){ legs.push(feeder); roles.push('dep'); }
+    legs.push(f); roles.push('dep');
+    if(arr){ legs.push(arr); roles.push('arr'); }
+    const anchor=feeder?feeder.date:f.date;
+    out.push({ legs, roles, anchor, jLeg:(arr&&arr.date>anchor)?'arr':null });
+  });
+  f21.forEach((a,i)=>{ if(u21.has(i)) return; out.push({ legs:[a], roles:['arr'], anchor:a.date, jLeg:null }); });
+  return out;
+}
+
+function _hBuildRotations(flights, companyName, destIATA){
+  const coU=(companyName||'').toUpperCase();
+  const rel=flights.filter(f=> (!coU || (f.company||'').toUpperCase()===coU) && _hDestCity(f)===destIATA);
+  const byDate=(a,b)=> String(a.date).localeCompare(String(b.date));
+  const mai=isMAIcompany(companyName);
+  const rotations=[], consumed=new Set();
+  if(destIATA==='LPA'){
+    _hBuildLPARotations(flights, coU, byDate).forEach(r=>{ rotations.push(r); r.legs.forEach(f=>consumed.add(f)); });
+  }
+  const deps=rel.filter(f=>!consumed.has(f) && _hIsNKC(f.from)).sort(byDate);
+  const arrs=rel.filter(f=>!consumed.has(f) && _hIsNKC(f.to)).sort(byDate);
+  const usedD=new Set(), usedA=new Set();
+  const match=(cands,used,reg,fromDate)=>{ let best=-1;
+    cands.forEach((c,i)=>{ if(used.has(i)||_hNormReg(c.registration)!==reg) return; const dd=_hDayDiff(fromDate,c.date); if(dd<0||dd>1) return; if(best<0||c.date<cands[best].date) best=i; });
+    return best; };
+  if(mai){
+    deps.forEach(d=>{ const mi=match(arrs,usedA,_hNormReg(d.registration),d.date); let a=null; if(mi>=0){a=arrs[mi];usedA.add(mi);}
+      rotations.push({dep:d,arr:a,order:['dep','arr'],jLeg:(a&&a.date>d.date)?'arr':null,anchor:d.date}); });
+    arrs.forEach((a,i)=>{ if(!usedA.has(i)) rotations.push({dep:null,arr:a,order:['dep','arr'],jLeg:null,anchor:a.date}); });
+  } else {
+    arrs.forEach(a=>{ const mi=match(deps,usedD,_hNormReg(a.registration),a.date); let d=null; if(mi>=0){d=deps[mi];usedD.add(mi);}
+      rotations.push({dep:d,arr:a,order:['arr','dep'],jLeg:(d&&d.date>a.date)?'dep':null,anchor:a.date}); });
+    deps.forEach((d,i)=>{ if(!usedD.has(i)) rotations.push({dep:d,arr:null,order:['arr','dep'],jLeg:null,anchor:d.date}); });
+  }
+  return rotations;
+}
+
+function _hRotLegs(r){
+  if(r.legs) return r.legs.map((f,i)=>({f, role:(r.roles&&r.roles[i])||'dep'})).filter(x=>x.f);
+  return r.order.map(k=>({f:(k==='dep'?r.dep:r.arr), role:k})).filter(x=>x.f);
+}
+function _hRotFirstFlight(r){ const l=_hRotLegs(r)[0]; return l?l.f:null; }
+
+// Toutes les rotations d'un lot de vols. Regroupe par (compagnie, destination),
+// apparie, puis rattache les vols orphelins en rotation solo (rien n'est caché).
+function _hBuildAllRotations(flights){
+  const groups=new Map();
+  flights.forEach(f=>{
+    const c=_hDestCity(f); if(!c||c==='NKC') return;
+    const key=(f.company||'')+'||'+c;
+    let g=groups.get(key); if(!g){ g={company:f.company||'',dest:c,flights:[]}; groups.set(key,g); }
+    g.flights.push(f);
+  });
+  let rotations=[];
+  groups.forEach(g=>{ rotations=rotations.concat(_hBuildRotations(g.flights, g.company, g.dest)); });
+  const used=new Set();
+  rotations.forEach(r=>_hRotLegs(r).forEach(x=>used.add(x.f)));
+  flights.forEach(f=>{ if(!used.has(f)) rotations.push({ legs:[f], roles:[_hIsNKC(f.from)?'dep':'arr'], anchor:f.date||'', jLeg:null }); });
+  rotations.sort((a,b)=>{
+    const d=String(a.anchor).localeCompare(String(b.anchor)); if(d) return d;
+    const fa=_hRotFirstFlight(a), fb=_hRotFirstFlight(b);
+    return String((fa&&fa.flightNumber)||'').localeCompare(String((fb&&fb.flightNumber)||''));
+  });
+  return rotations;
+}
+
+// Rendu du tableau d'accueil en ROTATIONS. Cellules fusionnées par rotation :
+// N° · Date (si toutes les jambes le même jour) · Compagnie · Immatriculation.
+// Par vol : N° d'autorisation · N° de vol · Type · Actions. Par tronçon : Trajet,
+// PAX, Bébés (sous-tronçons d'escale en jaune foncé).
+function renderRotationTable(rotations, rotOffset){
+  const body = elements.flightTableBody;
+  body.innerHTML='';
+  if(!rotations.length){
+    body.innerHTML = `<tr><td colspan="11" class="empty-state"><p>Aucun vol trouvé</p><small>Ajoutez un vol ou modifiez vos filtres</small></td></tr>`;
+    return;
+  }
+  rotations.forEach((rot, ri)=>{
+    const parity = ri % 2;
+    const rotNum = rotOffset + ri + 1;
+    const legs = _hRotLegs(rot);
+    const legLines = legs.map(({f})=> (typeof generateFlightLines==='function' ? generateFlightLines(f) : [{from:f.from,to:f.to,passengers:f.passengers,babies:f.babies}]));
+    const rotRows = legLines.reduce((s,ls)=>s+ls.length,0);
+    const dates = legs.map(({f})=>f.date);
+    const sameDate = dates.every(d=>d===dates[0]);
+    let physIdx = 0;
+    legs.forEach(({f}, li)=>{
+      const lines = legLines[li];
+      const flCount = lines.length;
+      const totals = flCount>1 ? {
+        totalPax: lines.reduce((s,l)=>s+(Number(l.passengers)||0),0),
+        totalBab: lines.reduce((s,l)=>s+(Number(l.babies)||0),0)
+      } : null;
+      lines.forEach((line, lj)=>{
+        const isFlightMain = (lj===0);
+        const isRotFirst = (physIdx===0);
+        const merge = {
+          num:  isRotFirst ? {show:true, span:rotRows, value:rotNum} : {show:false},
+          co:   isRotFirst ? {show:true, span:rotRows} : {show:false},
+          imm:  isRotFirst ? {show:true, span:rotRows} : {show:false},
+          date: sameDate
+                ? (isRotFirst ? {show:true, span:rotRows} : {show:false})
+                : (isFlightMain ? {show:true, span:flCount} : {show:false}),
+          rotStart: isRotFirst
+        };
+        body.appendChild(createRotationRow(f, line, lj, flCount, merge, (isFlightMain?totals:null), parity));
+        physIdx++;
+      });
+    });
+  });
+}
+
+// Une ligne physique d'une rotation. merge = {num,date,co,imm,rotStart} contrôle
+// les cellules fusionnées ; les cellules par vol (Auth, N° vol, Type, Actions)
+// portent rowspan = nombre de tronçons du vol, émises sur sa ligne principale.
+function createRotationRow(f, line, lj, flightLines, merge, escaleTotals, parity){
+  const row=document.createElement('tr');
+  if(f && f.id) row.setAttribute('data-flight-id', f.id);
+  row.style.background = parity===1 ? '#edf3fb' : '#ffffff';
+  if(f && f.isCharter) row.style.background='#fce4ec';
+  const isFlightMain = (lj===0);
+  if(merge.rotStart && isFlightMain) row.style.borderTop='2px solid #b9c9de';
+  else if(isFlightMain) row.style.borderTop='1px solid #e5edf6';
+
+  const isSub = lj>0;
+  const typeText = f.type==='DEP' ? 'Départ' : 'Arrivée';
+  const typeClass = f.type==='DEP' ? 'type-depart':'type-arrivee';
+  const fromCode = icaoToIATA(line?line.from:f.from) || '–';
+  const toCode   = icaoToIATA(line?line.to:f.to)     || '–';
+  const pax = line ? line.passengers : f.passengers;
+  const bab = line ? line.babies     : f.babies;
+  const vmid = 'vertical-align:middle;';
+
+  let html='';
+  if(merge.num.show)  html += `<td rowspan="${merge.num.span}" style="color:#94a3b8;font-weight:700;text-align:center;width:44px;${vmid}">${merge.num.value}</td>`;
+  if(isFlightMain)    html += `<td rowspan="${flightLines}" style="${vmid}"><strong>${escapeHtml(f.authorizationNumber||'N/A')}</strong></td>`;
+  if(merge.date.show) html += `<td rowspan="${merge.date.span}" style="${vmid}">${formatDateEU(f.date)}</td>`;
+  if(merge.co.show)   html += `<td rowspan="${merge.co.span}" style="${vmid}">${escapeHtml(f.company)}</td>`;
+  if(merge.imm.show)  html += `<td rowspan="${merge.imm.span}" style="${vmid}"><strong>${escapeHtml(f.registration)}</strong></td>`;
+  if(isFlightMain)    html += `<td rowspan="${flightLines}" style="${vmid}">${escapeHtml(f.flightNumber)}</td>`;
+  const yellow = isSub ? 'background:#f4c430;' : '';
+  const rColor = isSub ? '#3a2c00' : '#0f1e3d';
+  const aColor = isSub ? '#7a4f01' : '#D4AF37';
+  html += `<td style="text-align:center;white-space:nowrap;${yellow}"><strong style="color:${rColor};">${escapeHtml(fromCode)}</strong> <span style="color:${aColor};font-weight:700;margin:0 4px;">→</span> <strong style="color:${rColor};">${escapeHtml(toCode)}</strong></td>`;
+  if(isFlightMain)    html += `<td rowspan="${flightLines}" style="${vmid}"><span class="type-badge ${typeClass}">${typeText}</span></td>`;
+  html += `<td style="${isSub?'font-weight:700;color:#3a2c00;'+yellow:''}">${pax}</td>`;
+  html += `<td style="${isSub?'font-weight:700;color:#3a2c00;':''}">${bab}</td>`;
+  if(isFlightMain){
+    const totBox = escaleTotals ? `<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;background:#0f1e3d;color:#D4AF37;border-radius:8px;padding:4px 10px;font-weight:700;"><span style="font-size:9px;letter-spacing:.04em;opacity:.85;">TOTAL PAX</span><span style="font-size:15px;" id="tot-${f.id}">${escaleTotals.totalPax}</span></div>` : '';
+    html += `<td class="actions-cell" rowspan="${flightLines}" style="${vmid}">${totBox}<div class="actions-wrapper" style="${escaleTotals?'margin-left:6px;':''}"><button class="actions-btn" onclick="app.toggleActionsMenu(event, '${f.id}')" aria-label="Actions">⋯</button><div class="actions-menu" id="actions-${f.id}"><button data-perm="edit_flight" onclick="event.stopPropagation(); app.editFlight('${f.id}')" class="action-item"><span class="action-icon">✎</span><span>Modifier</span></button><button data-perm="delete_flight" onclick="event.stopPropagation(); app.deleteFlight('${f.id}')" class="action-item action-delete"><span class="action-icon">✕</span><span>Supprimer</span></button></div></div></td>`;
+  }
+  row.innerHTML = html;
+  return row;
+}
+
+// ============================================
 // RENDER FUNCTIONS
 // ============================================
-// Variables globales pour la pagination
+// Variables globales pour la pagination (PAR ROTATION)
 window._currentPage = window._currentPage || 'LAST';   // ouvrir sur la dernière page par défaut
-window._pageSize    = 50;
+window._pageSize    = 40;
 
 function render() {
     const filteredFlights = filterFlights();
@@ -1931,19 +2123,25 @@ function render() {
     else if (mode === 'only') mainSet = charterF;       // charters seuls
     else mainSet = normalF;                             // 'sep' (défaut) : charters à part
 
-    // Mémoriser la liste affichée (pagination + export Excel de l'accueil)
+    // Mémoriser la liste des vols affichés (export Excel de l'accueil).
     window._filteredSorted = mainSet;
 
-    // Ajuster la page courante si hors limites (ex: après filtre)
-    const totalPages = Math.max(1, Math.ceil(mainSet.length / window._pageSize));
-    // 'LAST' = ouvrir sur la dernière page (les vols les plus récents).
+    // ── Regroupement en ROTATIONS + pagination PAR ROTATION ──
+    // Les vols sont appariés (départ + arrivée) comme dans le suivi ; on ne coupe
+    // jamais une paire entre deux pages.
+    const rotations = _hBuildAllRotations(mainSet);
+    window._rotationsSorted = rotations;
+
+    const totalPages = Math.max(1, Math.ceil(rotations.length / window._pageSize));
+    // 'LAST' = ouvrir sur la dernière page (les rotations les plus récentes).
     if (window._currentPage === 'LAST') window._currentPage = totalPages;
     if (window._currentPage > totalPages) window._currentPage = totalPages;
     if (!(window._currentPage >= 1)) window._currentPage = 1;
 
-    renderTableWithPagination(mainSet);
+    const rotStart = (window._currentPage - 1) * window._pageSize;
+    renderRotationTable(rotations.slice(rotStart, rotStart + window._pageSize), rotStart);
     renderTotals(mainSet);
-    renderPaginationControls(mainSet.length);
+    renderPaginationControls(rotations.length);
 
     // Section séparée des Charter Flights (uniquement en mode « Séparés »)
     renderCharterSection(mode === 'sep' ? charterF : []);
@@ -2013,7 +2211,7 @@ function renderPaginationControls(total) {
     ctr.innerHTML = `
         <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
             <span style="font-weight:700;color:#0f1e3d;font-size:13px;">
-                ${total.toLocaleString()} vol${total>1?'s':''}
+                ${total.toLocaleString()} rotation${total>1?'s':''}
             </span>
             ${total > 0 ? `<span style="color:#64748b;font-size:12px;">Affichage ${start.toLocaleString()}–${end.toLocaleString()}</span>` : ''}
         </div>
@@ -2035,7 +2233,7 @@ window._goPrevPage = function() {
     }
 };
 window._goNextPage = function() {
-    const total = (window._filteredSorted || []).length;
+    const total = (window._rotationsSorted || []).length;
     const totalPages = Math.max(1, Math.ceil(total / window._pageSize));
     if (window._currentPage < totalPages) {
         window._currentPage++;
