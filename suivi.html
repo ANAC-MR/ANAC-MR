@@ -960,39 +960,37 @@ function _buildRotations(flights, companyName, destIATA){
 }
 
 // Construit les <tr> d'un ensemble de rotations (cellules fusionnées sur la paire).
+// Rotations triées PAR DATE ; la colonne Jour est fusionnée par journée
+// (toutes les rotations d'un même jour partagent une seule cellule Jour).
+// Les colonnes Compagnie / Type d'appareil / Capacité / Taux sont fusionnées
+// par rotation (départ + arrivée).
 function _rotationRowsHtml(rotations){
-  let html='';
-  rotations.forEach(r=>{
-    const legs=r.order.map(k=>k==='dep'?r.dep:r.arr).filter(Boolean);
-    const span=legs.length;
-    const rateCell = r.rate!=null ? `<span class="rate-cell ${rateClass(r.rate)}">${(r.rate*100).toFixed(1)}%</span>` : '—';
-    const first=legs[0];
-    const jour = first && first.dayName ? `${esc(first.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(first.dayDate||'')}</span>` : esc((first&&first.date)||'');
-    legs.forEach((f,i)=>{
-      const isDep=_isNKCcode(f._from||f.from);
-      const isJ = (r.jLeg==='dep'&&isDep) || (r.jLeg==='arr'&&!isDep);
-      const jbadge = isJ ? ' <span style="background:#b3362b;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:800;">J+1</span>' : '';
-      // Colonnes fusionnées (Jour, Compagnie, Type d'appareil, Capacité, Taux) sur la 1re ligne.
-      const merged = (i===0) ? (
-        `<td class="day-cell" rowspan="${span}">${jour}</td>`
-        + `<td class="co-cell" rowspan="${span}">${esc(f.company||'')}</td>`
-      ) : '';
-      const mergedRight = (i===0) ? (
-        `<td class="type-cell" rowspan="${span}">${esc(f.typeDisp||'')}</td>`
-        + `<td rowspan="${span}">${f.capacity!=null?f.capacity:'—'}</td>`
-      ) : '';
-      const taux = (i===0) ? `<td rowspan="${span}">${rateCell}</td>` : '';
-      html+=`<tr>
-        ${merged}
-        <td class="fn-cell">${esc(f.flightNumber||'')}</td>
-        <td class="route-cell">${esc(_rotRouteTxt(f))}${jbadge}</td>
-        ${mergedRight}
-        <td>${_rotPax(f)}</td>
-        ${taux}
-        <td>${esc(f.obs||'')}</td>
-      </tr>`;
+  const legsOf=r=>r.order.map(k=>k==='dep'?r.dep:r.arr).filter(Boolean);
+  const rots=rotations.slice().sort((a,b)=> String(a.anchor).localeCompare(String(b.anchor)) || (a.order[0]==='dep'?-1:1));
+  let html='', i=0;
+  while(i<rots.length){
+    const day=rots[i].anchor;
+    const group=[]; while(i<rots.length && rots[i].anchor===day){ group.push(rots[i]); i++; }
+    const dayRows=group.reduce((s,r)=>s+legsOf(r).length,0);
+    const fr=legsOf(group[0])[0];
+    const jourHtml = fr && fr.dayName ? `${esc(fr.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(fr.dayDate||'')}</span>` : esc((fr&&fr.date)||day||'');
+    let firstOfDay=true;
+    group.forEach(r=>{
+      const legs=legsOf(r); const span=legs.length;
+      const rateCell = r.rate!=null ? `<span class="rate-cell ${rateClass(r.rate)}">${(r.rate*100).toFixed(1)}%</span>` : '—';
+      legs.forEach((f,li)=>{
+        const isDep=_isNKCcode(f._from||f.from);
+        const isJ = (r.jLeg==='dep'&&isDep) || (r.jLeg==='arr'&&!isDep);
+        const jbadge = isJ ? ' <span style="background:#b3362b;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:800;">J+1</span>' : '';
+        const jourCell = (firstOfDay && li===0) ? `<td class="day-cell" rowspan="${dayRows}">${jourHtml}</td>` : '';
+        const coCell   = (li===0) ? `<td class="co-cell" rowspan="${span}">${esc(f.company||'')}</td>` : '';
+        const typeCap  = (li===0) ? (`<td class="type-cell" rowspan="${span}">${esc(f.typeDisp||'')}</td><td rowspan="${span}">${f.capacity!=null?f.capacity:'—'}</td>`) : '';
+        const taux     = (li===0) ? `<td rowspan="${span}">${rateCell}</td>` : '';
+        html+=`<tr>${jourCell}${coCell}<td class="fn-cell">${esc(f.flightNumber||'')}</td><td class="route-cell">${esc(_rotRouteTxt(f))}${jbadge}</td>${typeCap}<td>${_rotPax(f)}</td>${taux}<td>${esc(f.obs||'')}</td></tr>`;
+      });
+      firstOfDay=false;
     });
-  });
+  }
   return html;
 }
 
@@ -1105,20 +1103,44 @@ window.runVolCompare=async function(){
   const A=_rotStat(flights,coA,dA), B=_rotStat(flights,coB,dB);
   const la=dA+(coA?(' · '+coA):''), lb=dB+(coB?(' · '+coB):'');
   _cmpRender(la, lb, A, B);
-  // Le tableau du bas montre les rotations des deux destinations, séparées.
-  const grpHdr=(label,color)=>`<tr><td colspan="9" style="background:${color}22;border-left:4px solid ${color};color:#e6edf5;font-weight:800;padding:9px 14px;font-size:12px;letter-spacing:.02em;">${esc(label)}</td></tr>`;
-  const rowsA=_rotationRowsHtml(A.rots)||'<tr><td colspan="9" style="padding:10px;color:var(--dim);">Aucune rotation.</td></tr>';
-  const rowsB=_rotationRowsHtml(B.rots)||'<tr><td colspan="9" style="padding:10px;color:var(--dim);">Aucune rotation.</td></tr>';
-  document.getElementById('suiviBody').innerHTML =
-    grpHdr('● Destination A — '+la, '#D4AF37') + rowsA +
-    grpHdr('● Destination B — '+lb, '#4A9EFF') + rowsB;
+  // Grand tableau : rotations des DEUX destinations MÉLANGÉES et triées par date
+  // (colonne Jour fusionnée si même jour). La destination se lit dans la route.
+  const mixed=[...A.rots, ...B.rots];
+  document.getElementById('suiviBody').innerHTML = mixed.length
+    ? _rotationRowsHtml(mixed)
+    : '<tr class="empty-row"><td colspan="9">Aucune rotation pour ces destinations sur la période.</td></tr>';
   _weekFlights=[...A.legs, ...B.legs];
-  renderSummary(_weekFlights); _searchDestroyCharts();
+  // Résumé SÉPARÉ par destination (pas de total mélangé).
+  _renderCompareSummary(A, B, la, lb);
+  _searchDestroyCharts();
   const _sc=document.getElementById('searchCharts'); if(_sc) _sc.innerHTML='';
   document.getElementById('weekLabel').textContent =
     'Comparaison '+esc(dA)+' vs '+esc(dB)+' — du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))
     +' · '+(A.n+B.n)+' rotation(s)';
 };
+
+// Résumé par destination (remplace le total mélangé en mode Comparer).
+function _renderCompareSummary(A,B,la,lb){
+  const div=document.getElementById('summary'); if(div) div.innerHTML='';
+  const cr=document.getElementById('companyRates'); if(!cr) return;
+  const rateCls=r=> r==null?'':(r>=1?'rate-over':(r>=0.75?'rate-hi':(r>=0.5?'rate-mid':'rate-lo')));
+  const row=(label,color,st)=>{
+    const rateTxt=st.rate!=null?(st.rate*100).toFixed(1)+'%':'—';
+    return `<tr>
+      <td style="text-align:left;"><span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${color};margin-right:7px;vertical-align:middle;"></span>${esc(label)}</td>
+      <td>${st.n}</td>
+      <td>${st.legs.length}</td>
+      <td>${st.pax}</td>
+      <td class="rate-cell ${rateCls(st.rate)}">${rateTxt}</td>
+    </tr>`;
+  };
+  cr.innerHTML=`
+    <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">Résumé par destination</div>
+    <div class="tbl-wrap"><table style="min-width:auto;">
+      <thead><tr><th style="text-align:left;">Destination</th><th>Rotations</th><th>Vols</th><th>Passagers</th><th>Taux moyen</th></tr></thead>
+      <tbody>${row(la,'#D4AF37',A)}${row(lb,'#4A9EFF',B)}</tbody>
+    </table></div>`;
+}
 
 window.resetCompare=function(){
   _clearCompareFilters();
