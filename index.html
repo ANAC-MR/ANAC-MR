@@ -976,6 +976,23 @@ document.addEventListener('keydown', e => {
                 </div>
             </section>
 
+            <!-- ═══ BARRE HAUTE : totaux + pagination (miroir du bas) ═══ -->
+            <section style="margin-bottom:14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+                    <div style="display:inline-flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <div style="display:inline-flex;flex-direction:column;background:linear-gradient(135deg,#0f1e3d,#1a3a6b);color:#D4AF37;border-radius:10px;padding:6px 16px;border:1px solid rgba(212,175,55,0.4);line-height:1.15;">
+                            <span style="font-size:9px;letter-spacing:.05em;opacity:.85;text-transform:uppercase;">Passagers</span>
+                            <span id="totalPassengersTop" style="font-size:16px;font-weight:800;">0</span>
+                        </div>
+                        <div style="display:inline-flex;flex-direction:column;background:#fff;color:#0f1e3d;border-radius:10px;padding:6px 16px;border:1px solid #e5e7eb;line-height:1.15;">
+                            <span style="font-size:9px;letter-spacing:.05em;opacity:.7;text-transform:uppercase;">Bébés</span>
+                            <span id="totalBabiesTop" style="font-size:16px;font-weight:800;">0</span>
+                        </div>
+                    </div>
+                    <div id="flightPaginationTop" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end;"></div>
+                </div>
+            </section>
+
             <section class="table-section">
                 <div class="table-wrapper">
                     <table>

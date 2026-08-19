@@ -1772,7 +1772,7 @@ function resetFilters() {
     showNotification('Filtres réinitialisés', 'success');
 }
 
-function filterFlights() {
+function filterFlights(dateOverride) {
     const monthFilter = elements.monthSelect.value;
     const companyFilter = elements.companySelect.value;
     const fromFilter = elements.fromSelect.value;
@@ -1788,16 +1788,21 @@ function filterFlights() {
     const _filtered = flights.filter(flight => {
         const flightDate = new Date(flight.date);
 
-        // Year filter
-        if (yearFilter !== 'ALL' && flightDate.getFullYear() !== parseInt(yearFilter)) {
-            return false;
+        // Fenêtre de dates : soit une plage explicite (dateOverride, utilisée pour
+        // apparier les rotations à cheval sur deux mois), soit les filtres année/mois.
+        if (dateOverride) {
+            if (flight.date < dateOverride.from || flight.date > dateOverride.to) return false;
+        } else {
+            // Year filter
+            if (yearFilter !== 'ALL' && flightDate.getFullYear() !== parseInt(yearFilter)) {
+                return false;
+            }
+            // Month filter
+            if (monthFilter !== 'ALL' && flightDate.getMonth() !== parseInt(monthFilter)) {
+                return false;
+            }
         }
-        
-        // Month filter
-        if (monthFilter !== 'ALL' && flightDate.getMonth() !== parseInt(monthFilter)) {
-            return false;
-        }
-        
+
         // Company filter
         if (companyFilter !== 'ALL' && flight.company !== companyFilter) {
             return false;
@@ -1823,15 +1828,12 @@ function filterFlights() {
             if (!_ok) return false;
         }
         
-        // Date range filter
-        if (dateFrom && flight.date < dateFrom) {
-            return false;
+        // Date range filter (ignoré si une fenêtre explicite est fournie)
+        if (!dateOverride) {
+            if (dateFrom && flight.date < dateFrom) return false;
+            if (dateTo && flight.date > dateTo) return false;
         }
-        
-        if (dateTo && flight.date > dateTo) {
-            return false;
-        }
-        
+
         // Type filter
         if (currentTypeFilter !== 'ALL' && flight.type !== currentTypeFilter) {
             return false;
@@ -1849,6 +1851,9 @@ function filterFlights() {
 
         return true;
     });
+
+    // Fenêtre explicite (appariement rotations) → vols bruts, sans découpage tronçon.
+    if (dateOverride) return _filtered;
 
     // ── Mode TRONÇON : dès qu'un aéroport (De et/ou Vers) est précisé, on n'affiche
     // que le(s) segment(s) demandé(s), avec LEURS propres PAX/bébés (pas ceux du vol
@@ -2085,6 +2090,19 @@ function createRotationRow(f, line, lj, flightLines, merge, escaleTotals, parity
   return row;
 }
 
+// Plage de dates active (YYYY-MM-DD) déduite des filtres, ou null si aucun.
+function _hFmtYMD(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0'); return y+'-'+m+'-'+da; }
+function _hAddDays(ymd, n){ const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return ymd; d.setDate(d.getDate()+n); return _hFmtYMD(d); }
+function _homeDateRange(){
+  const df=elements.searchFrom.value, dt=elements.searchTo.value;
+  if(df && dt) return {from:df, to:dt};
+  const y=(elements.yearSelect && elements.yearSelect.value) || 'ALL';
+  const m=elements.monthSelect.value;
+  if(m!=='ALL' && y!=='ALL'){ const yr=parseInt(y),mo=parseInt(m); return {from:_hFmtYMD(new Date(yr,mo,1)), to:_hFmtYMD(new Date(yr,mo+1,0))}; }
+  if(m==='ALL' && y!=='ALL'){ return {from:y+'-01-01', to:y+'-12-31'}; }
+  return null;
+}
+
 // ============================================
 // RENDER FUNCTIONS
 // ============================================
@@ -2128,8 +2146,20 @@ function render() {
 
     // ── Regroupement en ROTATIONS + pagination PAR ROTATION ──
     // Les vols sont appariés (départ + arrivée) comme dans le suivi ; on ne coupe
-    // jamais une paire entre deux pages.
-    const rotations = _hBuildAllRotations(mainSet);
+    // jamais une paire entre deux pages. Pour ne pas séparer une rotation à cheval
+    // sur deux mois (arrivée un mois, départ le mois suivant, compagnies étrangères),
+    // on apparie sur une fenêtre élargie de ±2 jours puis on n'affiche que les
+    // rotations ANCRÉES dans la plage (arrivée pour les étrangères, départ pour MAI).
+    const _range = _homeDateRange();
+    const _tronc = (elements.fromSelect.value!=='ALL' || elements.toSelect.value!=='ALL') && !elements.searchVol.value.trim();
+    let rotations;
+    if (_range && !_tronc) {
+        const buffered = filterFlights({ from: _hAddDays(_range.from,-2), to: _hAddDays(_range.to,2) });
+        rotations = _hBuildAllRotations(buffered)
+            .filter(r => String(r.anchor) >= _range.from && String(r.anchor) <= _range.to);
+    } else {
+        rotations = _hBuildAllRotations(mainSet);
+    }
     window._rotationsSorted = rotations;
 
     const totalPages = Math.max(1, Math.ceil(rotations.length / window._pageSize));
@@ -2208,7 +2238,7 @@ function renderPaginationControls(total) {
         return `<button ${disabled?'disabled':''} onclick="${action}" style="background:${bg};color:${col};border:1px solid ${bd};border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:${cursor};transition:all 0.15s;letter-spacing:0.3px;">${label}</button>`;
     };
 
-    ctr.innerHTML = `
+    const inner = `
         <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
             <span style="font-weight:700;color:#0f1e3d;font-size:13px;">
                 ${total.toLocaleString()} rotation${total>1?'s':''}
@@ -2223,6 +2253,10 @@ function renderPaginationControls(total) {
             ${btn('Suivant →', cur>=totalPages, '_goNextPage()')}
         </div>
     `;
+    ctr.innerHTML = inner;
+    // Miroir en haut de page (mêmes boutons, même état).
+    const topCtr = document.getElementById('flightPaginationTop');
+    if (topCtr) topCtr.innerHTML = inner;
 }
 
 window._goPrevPage = function() {
@@ -2392,6 +2426,11 @@ function renderTotals(filteredFlights) {
     
     elements.totalPassengers.textContent = totalPassengers.toLocaleString();
     elements.totalBabies.textContent = totalBabies.toLocaleString();
+    // Miroir en haut de page.
+    const pTop = document.getElementById('totalPassengersTop');
+    if (pTop) pTop.textContent = totalPassengers.toLocaleString();
+    const bTop = document.getElementById('totalBabiesTop');
+    if (bTop) bTop.textContent = totalBabies.toLocaleString();
 
     // Mettre à jour le compteur total des vols filtrés
     const lbl = document.getElementById('totalVolsLabel');
