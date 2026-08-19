@@ -1254,40 +1254,36 @@ async function runSearch(){
   const rg=document.getElementById('sReg').value.trim().toUpperCase().replace(/[\s.\-]/g,'');
   document.getElementById('suiviBody').innerHTML='<tr class="empty-row"><td colspan="9">Recherche…</td></tr>';
   const flights=await loadRange(du, au);
+  const coU=co.toUpperCase();
 
-  if(dest){
-    // ── Mode ROTATIONS : départ + arrivée appariés pour la destination ──
-    let rotations=_buildRotations(flights, co, dest);
-    if(rg) rotations=rotations.filter(r=>[r.dep,r.arr].some(f=>f && normReg(f.registration).includes(rg)));
-    _renderRotations(rotations);
-    const legs=[]; rotations.forEach(r=>{ if(r.dep) legs.push(r.dep); if(r.arr) legs.push(r.arr); });
-    _weekFlights=legs; renderSummary(legs); _renderSearchCharts(legs);
-    const nm=_iataName[dest]?(' ('+_iataName[dest]+')'):'';
-    _exportCtx={ mode:'rotations', rotations,
-      title:'SUIVI DU TRAFIC — Destination '+dest+nm+(co?(' — '+co):''),
-      period:'Du '+fmtDMY(parseDateInput(du))+'   au   '+fmtDMY(parseDateInput(au)),
-      filename:'Rotations-'+dest+(co?('-'+co.replace(/\s+/g,'')):'') };
-    document.getElementById('weekLabel').textContent =
-      'Destination '+esc(dest)+nm+(co?(' — '+esc(co)):'')
-      +' · du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))+' · '+rotations.length+' rotation(s)';
-    return;
-  }
-
-  // ── Sans destination : filtre simple compagnie/immatriculation ──
-  const res=flights.filter(f=>{
-    if(co && !(f.company||'').toUpperCase().includes(co.toUpperCase())) return false;
-    if(rg && !((f.registration||'').toUpperCase().replace(/[\s.\-]/g,'').includes(rg))) return false;
-    return true;
+  // ── Mode ROTATIONS (toujours) : on apparie départ + arrivée par destination.
+  // Sans destination précise → toutes les destinations (de la compagnie choisie
+  // si précisée, sinon toutes). Chaque paire (compagnie, destination) est traitée
+  // avec sa propre logique MAI / étrangère.
+  const pairs=new Map();
+  flights.forEach(f=>{
+    if(coU && (f.company||'').toUpperCase()!==coU) return;
+    const c=_flightDestCity(f); if(!c || c==='NKC') return;
+    if(dest && c!==dest) return;
+    pairs.set((f.company||'')+'||'+c, {company:f.company||'', dest:c});
   });
-  _weekFlights=res;
-  _exportCtx={ mode:'week' };
-  renderTable(res); renderSummary(res); _renderSearchCharts(res);
-  const crit=[];
-  if(co) crit.push('compagnie « '+co+' »');
-  if(rg) crit.push('immat « '+rg+' »');
+  let rotations=[];
+  pairs.forEach(p=>{ rotations=rotations.concat(_buildRotations(flights, p.company, p.dest)); });
+  if(rg) rotations=rotations.filter(r=>[r.dep,r.arr].some(f=>f && normReg(f.registration).includes(rg)));
+
+  _renderRotations(rotations);
+  const legs=[]; rotations.forEach(r=>{ if(r.dep) legs.push(r.dep); if(r.arr) legs.push(r.arr); });
+  _weekFlights=legs; renderSummary(legs); _renderSearchCharts(legs);
+
+  const nm=dest?(_iataName[dest]?(' ('+_iataName[dest]+')'):''):'';
+  const scope = dest ? ('Destination '+dest+nm+(co?(' — '+co):''))
+              : (co ? ('Compagnie '+co+' — toutes destinations') : 'Toutes destinations');
+  _exportCtx={ mode:'rotations', rotations,
+    title:'SUIVI DU TRAFIC — '+scope,
+    period:'Du '+fmtDMY(parseDateInput(du))+'   au   '+fmtDMY(parseDateInput(au)),
+    filename:'Rotations-'+(dest||(co?co.replace(/\s+/g,''):'toutes')) };
   document.getElementById('weekLabel').textContent =
-    'Recherche du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))
-    +(crit.length?' — '+crit.join(', '):'')+' · '+res.length+' vol(s)';
+    esc(scope)+' · du '+fmtDMY(parseDateInput(du))+' au '+fmtDMY(parseDateInput(au))+' · '+rotations.length+' rotation(s)';
 }
 
 function resetSearch(){
