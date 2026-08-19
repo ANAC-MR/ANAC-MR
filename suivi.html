@@ -1750,6 +1750,50 @@ function _exportRotationsXlsx(X){
   for(let i=0;i<meta.length;i++){ if(meta[i].rotFirst && meta[i].rotRows>1){ const rS=3+i,rE=rS+meta[i].rotRows-1; [4,5,7].forEach(c=>ws['!merges'].push({s:{r:rS,c},e:{r:rE,c}})); } }
   // Fusion "N° de Vol" sur les tronçons d'un même vol (ex. L6221 = 3 lignes).
   for(let i=0;i<meta.length;i++){ if(meta[i].fnFirst && meta[i].fnRows>1){ const rS=3+i,rE=rS+meta[i].fnRows-1; ws['!merges'].push({s:{r:rS,c:2},e:{r:rE,c:2}}); } }
+
+  // ── Tableau « Taux moyen par compagnie » (Excel uniquement) ──
+  // Colonne ROTATIONS au lieu de VOLS (demande utilisateur, Excel seulement).
+  // Passagers et taux calculés comme le résumé à l'écran (tronçons affichés ;
+  // bébés jamais comptés). Ordre : Mauritania Airlines d'abord, puis alphabétique.
+  const coAgg={};
+  rots.forEach(r=>{
+    const co=_rotCompany(r)||'(Sans compagnie)';
+    const d=coAgg[co]||(coAgg[co]={rot:0,pax:0,rateSum:0,rateN:0});
+    d.rot++;
+    _rotLegs(r).forEach(({f})=>{
+      const cap=Number(f.capacity)||0;
+      suiviFlightLines(f).forEach(l=>{
+        if(l.pax==null) return; const px=Number(l.pax)||0; d.pax+=px;
+        if(cap>0){ d.rateSum+=px/cap; d.rateN++; }
+      });
+    });
+  });
+  const coList=Object.keys(coAgg).sort((a,b)=>{
+    if(isMAI(a)&&!isMAI(b)) return -1;
+    if(!isMAI(a)&&isMAI(b)) return 1;
+    return a.localeCompare(b);
+  });
+  if(coList.length){
+    const titleR=3+meta.length+2;   // 2 lignes vides sous le grand tableau
+    X.utils.sheet_add_aoa(ws, [['Taux moyen par compagnie']], {origin:{r:titleR,c:0}});
+    ws['!merges'].push({s:{r:titleR,c:0},e:{r:titleR,c:3}});
+    ws[X.utils.encode_cell({r:titleR,c:0})].s={font:{name:fontName,bold:true,sz:11,color:{rgb:'FF'+HEADER_TITLE_COLOR}}};
+    const headR=titleR+1;
+    X.utils.sheet_add_aoa(ws, [['Compagnie','Rotations','Passagers','Taux moyen']], {origin:{r:headR,c:0}});
+    for(let c=0;c<4;c++){ const ad=X.utils.encode_cell({r:headR,c}); ws[ad].s={font:{name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}},fill:{fgColor:{rgb:'FF'+HEADER_COLS_COLOR}},alignment:center,border}; }
+    coList.forEach((co,idx)=>{
+      const rr=headR+1+idx, d=coAgg[co], rate=d.rateN?d.rateSum/d.rateN:null, coColor=companyColor(co);
+      X.utils.sheet_add_aoa(ws, [[co, d.rot, d.pax, (rate!=null?rate:'')]], {origin:{r:rr,c:0}});
+      for(let c=0;c<4;c++){
+        const ad=X.utils.encode_cell({r:rr,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
+        const st={font:{name:fontName,sz:10},border,alignment:{vertical:'center',horizontal:(c===0?'left':'center')}};
+        if(c===0 && coColor){ st.fill={fgColor:{rgb:'FF'+coColor}}; st.font={name:fontName,sz:10,bold:true,color:{rgb:'FFFFFFFF'}}; }
+        if(c===3){ if(rate!=null){ ws[ad]={t:'n',v:rate,z:'0.0%',s:st}; } else { ws[ad]={t:'s',v:'',s:st}; } }
+        else ws[ad].s=st;
+      }
+    });
+  }
+
   const wb=X.utils.book_new();
   X.utils.book_append_sheet(wb, ws, 'Rotations');
   X.writeFile(wb, (ctx.filename||'Suivi-rotations')+'.xlsx');
