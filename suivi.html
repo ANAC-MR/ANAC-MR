@@ -924,7 +924,14 @@ window.buildDestOptions=buildDestOptions;
 
 // ══════════ MOTEUR DE ROTATIONS (appariement départ/arrivée par destination) ══════════
 function _isNKCcode(c){ const u=(c||'').toUpperCase().trim(); return u==='NKC'||u==='GQNO'||u==='GQNN'||toIATA(c)==='NKC'; }
+// Code de numéro de vol normalisé (sans espaces/tirets/horaire).
+function _rotFnCode(f){ return String((f&&(f.flightNumberRaw||f.flightNumber))||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+function _isRotFN(f, code){ return _rotFnCode(f)===code; }
 function _flightDestCity(f){
+  // Règle exceptionnelle : la rotation Las Palmas est composée de 3 numéros de vol
+  // (L6014 NKC-NDB, L6220 NDB-LPA, L6221 LPA-NDB-NKC). On les rattache TOUS à LPA
+  // pour qu'ils forment une seule rotation (le feeder L6014 pointerait sinon vers NDB).
+  if(_isRotFN(f,'L6014')||_isRotFN(f,'L6220')||_isRotFN(f,'L6221')) return 'LPA';
   const fr=f._from||f.from, to=f._to||f.to;
   if(_isNKCcode(fr)) return toIATA(to);
   if(_isNKCcode(to)) return toIATA(fr);
@@ -935,16 +942,45 @@ function _dayDiff(a,b){ const da=parseDateInput(a), db=parseDateInput(b); if(!da
 function _rotPax(f){ return (Number(f.passengers)||0)+(Number(f.babies)||0); }
 function _rotRouteTxt(f){ return toIATA(f._from||f.from)+' → '+toIATA(f._to||f.to); }
 
+// ── Accès générique aux legs d'une rotation ──
+// Rotation normale : {dep, arr, order:['dep','arr']|['arr','dep']}.
+// Rotation exceptionnelle LPA : {legs:[...], roles:['dep','dep','arr']}.
+function _rotFirstRole(r){ return (r.order? r.order[0] : (r.roles && r.roles[0])) || 'dep'; }
+function _rotLegs(r){
+  if(r.legs) return r.legs.map((f,i)=>({f, role:(r.roles&&r.roles[i])||'dep'})).filter(x=>x.f);
+  return r.order.map(k=>({f:(k==='dep'?r.dep:r.arr), role:k})).filter(x=>x.f);
+}
+// Lignes d'affichage d'un vol dans une rotation. Un vol marqué _rotExpand
+// (arrivée L6221 avec escale mauritanienne NDB) est éclaté en 3 tronçons ;
+// tout autre vol donne une seule ligne. La cellule N° de vol est fusionnée
+// sur les tronçons d'un même vol.
+function _rotLegLines(f){
+  if(f && f._rotExpand){
+    const ls=suiviFlightLines(f);
+    if(ls.length>1) return ls.map(l=>({ routeTxt:`${l.from} → ${l.to}`, pax:(Number(l.pax)||0)+(Number(l.babies)||0) }));
+  }
+  return [{ routeTxt:_rotRouteTxt(f), pax:_rotPax(f) }];
+}
+
 // Rotations pour compagnie + destination. MAI : départ ancre (arrivée J/J+1) ;
 // étrangères : arrivée ancre (départ J/J+1). Même immatriculation.
 function _buildRotations(flights, companyName, destIATA){
   const coU=(companyName||'').toUpperCase();
   const rel=flights.filter(f=> (!coU || (f.company||'').toUpperCase()===coU) && _flightDestCity(f)===destIATA);
   const byDate=(a,b)=> String(a.date).localeCompare(String(b.date));
-  const deps=rel.filter(f=>_isNKCcode(f._from||f.from)).sort(byDate);
-  const arrs=rel.filter(f=>_isNKCcode(f._to||f.to)).sort(byDate);
   const mai=suiviIsMAI(companyName);
-  const usedD=new Set(), usedA=new Set(), rotations=[];
+  const rotations=[], consumed=new Set();
+
+  // ── Règle exceptionnelle : rotation Las Palmas (LPA) ──
+  // DÉPART = L6014 (NKC-NDB) + L6220 (NDB-LPA) → 2 lignes.
+  // ARRIVÉE = L6221 (LPA-NDB-NKC) escale mauritanienne → 3 tronçons (n° fusionné).
+  if(destIATA==='LPA'){
+    _buildLPARotations(flights, coU, byDate).forEach(r=>{ rotations.push(r); r.legs.forEach(f=>consumed.add(f)); });
+  }
+
+  const deps=rel.filter(f=>!consumed.has(f) && _isNKCcode(f._from||f.from)).sort(byDate);
+  const arrs=rel.filter(f=>!consumed.has(f) && _isNKCcode(f._to||f.to)).sort(byDate);
+  const usedD=new Set(), usedA=new Set();
   const match=(cands,used,reg,fromDate)=>{ let best=-1;
     cands.forEach((c,i)=>{ if(used.has(i)||normReg(c.registration)!==reg) return; const dd=_dayDiff(fromDate,c.date); if(dd<0||dd>1) return; if(best<0||c.date<cands[best].date) best=i; });
     return best; };
@@ -957,9 +993,38 @@ function _buildRotations(flights, companyName, destIATA){
       rotations.push({dep:d,arr:a,order:['arr','dep'],jLeg:(d&&d.date>a.date)?'dep':null,anchor:a.date}); });
     deps.forEach((d,i)=>{ if(!usedD.has(i)) rotations.push({dep:d,arr:null,order:['arr','dep'],jLeg:null,anchor:d.date}); });
   }
-  rotations.forEach(r=>{ const rs=[_rateOfFlight(r.dep),_rateOfFlight(r.arr)].filter(x=>x!=null); r.rate=rs.length?rs.reduce((s,x)=>s+x,0)/rs.length:null; });
+  rotations.forEach(r=>{ if(r.rate!=null) return; const rs=_rotLegs(r).map(x=>_rateOfFlight(x.f)).filter(x=>x!=null); r.rate=rs.length?rs.reduce((s,x)=>s+x,0)/rs.length:null; });
   rotations.sort((x,y)=> String(x.anchor).localeCompare(String(y.anchor)));
   return rotations;
+}
+
+// Construit la (les) rotation(s) exceptionnelle(s) Las Palmas à partir des trois
+// numéros de vol dédiés, appariés par immatriculation + fenêtre de dates.
+//   DÉPART : L6014 (NKC-NDB, même jour) puis L6220 (NDB-LPA) — 2 legs.
+//   ARRIVÉE : L6221 (LPA-NDB-NKC, J ou J+1) — 1 vol éclaté en 3 tronçons.
+function _buildLPARotations(flights, coU, byDate){
+  const co=f=> !coU || (f.company||'').toUpperCase()===coU;
+  const f20=flights.filter(f=>co(f)&&_isRotFN(f,'L6220')).sort(byDate);
+  const f14=flights.filter(f=>co(f)&&_isRotFN(f,'L6014')).sort(byDate);
+  const f21=flights.filter(f=>co(f)&&_isRotFN(f,'L6221')).sort(byDate);
+  const used14=new Set(), used21=new Set(), out=[];
+  const take=(arr,used,reg,fromDate,maxDiff)=>{ let best=-1;
+    arr.forEach((c,i)=>{ if(used.has(i)||normReg(c.registration)!==reg) return; const dd=_dayDiff(fromDate,c.date); if(dd<0||dd>maxDiff) return; if(best<0||c.date<arr[best].date) best=i; });
+    return best; };
+  f20.forEach(f=>{
+    const reg=normReg(f.registration);
+    const i14=take(f14,used14,reg,f.date,0); let feeder=null; if(i14>=0){feeder=f14[i14];used14.add(i14);}
+    const i21=take(f21,used21,reg,f.date,1); let arr=null; if(i21>=0){arr=f21[i21];used21.add(i21);}
+    const legs=[], roles=[];
+    if(feeder){ legs.push(feeder); roles.push('dep'); }
+    legs.push(f); roles.push('dep');
+    if(arr){ arr._rotExpand=true; legs.push(arr); roles.push('arr'); }
+    const anchor=feeder?feeder.date:f.date;
+    out.push({ legs, roles, anchor, jLeg:(arr&&arr.date>anchor)?'arr':null });
+  });
+  // Arrivées L6221 sans départ apparié → arrivée seule (3 tronçons).
+  f21.forEach((a,i)=>{ if(used21.has(i)) return; a._rotExpand=true; out.push({ legs:[a], roles:['arr'], anchor:a.date, jLeg:null }); });
+  return out;
 }
 
 // Construit les <tr> d'un ensemble de rotations (cellules fusionnées sur la paire).
@@ -968,30 +1033,36 @@ function _buildRotations(flights, companyName, destIATA){
 // Les colonnes Compagnie / Type d'appareil / Capacité / Taux sont fusionnées
 // par rotation (départ + arrivée).
 function _rotationRowsHtml(rotations){
-  const legsOf=r=>r.order.map(k=>k==='dep'?r.dep:r.arr).filter(Boolean);
-  const rots=rotations.slice().sort((a,b)=> String(a.anchor).localeCompare(String(b.anchor)) || (a.order[0]==='dep'?-1:1));
+  // Nombre de lignes physiques d'une rotation (somme des tronçons de ses legs).
+  const rotRows=r=>_rotLegs(r).reduce((s,x)=>s+_rotLegLines(x.f).length,0);
+  const rots=rotations.slice().sort((a,b)=> String(a.anchor).localeCompare(String(b.anchor)) || (_rotFirstRole(a)==='dep'?-1:1));
   let html='', i=0;
   while(i<rots.length){
     const day=rots[i].anchor;
     const group=[]; while(i<rots.length && rots[i].anchor===day){ group.push(rots[i]); i++; }
-    const dayRows=group.reduce((s,r)=>s+legsOf(r).length,0);
-    const fr=legsOf(group[0])[0];
+    const dayRows=group.reduce((s,r)=>s+rotRows(r),0);
+    const fr=_rotLegs(group[0])[0].f;
     const jourHtml = fr && fr.dayName ? `${esc(fr.dayName)}<br><span style="font-weight:600;font-size:11px;color:var(--dim);">${esc(fr.dayDate||'')}</span>` : esc((fr&&fr.date)||day||'');
-    let firstOfDay=true;
+    let dayEmitted=false;
     group.forEach(r=>{
-      const legs=legsOf(r); const span=legs.length;
+      const legs=_rotLegs(r); const span=rotRows(r);
       const rateCell = r.rate!=null ? `<span class="rate-cell ${rateClass(r.rate)}">${(r.rate*100).toFixed(1)}%</span>` : '—';
-      legs.forEach((f,li)=>{
-        const isDep=_isNKCcode(f._from||f.from);
+      let rotFirst=true;
+      legs.forEach(({f,role})=>{
+        const lines=_rotLegLines(f);
+        const isDep=(role==='dep');
         const isJ = (r.jLeg==='dep'&&isDep) || (r.jLeg==='arr'&&!isDep);
-        const jbadge = isJ ? ' <span style="background:#b3362b;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:800;">J+1</span>' : '';
-        const jourCell = (firstOfDay && li===0) ? `<td class="day-cell" rowspan="${dayRows}">${jourHtml}</td>` : '';
-        const coCell   = (li===0) ? `<td class="co-cell" rowspan="${span}">${esc(f.company||'')}</td>` : '';
-        const typeCap  = (li===0) ? (`<td class="type-cell" rowspan="${span}">${esc(f.typeDisp||'')}</td><td rowspan="${span}">${f.capacity!=null?f.capacity:'—'}</td>`) : '';
-        const taux     = (li===0) ? `<td rowspan="${span}">${rateCell}</td>` : '';
-        html+=`<tr>${jourCell}${coCell}<td class="fn-cell">${esc(f.flightNumber||'')}</td><td class="route-cell">${esc(_rotRouteTxt(f))}${jbadge}</td>${typeCap}<td>${_rotPax(f)}</td>${taux}<td>${esc(f.obs||'')}</td></tr>`;
+        lines.forEach((ln,li)=>{
+          const jbadge = (isJ && li===0) ? ' <span style="background:#b3362b;color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:800;">J+1</span>' : '';
+          const jourCell = (!dayEmitted) ? `<td class="day-cell" rowspan="${dayRows}">${jourHtml}</td>` : '';
+          const coCell   = rotFirst ? `<td class="co-cell" rowspan="${span}">${esc(f.company||'')}</td>` : '';
+          const fnCell   = (li===0) ? `<td class="fn-cell" rowspan="${lines.length}">${esc(f.flightNumber||'')}</td>` : '';
+          const typeCap  = rotFirst ? (`<td class="type-cell" rowspan="${span}">${esc(f.typeDisp||'')}</td><td rowspan="${span}">${f.capacity!=null?f.capacity:'—'}</td>`) : '';
+          const taux     = rotFirst ? `<td rowspan="${span}">${rateCell}</td>` : '';
+          html+=`<tr>${jourCell}${coCell}${fnCell}<td class="route-cell">${esc(ln.routeTxt)}${jbadge}</td>${typeCap}<td>${ln.pax}</td>${taux}<td>${esc(f.obs||'')}</td></tr>`;
+          dayEmitted=true; rotFirst=false;
+        });
       });
-      firstOfDay=false;
     });
   }
   return html;
@@ -1080,8 +1151,9 @@ function _rotStat(flights, company, destIATA){
   const rots=_buildRotations(flights, company, destIATA);
   let pax=0, rateSum=0, rateN=0; const byMonth={}; const legs=[];
   rots.forEach(r=>{
-    [r.dep,r.arr].filter(Boolean).forEach(f=>legs.push(f));
-    const p=[r.dep,r.arr].filter(Boolean).reduce((s,f)=>s+_rotPax(f),0);
+    const rl=_rotLegs(r).map(x=>x.f);
+    rl.forEach(f=>legs.push(f));
+    const p=rl.reduce((s,f)=>s+_rotPax(f),0);
     pax+=p;
     const mo=String(r.anchor||'').slice(0,7);
     if(!byMonth[mo]) byMonth[mo]={pax:0,rateSum:0,rateN:0};
@@ -1269,10 +1341,10 @@ async function runSearch(){
   });
   let rotations=[];
   pairs.forEach(p=>{ rotations=rotations.concat(_buildRotations(flights, p.company, p.dest)); });
-  if(rg) rotations=rotations.filter(r=>[r.dep,r.arr].some(f=>f && normReg(f.registration).includes(rg)));
+  if(rg) rotations=rotations.filter(r=>_rotLegs(r).some(x=>normReg(x.f.registration).includes(rg)));
 
   _renderRotations(rotations);
-  const legs=[]; rotations.forEach(r=>{ if(r.dep) legs.push(r.dep); if(r.arr) legs.push(r.arr); });
+  const legs=[]; rotations.forEach(r=>_rotLegs(r).forEach(x=>legs.push(x.f)));
   _weekFlights=legs; renderSummary(legs); _renderSearchCharts(legs);
 
   const nm=dest?(_iataName[dest]?(' ('+_iataName[dest]+')'):''):'';
@@ -1616,8 +1688,8 @@ function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;
 // Export Excel dédié au mode ROTATIONS (Recherche / Comparer par destination).
 function _exportRotationsXlsx(X){
   const ctx=_exportCtx||{};
-  const legsOf=r=>r.order.map(k=>k==='dep'?r.dep:r.arr).filter(Boolean);
-  const rots=(ctx.rotations||[]).slice().sort((a,b)=> String(a.anchor).localeCompare(String(b.anchor)) || (a.order[0]==='dep'?-1:1));
+  const rots=(ctx.rotations||[]).slice().sort((a,b)=> String(a.anchor).localeCompare(String(b.anchor)) || (_rotFirstRole(a)==='dep'?-1:1));
+  const rotRows=r=>_rotLegs(r).reduce((s,x)=>s+_rotLegLines(x.f).length,0);
   const fontName='Arial';
   const thin={style:'thin',color:{rgb:'FFBFBFBF'}}, border={top:thin,bottom:thin,left:thin,right:thin};
   const center={horizontal:'center',vertical:'center',wrapText:true};
@@ -1627,22 +1699,27 @@ function _exportRotationsXlsx(X){
   rows.push(['Jour','Compagnie','N° de Vol / Horaire','Prove-Destination','Type d\'Appareil','Capacité','Nbre de Passagers','Taux de remplissage','Observat.']);
   const meta=[];
   rots.forEach(r=>{
-    const legs=legsOf(r);
-    legs.forEach((f,li)=>{
-      const isDep=_isNKCcode(f._from||f.from);
+    const legs=_rotLegs(r); const span=rotRows(r);
+    let rotFirst=true;
+    legs.forEach(({f,role})=>{
+      const lines=_rotLegLines(f);
+      const isDep=(role==='dep');
       const isJ=(r.jLeg==='dep'&&isDep)||(r.jLeg==='arr'&&!isDep);
-      rows.push([
-        li===0 ? ((f.dayName||'')+' '+(f.dayDate||'')).trim() : '',
-        li===0 ? (f.company||'') : '',
-        f.flightNumber||'',
-        _rotRouteTxt(f),
-        li===0 ? (f.typeDisp||'') : '',
-        li===0 ? (f.capacity!=null?f.capacity:'') : '',
-        _rotPax(f),
-        (li===0 && r.rate!=null) ? r.rate : '',
-        isJ ? 'J+1' : ''
-      ]);
-      meta.push({ dateKey:f.date, company:f.company||'', isFirst:li===0, span:legs.length });
+      lines.forEach((ln,li)=>{
+        rows.push([
+          li===0 ? ((f.dayName||'')+' '+(f.dayDate||'')).trim() : '',
+          rotFirst ? (f.company||'') : '',
+          li===0 ? (f.flightNumber||'') : '',
+          ln.routeTxt,
+          rotFirst ? (f.typeDisp||'') : '',
+          rotFirst ? (f.capacity!=null?f.capacity:'') : '',
+          ln.pax,
+          (rotFirst && r.rate!=null) ? r.rate : '',
+          (isJ && li===0) ? 'J+1' : ''
+        ]);
+        meta.push({ dateKey:f.date, company:f.company||'', isFirst:rotFirst, span, fnFirst:(li===0), fnSpan:lines.length });
+        rotFirst=false;
+      });
     });
   });
   const ws=X.utils.aoa_to_sheet(rows);
@@ -1673,6 +1750,10 @@ function _exportRotationsXlsx(X){
   // Fusion Compagnie / Type / Capacité / Taux par rotation (départ + arrivée).
   for(let i=0;i<meta.length;i++){
     if(meta[i].isFirst && meta[i].span>1){ const rS=3+i, rE=rS+meta[i].span-1; [1,4,5,7].forEach(c=>ws['!merges'].push({s:{r:rS,c},e:{r:rE,c}})); }
+  }
+  // Fusion colonne "N° de Vol" sur les tronçons d'un même vol (ex. L6221 = 3 lignes).
+  for(let i=0;i<meta.length;i++){
+    if(meta[i].fnFirst && meta[i].fnSpan>1){ const rS=3+i, rE=rS+meta[i].fnSpan-1; ws['!merges'].push({s:{r:rS,c:2},e:{r:rE,c:2}}); }
   }
   const wb=X.utils.book_new();
   X.utils.book_append_sheet(wb, ws, 'Rotations');
