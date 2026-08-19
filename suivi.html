@@ -1003,9 +1003,28 @@ function _renderRotations(rotations){
   body.innerHTML=_rotationRowsHtml(rotations);
 }
 
+// Réinitialise complètement les filtres d'une section (y compris les dates).
+function _clearSearchFilters(){
+  ['sCo','sDest','sReg','sDu','sAu'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  const sd=document.getElementById('sDest'); if(sd) sd.innerHTML='<option value="">Toutes</option>';
+  if(typeof _searchDestroyCharts==='function') _searchDestroyCharts();
+  const sc=document.getElementById('searchCharts'); if(sc) sc.innerHTML='';
+}
+function _clearCompareFilters(){
+  ['cCoA','cDestA','cCoB','cDestB','cDu','cAu'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['cDestA','cDestB'].forEach(id=>{ const e=document.getElementById(id); if(e) e.innerHTML='<option value="">—</option>'; });
+  if(typeof _cmpDestroy==='function') _cmpDestroy();
+  const box=document.getElementById('cmpVolResult'); if(box) box.innerHTML='';
+}
+
 function toggleSearch(){
   const p=document.getElementById('searchPanel');
   const opening=p.classList.contains('hidden');
+  if(opening){
+    // Ouvrir Recherche → fermer + réinitialiser Comparer.
+    const cp=document.getElementById('comparePanel'); if(cp) cp.classList.add('hidden');
+    _clearCompareFilters();
+  }
   p.classList.toggle('hidden');
   if(opening){
     populateSearchCompanies(); buildDestOptions();
@@ -1018,6 +1037,11 @@ function toggleSearch(){
 function toggleCompare(){
   const p=document.getElementById('comparePanel');
   const opening=p.classList.contains('hidden');
+  if(opening){
+    // Ouvrir Comparer → fermer + réinitialiser Recherche.
+    const sp=document.getElementById('searchPanel'); if(sp) sp.classList.add('hidden');
+    _clearSearchFilters();
+  }
   p.classList.toggle('hidden');
   if(opening){
     cmpPopulateCompanies();
@@ -1097,9 +1121,7 @@ window.runVolCompare=async function(){
 };
 
 window.resetCompare=function(){
-  ['cCoA','cDestA','cCoB','cDestB'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-  _cmpDestroy();
-  const box=document.getElementById('cmpVolResult'); if(box) box.innerHTML='';
+  _clearCompareFilters();
   document.getElementById('comparePanel').classList.add('hidden');
   thisWeek();
 };
@@ -1235,9 +1257,7 @@ async function runSearch(){
 }
 
 function resetSearch(){
-  ['sCo','sDest','sReg'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-  _searchDestroyCharts();
-  const sc=document.getElementById('searchCharts'); if(sc) sc.innerHTML='';
+  _clearSearchFilters();
   document.getElementById('searchPanel').classList.add('hidden');
   thisWeek();
 }
