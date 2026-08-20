@@ -2070,9 +2070,9 @@ function createRotationRow(f, line, lj, flightLines, merge, escaleTotals, parity
 
   let html='';
   if(merge.num.show)  html += `<td rowspan="${merge.num.span}" style="color:#94a3b8;font-weight:700;text-align:center;width:44px;${vmid}">${merge.num.value}</td>`;
-  if(isFlightMain)    html += `<td rowspan="${flightLines}" style="${vmid}"><strong>${escapeHtml(f.authorizationNumber||'N/A')}</strong></td>`;
-  if(merge.date.show) html += `<td rowspan="${merge.date.span}" style="${vmid}">${formatDateEU(f.date)}</td>`;
-  if(merge.co.show)   html += `<td rowspan="${merge.co.span}" style="${vmid}">${escapeHtml(f.company)}</td>`;
+  if(isFlightMain)    html += `<td rowspan="${flightLines}" style="${vmid}">${escapeHtml(f.authorizationNumber||'N/A')}</td>`;
+  if(merge.date.show) html += `<td rowspan="${merge.date.span}" style="${vmid}font-weight:700;">${formatDateEU(f.date)}</td>`;
+  if(merge.co.show)   html += `<td rowspan="${merge.co.span}" style="${vmid}font-weight:800;color:#D4AF37;">${escapeHtml(f.company)}</td>`;
   if(merge.imm.show)  html += `<td rowspan="${merge.imm.span}" style="${vmid}"><strong>${escapeHtml(f.registration)}</strong></td>`;
   if(isFlightMain)    html += `<td rowspan="${flightLines}" style="${vmid}">${escapeHtml(f.flightNumber)}</td>`;
   const yellow = isSub ? 'background:#f4c430;' : '';
