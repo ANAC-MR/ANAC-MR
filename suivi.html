@@ -888,6 +888,7 @@ async function loadWeek(startStr){
   }
   const legs=[]; rotations.forEach(r=>_rotLegs(r).forEach(x=>legs.push(x.f)));
   renderSummary(legs.length?legs:flights);
+  _renderCompanyRates(rotations);
   _exportCtx={ mode:'rotations', rotations,
     title:'SUIVI DU TRAFIC AÉRIEN',
     period:'Du '+fmtDMY(start)+'   au   '+fmtDMY(end),
@@ -1400,7 +1401,7 @@ async function runSearch(){
 
   _renderRotations(rotations);
   const legs=[]; rotations.forEach(r=>_rotLegs(r).forEach(x=>legs.push(x.f)));
-  _weekFlights=legs; renderSummary(legs); _renderSearchCharts(legs);
+  _weekFlights=legs; renderSummary(legs); _renderCompanyRates(rotations); _renderSearchCharts(legs);
 
   const nm=dest?(_iataName[dest]?(' ('+_iataName[dest]+')'):''):'';
   const scope = dest ? ('Destination '+dest+nm+(co?(' — '+co):''))
@@ -1623,43 +1624,49 @@ function renderSummary(flights){
     <div class="sm-card"><div class="sm-v">${totalPax}</div><div class="sm-l">Passagers</div></div>
     <div class="sm-card"><div class="sm-v">${avgRate!=null?(avgRate*100).toFixed(1)+'%':'—'}</div><div class="sm-l">Taux moyen</div></div>`;
 
-  // ── Taux moyen PAR COMPAGNIE ──
+  // Le tableau « Taux moyen par compagnie » est rendu à part (par rotations).
+}
+
+// Tableau « Taux moyen par compagnie » (mode rotations : semaine / recherche).
+// Compte les ROTATIONS (le triplet Las Palmas L6014+L6220 / L6221 = 1 rotation) ;
+// passagers séparés Départ / Arrivée / Total ; compagnies triées par passagers
+// décroissants ; bébés jamais comptés.
+function _renderCompanyRates(rotations){
+  const cr=document.getElementById('companyRates'); if(!cr) return;
   const byCo={};
-  flights.forEach(f=>{
-    const co=f.company||'(Sans compagnie)';
-    (byCo[co]=byCo[co]||{rates:[],vols:0,pax:0});
-    byCo[co].vols++;
-    const lines=suiviFlightLines(f);
-    byCo[co].pax+=lines.reduce((s,l)=>s+(Number(l.pax)||0),0);
-    lineRates(f).forEach(r=>byCo[co].rates.push(r));
+  (rotations||[]).forEach(r=>{
+    const co=_rotCompany(r)||'(Sans compagnie)';
+    const d=byCo[co]||(byCo[co]={rot:0,dep:0,arr:0,rateSum:0,rateN:0});
+    d.rot++;
+    _rotLegs(r).forEach(({f,role})=>{ const p=_rotPax(f); if(role==='dep') d.dep+=p; else d.arr+=p; });
+    if(r.rate!=null){ d.rateSum+=r.rate; d.rateN++; }
   });
-  const cos=Object.keys(byCo).sort((a,b)=>{
-    // Mauritania Airlines en premier, puis ordre alphabétique
-    if(isMAI(a)&&!isMAI(b)) return -1;
-    if(!isMAI(a)&&isMAI(b)) return 1;
-    return a.localeCompare(b);
-  });
+  const cos=Object.keys(byCo).sort((a,b)=> (byCo[b].dep+byCo[b].arr)-(byCo[a].dep+byCo[a].arr) || a.localeCompare(b));
+  if(!cos.length){ cr.innerHTML=''; return; }
+  const rateCls=r=> r==null?'':(r>=1?'rate-over':(r>=0.75?'rate-hi':(r>=0.5?'rate-mid':'rate-lo')));
+  const nf=n=>Number(n||0).toLocaleString('fr-FR');
   let rows='';
   for(const co of cos){
-    const d=byCo[co];
-    const avg=d.rates.length?(d.rates.reduce((x,y)=>x+y,0)/d.rates.length):null;
-    const coColor=companyColor(co);
+    const d=byCo[co], total=d.dep+d.arr, avg=d.rateN?d.rateSum/d.rateN:null, coColor=companyColor(co);
     const dot=coColor?`<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:#${coColor};margin-right:7px;vertical-align:middle;"></span>`:'';
-    const rateTxt=avg!=null?(avg*100).toFixed(1)+'%':'—';
-    const rateCls=avg==null?'':(avg>=1?'rate-over':(avg>=0.75?'rate-hi':(avg>=0.5?'rate-mid':'rate-lo')));
     rows+=`<tr>
       <td style="text-align:left;">${dot}${esc(co)}</td>
-      <td>${d.vols}</td>
-      <td>${d.pax}</td>
-      <td class="rate-cell ${rateCls}">${rateTxt}</td>
+      <td>${d.rot}</td>
+      <td>${nf(d.dep)}</td>
+      <td>${nf(d.arr)}</td>
+      <td style="font-weight:700;">${nf(total)}</td>
+      <td class="rate-cell ${rateCls(avg)}">${avg!=null?(avg*100).toFixed(1)+'%':'—'}</td>
     </tr>`;
   }
-  document.getElementById('companyRates').innerHTML = cos.length ? `
+  cr.innerHTML=`
     <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">Taux moyen par compagnie</div>
     <div class="tbl-wrap"><table style="min-width:auto;">
-      <thead><tr><th style="text-align:left;">Compagnie</th><th>Vols</th><th>Passagers</th><th>Taux moyen</th></tr></thead>
+      <thead>
+        <tr><th rowspan="2" style="text-align:left;">Compagnie</th><th rowspan="2">Rotations</th><th colspan="3">Passagers</th><th rowspan="2">Taux moyen</th></tr>
+        <tr><th>Départ</th><th>Arrivée</th><th>Total</th></tr>
+      </thead>
       <tbody>${rows}</tbody>
-    </table></div>` : '';
+    </table></div>`;
 }
 
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -1751,44 +1758,43 @@ function _exportRotationsXlsx(X){
   // Fusion "N° de Vol" sur les tronçons d'un même vol (ex. L6221 = 3 lignes).
   for(let i=0;i<meta.length;i++){ if(meta[i].fnFirst && meta[i].fnRows>1){ const rS=3+i,rE=rS+meta[i].fnRows-1; ws['!merges'].push({s:{r:rS,c:2},e:{r:rE,c:2}}); } }
 
-  // ── Tableau « Taux moyen par compagnie » (Excel uniquement) ──
-  // Colonne ROTATIONS au lieu de VOLS (demande utilisateur, Excel seulement).
-  // Passagers et taux calculés comme le résumé à l'écran (tronçons affichés ;
-  // bébés jamais comptés). Ordre : Mauritania Airlines d'abord, puis alphabétique.
+  // ── Tableau « Taux moyen par compagnie » (Excel) ──
+  // ROTATIONS (le triplet Las Palmas L6014+L6220 / L6221 = 1 rotation) ; passagers
+  // séparés Départ / Arrivée / Total ; compagnies triées par passagers décroissants ;
+  // bébés jamais comptés.
   const coAgg={};
   rots.forEach(r=>{
     const co=_rotCompany(r)||'(Sans compagnie)';
-    const d=coAgg[co]||(coAgg[co]={rot:0,pax:0,rateSum:0,rateN:0});
+    const d=coAgg[co]||(coAgg[co]={rot:0,dep:0,arr:0,rateSum:0,rateN:0});
     d.rot++;
-    _rotLegs(r).forEach(({f})=>{
-      const cap=Number(f.capacity)||0;
-      suiviFlightLines(f).forEach(l=>{
-        if(l.pax==null) return; const px=Number(l.pax)||0; d.pax+=px;
-        if(cap>0){ d.rateSum+=px/cap; d.rateN++; }
-      });
-    });
+    _rotLegs(r).forEach(({f,role})=>{ const p=_rotPax(f); if(role==='dep') d.dep+=p; else d.arr+=p; });
+    if(r.rate!=null){ d.rateSum+=r.rate; d.rateN++; }
   });
-  const coList=Object.keys(coAgg).sort((a,b)=>{
-    if(isMAI(a)&&!isMAI(b)) return -1;
-    if(!isMAI(a)&&isMAI(b)) return 1;
-    return a.localeCompare(b);
-  });
+  const coList=Object.keys(coAgg).sort((a,b)=> (coAgg[b].dep+coAgg[b].arr)-(coAgg[a].dep+coAgg[a].arr) || a.localeCompare(b));
   if(coList.length){
     const titleR=3+meta.length+2;   // 2 lignes vides sous le grand tableau
     X.utils.sheet_add_aoa(ws, [['Taux moyen par compagnie']], {origin:{r:titleR,c:0}});
-    ws['!merges'].push({s:{r:titleR,c:0},e:{r:titleR,c:3}});
+    ws['!merges'].push({s:{r:titleR,c:0},e:{r:titleR,c:5}});
     ws[X.utils.encode_cell({r:titleR,c:0})].s={font:{name:fontName,bold:true,sz:11,color:{rgb:'FF'+HEADER_TITLE_COLOR}}};
-    const headR=titleR+1;
-    X.utils.sheet_add_aoa(ws, [['Compagnie','Rotations','Passagers','Taux moyen']], {origin:{r:headR,c:0}});
-    for(let c=0;c<4;c++){ const ad=X.utils.encode_cell({r:headR,c}); ws[ad].s={font:{name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}},fill:{fgColor:{rgb:'FF'+HEADER_COLS_COLOR}},alignment:center,border}; }
+    const headR=titleR+1, subR=headR+1;
+    X.utils.sheet_add_aoa(ws, [['Compagnie','Rotations','Passagers','','','Taux moyen']], {origin:{r:headR,c:0}});
+    X.utils.sheet_add_aoa(ws, [['','','Départ','Arrivée','Total','']], {origin:{r:subR,c:0}});
+    // Compagnie / Rotations / Taux moyen sur 2 lignes ; « Passagers » sur 3 colonnes.
+    ws['!merges'].push({s:{r:headR,c:0},e:{r:subR,c:0}});
+    ws['!merges'].push({s:{r:headR,c:1},e:{r:subR,c:1}});
+    ws['!merges'].push({s:{r:headR,c:2},e:{r:headR,c:4}});
+    ws['!merges'].push({s:{r:headR,c:5},e:{r:subR,c:5}});
+    const hst={font:{name:fontName,bold:true,sz:10,color:{rgb:'FFFFFFFF'}},fill:{fgColor:{rgb:'FF'+HEADER_COLS_COLOR}},alignment:center,border};
+    for(let c=0;c<6;c++){ const a1=X.utils.encode_cell({r:headR,c}); if(!ws[a1])ws[a1]={t:'s',v:''}; ws[a1].s=hst; const a2=X.utils.encode_cell({r:subR,c}); if(!ws[a2])ws[a2]={t:'s',v:''}; ws[a2].s=hst; }
     coList.forEach((co,idx)=>{
-      const rr=headR+1+idx, d=coAgg[co], rate=d.rateN?d.rateSum/d.rateN:null, coColor=companyColor(co);
-      X.utils.sheet_add_aoa(ws, [[co, d.rot, d.pax, (rate!=null?rate:'')]], {origin:{r:rr,c:0}});
-      for(let c=0;c<4;c++){
+      const rr=subR+1+idx, d=coAgg[co], total=d.dep+d.arr, rate=d.rateN?d.rateSum/d.rateN:null, coColor=companyColor(co);
+      X.utils.sheet_add_aoa(ws, [[co, d.rot, d.dep, d.arr, total, (rate!=null?rate:'')]], {origin:{r:rr,c:0}});
+      for(let c=0;c<6;c++){
         const ad=X.utils.encode_cell({r:rr,c}); if(!ws[ad])ws[ad]={t:'s',v:''};
         const st={font:{name:fontName,sz:10},border,alignment:{vertical:'center',horizontal:(c===0?'left':'center')}};
         if(c===0 && coColor){ st.fill={fgColor:{rgb:'FF'+coColor}}; st.font={name:fontName,sz:10,bold:true,color:{rgb:'FFFFFFFF'}}; }
-        if(c===3){ if(rate!=null){ ws[ad]={t:'n',v:rate,z:'0.0%',s:st}; } else { ws[ad]={t:'s',v:'',s:st}; } }
+        else if(c===4){ st.font={name:fontName,sz:10,bold:true}; }
+        if(c===5){ if(rate!=null){ ws[ad]={t:'n',v:rate,z:'0.0%',s:st}; } else { ws[ad]={t:'s',v:'',s:st}; } }
         else ws[ad].s=st;
       }
     });
