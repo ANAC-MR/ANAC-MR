@@ -1107,7 +1107,7 @@ document.addEventListener('keydown', e => {
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
   <div style="background:linear-gradient(135deg,rgba(74,158,255,.2),rgba(74,158,255,.06));border:1px solid rgba(74,158,255,.3);border-radius:14px;padding:16px 18px;">
     <div style="font-size:30px;font-weight:800;color:#60a5fa;font-family:'JetBrains Mono',monospace;" id="kpi-vols">–</div>
-    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Total vols</div>
+    <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-top:2px;">Total rotations</div>
     <div style="font-size:11px;color:#5A7A9A;margin-top:2px;" id="kpi-vols-sub"></div>
   </div>
   <div style="background:linear-gradient(135deg,rgba(45,212,160,.2),rgba(45,212,160,.06));border:1px solid rgba(45,212,160,.3);border-radius:14px;padding:16px 18px;">
@@ -1132,8 +1132,8 @@ document.addEventListener('keydown', e => {
 
   <!-- Vols/mois -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Vols par mois</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Vols enregistrés</div>
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Rotations par mois</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Rotations enregistrées</div>
     <div style="position:relative;height:210px;"><canvas id="chartVolsMois"></canvas></div>
   </div>
 
@@ -2480,7 +2480,11 @@ window.generateAnalyticalReport = async function() {
     const capOf = f => capMap[(f.registration||'').toUpperCase().replace(/[\s.\-]/g,'')] || 0;
 
     // ── Agrégats ──
-    const movements = flt.length;
+    // Comptages en ROTATIONS (le triplet Las Palmas L6014+L6220 / L6221 = 1).
+    const _rs = (typeof window._rotationStats==='function')
+      ? window._rotationStats(flt)
+      : {total:flt.length, byCompany:{}, byMonth:Array(12).fill(0)};
+    const movements = _rs.total;   // « mouvements » = nombre de rotations
     let paxTotal=0, paxDepTot=0, paxArrTot=0, rateSum=0, rateN=0;
     const monPax=Array(12).fill(0), monMov=Array(12).fill(0);
     const co={}, coMonth={};
@@ -2500,9 +2504,9 @@ window.generateAnalyticalReport = async function() {
       else        { co[c].paxArr+=px; co[c].movArr++; paxArrTot+=px; if(r!=null){monArrRS[mo]+=r;monArrRN[mo]++;} }
     });
     const avgRate = rateN ? rateSum/rateN : null;   // moyenne globale (0..1)
-    const coRows = Object.entries(co).map(([name,s])=>({name,pax:s.paxDep+s.paxArr,paxDep:s.paxDep,paxArr:s.paxArr,mov:s.movDep+s.movArr,rate:s.rateN?s.rateSum/s.rateN:null}))
+    const coRows = Object.entries(co).map(([name,s])=>({name,pax:s.paxDep+s.paxArr,paxDep:s.paxDep,paxArr:s.paxArr,mov:(_rs.byCompany[name]||0),rate:s.rateN?s.rateSum/s.rateN:null}))
       .sort((a,b)=>b.pax-a.pax);
-    const monthsPresent = monMov.map((v,i)=>({i,pax:monPax[i],mov:v})).filter(x=>x.mov>0);
+    const monthsPresent = _rs.byMonth.map((v,i)=>({i,pax:monPax[i],mov:v})).filter(x=>x.mov>0 || x.pax>0);
 
     // Destinations par tronçon
     const dcAll={};
@@ -2541,10 +2545,10 @@ window.generateAnalyticalReport = async function() {
 
     const synthese = [];
     synthese.push(scopeCompany
-      ? `Ce rapport porte sur ${scopeCompany} à Nouakchott, sur ${perLabel.toLowerCase()}${y!=='ALL'?' '+y:''}. La compagnie a réalisé ${num(movements)} mouvements pour ${num(paxTotal)} passagers.`
-      : `Sur ${perLabel.toLowerCase()}${y!=='ALL'?' '+y:''}, Nouakchott a enregistré ${num(movements)} mouvements pour ${num(paxTotal)} passagers.`);
+      ? `Ce rapport porte sur ${scopeCompany} à Nouakchott, sur ${perLabel.toLowerCase()}${y!=='ALL'?' '+y:''}. La compagnie a réalisé ${num(movements)} rotations pour ${num(paxTotal)} passagers.`
+      : `Sur ${perLabel.toLowerCase()}${y!=='ALL'?' '+y:''}, Nouakchott a enregistré ${num(movements)} rotations pour ${num(paxTotal)} passagers.`);
     synthese.push(senstxt);
-    if (movements>0) synthese.push(`En moyenne, chaque mouvement transporte ${num(Math.round(paxTotal/movements))} passagers.`);
+    if (movements>0) synthese.push(`En moyenne, chaque rotation transporte ${num(Math.round(paxTotal/movements))} passagers.`);
     if (avgRate!=null) synthese.push(`Le taux de remplissage moyen s'établit à ${pc1(avgRate*100)} %.`);
 
     // Analyse mensuelle (seulement si plusieurs mois)
@@ -2572,7 +2576,7 @@ window.generateAnalyticalReport = async function() {
       }
       compaTxt.push(`${coRows.length} compagnie${coRows.length>1?'s':''} au total sont présentes sur la période.`);
     } else if (scopeCompany && leader){
-      compaTxt.push(`${leader.name} a transporté ${num(leader.paxDep)} passagers au départ et ${num(leader.paxArr)} à l'arrivée, pour ${num(leader.mov)} mouvements.`);
+      compaTxt.push(`${leader.name} a transporté ${num(leader.paxDep)} passagers au départ et ${num(leader.paxArr)} à l'arrivée, pour ${num(leader.mov)} rotations.`);
     }
 
     // Destinations
@@ -2660,7 +2664,7 @@ window.generateAnalyticalReport = async function() {
     const cW=[2750,1150,1150,1250,1100,1000,1200];
     const rtTxt=r=> (r!=null?pc1(r*100)+' %':'—');
     const coTable=new Table({width:{size:W,type:WidthType.DXA},columnWidths:cW,rows:[
-      new TableRow({children:[hc('Compagnie',cW[0]),hc('PAX départs',cW[1]),hc('PAX arrivées',cW[2]),hc('Total PAX',cW[3]),hc('Mouvements',cW[4]),hc('Part',cW[5]),hc('Taux moyen',cW[6])]}),
+      new TableRow({children:[hc('Compagnie',cW[0]),hc('PAX départs',cW[1]),hc('PAX arrivées',cW[2]),hc('Total PAX',cW[3]),hc('Rotations',cW[4]),hc('Part',cW[5]),hc('Taux moyen',cW[6])]}),
       ...coRows.map(r=>new TableRow({children:[dc2(r.name,cW[0],{left:true,bold:true}),dc2(num(r.paxDep),cW[1]),dc2(num(r.paxArr),cW[2]),dc2(num(r.pax),cW[3]),dc2(num(r.mov),cW[4]),dc2(pc1(r.pax/paxTotal*100)+' %',cW[5]),dc2(rtTxt(r.rate),cW[6])]})),
       new TableRow({children:[dc2('TOTAL',cW[0],{left:true,bold:true,fill:'F0E6C8'}),dc2(num(paxDepTot),cW[1],{bold:true,fill:'F0E6C8'}),dc2(num(paxArrTot),cW[2],{bold:true,fill:'F0E6C8'}),dc2(num(paxTotal),cW[3],{bold:true,fill:'F0E6C8'}),dc2(num(movements),cW[4],{bold:true,fill:'F0E6C8'}),dc2('100 %',cW[5],{bold:true,fill:'F0E6C8'}),dc2(rtTxt(avgRate),cW[6],{bold:true,fill:'F0E6C8'})]})
     ]});
@@ -2674,7 +2678,7 @@ window.generateAnalyticalReport = async function() {
     if (monthsPresent.length>1){
       const mW=[3000,3300,3300];
       monthTable=new Table({width:{size:W,type:WidthType.DXA},columnWidths:mW,rows:[
-        new TableRow({children:[hc('Mois',mW[0]),hc('Mouvements',mW[1]),hc('Passagers',mW[2])]}),
+        new TableRow({children:[hc('Mois',mW[0]),hc('Rotations',mW[1]),hc('Passagers',mW[2])]}),
         ...monthsPresent.map(x=>new TableRow({children:[dc2(MONTHS_LONG[x.i],mW[0],{left:true}),dc2(num(x.mov),mW[1]),dc2(num(x.pax),mW[2])]}))
       ]});
     }
@@ -2907,7 +2911,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
     const kpiW = (pageW - 2*marg - 3*kpiGap) / 4;
     const kpiH = 22;
     const kpis = [
-        { label:'Total vols',      value:kpiVols, color:[96, 165, 250] },
+        { label:'Total rotations', value:kpiVols, color:[96, 165, 250] },
         { label:'Total passagers', value:kpiPax,  color:[52, 211, 153] },
         { label:'Compagnies',      value:kpiComp, color:[212, 175,  55] },
         { label:'Destinations',    value:kpiDest, color:[248, 113, 113] },
@@ -2956,7 +2960,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
     const chartH = 62;
 
     const chartData = [
-        { id:'chartVolsMois', title:'Vols par mois',           color:[96, 165, 250] },
+        { id:'chartVolsMois', title:'Rotations par mois',      color:[96, 165, 250] },
         { id:'chartPaxMois',  title:'Passagers par mois',      color:[52, 211, 153] },
         { id:'chartTopComp',  title:'Top compagnies',          color:[212, 175, 55]  },
         { id:'chartPaxComp',  title:'Passagers par compagnie', color:[168, 85, 247]  },
@@ -3171,7 +3175,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
         yPos += rowH;
 
         const rows = [
-            ['Nombre de vols',         sA.vols, sB.vols],
+            ['Nombre de rotations',    sA.vols, sB.vols],
             ['Passagers transportés',  sA.pax,  sB.pax ],
         ];
         rows.forEach((r, i) => {
@@ -3222,7 +3226,7 @@ async function _doExportPDF(JsPDF, hiResImages) {
                 pdf.setTextColor(255, 255, 255);
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(8.5);
-                pdf.text('Vols par mois', marg + 2.5, yPos + 4.2);
+                pdf.text('Rotations par mois', marg + 2.5, yPos + 4.2);
                 try { pdf.addImage(cmpImgM, 'JPEG', marg + 2, yPos + 8, chW2 - 4, chH2 - 11, undefined, 'FAST'); }
                 catch(e) {}
             }
@@ -3562,17 +3566,21 @@ function refreshCharts(){
     const flt=filterFlights(all);
     if(!flt.length){const _sub2 = document.getElementById('chartsSubtitle'); if (_sub2) _sub2.textContent='Aucun vol pour ce filtre'; return;}
 
+    // Comptages en ROTATIONS (triplet Las Palmas = 1) ; passagers inchangés.
+    const _rs = (typeof window._rotationStats==='function')
+      ? window._rotationStats(flt)
+      : {total:flt.length, byCompany:{}, byMonth:Array(12).fill(0)};
     const pax=flt.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0);
     const comp=new Set(flt.map(f=>f.company).filter(Boolean));
     const dest=new Set();
     flt.forEach(f=>_troncons(f).forEach(t=>{ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined') dest.add(t.city); }));
     const babies=flt.reduce((s,f)=>s+(+f.babies||0),0);
 
-    document.getElementById('kpi-vols').textContent=flt.length.toLocaleString('fr-FR');
+    document.getElementById('kpi-vols').textContent=_rs.total.toLocaleString('fr-FR');
     document.getElementById('kpi-pax').textContent=pax.toLocaleString('fr-FR');
     document.getElementById('kpi-comp').textContent=comp.size;
     document.getElementById('kpi-dest').textContent=dest.size;
-    document.getElementById('kpi-vols-sub').textContent='vols enregistrés';
+    document.getElementById('kpi-vols-sub').textContent='rotations enregistrées';
     document.getElementById('kpi-pax-sub').textContent='passagers transportés';
     document.getElementById('kpi-comp-sub').textContent=[...comp].slice(0,2).join(', ')+(comp.size>2?'…':'');
     document.getElementById('kpi-dest-sub').textContent='destinations actives';
@@ -3580,12 +3588,12 @@ function refreshCharts(){
     const y=document.getElementById('chartYearFilter').value;
     const m=document.getElementById('chartMonthFilter').value;
     const mn=m!=='ALL'?_chartPeriodLabel(m):'';
-    const _sub3 = document.getElementById('chartsSubtitle'); if (_sub3) _sub3.textContent=`${flt.length.toLocaleString('fr-FR')} vol(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
+    const _sub3 = document.getElementById('chartsSubtitle'); if (_sub3) _sub3.textContent=`${_rs.total.toLocaleString('fr-FR')} rotation(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
 
-    // Vols/mois
-    kill('v');const volData=monthly(flt);
+    // Rotations/mois
+    kill('v');const volData=_rs.byMonth;
     charts['v']=new Chart(document.getElementById('chartVolsMois'),{
-        type:'bar',data:{labels:MONTHS_FR,datasets:[{label:'Vols',data:volData,
+        type:'bar',data:{labels:MONTHS_FR,datasets:[{label:'Rotations',data:volData,
             backgroundColor:volData.map(v=>v===Math.max(...volData)?'rgba(74,158,255,.9)':'rgba(74,158,255,.45)'),
             borderColor:'#4A9EFF',borderWidth:2,borderRadius:7,borderSkipped:false}]},
         options:darkOpts()
@@ -3611,13 +3619,12 @@ function refreshCharts(){
             tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}})
     });
 
-    // Top compagnies
-    kill('c');const cc={};
-    flt.forEach(f=>{if(f.company)cc[f.company]=(cc[f.company]||0)+1;});
+    // Top compagnies (par rotations)
+    kill('c');const cc=Object.assign({}, _rs.byCompany);
     const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
     charts['c']=new Chart(document.getElementById('chartTopComp'),{
         type:'bar',data:{labels:sc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
-            datasets:[{label:'Vols',data:sc.map(([,v])=>v),
+            datasets:[{label:'Rotations',data:sc.map(([,v])=>v),
                 backgroundColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),
                 borderColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderRadius:5}]},
         options:darkOpts({indexAxis:'y'})
@@ -3838,14 +3845,20 @@ function runComparison() {
     const fA = all.filter(f => f.company === a && filter(f));
     const fB = all.filter(f => f.company === b && filter(f));
 
-    const stats = (flights) => ({
-        vols: flights.length,
-        pax:  flights.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0),
-        // Immatriculations distinctes NORMALISÉES : 5T-CLE, 5TCLE et 5T CLE
-        // sont le même appareil (tirets/espaces/points ignorés).
-        imm:  new Set(flights.map(f=>(f.registration||'').toUpperCase().replace(/[\s.\-]/g,'')).filter(Boolean)).size,
-        monthly: monthly(flights),
-    });
+    const stats = (flights) => {
+        // Comptages en ROTATIONS (triplet Las Palmas = 1) ; passagers inchangés.
+        const rs = (typeof window._rotationStats==='function')
+          ? window._rotationStats(flights)
+          : {total:flights.length, byMonth:monthly(flights)};
+        return {
+          vols: rs.total,
+          pax:  flights.reduce((s,f)=>s+(+f.passengers||0)+(+f.babies||0),0),
+          // Immatriculations distinctes NORMALISÉES : 5T-CLE, 5TCLE et 5T CLE
+          // sont le même appareil (tirets/espaces/points ignorés).
+          imm:  new Set(flights.map(f=>(f.registration||'').toUpperCase().replace(/[\s.\-]/g,'')).filter(Boolean)).size,
+          monthly: rs.byMonth,
+        };
+    };
 
     const sA = stats(fA), sB = stats(fB);
     const winner = (va, vb) => va > vb ? 'a' : vb > va ? 'b' : '';
@@ -3855,11 +3868,11 @@ function runComparison() {
             <div class="compare-kpi a">
                 <div class="ck-name">${esc(a)}</div>
                 <div class="ck-val">${sA.vols}</div>
-                <div class="ck-label">Vols totaux</div>
+                <div class="ck-label">Rotations totales</div>
                 ${winner(sA.vols,sB.vols)==='a'?'<span class="winner-badge">LEADER</span>':''}
             </div>
             <div class="compare-kpi neutral" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
-                <div style="font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;">Vols</div>
+                <div style="font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;">Rotations</div>
                 <div style="font-size:22px;font-weight:800;color:#4a5568;">${sA.vols} / ${sB.vols}</div>
                 <div style="font-size:11px;color:#a0aec0;">PAX: ${sA.pax.toLocaleString('fr-FR')} / ${sB.pax.toLocaleString('fr-FR')}</div>
                 <div style="font-size:11px;color:#a0aec0;">Immat: ${sA.imm} / ${sB.imm}</div>
@@ -3867,7 +3880,7 @@ function runComparison() {
             <div class="compare-kpi b">
                 <div class="ck-name">${esc(b)}</div>
                 <div class="ck-val">${sB.vols}</div>
-                <div class="ck-label">Vols totaux</div>
+                <div class="ck-label">Rotations totales</div>
                 ${winner(sA.vols,sB.vols)==='b'?'<span class="winner-badge">LEADER</span>':''}
             </div>
 
@@ -3890,7 +3903,7 @@ function runComparison() {
 
         <div class="compare-chart-row" style="margin-top:16px;">
             <div>
-                <div style="font-size:12px;font-weight:700;color:#4a5568;text-transform:uppercase;margin-bottom:8px;">Vols par mois</div>
+                <div style="font-size:12px;font-weight:700;color:#4a5568;text-transform:uppercase;margin-bottom:8px;">Rotations par mois</div>
                 <div class="compare-chart-wrap"><canvas id="cmpChartMois"></canvas></div>
             </div>
             <div>

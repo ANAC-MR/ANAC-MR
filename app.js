@@ -2001,6 +2001,26 @@ function _hBuildAllRotations(flights){
   return rotations;
 }
 
+// Exposé pour la page Diagrammes & Rapports (scripts hors module).
+// Statistiques de rotations d'un lot de vols : total, par compagnie (ancre),
+// par mois (ancre). Le triplet Las Palmas (L6014+L6220 / L6221) compte pour 1.
+if (typeof window !== 'undefined') {
+  window._hBuildAllRotations = _hBuildAllRotations;
+  window._hRotLegs = _hRotLegs;
+  window._hRotFirstFlight = _hRotFirstFlight;
+  window._rotationStats = function(flights){
+    const rots = _hBuildAllRotations(flights || []);
+    const byCompany = {}, byMonth = Array(12).fill(0);
+    rots.forEach(r => {
+      const f0 = _hRotFirstFlight(r), co = (f0 && f0.company) || 'Inconnue';
+      byCompany[co] = (byCompany[co] || 0) + 1;
+      const d = new Date((r.anchor || '') + 'T00:00:00'), mo = isNaN(d) ? -1 : d.getMonth();
+      if (mo >= 0 && mo < 12) byMonth[mo]++;
+    });
+    return { total: rots.length, byCompany, byMonth, rotations: rots };
+  };
+}
+
 // Rendu du tableau d'accueil en ROTATIONS. Cellules fusionnées par rotation :
 // N° · Date (si toutes les jambes le même jour) · Compagnie · Immatriculation.
 // Par vol : N° d'autorisation · N° de vol · Type · Actions. Par tronçon : Trajet,
