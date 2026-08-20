@@ -1180,6 +1180,30 @@ document.addEventListener('keydown', e => {
     <div id="destDetail" style="display:none;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;margin-top:6px;"></div>
   </div>
 
+  <!-- Taux de remplissage pleine largeur -->
+  <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Taux de remplissage</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:14px;">Calculé par rotation (moyenne des jambes) — bébés exclus</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Taux par compagnie</div>
+        <div style="position:relative;height:240px;"><canvas id="chartRateComp"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Taux par destination</div>
+        <div style="position:relative;height:240px;"><canvas id="chartRateDest"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Répartition des rotations</div>
+        <div style="position:relative;height:220px;"><canvas id="chartRotShare2"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Répartition des passagers</div>
+        <div style="position:relative;height:220px;"><canvas id="chartPaxShare2"></canvas></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Comparaison 2 compagnies pleine largeur -->
   <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:12px;">Comparaison de deux compagnies</div>
@@ -2437,11 +2461,21 @@ async function _loadAircraftCap(){
 // Taux de remplissage : capacité de l'appareil (0 si inconnue ; requiert que
 // _loadAircraftCap() ait rempli le cache window._acCap). Bébés jamais comptés.
 window._capOf = function(f){ const m=window._acCap||{}; return m[(((f&&f.registration)||'').toUpperCase().replace(/[\s.\-]/g,''))]||0; };
-// Taux de remplissage moyen d'un lot de vols (moyenne des taux par vol capacité connue).
+// Taux de remplissage moyen, calculé PAR ROTATION : chaque rotation = moyenne des
+// taux (passagers/capacité) de ses jambes ; on moyenne ensuite sur les rotations.
+// Bébés jamais comptés. Repli par vol si le moteur de rotations est indisponible.
 window._fillRate = function(flights){
-  let sum=0,n=0;
-  (flights||[]).forEach(function(f){ const cap=window._capOf(f); if(cap>0){ sum += ((+f.passengers||0)/cap); n++; } });
-  return n ? (sum/n) : null;
+  const B=window._hBuildAllRotations, L=window._hRotLegs;
+  if(typeof B!=='function' || typeof L!=='function'){
+    let s=0,k=0; (flights||[]).forEach(function(f){ const c=window._capOf(f); if(c>0){ s+=(+f.passengers||0)/c; k++; } }); return k?s/k:null;
+  }
+  const rots=B(flights||[]); let sum=0,n=0;
+  rots.forEach(function(r){
+    const legs=L(r); let rs=0,rn=0;
+    legs.forEach(function(x){ const c=window._capOf(x.f); if(c>0){ rs+=(+x.f.passengers||0)/c; rn++; } });
+    if(rn){ sum+=rs/rn; n++; }
+  });
+  return n?sum/n:null;
 };
 
 // dataURL PNG → octets (pour ImageRun docx)
@@ -3683,6 +3717,51 @@ function refreshCharts(){
     kill('ps');
     if(document.getElementById('chartPaxShare')){
         charts['ps']=new Chart(document.getElementById('chartPaxShare'),{
+            type:'doughnut',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+                datasets:[{data:spc.map(([,v])=>v),backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2}]},
+            options:doughOpts});
+    }
+
+    // ── Section « Taux de remplissage » (par rotation) ──
+    // Taux par compagnie (barres)
+    kill('rateC');
+    var flByCo={};
+    flt.forEach(function(f){ if(f.company){ (flByCo[f.company]=flByCo[f.company]||[]).push(f); } });
+    var rateCo=Object.keys(flByCo).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(flByCo[c]):null]; })
+        .filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+    if(document.getElementById('chartRateComp') && rateCo.length){
+        charts['rateC']=new Chart(document.getElementById('chartRateComp'),{
+            type:'bar',data:{labels:rateCo.map(function(e){return e[0].length>16?e[0].slice(0,16)+'…':e[0];}),
+                datasets:[{label:'Taux %',data:rateCo.map(function(e){return +(e[1]*100).toFixed(1);}),
+                    backgroundColor:rateCo.map(function(_,i){return PALETTE[i%PALETTE.length]+'cc';}),
+                    borderColor:rateCo.map(function(_,i){return PALETTE[i%PALETTE.length];}),borderWidth:2,borderRadius:5}]},
+            options:darkOpts({indexAxis:'y'})});
+    }
+    // Taux par destination (barres)
+    kill('rateD');
+    var flByDest={};
+    flt.forEach(function(f){ _troncons(f).forEach(function(t){ var city=t.city; if(!city||city==='Nouakchott'||city===''||city==='undefined')return; (flByDest[city]=flByDest[city]||new Set()).add(f); }); });
+    var rateDest=Object.keys(flByDest).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(Array.from(flByDest[c])):null]; })
+        .filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+    if(document.getElementById('chartRateDest') && rateDest.length){
+        charts['rateD']=new Chart(document.getElementById('chartRateDest'),{
+            type:'bar',data:{labels:rateDest.map(function(e){return e[0];}),
+                datasets:[{label:'Taux %',data:rateDest.map(function(e){return +(e[1]*100).toFixed(1);}),
+                    backgroundColor:rateDest.map(function(_,i){return PALETTE[(i+3)%PALETTE.length]+'cc';}),
+                    borderColor:rateDest.map(function(_,i){return PALETTE[(i+3)%PALETTE.length];}),borderWidth:2,borderRadius:5}]},
+            options:darkOpts({indexAxis:'y'})});
+    }
+    // Camemberts dupliqués dans la section Taux
+    kill('rs2');
+    if(document.getElementById('chartRotShare2')){
+        charts['rs2']=new Chart(document.getElementById('chartRotShare2'),{
+            type:'doughnut',data:{labels:srt.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+                datasets:[{data:srt.map(([,v])=>v),backgroundColor:srt.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),borderColor:srt.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2}]},
+            options:doughOpts});
+    }
+    kill('ps2');
+    if(document.getElementById('chartPaxShare2')){
+        charts['ps2']=new Chart(document.getElementById('chartPaxShare2'),{
             type:'doughnut',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
                 datasets:[{data:spc.map(([,v])=>v),backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2}]},
             options:doughOpts});
