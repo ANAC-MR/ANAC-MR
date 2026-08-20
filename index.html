@@ -1147,7 +1147,7 @@ document.addEventListener('keydown', e => {
   <!-- Top compagnies -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Top compagnies</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Classement par nombre de vols</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Classement par nombre de rotations</div>
     <div style="position:relative;height:210px;"><canvas id="chartTopComp"></canvas></div>
   </div>
 
@@ -1156,6 +1156,20 @@ document.addEventListener('keydown', e => {
     <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Passagers par compagnie</div>
     <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Total transportés</div>
     <div style="position:relative;height:210px;"><canvas id="chartPaxComp"></canvas></div>
+  </div>
+
+  <!-- Répartition des rotations (camembert) -->
+  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Répartition des rotations</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Par compagnie</div>
+    <div style="position:relative;height:210px;"><canvas id="chartRotShare"></canvas></div>
+  </div>
+
+  <!-- Répartition des passagers (camembert) -->
+  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Répartition des passagers</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Par compagnie</div>
+    <div style="position:relative;height:210px;"><canvas id="chartPaxShare"></canvas></div>
   </div>
 
   <!-- Destinations cliquables pleine largeur -->
@@ -2420,6 +2434,15 @@ async function _loadAircraftCap(){
   }catch(e){ console.warn('Chargement capacités:', e&&e.message); }
   window._acCap=map; return map;
 }
+// Taux de remplissage : capacité de l'appareil (0 si inconnue ; requiert que
+// _loadAircraftCap() ait rempli le cache window._acCap). Bébés jamais comptés.
+window._capOf = function(f){ const m=window._acCap||{}; return m[(((f&&f.registration)||'').toUpperCase().replace(/[\s.\-]/g,''))]||0; };
+// Taux de remplissage moyen d'un lot de vols (moyenne des taux par vol capacité connue).
+window._fillRate = function(flights){
+  let sum=0,n=0;
+  (flights||[]).forEach(function(f){ const cap=window._capOf(f); if(cap>0){ sum += ((+f.passengers||0)/cap); n++; } });
+  return n ? (sum/n) : null;
+};
 
 // dataURL PNG → octets (pour ImageRun docx)
 function _dataUrlToBytes(durl){
@@ -3557,6 +3580,10 @@ function refreshCharts(){
       return;
     }
     console.log('[CHARTS] refreshCharts: ' + all.length + ' vols disponibles');
+    // Précharger les capacités (taux de remplissage) puis re-rendre une fois dispo.
+    if (!window._acCap && typeof _loadAircraftCap==='function') {
+        _loadAircraftCap().then(function(){ try{ refreshCharts(); }catch(e){} });
+    }
     if (typeof Chart === 'undefined') {
       console.error('[CHARTS] Chart.js n\'est pas chargé !');
       return;
@@ -3642,6 +3669,25 @@ function refreshCharts(){
         options:darkOpts({indexAxis:'y'})
     });
 
+    // Répartition des rotations (camembert par compagnie)
+    kill('rs');
+    const srt=Object.entries(_rs.byCompany).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const doughOpts={responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}};
+    if(document.getElementById('chartRotShare')){
+        charts['rs']=new Chart(document.getElementById('chartRotShare'),{
+            type:'doughnut',data:{labels:srt.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+                datasets:[{data:srt.map(([,v])=>v),backgroundColor:srt.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),borderColor:srt.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2}]},
+            options:doughOpts});
+    }
+    // Répartition des passagers (camembert par compagnie)
+    kill('ps');
+    if(document.getElementById('chartPaxShare')){
+        charts['ps']=new Chart(document.getElementById('chartPaxShare'),{
+            type:'doughnut',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+                datasets:[{data:spc.map(([,v])=>v),backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2}]},
+            options:doughOpts});
+    }
+
     renderDestCards(flt);
 }
 
@@ -3653,8 +3699,9 @@ function renderDestCards(flt){
         _troncons(f).forEach(t=>{
             const city=t.city;
             if(!city||city==='Nouakchott'||city===''||city==='undefined')return;
-            if(!dc[city])dc[city]={vols:0,pax:0,dep:{vols:0,pax:0},arr:{vols:0,pax:0},asEscale:0,asFinal:0,companies:{}};
+            if(!dc[city])dc[city]={vols:0,pax:0,dep:{vols:0,pax:0},arr:{vols:0,pax:0},asEscale:0,asFinal:0,companies:{},_fset:new Set()};
             const b=dc[city];
+            b._fset.add(f);
             b.vols++; b.pax+=t.pax;
             const dk=t.dir==='ARR'?'arr':'dep';
             b[dk].vols++; b[dk].pax+=t.pax;
@@ -3673,13 +3720,15 @@ function renderDestCards(flt){
     document.getElementById('destCards').innerHTML=sorted.map(([city,info],i)=>{
         const pct=Math.round(info.vols/maxV*100);
         const color=PALETTE[i%PALETTE.length];
+        const rate=(typeof window._fillRate==='function')?window._fillRate(Array.from(info._fset||[])):null;
+        const rateTxt=rate!=null?' · Taux '+Math.round(rate*100)+'%':'';
         return `<div onclick="showDestDetail(${i},this)"
             style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;
             padding:12px 16px;cursor:pointer;transition:all .15s;min-width:130px;flex:1;max-width:185px;" class="dest-card"
             onmouseover="this.style.borderColor='${color}66';this.style.background='rgba(255,255,255,.07)'"
             onmouseout="if(!this.classList.contains('dc-active')){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';}">
             <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">${esc(city)}</div>
-            <div style="font-size:11px;color:#5A7A9A;margin-bottom:7px;">${info.vols} vols · ${info.pax.toLocaleString('fr-FR')} pax</div>
+            <div style="font-size:11px;color:#5A7A9A;margin-bottom:7px;">${info.vols} vols · ${info.pax.toLocaleString('fr-FR')} pax${rateTxt}</div>
             <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;">
               <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;"></div>
             </div>
@@ -3857,6 +3906,7 @@ function runComparison() {
           // sont le même appareil (tirets/espaces/points ignorés).
           imm:  new Set(flights.map(f=>(f.registration||'').toUpperCase().replace(/[\s.\-]/g,'')).filter(Boolean)).size,
           monthly: rs.byMonth,
+          rate: (typeof window._fillRate==='function') ? window._fillRate(flights) : null,
         };
     };
 
@@ -3898,6 +3948,19 @@ function runComparison() {
                 ${winner(sA.pax,sB.pax)==='b'?'<span class="winner-badge">LEADER</span>':''}
             </div>
 
+            <div class="compare-kpi a">
+                <div class="ck-val">${sA.rate!=null?Math.round(sA.rate*100)+'%':'—'}</div>
+                <div class="ck-label">Taux de remplissage</div>
+                ${winner(sA.rate||0,sB.rate||0)==='a'?'<span class="winner-badge">LEADER</span>':''}
+            </div>
+            <div class="compare-kpi neutral" style="display:flex;align-items:center;justify-content:center;">
+                <div style="font-size:12px;font-weight:700;color:#718096;text-transform:uppercase;">Taux de remplissage</div>
+            </div>
+            <div class="compare-kpi b">
+                <div class="ck-val">${sB.rate!=null?Math.round(sB.rate*100)+'%':'—'}</div>
+                <div class="ck-label">Taux de remplissage</div>
+                ${winner(sA.rate||0,sB.rate||0)==='b'?'<span class="winner-badge">LEADER</span>':''}
+            </div>
 
         </div>
 
@@ -4004,7 +4067,14 @@ function runRouteComparison() {
         if (h.t.dir === 'DEP') { d.dep++; d.paxDep += h.t.pax; if(mo>=0&&mo<12){ depMonth[mo]++; depPaxMonth[mo]+=h.t.pax; } }
         else                   { d.arr++; d.paxArr += h.t.pax; if(mo>=0&&mo<12){ arrMonth[mo]++; arrPaxMonth[mo]+=h.t.pax; } }
     });
-    Object.keys(byComp).forEach(function(c){ byComp[c].rot = rotByCo[c]||0; });
+    // Taux de remplissage par compagnie (passagers / capacité, bébés exclus).
+    var flightsByCo = {};
+    servingFlights.forEach(function(f){ if(f.company){ (flightsByCo[f.company]=flightsByCo[f.company]||[]).push(f); } });
+    Object.keys(byComp).forEach(function(c){
+        byComp[c].rot = rotByCo[c]||0;
+        byComp[c].rate = (typeof window._fillRate==='function') ? window._fillRate(flightsByCo[c]||[]) : null;
+    });
+    var globalRate = (typeof window._fillRate==='function') ? window._fillRate(servingFlights) : null;
 
     var sorted = Object.entries(byComp).sort(function(a,b){ return (b[1].rot - a[1].rot) || (b[1].pax - a[1].pax); });
     var colors = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE'];
@@ -4034,9 +4104,14 @@ function runRouteComparison() {
             +'<div style="font-size:21px;font-weight:800;color:'+color+';">'+s.rot
             +'<span style="font-size:11px;color:#5A7A9A;font-weight:400;"> rotation'+(s.rot>1?'s':'')+'</span></div>'
             +'<div style="font-size:11px;color:#5A7A9A;margin-top:2px;">'+s.pax.toLocaleString('fr-FR')+' pax · '+share+'%</div>'
-            +'<div style="font-size:10px;color:#5A7A9A;margin-top:3px;">↑ '+s.dep+' dép. · ↓ '+s.arr+' arr.</div>'
+            +'<div style="font-size:10px;color:#5A7A9A;margin-top:3px;">↑ '+s.dep+' dép. · ↓ '+s.arr+' arr.'+(s.rate!=null?' · Taux '+Math.round(s.rate*100)+'%':'')+'</div>'
             +peakHtml+'</div>';
     });
+
+    // ── Diagramme « Répartition des rotations par compagnie » ──
+    var rotHtml = '<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;margin-top:14px;">'
+        +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Répartition des rotations par compagnie</div>'
+        +'<div style="position:relative;height:220px;"><canvas id="routeChartRot"></canvas></div></div>';
 
     // ── Chart HTML : barres (multi-mois) ou camembert (1 mois) ──
     var chartHtml = isMultiMonth
@@ -4061,13 +4136,29 @@ function runRouteComparison() {
         +'<span style="font-size:12px;color:#5A7A9A;background:rgba(255,255,255,.05);padding:3px 9px;border-radius:6px;">'+totalRot+' rotation'+(totalRot>1?'s':'')+' · '+periodeLabel+'</span>'
         +'</div>'
         +'<div style="display:flex;flex-wrap:wrap;gap:10px;">'+kpiHtml+'</div>'
+        +rotHtml
         +chartHtml;
 
     setTimeout(function() {
         var cvV = document.getElementById('routeChartVols');
         var cvP = document.getElementById('routeChartPax');
         if (!cvV || !cvP) return;
-        killCmp('rV'); killCmp('rP');
+        killCmp('rV'); killCmp('rP'); killCmp('rR');
+
+        // Camembert « Répartition des rotations par compagnie ».
+        var cvR = document.getElementById('routeChartRot');
+        if (cvR) {
+            cmpCharts['rR'] = new Chart(cvR, {
+                type:'doughnut',
+                data:{ labels: sorted.map(function(e){return e[0];}),
+                    datasets:[{ data: sorted.map(function(e){return e[1].rot;}),
+                        backgroundColor: sorted.map(function(_,i){return colors[i%colors.length]+'CC';}),
+                        borderColor: sorted.map(function(_,i){return colors[i%colors.length];}), borderWidth:2 }] },
+                options:{ responsive:true, maintainAspectRatio:false, cutout:'58%',
+                    plugins:{ legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},
+                        tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8} } }
+            });
+        }
 
         var legendOpts  = {display:true, position:'top', labels:{color:'#94a3b8',font:{size:10},padding:10,usePointStyle:true}};
         var tooltipOpts = {backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8};
