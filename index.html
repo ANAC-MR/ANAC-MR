@@ -3980,17 +3980,33 @@ function runRouteComparison() {
     var months = new Set(hits.map(function(h){ return new Date(h.f.date).getMonth(); }));
     var isMultiMonth = months.size > 1;
 
-    // Construire les stats par compagnie (par tronçon)
-    var byComp = {};
-    hits.forEach(function(h) {
-        var f = h.f; if (!f.company) return;
-        if (!byComp[f.company]) byComp[f.company] = { vols:0, pax:0, byMonth:Array(12).fill(0) };
-        byComp[f.company].vols++;
-        byComp[f.company].pax += h.t.pax;
-        byComp[f.company].byMonth[new Date(f.date).getMonth()]++;
+    // Rotations desservant ce trajet (triplet Las Palmas = 1), par compagnie.
+    var servingFlights = Array.from(new Set(hits.map(function(h){return h.f;})));
+    var _rots = (typeof window._hBuildAllRotations==='function') ? window._hBuildAllRotations(servingFlights) : [];
+    var totalRot = _rots.length;
+    var rotByCo = {};
+    _rots.forEach(function(r){
+        var f0 = (typeof window._hRotFirstFlight==='function') ? window._hRotFirstFlight(r) : (r.legs?r.legs[0]:(r.dep||r.arr));
+        var c = (f0 && f0.company) || 'Inconnue';
+        rotByCo[c] = (rotByCo[c]||0)+1;
     });
 
-    var sorted = Object.entries(byComp).sort(function(a,b){ return b[1].vols - a[1].vols; });
+    // Stats par compagnie (par tronçon), séparées Départs / Arrivées.
+    var byComp = {};
+    var depMonth=Array(12).fill(0), arrMonth=Array(12).fill(0);
+    var depPaxMonth=Array(12).fill(0), arrPaxMonth=Array(12).fill(0);
+    hits.forEach(function(h) {
+        var f = h.f; if (!f.company) return;
+        var mo = new Date(f.date).getMonth();
+        if (!byComp[f.company]) byComp[f.company] = { rot:0, vols:0, pax:0, dep:0, arr:0, paxDep:0, paxArr:0, byMonth:Array(12).fill(0) };
+        var d = byComp[f.company];
+        d.vols++; d.pax += h.t.pax; if(mo>=0&&mo<12) d.byMonth[mo]++;
+        if (h.t.dir === 'DEP') { d.dep++; d.paxDep += h.t.pax; if(mo>=0&&mo<12){ depMonth[mo]++; depPaxMonth[mo]+=h.t.pax; } }
+        else                   { d.arr++; d.paxArr += h.t.pax; if(mo>=0&&mo<12){ arrMonth[mo]++; arrPaxMonth[mo]+=h.t.pax; } }
+    });
+    Object.keys(byComp).forEach(function(c){ byComp[c].rot = rotByCo[c]||0; });
+
+    var sorted = Object.entries(byComp).sort(function(a,b){ return (b[1].rot - a[1].rot) || (b[1].pax - a[1].pax); });
     var colors = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE'];
 
     // Période label
@@ -4006,18 +4022,19 @@ function runRouteComparison() {
     sorted.forEach(function(entry, i) {
         var co = entry[0], s = entry[1];
         var color = colors[i % colors.length];
-        var share = Math.round(s.vols / all.length * 100);
+        var share = totalRot ? Math.round(s.rot / totalRot * 100) : 0;
         var peakM = s.byMonth.indexOf(Math.max.apply(null, s.byMonth));
         var peakHtml = (isMultiMonth && s.byMonth[peakM] > 0)
-            ? '<div style="font-size:10px;color:'+color+';margin-top:5px;">Pic: '+MONTHS_FR[peakM]+' ('+s.byMonth[peakM]+' vols)</div>'
+            ? '<div style="font-size:10px;color:'+color+';margin-top:5px;">Pic: '+MONTHS_FR[peakM]+' ('+s.byMonth[peakM]+' mvts)</div>'
             : '';
         kpiHtml += '<div style="flex:1;min-width:150px;background:rgba(255,255,255,.03);border:1px solid '+color+'33;'
             +'border-radius:12px;padding:13px 16px;position:relative;overflow:hidden;">'
             +'<div style="position:absolute;top:0;left:0;height:3px;width:'+share+'%;background:'+color+';border-radius:0 0 3px 0;"></div>'
             +'<div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:5px;">'+co+'</div>'
-            +'<div style="font-size:21px;font-weight:800;color:'+color+';">'+s.vols
-            +'<span style="font-size:11px;color:#5A7A9A;font-weight:400;"> vols</span></div>'
+            +'<div style="font-size:21px;font-weight:800;color:'+color+';">'+s.rot
+            +'<span style="font-size:11px;color:#5A7A9A;font-weight:400;"> rotation'+(s.rot>1?'s':'')+'</span></div>'
             +'<div style="font-size:11px;color:#5A7A9A;margin-top:2px;">'+s.pax.toLocaleString('fr-FR')+' pax · '+share+'%</div>'
+            +'<div style="font-size:10px;color:#5A7A9A;margin-top:3px;">↑ '+s.dep+' dép. · ↓ '+s.arr+' arr.</div>'
             +peakHtml+'</div>';
     });
 
@@ -4025,23 +4042,23 @@ function runRouteComparison() {
     var chartHtml = isMultiMonth
         ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
             +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Vols par mois</div>'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Mouvements par mois — Départs / Arrivées</div>'
             +'<div style="position:relative;height:200px;"><canvas id="routeChartVols"></canvas></div></div>'
             +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Passagers par mois</div>'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Passagers par mois — Départs / Arrivées</div>'
             +'<div style="position:relative;height:200px;"><canvas id="routeChartPax"></canvas></div></div></div>'
         : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
             +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Part des vols</div>'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Mouvements — Départs / Arrivées</div>'
             +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartVols"></canvas></div></div>'
             +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Part des passagers</div>'
+            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Passagers — Départs / Arrivées</div>'
             +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartPax"></canvas></div></div></div>';
 
     res.innerHTML =
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
         +'<span style="font-size:15px;font-weight:700;color:#e2e8f0;">NKC ↔ '+destCity+'</span>'
-        +'<span style="font-size:12px;color:#5A7A9A;background:rgba(255,255,255,.05);padding:3px 9px;border-radius:6px;">'+all.length+' vol'+(all.length>1?'s':'')+' · '+periodeLabel+'</span>'
+        +'<span style="font-size:12px;color:#5A7A9A;background:rgba(255,255,255,.05);padding:3px 9px;border-radius:6px;">'+totalRot+' rotation'+(totalRot>1?'s':'')+' · '+periodeLabel+'</span>'
         +'</div>'
         +'<div style="display:flex;flex-wrap:wrap;gap:10px;">'+kpiHtml+'</div>'
         +chartHtml;
@@ -4059,45 +4076,27 @@ function runRouteComparison() {
             y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:10}},beginAtZero:true}
         };
 
+        var DEPC='#4A9EFF', ARRC='#2DD4A0';
         if (isMultiMonth) {
-            // Barres mensuelles
-            var datasetsVols = sorted.map(function(entry, i) {
-                return {
-                    label: entry[0].length>18 ? entry[0].slice(0,18)+'…' : entry[0],
-                    data:  entry[1].byMonth,
-                    backgroundColor: colors[i%colors.length]+'99',
-                    borderColor: colors[i%colors.length],
-                    borderWidth: 2, borderRadius: 4
-                };
-            });
-            var datasetsPax = sorted.map(function(entry, i) {
-                var paxData = Array(12).fill(0);
-                hits.filter(function(h){return h.f.company===entry[0];}).forEach(function(h){
-                    if(h.f.date) paxData[new Date(h.f.date).getMonth()] += h.t.pax;
-                });
-                return {
-                    label: entry[0].length>18 ? entry[0].slice(0,18)+'…' : entry[0],
-                    data: paxData,
-                    borderColor: colors[i%colors.length],
-                    backgroundColor: colors[i%colors.length]+'20',
-                    borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 3
-                };
-            });
+            // Barres mensuelles : Départs vs Arrivées (mouvements et passagers).
             cmpCharts['rV'] = new Chart(cvV, {
-                type:'bar', data:{labels:MONTHS_FR, datasets:datasetsVols},
+                type:'bar', data:{labels:MONTHS_FR, datasets:[
+                    {label:'Départs',  data:depMonth, backgroundColor:DEPC+'99', borderColor:DEPC, borderWidth:2, borderRadius:4},
+                    {label:'Arrivées', data:arrMonth, backgroundColor:ARRC+'99', borderColor:ARRC, borderWidth:2, borderRadius:4}
+                ]},
                 options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
             });
             cmpCharts['rP'] = new Chart(cvP, {
-                type:'line', data:{labels:MONTHS_FR, datasets:datasetsPax},
+                type:'bar', data:{labels:MONTHS_FR, datasets:[
+                    {label:'Départs',  data:depPaxMonth, backgroundColor:DEPC+'99', borderColor:DEPC, borderWidth:2, borderRadius:4},
+                    {label:'Arrivées', data:arrPaxMonth, backgroundColor:ARRC+'99', borderColor:ARRC, borderWidth:2, borderRadius:4}
+                ]},
                 options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
             });
         } else {
-            // Camembert pour 1 mois
-            var labels  = sorted.map(function(e){return e[0];});
-            var volsData = sorted.map(function(e){return e[1].vols;});
-            var paxData  = sorted.map(function(e){return e[1].pax;});
-            var bgColors = sorted.map(function(_,i){return colors[i%colors.length]+'CC';});
-            var bdColors = sorted.map(function(_,i){return colors[i%colors.length];});
+            // Camembert pour 1 mois : Départs vs Arrivées.
+            var totDep=depMonth.reduce(function(a,b){return a+b;},0), totArr=arrMonth.reduce(function(a,b){return a+b;},0);
+            var totDepPax=depPaxMonth.reduce(function(a,b){return a+b;},0), totArrPax=arrPaxMonth.reduce(function(a,b){return a+b;},0);
             var doughnutOpts = {
                 responsive:true, maintainAspectRatio:false,
                 plugins:{legend:{display:true,position:'bottom',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},tooltip:tooltipOpts},
@@ -4105,12 +4104,12 @@ function runRouteComparison() {
             };
             cmpCharts['rV'] = new Chart(cvV, {
                 type:'doughnut',
-                data:{labels:labels, datasets:[{data:volsData, backgroundColor:bgColors, borderColor:bdColors, borderWidth:2}]},
+                data:{labels:['Départs','Arrivées'], datasets:[{data:[totDep,totArr], backgroundColor:[DEPC+'CC',ARRC+'CC'], borderColor:[DEPC,ARRC], borderWidth:2}]},
                 options:doughnutOpts
             });
             cmpCharts['rP'] = new Chart(cvP, {
                 type:'doughnut',
-                data:{labels:labels, datasets:[{data:paxData, backgroundColor:bgColors, borderColor:bdColors, borderWidth:2}]},
+                data:{labels:['Départs','Arrivées'], datasets:[{data:[totDepPax,totArrPax], backgroundColor:[DEPC+'CC',ARRC+'CC'], borderColor:[DEPC,ARRC], borderWidth:2}]},
                 options:doughnutOpts
             });
         }
