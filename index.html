@@ -1972,7 +1972,13 @@ function _expSegments(f){
   let segs;
   if(f.stopover && stop){
     if(_expIsMR(f.stopover)) segs=[{r:dep+'-'+stop,px:paxStop},{r:dep+'-'+arr,px:paxThru},{r:stop+'-'+arr,px:midLeg}];
-    else                    segs=[{r:dep+'-'+arr,px:paxThru},{r:dep+'-'+stop,px:paxStop}];
+    else {
+      // Escale étrangère → 2 tronçons. Sens de la 2e ligne selon le type :
+      //   DÉPART (NKC→escale) : dep-stop ; ARRIVÉE (escale→NKC) : stop-arr.
+      const isArr=(f.type||'').toUpperCase().charAt(0)==='A';
+      const sub = isArr ? (stop+'-'+arr) : (dep+'-'+stop);
+      segs=[{r:dep+'-'+arr,px:paxThru},{r:sub,px:paxStop}];
+    }
   } else segs=[{r:dep+'-'+arr,px:total}];
   return segs.map((s,idx)=>({ vol: idx===0?(FN+'('+s.r+')'):('('+s.r+')'), px:s.px, date: idx===0?D:'' }));
 }
