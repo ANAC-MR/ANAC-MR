@@ -2008,6 +2008,7 @@ if (typeof window !== 'undefined') {
   window._hBuildAllRotations = _hBuildAllRotations;
   window._hRotLegs = _hRotLegs;
   window._hRotFirstFlight = _hRotFirstFlight;
+  window._hDestCity = _hDestCity;
   window._rotationStats = function(flights){
     const rots = _hBuildAllRotations(flights || []);
     const byCompany = {}, byMonth = Array(12).fill(0);

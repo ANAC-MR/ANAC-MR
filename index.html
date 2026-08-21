@@ -1144,31 +1144,31 @@ document.addEventListener('keydown', e => {
     <div style="position:relative;height:210px;"><canvas id="chartPaxMois"></canvas></div>
   </div>
 
-  <!-- Top compagnies -->
+  <!-- Top compagnies / destinations -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Top compagnies</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Classement par nombre de rotations</div>
+    <div id="ttlTopComp" style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Top compagnies</div>
+    <div id="subTopComp" style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Classement par nombre de rotations</div>
     <div style="position:relative;height:210px;"><canvas id="chartTopComp"></canvas></div>
   </div>
 
   <!-- PAX/compagnie -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Passagers par compagnie</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Total transportés</div>
+    <div id="ttlPaxComp" style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Passagers par compagnie</div>
+    <div id="subPaxComp" style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Total transportés</div>
     <div style="position:relative;height:210px;"><canvas id="chartPaxComp"></canvas></div>
   </div>
 
   <!-- Répartition des rotations (camembert) -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Répartition des rotations</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Par compagnie</div>
+    <div id="ttlRotShare" style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Répartition des rotations</div>
+    <div id="subRotShare" style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Par compagnie</div>
     <div style="position:relative;height:210px;"><canvas id="chartRotShare"></canvas></div>
   </div>
 
   <!-- Répartition des passagers (camembert) -->
   <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Répartition des passagers</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Par compagnie</div>
+    <div id="ttlPaxShare" style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Répartition des passagers</div>
+    <div id="subPaxShare" style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Par compagnie</div>
     <div style="position:relative;height:210px;"><canvas id="chartPaxShare"></canvas></div>
   </div>
 
@@ -3657,6 +3657,31 @@ function refreshCharts(){
     const mn=m!=='ALL'?_chartPeriodLabel(m):'';
     const _sub3 = document.getElementById('chartsSubtitle'); if (_sub3) _sub3.textContent=`${_rs.total.toLocaleString('fr-FR')} rotation(s)${y!=='ALL'?' — '+y:''}${mn?' — '+mn:''}`;
 
+    // ── Une seule compagnie filtrée : les graphiques « par compagnie » n'ont pas
+    // de sens (une seule entrée). On les bascule en « par destination ». ──
+    const _co = document.getElementById('chartCompanyFilter').value;
+    const singleCo = !!(_co && _co !== 'ALL');
+    const _setTxt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
+    _setTxt('ttlTopComp', singleCo?'Rotations par destination':'Top compagnies');
+    _setTxt('subTopComp', singleCo?_co:'Classement par nombre de rotations');
+    _setTxt('ttlPaxComp', singleCo?'Passagers par destination':'Passagers par compagnie');
+    _setTxt('subPaxComp', singleCo?_co:'Total transportés');
+    _setTxt('subRotShare', singleCo?'Par destination':'Par compagnie');
+    _setTxt('subPaxShare', singleCo?'Par destination':'Par compagnie');
+    // Séries [label, valeur] pour rotations et passagers (par compagnie, ou par destination).
+    let rotSeries, paxSeries;
+    if(singleCo){
+        const destRot={}, destPax={};
+        _rs.rotations.forEach(function(r){ const f0=window._hRotFirstFlight?window._hRotFirstFlight(r):null; const d=(typeof window._hDestCity==='function')?window._hDestCity(f0):null; if(!d||d==='NKC')return; const nm=(typeof cityName==='function')?cityName(d):d; if(nm&&nm!=='Nouakchott') destRot[nm]=(destRot[nm]||0)+1; });
+        flt.forEach(function(f){ _troncons(f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined') destPax[t.city]=(destPax[t.city]||0)+t.pax; }); });
+        rotSeries=Object.entries(destRot).sort((a,b)=>b[1]-a[1]).slice(0,8);
+        paxSeries=Object.entries(destPax).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    } else {
+        rotSeries=Object.entries(_rs.byCompany).sort((a,b)=>b[1]-a[1]).slice(0,8);
+        const _pcTmp={}; flt.forEach(function(f){ if(f.company) _pcTmp[f.company]=(_pcTmp[f.company]||0)+(+f.passengers||0)+(+f.babies||0); });
+        paxSeries=Object.entries(_pcTmp).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    }
+
     // Rotations/mois
     kill('v');const volData=_rs.byMonth;
     charts['v']=new Chart(document.getElementById('chartVolsMois'),{
@@ -3686,9 +3711,8 @@ function refreshCharts(){
             tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}})
     });
 
-    // Top compagnies (par rotations)
-    kill('c');const cc=Object.assign({}, _rs.byCompany);
-    const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    // Top compagnies / Rotations par destination (si 1 compagnie)
+    kill('c');const sc=rotSeries;
     charts['c']=new Chart(document.getElementById('chartTopComp'),{
         type:'bar',data:{labels:sc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
             datasets:[{label:'Rotations',data:sc.map(([,v])=>v),
@@ -3697,10 +3721,8 @@ function refreshCharts(){
         options:darkOpts({indexAxis:'y'})
     });
 
-    // PAX/compagnie
-    kill('pc');const pc={};
-    flt.forEach(f=>{if(f.company)pc[f.company]=(pc[f.company]||0)+(+f.passengers||0)+(+f.babies||0);});
-    const spc=Object.entries(pc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    // Passagers par compagnie / par destination (si 1 compagnie)
+    kill('pc');const spc=paxSeries;
     charts['pc']=new Chart(document.getElementById('chartPaxComp'),{
         type:'bar',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
             datasets:[{label:'PAX',data:spc.map(([,v])=>v),
@@ -3709,9 +3731,9 @@ function refreshCharts(){
         options:darkOpts({indexAxis:'y'})
     });
 
-    // Répartition des rotations (camembert par compagnie)
+    // Répartition des rotations (camembert par compagnie / destination)
     kill('rs');
-    const srt=Object.entries(_rs.byCompany).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const srt=rotSeries;
     const doughOpts={responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}};
     if(document.getElementById('chartRotShare')){
         charts['rs']=new Chart(document.getElementById('chartRotShare'),{
@@ -4161,6 +4183,21 @@ function runRouteComparison() {
     });
     var globalRate = (typeof window._fillRate==='function') ? window._fillRate(servingFlights) : null;
 
+    // ── Comparaison par compagnie ET par mois : rotations, passagers, taux ──
+    var rotMonthByCo = {};
+    _rots.forEach(function(r){
+        var f0 = (typeof window._hRotFirstFlight==='function') ? window._hRotFirstFlight(r) : (r.legs?r.legs[0]:(r.dep||r.arr));
+        var c = (f0 && f0.company) || 'Inconnue';
+        var dd = new Date((r.anchor||'')+'T00:00:00'); var mo = isNaN(dd)?-1:dd.getMonth();
+        if(!rotMonthByCo[c]) rotMonthByCo[c]=Array(12).fill(0);
+        if(mo>=0&&mo<12) rotMonthByCo[c][mo]++;
+    });
+    var paxMonthByCo = {};
+    hits.forEach(function(h){ var c=h.f.company; if(!c)return; var mo=new Date(h.f.date).getMonth(); if(!paxMonthByCo[c])paxMonthByCo[c]=Array(12).fill(0); if(mo>=0&&mo<12) paxMonthByCo[c][mo]+=h.t.pax; });
+    var rateMonthByCo = {}, flByCoMonth = {};
+    servingFlights.forEach(function(f){ var c=f.company; if(!c)return; var mo=new Date(f.date).getMonth(); if(mo<0||mo>11)return; (flByCoMonth[c]=flByCoMonth[c]||{}); (flByCoMonth[c][mo]=flByCoMonth[c][mo]||[]).push(f); });
+    Object.keys(flByCoMonth).forEach(function(c){ rateMonthByCo[c]=Array(12).fill(null); for(var _m=0;_m<12;_m++){ if(flByCoMonth[c][_m]) rateMonthByCo[c][_m]=(typeof window._fillRate==='function')?window._fillRate(flByCoMonth[c][_m]):null; } });
+
     var sorted = Object.entries(byComp).sort(function(a,b){ return (b[1].rot - a[1].rot) || (b[1].pax - a[1].pax); });
     var colors = ['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE'];
 
@@ -4198,22 +4235,14 @@ function runRouteComparison() {
         +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Répartition des rotations par compagnie</div>'
         +'<div style="position:relative;height:220px;"><canvas id="routeChartRot"></canvas></div></div>';
 
-    // ── Chart HTML : barres (multi-mois) ou camembert (1 mois) ──
-    var chartHtml = isMultiMonth
-        ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
-            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Mouvements par mois — Départs / Arrivées</div>'
-            +'<div style="position:relative;height:200px;"><canvas id="routeChartVols"></canvas></div></div>'
-            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Passagers par mois — Départs / Arrivées</div>'
-            +'<div style="position:relative;height:200px;"><canvas id="routeChartPax"></canvas></div></div></div>'
-        : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
-            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Mouvements — Départs / Arrivées</div>'
-            +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartVols"></canvas></div></div>'
-            +'<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;">'
-            +'<div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Passagers — Départs / Arrivées</div>'
-            +'<div style="position:relative;height:200px;width:200px;"><canvas id="routeChartPax"></canvas></div></div></div>';
+    // ── Chart HTML : COMPARAISON entre compagnies (rotations, passagers, taux) ──
+    var _card='background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:14px;';
+    var _lbl='font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;';
+    var chartHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">'
+        +'<div style="'+_card+'"><div style="'+_lbl+'">Rotations par compagnie'+(isMultiMonth?' — par mois':'')+'</div><div style="position:relative;height:210px;"><canvas id="routeChartVols"></canvas></div></div>'
+        +'<div style="'+_card+'"><div style="'+_lbl+'">Passagers par compagnie'+(isMultiMonth?' — par mois':'')+'</div><div style="position:relative;height:210px;"><canvas id="routeChartPax"></canvas></div></div>'
+        +'</div>'
+        +'<div style="'+_card+'margin-top:14px;"><div style="'+_lbl+'">'+(isMultiMonth?'Évolution du taux de remplissage par compagnie':'Taux de remplissage par compagnie')+'</div><div style="position:relative;height:220px;"><canvas id="routeChartRate"></canvas></div></div>';
 
     res.innerHTML =
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
@@ -4252,42 +4281,39 @@ function runRouteComparison() {
             y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#5A7A9A',font:{size:10}},beginAtZero:true}
         };
 
-        var DEPC='#4A9EFF', ARRC='#2DD4A0';
+        killCmp('rRate');
+        var cvRate = document.getElementById('routeChartRate');
+        var pctv = function(v){ return v!=null?+(v*100).toFixed(1):null; };
+        var yPct = {x:scalesOpts.x,y:{grid:scalesOpts.y.grid,ticks:{color:'#5A7A9A',font:{size:10},callback:function(v){return v+' %';}},beginAtZero:true}};
         if (isMultiMonth) {
-            // Barres mensuelles : Départs vs Arrivées (mouvements et passagers).
+            // COMPARAISON par compagnie et par mois (une série par compagnie).
             cmpCharts['rV'] = new Chart(cvV, {
-                type:'bar', data:{labels:MONTHS_FR, datasets:[
-                    {label:'Départs',  data:depMonth, backgroundColor:DEPC+'99', borderColor:DEPC, borderWidth:2, borderRadius:4},
-                    {label:'Arrivées', data:arrMonth, backgroundColor:ARRC+'99', borderColor:ARRC, borderWidth:2, borderRadius:4}
-                ]},
+                type:'bar', data:{labels:MONTHS_FR, datasets: sorted.map(function(e,i){ return {
+                    label:e[0].length>16?e[0].slice(0,16)+'…':e[0], data:(rotMonthByCo[e[0]]||Array(12).fill(0)),
+                    backgroundColor:colors[i%colors.length]+'99', borderColor:colors[i%colors.length], borderWidth:2, borderRadius:4 }; }) },
                 options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
             });
             cmpCharts['rP'] = new Chart(cvP, {
-                type:'bar', data:{labels:MONTHS_FR, datasets:[
-                    {label:'Départs',  data:depPaxMonth, backgroundColor:DEPC+'99', borderColor:DEPC, borderWidth:2, borderRadius:4},
-                    {label:'Arrivées', data:arrPaxMonth, backgroundColor:ARRC+'99', borderColor:ARRC, borderWidth:2, borderRadius:4}
-                ]},
+                type:'bar', data:{labels:MONTHS_FR, datasets: sorted.map(function(e,i){ return {
+                    label:e[0].length>16?e[0].slice(0,16)+'…':e[0], data:(paxMonthByCo[e[0]]||Array(12).fill(0)),
+                    backgroundColor:colors[i%colors.length]+'99', borderColor:colors[i%colors.length], borderWidth:2, borderRadius:4 }; }) },
                 options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:scalesOpts}
+            });
+            if (cvRate) cmpCharts['rRate'] = new Chart(cvRate, {
+                type:'line', data:{labels:MONTHS_FR, datasets: sorted.map(function(e,i){ return {
+                    label:e[0].length>16?e[0].slice(0,16)+'…':e[0], data:(rateMonthByCo[e[0]]||Array(12).fill(null)).map(pctv),
+                    borderColor:colors[i%colors.length], backgroundColor:colors[i%colors.length]+'22', borderWidth:2.5, tension:.35, spanGaps:true, pointRadius:3, fill:false }; }) },
+                options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legendOpts,tooltip:tooltipOpts},scales:yPct}
             });
         } else {
-            // Camembert pour 1 mois : Départs vs Arrivées.
-            var totDep=depMonth.reduce(function(a,b){return a+b;},0), totArr=arrMonth.reduce(function(a,b){return a+b;},0);
-            var totDepPax=depPaxMonth.reduce(function(a,b){return a+b;},0), totArrPax=arrPaxMonth.reduce(function(a,b){return a+b;},0);
-            var doughnutOpts = {
-                responsive:true, maintainAspectRatio:false,
-                plugins:{legend:{display:true,position:'bottom',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},tooltip:tooltipOpts},
-                cutout:'60%'
-            };
-            cmpCharts['rV'] = new Chart(cvV, {
-                type:'doughnut',
-                data:{labels:['Départs','Arrivées'], datasets:[{data:[totDep,totArr], backgroundColor:[DEPC+'CC',ARRC+'CC'], borderColor:[DEPC,ARRC], borderWidth:2}]},
-                options:doughnutOpts
-            });
-            cmpCharts['rP'] = new Chart(cvP, {
-                type:'doughnut',
-                data:{labels:['Départs','Arrivées'], datasets:[{data:[totDepPax,totArrPax], backgroundColor:[DEPC+'CC',ARRC+'CC'], borderColor:[DEPC,ARRC], borderWidth:2}]},
-                options:doughnutOpts
-            });
+            // Un seul mois : comparaison par compagnie (barres).
+            var labs = sorted.map(function(e){return e[0].length>16?e[0].slice(0,16)+'…':e[0];});
+            var bg = sorted.map(function(_,i){return colors[i%colors.length]+'CC';});
+            var bd = sorted.map(function(_,i){return colors[i%colors.length];});
+            var barOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tooltipOpts},scales:scalesOpts};
+            cmpCharts['rV'] = new Chart(cvV, { type:'bar', data:{labels:labs, datasets:[{label:'Rotations',data:sorted.map(function(e){return e[1].rot;}),backgroundColor:bg,borderColor:bd,borderWidth:2,borderRadius:5}]}, options:barOpts });
+            cmpCharts['rP'] = new Chart(cvP, { type:'bar', data:{labels:labs, datasets:[{label:'Passagers',data:sorted.map(function(e){return e[1].pax;}),backgroundColor:bg,borderColor:bd,borderWidth:2,borderRadius:5}]}, options:barOpts });
+            if (cvRate) cmpCharts['rRate'] = new Chart(cvRate, { type:'bar', data:{labels:labs, datasets:[{label:'Taux %',data:sorted.map(function(e){return e[1].rate!=null?+(e[1].rate*100).toFixed(1):0;}),backgroundColor:bg,borderColor:bd,borderWidth:2,borderRadius:5}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tooltipOpts},scales:yPct} });
         }
     }, 60);
 }
