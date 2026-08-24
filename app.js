@@ -1993,8 +1993,13 @@ function _hBuildAllRotations(flights){
   const used=new Set();
   rotations.forEach(r=>_hRotLegs(r).forEach(x=>used.add(x.f)));
   flights.forEach(f=>{ if(!used.has(f)) rotations.push({ legs:[f], roles:[_hIsNKC(f.from)?'dep':'arr'], anchor:f.date||'', jLeg:null }); });
+  // Tri : par DATE d'ancre, puis par N° d'AUTORISATION de l'ancre (départ pour MAI,
+  // arrivée pour les autres — c'est la 1re jambe de la rotation).
+  const _authNum=f=>{ const m=String((f&&f.authorizationNumber)||'').match(/(\d+)$/); return m?parseInt(m[1],10):0; };
   rotations.sort((a,b)=>{
     const d=String(a.anchor).localeCompare(String(b.anchor)); if(d) return d;
+    const na=_authNum(_hRotFirstFlight(a)), nb=_authNum(_hRotFirstFlight(b));
+    if(na!==nb) return na-nb;
     const fa=_hRotFirstFlight(a), fb=_hRotFirstFlight(b);
     return String((fa&&fa.flightNumber)||'').localeCompare(String((fb&&fb.flightNumber)||''));
   });
