@@ -4824,7 +4824,9 @@ function _chgAnalyzeSheet(rows, sheetName, ctxYear) {
     const cols = [];
     for (let c = 0; c < nCols; c++) {
         const h = hdr[c] || '';
-        const f = FIELD(h);
+        let f = FIELD(h);
+        // Repli : libellé « Immatriculation » placé dans la ligne de bande (format export accueil).
+        if (!f && hr > 0) { const bf = FIELD(up(rows[hr-1][c] || '')); if (bf === 'imm') f = bf; }
         if (!f) continue;
         // Bande : d'abord le libellé DANS l'en-tête, sinon la ligne au-dessus
         let b = '';
@@ -4860,15 +4862,36 @@ function _chgAnalyzeSheet(rows, sheetName, ctxYear) {
     const sm = _CHG_MOIS[up(sheetName)] || 0;
 
     // 6. Extraction, une ligne par bande
+    // Report (par bande) du n° de vol et de la date sur les sous-lignes d'escale
+    // du format d'export accueil (route dans la cellule Vol : « L6104(NKC-CKY) »,
+    // sous-lignes « (NKC-DSS) » sans date ni n° de vol).
+    const lastVol = {}, lastDate = {}; let lastImm = '';
     for (let r = hr+1; r < rows.length; r++) {
         const row = rows[r];
         if (!row || row.every(v => !norm(v))) continue;
         if (row.some(v => _CHG_RX_TOTAL.test(norm(v)))) continue;
         maps.forEach(function(m) {
-            const rawDate = m.date >= 0 ? norm(row[m.date]) : '';
-            const vol     = m.vol  >= 0 ? up(row[m.vol])    : '';
+            let rawDate = m.date >= 0 ? norm(row[m.date]) : '';
+            let vol     = m.vol  >= 0 ? up(row[m.vol])    : '';
             const paxRaw  = m.pax  >= 0 ? norm(row[m.pax])  : '';
-            const seg     = m.segment >= 0 ? up(row[m.segment]).replace(/[^A-Z0-9]/g,'') : '';
+            let seg     = m.segment >= 0 ? up(row[m.segment]).replace(/[^A-Z0-9]/g,'') : '';
+            let imm     = m.imm  >= 0 ? up(row[m.imm]) : '';
+            // Route embarquée dans la cellule Vol : « L6104(NKC-CKY) » ou « (NKC-DSS) ».
+            if (!seg && vol) {
+                const pm = vol.match(/\(\s*([A-Z]{3})\s*-?\s*([A-Z]{3})\s*\)/);
+                if (pm) { seg = pm[1] + pm[2]; vol = vol.slice(0, vol.indexOf('(')).trim(); }
+            }
+            // Report n° de vol / date sur les tronçons (sous-lignes d'escale).
+            const bk = m.band || '';
+            if (seg) {
+                if (!vol)     vol     = lastVol[bk]  || ''; else lastVol[bk]  = vol;
+                if (!rawDate) rawDate = lastDate[bk] || ''; else lastDate[bk] = rawDate;
+            } else {
+                if (vol)     lastVol[bk]  = vol;
+                if (rawDate) lastDate[bk] = rawDate;
+            }
+            // Immatriculation fusionnée verticalement (une par rotation) → report vers le bas.
+            if (imm) lastImm = imm; else imm = lastImm;
             if (!rawDate && !vol) return;
             if (!vol && !paxRaw)  return;
             out.rows.push({
@@ -4878,7 +4901,7 @@ function _chgAnalyzeSheet(rows, sheetName, ctxYear) {
                 segment: seg,
                 pax:   m.pax  >= 0 ? (parseInt(paxRaw) || 0) : 0,
                 bebes: m.bebe >= 0 ? (parseInt(norm(row[m.bebe])) || 0) : 0,
-                imm:   m.imm  >= 0 ? up(row[m.imm]) : '',
+                imm:   imm,
                 typeHint: m.band || '',
                 sheet: sheetName
             });
