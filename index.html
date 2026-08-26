@@ -3706,8 +3706,9 @@ function refreshCharts(){
         const destRot={}, destPax={};
         _rs.rotations.forEach(function(r){ const f0=window._hRotFirstFlight?window._hRotFirstFlight(r):null; const d=(typeof window._hDestCity==='function')?window._hDestCity(f0):null; if(!d||d==='NKC')return; const nm=(typeof cityName==='function')?cityName(d):d; if(nm&&nm!=='Nouakchott') destRot[nm]=(destRot[nm]||0)+1; });
         flt.forEach(function(f){ _troncons(f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined') destPax[t.city]=(destPax[t.city]||0)+t.pax; }); });
-        rotSeries=Object.entries(destRot).sort((a,b)=>b[1]-a[1]).slice(0,8);
-        paxSeries=Object.entries(destPax).sort((a,b)=>b[1]-a[1]).slice(0,8);
+        // Une compagnie : TOUTES ses destinations (pas de limite).
+        rotSeries=Object.entries(destRot).sort((a,b)=>b[1]-a[1]);
+        paxSeries=Object.entries(destPax).sort((a,b)=>b[1]-a[1]);
     } else {
         rotSeries=Object.entries(_rs.byCompany).sort((a,b)=>b[1]-a[1]).slice(0,8);
         const _pcTmp={}; flt.forEach(function(f){ if(f.company) _pcTmp[f.company]=(_pcTmp[f.company]||0)+(+f.passengers||0)+(+f.babies||0); });
