@@ -1220,8 +1220,8 @@ function _rotStat(flights, company, destIATA){
     const p=rl.reduce((s,f)=>s+_rotPax(f),0);
     pax+=p;
     const mo=String(r.anchor||'').slice(0,7);
-    if(!byMonth[mo]) byMonth[mo]={pax:0,rateSum:0,rateN:0};
-    byMonth[mo].pax+=p;
+    if(!byMonth[mo]) byMonth[mo]={pax:0,rateSum:0,rateN:0,n:0};
+    byMonth[mo].pax+=p; byMonth[mo].n++;
     if(r.rate!=null){ rateSum+=r.rate; rateN++; byMonth[mo].rateSum+=r.rate; byMonth[mo].rateN++; }
   });
   return { rots, legs, n:rots.length, pax, avg:rots.length?Math.round(pax/rots.length):0, rate:rateN?rateSum/rateN:null, byMonth };
@@ -1311,8 +1311,9 @@ function _cmpRender(va,vb,A,B){
       <div style="${card}"><div style="${ct}">PAX moyen par rotation</div><div style="position:relative;height:160px;"><canvas id="cmpC2"></canvas></div></div>
       <div style="${card}"><div style="${ct}">Nombre de rotations</div><div style="position:relative;height:160px;"><canvas id="cmpC3"></canvas></div></div>
     </div>
-    <div style="${card};margin-bottom:14px;"><div style="${ct}">PAX par mois</div><div style="position:relative;height:240px;"><canvas id="cmpC4"></canvas></div></div>
-    <div style="${card}"><div style="${ct}">Taux de remplissage par mois</div><div style="position:relative;height:240px;"><canvas id="cmpC5"></canvas></div></div>`;
+    <div style="${card};margin-bottom:14px;"><div style="${ct}">Rotations par mois (évolution)</div><div style="position:relative;height:240px;"><canvas id="cmpC6"></canvas></div></div>
+    <div style="${card};margin-bottom:14px;"><div style="${ct}">PAX par mois (évolution)</div><div style="position:relative;height:240px;"><canvas id="cmpC4"></canvas></div></div>
+    <div style="${card}"><div style="${ct}">Taux de remplissage par mois (évolution)</div><div style="position:relative;height:240px;"><canvas id="cmpC5"></canvas></div></div>`;
   if(typeof Chart==='undefined'){ box.insertAdjacentHTML('beforeend','<div style="color:var(--red);padding:8px;">Bibliothèque de graphiques non chargée.</div>'); return; }
   const labels=[va,vb], grid='rgba(255,255,255,.08)', tick='#8a97a8';
   const opt=(fmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.parsed.y)}}},
@@ -1325,34 +1326,51 @@ function _cmpRender(va,vb,A,B){
   // Mois couverts (union), triés chronologiquement
   const months=[...new Set([...Object.keys(A.byMonth),...Object.keys(B.byMonth)])].sort();
   const mLabels=months.map(_moLabel);
-  const monthlyOpt=(fmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#cdd6e2'}},tooltip:{callbacks:{label:c=>c.dataset.label+' : '+fmt(c.parsed.y)}}},
+  const monthlyOpt=(fmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#cdd6e2',usePointStyle:true,boxWidth:10}},tooltip:{callbacks:{label:c=>c.dataset.label+' : '+fmt(c.parsed.y)}}},
     scales:{x:{ticks:{color:tick,font:{size:11}},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick,callback:fmt},grid:{color:grid}}}});
-  // PAX par mois (barres groupées A/B)
+  // Courbe d'évolution : deux séries (A / B) en lignes.
+  const lineDs=(va,vb,dA,dB)=>[
+    {label:va,data:dA,borderColor:cA,backgroundColor:cA+'22',borderWidth:2.5,tension:.35,spanGaps:true,pointRadius:3,fill:false},
+    {label:vb,data:dB,borderColor:cB,backgroundColor:cB+'22',borderWidth:2.5,tension:.35,spanGaps:true,pointRadius:3,fill:false}
+  ];
+  // Rotations par mois (évolution)
+  const el6=document.getElementById('cmpC6');
+  if(el6 && months.length){
+    _cmpCharts.cmpC6=new Chart(el6,{type:'line',data:{labels:mLabels,datasets:lineDs(va,vb,
+      months.map(m=>A.byMonth[m]?A.byMonth[m].n:0), months.map(m=>B.byMonth[m]?B.byMonth[m].n:0))},options:monthlyOpt(v=>Math.round(v))});
+  }
+  // PAX par mois (évolution)
   const el4=document.getElementById('cmpC4');
   if(el4 && months.length){
-    _cmpCharts.cmpC4=new Chart(el4,{type:'bar',data:{labels:mLabels,datasets:[
-      {label:va,data:months.map(m=>A.byMonth[m]?A.byMonth[m].pax:0),backgroundColor:cA,borderRadius:5,maxBarThickness:46},
-      {label:vb,data:months.map(m=>B.byMonth[m]?B.byMonth[m].pax:0),backgroundColor:cB,borderRadius:5,maxBarThickness:46}
-    ]},options:monthlyOpt(v=>Math.round(v))});
+    _cmpCharts.cmpC4=new Chart(el4,{type:'line',data:{labels:mLabels,datasets:lineDs(va,vb,
+      months.map(m=>A.byMonth[m]?A.byMonth[m].pax:0), months.map(m=>B.byMonth[m]?B.byMonth[m].pax:0))},options:monthlyOpt(v=>Math.round(v))});
   }
-  // Taux de remplissage par mois (%)
+  // Taux de remplissage par mois (évolution, %)
   const el5=document.getElementById('cmpC5');
-  const rateOf=(st,m)=>{ const b=st.byMonth[m]; return (b&&b.rateN)?+(b.rateSum/b.rateN*100).toFixed(1):0; };
+  const rateOf=(st,m)=>{ const b=st.byMonth[m]; return (b&&b.rateN)?+(b.rateSum/b.rateN*100).toFixed(1):null; };
   if(el5 && months.length){
-    _cmpCharts.cmpC5=new Chart(el5,{type:'bar',data:{labels:mLabels,datasets:[
-      {label:va,data:months.map(m=>rateOf(A,m)),backgroundColor:cA,borderRadius:5,maxBarThickness:46},
-      {label:vb,data:months.map(m=>rateOf(B,m)),backgroundColor:cB,borderRadius:5,maxBarThickness:46}
-    ]},options:monthlyOpt(v=>Math.round(v*10)/10+' %')});
+    _cmpCharts.cmpC5=new Chart(el5,{type:'line',data:{labels:mLabels,datasets:lineDs(va,vb,
+      months.map(m=>rateOf(A,m)), months.map(m=>rateOf(B,m)))},options:monthlyOpt(v=>Math.round(v*10)/10+' %')});
   }
 }
 
 // ── Graphiques de synthèse de la Recherche ──
 let _searchCharts={};
 function _searchDestroyCharts(){ Object.values(_searchCharts).forEach(c=>{try{c.destroy();}catch(e){}}); _searchCharts={}; }
-function _renderSearchCharts(res){
+const _SR_PAL=['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#38bdf8','#f472b6','#a3e635','#f59e0b','#26de81','#fd9644'];
+// Villes desservies par un vol (tronçons hors mid-leg), en IATA — escales comprises.
+function _srTroncons(f){
+  return suiviFlightLines(f).map(function(l){ const fN=_isNKCcode(l.from), tN=_isNKCcode(l.to); if(fN===tN) return null; return { city: fN?toIATA(l.to):toIATA(l.from), pax:(Number(l.pax)||0) }; }).filter(Boolean);
+}
+function _srRotCities(r){ const set=new Set(); _rotLegs(r).forEach(function(x){ _srTroncons(x.f).forEach(function(t){ set.add(t.city); }); }); return set; }
+
+function _renderSearchCharts(res, rotations){
   const box=document.getElementById('searchCharts'); if(!box) return;
   _searchDestroyCharts();
   if(!res || !res.length || typeof Chart==='undefined'){ box.innerHTML=''; return; }
+  const cos=[...new Set(res.map(f=>f.company||'—'))];
+  // Une seule compagnie → courbes d'évolution par destination (comme Diagrammes).
+  if(cos.length===1 && rotations && rotations.length){ _renderSearchEvolution(res, rotations, cos[0]); return; }
   const byCo={}, byMonth={};
   res.forEach(f=>{
     const p=(Number(f.passengers)||0);   // bébés jamais comptés
@@ -1363,9 +1381,9 @@ function _renderSearchCharts(res){
     const mo=String(f.date||'').slice(0,7);
     byMonth[mo]=(byMonth[mo]||0)+p;
   });
-  const cos=Object.keys(byCo).sort((a,b)=>byCo[b].pax-byCo[a].pax);
+  const cosSorted=Object.keys(byCo).sort((a,b)=>byCo[b].pax-byCo[a].pax);
   const months=Object.keys(byMonth).sort();
-  const PAL=['#4A9EFF','#D4AF37','#2DD4A0','#FF6B6B','#FF9F43','#A29BFE','#38bdf8','#f472b6','#a3e635'];
+  const PAL=_SR_PAL;
   const card='background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:10px 12px;';
   const ct='font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;';
   box.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
@@ -1376,9 +1394,38 @@ function _renderSearchCharts(res){
   const tick='#8a97a8', grid='rgba(255,255,255,.08)';
   const opt=(fmt)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt(c.parsed.y)}}},
     scales:{x:{ticks:{color:tick,font:{size:11},maxRotation:0,autoSkip:true},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick,callback:fmt},grid:{color:grid}}}});
-  _searchCharts.scCo=new Chart(document.getElementById('scCo'),{type:'bar',data:{labels:cos,datasets:[{data:cos.map(c=>byCo[c].pax),backgroundColor:cos.map((_,i)=>PAL[i%PAL.length]),borderRadius:5,maxBarThickness:60}]},options:opt(v=>Math.round(v))});
+  _searchCharts.scCo=new Chart(document.getElementById('scCo'),{type:'bar',data:{labels:cosSorted,datasets:[{data:cosSorted.map(c=>byCo[c].pax),backgroundColor:cosSorted.map((_,i)=>PAL[i%PAL.length]),borderRadius:5,maxBarThickness:60}]},options:opt(v=>Math.round(v))});
   _searchCharts.scMonth=new Chart(document.getElementById('scMonth'),{type:'bar',data:{labels:months.map(_moLabel),datasets:[{data:months.map(m=>byMonth[m]),backgroundColor:'#4A9EFF',borderRadius:5,maxBarThickness:46}]},options:opt(v=>Math.round(v))});
-  _searchCharts.scRate=new Chart(document.getElementById('scRate'),{type:'bar',data:{labels:cos,datasets:[{data:cos.map(c=>byCo[c].rateN?+(byCo[c].rateSum/byCo[c].rateN*100).toFixed(1):0),backgroundColor:cos.map((_,i)=>PAL[i%PAL.length]),borderRadius:5,maxBarThickness:60}]},options:opt(v=>Math.round(v*10)/10+' %')});
+  _searchCharts.scRate=new Chart(document.getElementById('scRate'),{type:'bar',data:{labels:cosSorted,datasets:[{data:cosSorted.map(c=>byCo[c].rateN?+(byCo[c].rateSum/byCo[c].rateN*100).toFixed(1):0),backgroundColor:cosSorted.map((_,i)=>PAL[i%PAL.length]),borderRadius:5,maxBarThickness:60}]},options:opt(v=>Math.round(v*10)/10+' %')});
+}
+
+// Une seule compagnie : courbes d'évolution par destination (rotations, passagers, taux — par mois).
+function _renderSearchEvolution(legs, rotations, company){
+  const box=document.getElementById('searchCharts'); if(!box) return;
+  const monthsSet=new Set(), rotCM={}, paxCM={}, rateFlByCM={};
+  rotations.forEach(function(r){ const mo=String(r.anchor||'').slice(0,7); if(!mo) return; monthsSet.add(mo); _srRotCities(r).forEach(function(city){ (rotCM[city]=rotCM[city]||{}); rotCM[city][mo]=(rotCM[city][mo]||0)+1; }); });
+  legs.forEach(function(f){ const mo=String(f.date||'').slice(0,7); if(!mo) return; monthsSet.add(mo);
+    _srTroncons(f).forEach(function(t){ (paxCM[t.city]=paxCM[t.city]||{}); paxCM[t.city][mo]=(paxCM[t.city][mo]||0)+t.pax; });
+    (new Set(_srTroncons(f).map(function(t){return t.city;}))).forEach(function(city){ const k=city+'|'+mo; (rateFlByCM[k]=rateFlByCM[k]||[]).push(f); });
+  });
+  const months=[...monthsSet].sort();
+  const dests=Object.keys(rotCM).sort(function(a,b){ const sa=Object.values(rotCM[a]).reduce((x,y)=>x+y,0), sb=Object.values(rotCM[b]).reduce((x,y)=>x+y,0); return sb-sa; });
+  const PAL=_SR_PAL, tick='#8a97a8', grid='rgba(255,255,255,.08)';
+  const card='background:#0d1a2e;border:1px solid var(--border);border-radius:10px;padding:10px 12px;';
+  const ct='font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;';
+  box.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;">
+    <div style="${card}"><div style="${ct}">Rotations par mois — par destination</div><div style="position:relative;height:240px;"><canvas id="scEvRot"></canvas></div></div>
+    <div style="${card}"><div style="${ct}">Passagers par mois — par destination</div><div style="position:relative;height:240px;"><canvas id="scEvPax"></canvas></div></div>
+    <div style="${card};grid-column:1/-1;"><div style="${ct}">Taux de remplissage par mois — par destination</div><div style="position:relative;height:260px;"><canvas id="scEvRate"></canvas></div></div>
+  </div>`;
+  const label=c=> (_iataName&&_iataName[c])?_iataName[c]:c;
+  const lineOpts=(pct)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{color:tick,font:{size:10},boxWidth:10,usePointStyle:true}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+' : '+(pct?(Math.round(c.parsed.y*10)/10+' %'):Math.round(c.parsed.y))}}},
+    scales:{x:{ticks:{color:tick,font:{size:10}},grid:{display:false}},y:{beginAtZero:true,ticks:{color:tick,callback:pct?(v=>v+' %'):(v=>Math.round(v))},grid:{color:grid}}}});
+  const ds=(mapCM,pct)=> dests.map(function(city,i){ return { label:label(city), data:months.map(function(m){ if(pct){ const arr=rateFlByCM[city+'|'+m]; if(!arr||!arr.length) return null; const rs=arr.map(_rateOfFlight).filter(x=>x!=null); return rs.length? +(rs.reduce((s,x)=>s+x,0)/rs.length*100).toFixed(1):null; } return (mapCM[city]&&mapCM[city][m])||0; }), borderColor:PAL[i%PAL.length], backgroundColor:PAL[i%PAL.length]+'22', borderWidth:2.5, tension:.35, spanGaps:true, pointRadius:2.5, fill:false }; });
+  const mlab=months.map(_moLabel);
+  _searchCharts.scEvRot=new Chart(document.getElementById('scEvRot'),{type:'line',data:{labels:mlab,datasets:ds(rotCM,false)},options:lineOpts(false)});
+  _searchCharts.scEvPax=new Chart(document.getElementById('scEvPax'),{type:'line',data:{labels:mlab,datasets:ds(paxCM,false)},options:lineOpts(false)});
+  _searchCharts.scEvRate=new Chart(document.getElementById('scEvRate'),{type:'line',data:{labels:mlab,datasets:ds(null,true)},options:lineOpts(true)});
 }
 
 async function runSearch(){
@@ -1401,7 +1448,7 @@ async function runSearch(){
 
   _renderRotations(rotations);
   const legs=[]; rotations.forEach(r=>_rotLegs(r).forEach(x=>legs.push(x.f)));
-  _weekFlights=legs; renderSummary(legs); _renderCompanyRates(rotations); _renderSearchCharts(legs);
+  _weekFlights=legs; renderSummary(legs); _renderCompanyRates(rotations); _renderSearchCharts(legs, rotations);
 
   const nm=dest?(_iataName[dest]?(' ('+_iataName[dest]+')'):''):'';
   const scope = dest ? ('Destination '+dest+nm+(co?(' — '+co):''))
