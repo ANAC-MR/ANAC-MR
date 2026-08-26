@@ -3722,7 +3722,8 @@ function refreshCharts(){
         _rs.rotations.forEach(function(r){ const nm=destOf(r); if(!nm||nm==='Nouakchott')return; const dd=new Date((r.anchor||'')+'T00:00:00'); const mo=isNaN(dd)?-1:dd.getMonth(); if(mo<0||mo>11)return; (rotMByDest[nm]=rotMByDest[nm]||Array(12).fill(0))[mo]++; });
         flt.forEach(function(f){ if(!f.date)return; const mo=new Date(f.date).getMonth(); if(mo<0||mo>11)return; _troncons(f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined'){ (paxMByDest[t.city]=paxMByDest[t.city]||Array(12).fill(0))[mo]+=t.pax; } }); });
         const flByDM={}; flt.forEach(function(f){ if(!f.date)return; const mo=new Date(f.date).getMonth(); if(mo<0||mo>11)return; _troncons(f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined'){ const key=t.city+'|'+mo; (flByDM[key]=flByDM[key]||new Set()).add(f); } }); });
-        destOrder=Object.keys(rotMByDest).sort(function(a,b){ return rotMByDest[b].reduce((x,y)=>x+y,0)-rotMByDest[a].reduce((x,y)=>x+y,0); }).slice(0,8);
+        // Toutes les destinations MAI (triées par total de rotations), sans limite.
+        destOrder=Object.keys(rotMByDest).sort(function(a,b){ return rotMByDest[b].reduce((x,y)=>x+y,0)-rotMByDest[a].reduce((x,y)=>x+y,0); });
         destOrder.forEach(function(nm){ rateMByDest[nm]=Array(12).fill(null); for(let mo=0;mo<12;mo++){ const s=flByDM[nm+'|'+mo]; if(s) rateMByDest[nm][mo]=(typeof window._fillRate==='function')?window._fillRate(Array.from(s)):null; } });
     }
     if(isForeign){
