@@ -3700,11 +3700,14 @@ function refreshCharts(){
         _setTxt('subPaxShare', singleCo?'Par destination':'Par compagnie');
     }
     _setTxt('ttlRateComp', isMAIsel?'Taux par mois (par destination)':'Taux par compagnie');
+    // Villes desservies par une rotation (destination finale + escales, ex. Dakar, Nouadhibou).
+    const rotCitiesOf=function(r){ const set=new Set(); const legs=(typeof window._hRotLegs==='function')?window._hRotLegs(r):[]; legs.forEach(function(x){ _troncons(x.f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined') set.add(t.city); }); }); return set; };
     // Séries [label, valeur] pour rotations et passagers (par compagnie, ou par destination si 1 compagnie).
     let rotSeries, paxSeries;
     if(singleCo){
         const destRot={}, destPax={};
-        _rs.rotations.forEach(function(r){ const f0=window._hRotFirstFlight?window._hRotFirstFlight(r):null; const d=(typeof window._hDestCity==='function')?window._hDestCity(f0):null; if(!d||d==='NKC')return; const nm=(typeof cityName==='function')?cityName(d):d; if(nm&&nm!=='Nouakchott') destRot[nm]=(destRot[nm]||0)+1; });
+        // Rotations comptées par ville desservie (escales comprises) → Dakar, Nouadhibou, etc. figurent.
+        _rs.rotations.forEach(function(r){ rotCitiesOf(r).forEach(function(nm){ destRot[nm]=(destRot[nm]||0)+1; }); });
         flt.forEach(function(f){ _troncons(f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined') destPax[t.city]=(destPax[t.city]||0)+t.pax; }); });
         // Une compagnie : TOUTES ses destinations (pas de limite).
         rotSeries=Object.entries(destRot).sort((a,b)=>b[1]-a[1]);
@@ -3719,8 +3722,7 @@ function refreshCharts(){
     // Données MAI : ÉVOLUTION par rotation (destination) par mois. Étrangère : par mois / appareil.
     let rotMByDest={}, paxMByDest={}, rateMByDest={}, destOrder=[], rateMonth=[], immShare=[];
     if(isMAIsel){
-        const destOf=function(r){ const f0=window._hRotFirstFlight?window._hRotFirstFlight(r):null; const d=(typeof window._hDestCity==='function')?window._hDestCity(f0):null; return (d&&d!=='NKC')?((typeof cityName==='function')?cityName(d):d):null; };
-        _rs.rotations.forEach(function(r){ const nm=destOf(r); if(!nm||nm==='Nouakchott')return; const dd=new Date((r.anchor||'')+'T00:00:00'); const mo=isNaN(dd)?-1:dd.getMonth(); if(mo<0||mo>11)return; (rotMByDest[nm]=rotMByDest[nm]||Array(12).fill(0))[mo]++; });
+        _rs.rotations.forEach(function(r){ const dd=new Date((r.anchor||'')+'T00:00:00'); const mo=isNaN(dd)?-1:dd.getMonth(); if(mo<0||mo>11)return; rotCitiesOf(r).forEach(function(nm){ (rotMByDest[nm]=rotMByDest[nm]||Array(12).fill(0))[mo]++; }); });
         flt.forEach(function(f){ if(!f.date)return; const mo=new Date(f.date).getMonth(); if(mo<0||mo>11)return; _troncons(f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined'){ (paxMByDest[t.city]=paxMByDest[t.city]||Array(12).fill(0))[mo]+=t.pax; } }); });
         const flByDM={}; flt.forEach(function(f){ if(!f.date)return; const mo=new Date(f.date).getMonth(); if(mo<0||mo>11)return; _troncons(f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined'){ const key=t.city+'|'+mo; (flByDM[key]=flByDM[key]||new Set()).add(f); } }); });
         // Toutes les destinations MAI (triées par total de rotations), sans limite.
