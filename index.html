@@ -1174,15 +1174,15 @@ document.addEventListener('keydown', e => {
 
   <!-- Par numéro de vol (Mauritania Airlines uniquement) pleine largeur -->
   <div id="card-fn" style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;display:none;">
-    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Comparaison par numéro de vol</div>
-    <div style="font-size:11px;color:#5A7A9A;margin-bottom:14px;">Mauritania Airlines</div>
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Évolution par rotation</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:14px;">Mauritania Airlines — par destination, par mois</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div>
-        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Rotations par n° de vol</div>
+        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Rotations par mois</div>
         <div style="position:relative;height:240px;"><canvas id="chartFnRot"></canvas></div>
       </div>
       <div>
-        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Passagers par n° de vol</div>
+        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Passagers par mois</div>
         <div style="position:relative;height:240px;"><canvas id="chartFnPax"></canvas></div>
       </div>
     </div>
@@ -3699,7 +3699,7 @@ function refreshCharts(){
         _setTxt('subRotShare', singleCo?'Par destination':'Par compagnie');
         _setTxt('subPaxShare', singleCo?'Par destination':'Par compagnie');
     }
-    _setTxt('ttlRateComp', isMAIsel?'Taux par n° de vol':'Taux par compagnie');
+    _setTxt('ttlRateComp', isMAIsel?'Taux par mois (par destination)':'Taux par compagnie');
     // Séries [label, valeur] pour rotations et passagers (par compagnie, ou par destination si 1 compagnie).
     let rotSeries, paxSeries;
     if(singleCo){
@@ -3715,14 +3715,15 @@ function refreshCharts(){
     }
     // Palette + options camembert réutilisées.
     const _doughOpts={responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}};
-    // Données spécifiques MAI (par n° de vol) et étrangère (par mois / appareil).
-    let fnRot=[], fnPax=[], rateMonth=[], immShare=[];
+    // Données MAI : ÉVOLUTION par rotation (destination) par mois. Étrangère : par mois / appareil.
+    let rotMByDest={}, paxMByDest={}, rateMByDest={}, destOrder=[], rateMonth=[], immShare=[];
     if(isMAIsel){
-        const rBy={}, pBy={};
-        _rs.rotations.forEach(function(r){ const f0=window._hRotFirstFlight?window._hRotFirstFlight(r):null; const fn=(f0&&f0.flightNumber)||'?'; rBy[fn]=(rBy[fn]||0)+1; });
-        flt.forEach(function(f){ const fn=f.flightNumber||'?'; pBy[fn]=(pBy[fn]||0)+(+f.passengers||0); });
-        fnRot=Object.entries(rBy).sort((a,b)=>b[1]-a[1]).slice(0,14);
-        fnPax=Object.entries(pBy).sort((a,b)=>b[1]-a[1]).slice(0,14);
+        const destOf=function(r){ const f0=window._hRotFirstFlight?window._hRotFirstFlight(r):null; const d=(typeof window._hDestCity==='function')?window._hDestCity(f0):null; return (d&&d!=='NKC')?((typeof cityName==='function')?cityName(d):d):null; };
+        _rs.rotations.forEach(function(r){ const nm=destOf(r); if(!nm||nm==='Nouakchott')return; const dd=new Date((r.anchor||'')+'T00:00:00'); const mo=isNaN(dd)?-1:dd.getMonth(); if(mo<0||mo>11)return; (rotMByDest[nm]=rotMByDest[nm]||Array(12).fill(0))[mo]++; });
+        flt.forEach(function(f){ if(!f.date)return; const mo=new Date(f.date).getMonth(); if(mo<0||mo>11)return; _troncons(f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined'){ (paxMByDest[t.city]=paxMByDest[t.city]||Array(12).fill(0))[mo]+=t.pax; } }); });
+        const flByDM={}; flt.forEach(function(f){ if(!f.date)return; const mo=new Date(f.date).getMonth(); if(mo<0||mo>11)return; _troncons(f).forEach(function(t){ if(t.city&&t.city!=='Nouakchott'&&t.city!==''&&t.city!=='undefined'){ const key=t.city+'|'+mo; (flByDM[key]=flByDM[key]||new Set()).add(f); } }); });
+        destOrder=Object.keys(rotMByDest).sort(function(a,b){ return rotMByDest[b].reduce((x,y)=>x+y,0)-rotMByDest[a].reduce((x,y)=>x+y,0); }).slice(0,8);
+        destOrder.forEach(function(nm){ rateMByDest[nm]=Array(12).fill(null); for(let mo=0;mo<12;mo++){ const s=flByDM[nm+'|'+mo]; if(s) rateMByDest[nm][mo]=(typeof window._fillRate==='function')?window._fillRate(Array.from(s)):null; } });
     }
     if(isForeign){
         // taux de remplissage par mois
@@ -3814,40 +3815,45 @@ function refreshCharts(){
                 datasets:[{data:spc.map(([,v])=>v),backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2}]},
             options:doughOpts});
     }
-    // Comparaison par n° de vol (Mauritania Airlines)
+    // Évolution par rotation (destination) par mois — Mauritania Airlines (courbes)
     kill('fnR'); kill('fnP');
+    const _evoLegend={display:true,position:'top',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}};
+    const _lineDs=function(mapByDest, pct){ return destOrder.map(function(nm,i){ const arr=mapByDest[nm]||Array(12).fill(0); return {label:nm.length>16?nm.slice(0,16)+'…':nm, data: pct?arr.map(v=>v!=null?+(v*100).toFixed(1):null):arr, borderColor:PALETTE[i%PALETTE.length], backgroundColor:PALETTE[i%PALETTE.length]+'22', borderWidth:2.5, tension:.35, spanGaps:true, pointRadius:2.5, fill:false }; }); };
     if(isMAIsel){
         if(document.getElementById('chartFnRot')){
             charts['fnR']=new Chart(document.getElementById('chartFnRot'),{
-                type:'bar',data:{labels:fnRot.map(([k])=>k),datasets:[{label:'Rotations',data:fnRot.map(([,v])=>v),backgroundColor:fnRot.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),borderColor:fnRot.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderRadius:5}]},
-                options:darkOpts({indexAxis:'y'})});
+                type:'line',data:{labels:MONTHS_FR,datasets:_lineDs(rotMByDest,false)},
+                options:darkOpts({plugins:{legend:_evoLegend}})});
         }
         if(document.getElementById('chartFnPax')){
             charts['fnP']=new Chart(document.getElementById('chartFnPax'),{
-                type:'bar',data:{labels:fnPax.map(([k])=>k),datasets:[{label:'PAX',data:fnPax.map(([,v])=>v),backgroundColor:fnPax.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),borderColor:fnPax.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderRadius:5}]},
-                options:darkOpts({indexAxis:'y'})});
+                type:'line',data:{labels:MONTHS_FR,datasets:_lineDs(paxMByDest,false)},
+                options:darkOpts({plugins:{legend:_evoLegend}})});
         }
     }
 
     // ── Section « Taux de remplissage » (par rotation) — masquée pour compagnie étrangère ──
     kill('rateC'); kill('rateD'); kill('rs2'); kill('ps2');
     if(!isForeign){
-      // Taux par compagnie (Toutes) OU par n° de vol (Mauritania Airlines)
-      var rateCo;
       if(isMAIsel){
-        var flByFN={}; flt.forEach(function(f){ var fn=f.flightNumber||'?'; (flByFN[fn]=flByFN[fn]||[]).push(f); });
-        rateCo=Object.keys(flByFN).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(flByFN[c]):null]; }).filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,14);
+        // Taux de remplissage par mois — une courbe par destination (évolution).
+        if(document.getElementById('chartRateComp')){
+          charts['rateC']=new Chart(document.getElementById('chartRateComp'),{
+              type:'line',data:{labels:MONTHS_FR,datasets:_lineDs(rateMByDest,true)},
+              options:darkOpts({plugins:{legend:_evoLegend}})});
+        }
       } else {
+        // Taux par compagnie (toutes compagnies) — barres.
         var flByCo={}; flt.forEach(function(f){ if(f.company){ (flByCo[f.company]=flByCo[f.company]||[]).push(f); } });
-        rateCo=Object.keys(flByCo).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(flByCo[c]):null]; }).filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
-      }
-      if(document.getElementById('chartRateComp') && rateCo.length){
-        charts['rateC']=new Chart(document.getElementById('chartRateComp'),{
-            type:'bar',data:{labels:rateCo.map(function(e){return e[0].length>16?e[0].slice(0,16)+'…':e[0];}),
-                datasets:[{label:'Taux %',data:rateCo.map(function(e){return +(e[1]*100).toFixed(1);}),
-                    backgroundColor:rateCo.map(function(_,i){return PALETTE[i%PALETTE.length]+'cc';}),
-                    borderColor:rateCo.map(function(_,i){return PALETTE[i%PALETTE.length];}),borderWidth:2,borderRadius:5}]},
-            options:darkOpts({indexAxis:'y'})});
+        var rateCo=Object.keys(flByCo).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(flByCo[c]):null]; }).filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+        if(document.getElementById('chartRateComp') && rateCo.length){
+          charts['rateC']=new Chart(document.getElementById('chartRateComp'),{
+              type:'bar',data:{labels:rateCo.map(function(e){return e[0].length>16?e[0].slice(0,16)+'…':e[0];}),
+                  datasets:[{label:'Taux %',data:rateCo.map(function(e){return +(e[1]*100).toFixed(1);}),
+                      backgroundColor:rateCo.map(function(_,i){return PALETTE[i%PALETTE.length]+'cc';}),
+                      borderColor:rateCo.map(function(_,i){return PALETTE[i%PALETTE.length];}),borderWidth:2,borderRadius:5}]},
+              options:darkOpts({indexAxis:'y'})});
+        }
       }
       // Taux par destination (barres)
       var flByDest={};
