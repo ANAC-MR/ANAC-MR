@@ -1145,35 +1145,51 @@ document.addEventListener('keydown', e => {
   </div>
 
   <!-- Top compagnies / destinations -->
-  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+  <div id="card-topcomp" style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div id="ttlTopComp" style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Top compagnies</div>
     <div id="subTopComp" style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Classement par nombre de rotations</div>
     <div style="position:relative;height:210px;"><canvas id="chartTopComp"></canvas></div>
   </div>
 
   <!-- PAX/compagnie -->
-  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+  <div id="card-paxcomp" style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div id="ttlPaxComp" style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Passagers par compagnie</div>
     <div id="subPaxComp" style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Total transportés</div>
     <div style="position:relative;height:210px;"><canvas id="chartPaxComp"></canvas></div>
   </div>
 
   <!-- Répartition des rotations (camembert) -->
-  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+  <div id="card-rotshare" style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div id="ttlRotShare" style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Répartition des rotations</div>
     <div id="subRotShare" style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Par compagnie</div>
     <div style="position:relative;height:210px;"><canvas id="chartRotShare"></canvas></div>
   </div>
 
   <!-- Répartition des passagers (camembert) -->
-  <div style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+  <div id="card-paxshare" style="background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div id="ttlPaxShare" style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Répartition des passagers</div>
     <div id="subPaxShare" style="font-size:11px;color:#5A7A9A;margin-bottom:12px;">Par compagnie</div>
     <div style="position:relative;height:210px;"><canvas id="chartPaxShare"></canvas></div>
   </div>
 
+  <!-- Par numéro de vol (Mauritania Airlines uniquement) pleine largeur -->
+  <div id="card-fn" style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;display:none;">
+    <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Comparaison par numéro de vol</div>
+    <div style="font-size:11px;color:#5A7A9A;margin-bottom:14px;">Mauritania Airlines</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Rotations par n° de vol</div>
+        <div style="position:relative;height:240px;"><canvas id="chartFnRot"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Passagers par n° de vol</div>
+        <div style="position:relative;height:240px;"><canvas id="chartFnPax"></canvas></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Destinations cliquables pleine largeur -->
-  <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+  <div id="card-dest" style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Destinations les plus fréquentées</div>
     <div style="font-size:11px;color:#5A7A9A;margin-bottom:14px;">Depuis / vers Nouakchott — cliquez sur une ville pour voir les détails</div>
     <div id="destCards" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;"></div>
@@ -1181,16 +1197,16 @@ document.addEventListener('keydown', e => {
   </div>
 
   <!-- Taux de remplissage pleine largeur -->
-  <div style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
+  <div id="card-taux" style="grid-column:1/-1;background:rgba(15,27,45,.9);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;">
     <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:3px;">Taux de remplissage</div>
     <div style="font-size:11px;color:#5A7A9A;margin-bottom:14px;">Calculé par rotation (moyenne des jambes) — bébés exclus</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div>
-        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Taux par compagnie</div>
+        <div id="ttlRateComp" style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Taux par compagnie</div>
         <div style="position:relative;height:240px;"><canvas id="chartRateComp"></canvas></div>
       </div>
       <div>
-        <div style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Taux par destination</div>
+        <div id="ttlRateDest" style="font-size:11px;font-weight:700;color:#5A7A9A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Taux par destination</div>
         <div style="position:relative;height:240px;"><canvas id="chartRateDest"></canvas></div>
       </div>
       <div>
@@ -3661,14 +3677,30 @@ function refreshCharts(){
     // de sens (une seule entrée). On les bascule en « par destination ». ──
     const _co = document.getElementById('chartCompanyFilter').value;
     const singleCo = !!(_co && _co !== 'ALL');
+    const isMAIsel  = singleCo && (typeof isMAIcompany==='function') && isMAIcompany(_co);
+    const isForeign = singleCo && !isMAIsel;   // 1 destination → graphiques "par destination" sans intérêt
     const _setTxt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
-    _setTxt('ttlTopComp', singleCo?'Rotations par destination':'Top compagnies');
-    _setTxt('subTopComp', singleCo?_co:'Classement par nombre de rotations');
-    _setTxt('ttlPaxComp', singleCo?'Passagers par destination':'Passagers par compagnie');
-    _setTxt('subPaxComp', singleCo?_co:'Total transportés');
-    _setTxt('subRotShare', singleCo?'Par destination':'Par compagnie');
-    _setTxt('subPaxShare', singleCo?'Par destination':'Par compagnie');
-    // Séries [label, valeur] pour rotations et passagers (par compagnie, ou par destination).
+    const _show=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display=on?'':'none'; };
+    // Visibilité des cartes selon le mode (compagnie étrangère = mono-destination).
+    _show('card-rotshare', !isForeign);
+    _show('card-paxshare', !isForeign);
+    _show('card-dest',     !isForeign);
+    _show('card-taux',     !isForeign);
+    _show('card-fn',       isMAIsel);   // comparaison par n° de vol : Mauritania Airlines seulement
+    // Titres
+    if(isForeign){
+        _setTxt('ttlTopComp','Taux de remplissage par mois'); _setTxt('subTopComp',_co);
+        _setTxt('ttlPaxComp','Répartition par appareil');     _setTxt('subPaxComp',_co);
+    } else {
+        _setTxt('ttlTopComp', singleCo?'Rotations par destination':'Top compagnies');
+        _setTxt('subTopComp', singleCo?_co:'Classement par nombre de rotations');
+        _setTxt('ttlPaxComp', singleCo?'Passagers par destination':'Passagers par compagnie');
+        _setTxt('subPaxComp', singleCo?_co:'Total transportés');
+        _setTxt('subRotShare', singleCo?'Par destination':'Par compagnie');
+        _setTxt('subPaxShare', singleCo?'Par destination':'Par compagnie');
+    }
+    _setTxt('ttlRateComp', isMAIsel?'Taux par n° de vol':'Taux par compagnie');
+    // Séries [label, valeur] pour rotations et passagers (par compagnie, ou par destination si 1 compagnie).
     let rotSeries, paxSeries;
     if(singleCo){
         const destRot={}, destPax={};
@@ -3680,6 +3712,25 @@ function refreshCharts(){
         rotSeries=Object.entries(_rs.byCompany).sort((a,b)=>b[1]-a[1]).slice(0,8);
         const _pcTmp={}; flt.forEach(function(f){ if(f.company) _pcTmp[f.company]=(_pcTmp[f.company]||0)+(+f.passengers||0)+(+f.babies||0); });
         paxSeries=Object.entries(_pcTmp).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    }
+    // Palette + options camembert réutilisées.
+    const _doughOpts={responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}};
+    // Données spécifiques MAI (par n° de vol) et étrangère (par mois / appareil).
+    let fnRot=[], fnPax=[], rateMonth=[], immShare=[];
+    if(isMAIsel){
+        const rBy={}, pBy={};
+        _rs.rotations.forEach(function(r){ const f0=window._hRotFirstFlight?window._hRotFirstFlight(r):null; const fn=(f0&&f0.flightNumber)||'?'; rBy[fn]=(rBy[fn]||0)+1; });
+        flt.forEach(function(f){ const fn=f.flightNumber||'?'; pBy[fn]=(pBy[fn]||0)+(+f.passengers||0); });
+        fnRot=Object.entries(rBy).sort((a,b)=>b[1]-a[1]).slice(0,14);
+        fnPax=Object.entries(pBy).sort((a,b)=>b[1]-a[1]).slice(0,14);
+    }
+    if(isForeign){
+        // taux de remplissage par mois
+        const flByM={}; flt.forEach(function(f){ if(!f.date)return; const mo=new Date(f.date).getMonth(); if(mo<0||mo>11)return; (flByM[mo]=flByM[mo]||[]).push(f); });
+        rateMonth=Array(12).fill(null); for(let mo=0;mo<12;mo++){ if(flByM[mo]) rateMonth[mo]=(typeof window._fillRate==='function')?window._fillRate(flByM[mo]):null; }
+        // répartition par appareil (nb de vols par immatriculation)
+        const byImm={}; flt.forEach(function(f){ const im=(f.registration||'—').toUpperCase().replace(/[\s.\-]/g,''); byImm[im]=(byImm[im]||0)+1; });
+        immShare=Object.entries(byImm).sort((a,b)=>b[1]-a[1]).slice(0,8);
     }
 
     // Rotations/mois
@@ -3711,88 +3762,118 @@ function refreshCharts(){
             tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}})
     });
 
-    // Top compagnies / Rotations par destination (si 1 compagnie)
+    // Top compagnies / Rotations par destination (MAI) / Taux par mois (étranger)
     kill('c');const sc=rotSeries;
-    charts['c']=new Chart(document.getElementById('chartTopComp'),{
-        type:'bar',data:{labels:sc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
-            datasets:[{label:'Rotations',data:sc.map(([,v])=>v),
-                backgroundColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),
-                borderColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderRadius:5}]},
-        options:darkOpts({indexAxis:'y'})
-    });
+    if(isForeign){
+        charts['c']=new Chart(document.getElementById('chartTopComp'),{
+            type:'line',data:{labels:MONTHS_FR,datasets:[{label:'Taux %',data:rateMonth.map(v=>v!=null?+(v*100).toFixed(1):null),borderColor:'#4A9EFF',backgroundColor:'rgba(74,158,255,.15)',borderWidth:2.5,tension:.35,spanGaps:true,pointRadius:3,fill:true}]},
+            options:darkOpts({plugins:{legend:{display:false}}})
+        });
+    } else {
+        charts['c']=new Chart(document.getElementById('chartTopComp'),{
+            type:'bar',data:{labels:sc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+                datasets:[{label:'Rotations',data:sc.map(([,v])=>v),
+                    backgroundColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),
+                    borderColor:sc.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderRadius:5}]},
+            options:darkOpts({indexAxis:'y'})
+        });
+    }
 
-    // Passagers par compagnie / par destination (si 1 compagnie)
+    // Passagers par compagnie / par destination (MAI) / Répartition par appareil (étranger)
     kill('pc');const spc=paxSeries;
-    charts['pc']=new Chart(document.getElementById('chartPaxComp'),{
-        type:'bar',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
-            datasets:[{label:'PAX',data:spc.map(([,v])=>v),
-                backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),
-                borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderRadius:5}]},
-        options:darkOpts({indexAxis:'y'})
-    });
+    if(isForeign){
+        charts['pc']=new Chart(document.getElementById('chartPaxComp'),{
+            type:'doughnut',data:{labels:immShare.map(([k])=>k),
+                datasets:[{data:immShare.map(([,v])=>v),backgroundColor:immShare.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),borderColor:immShare.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2}]},
+            options:_doughOpts});
+    } else {
+        charts['pc']=new Chart(document.getElementById('chartPaxComp'),{
+            type:'bar',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
+                datasets:[{label:'PAX',data:spc.map(([,v])=>v),
+                    backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),
+                    borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderRadius:5}]},
+            options:darkOpts({indexAxis:'y'})
+        });
+    }
 
-    // Répartition des rotations (camembert par compagnie / destination)
+    // Répartition des rotations (camembert) — masquée pour compagnie étrangère
     kill('rs');
     const srt=rotSeries;
-    const doughOpts={responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:true,position:'right',labels:{color:'#94a3b8',font:{size:10},padding:8,usePointStyle:true}},tooltip:{backgroundColor:'rgba(7,16,31,.97)',titleColor:'#e2e8f0',bodyColor:'#94a3b8',borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,cornerRadius:8}}};
-    if(document.getElementById('chartRotShare')){
+    const doughOpts=_doughOpts;
+    if(!isForeign && document.getElementById('chartRotShare')){
         charts['rs']=new Chart(document.getElementById('chartRotShare'),{
             type:'doughnut',data:{labels:srt.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
                 datasets:[{data:srt.map(([,v])=>v),backgroundColor:srt.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),borderColor:srt.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2}]},
             options:doughOpts});
     }
-    // Répartition des passagers (camembert par compagnie)
+    // Répartition des passagers (camembert) — masquée pour compagnie étrangère
     kill('ps');
-    if(document.getElementById('chartPaxShare')){
+    if(!isForeign && document.getElementById('chartPaxShare')){
         charts['ps']=new Chart(document.getElementById('chartPaxShare'),{
             type:'doughnut',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
                 datasets:[{data:spc.map(([,v])=>v),backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2}]},
             options:doughOpts});
     }
+    // Comparaison par n° de vol (Mauritania Airlines)
+    kill('fnR'); kill('fnP');
+    if(isMAIsel){
+        if(document.getElementById('chartFnRot')){
+            charts['fnR']=new Chart(document.getElementById('chartFnRot'),{
+                type:'bar',data:{labels:fnRot.map(([k])=>k),datasets:[{label:'Rotations',data:fnRot.map(([,v])=>v),backgroundColor:fnRot.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),borderColor:fnRot.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderRadius:5}]},
+                options:darkOpts({indexAxis:'y'})});
+        }
+        if(document.getElementById('chartFnPax')){
+            charts['fnP']=new Chart(document.getElementById('chartFnPax'),{
+                type:'bar',data:{labels:fnPax.map(([k])=>k),datasets:[{label:'PAX',data:fnPax.map(([,v])=>v),backgroundColor:fnPax.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),borderColor:fnPax.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderRadius:5}]},
+                options:darkOpts({indexAxis:'y'})});
+        }
+    }
 
-    // ── Section « Taux de remplissage » (par rotation) ──
-    // Taux par compagnie (barres)
-    kill('rateC');
-    var flByCo={};
-    flt.forEach(function(f){ if(f.company){ (flByCo[f.company]=flByCo[f.company]||[]).push(f); } });
-    var rateCo=Object.keys(flByCo).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(flByCo[c]):null]; })
-        .filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
-    if(document.getElementById('chartRateComp') && rateCo.length){
+    // ── Section « Taux de remplissage » (par rotation) — masquée pour compagnie étrangère ──
+    kill('rateC'); kill('rateD'); kill('rs2'); kill('ps2');
+    if(!isForeign){
+      // Taux par compagnie (Toutes) OU par n° de vol (Mauritania Airlines)
+      var rateCo;
+      if(isMAIsel){
+        var flByFN={}; flt.forEach(function(f){ var fn=f.flightNumber||'?'; (flByFN[fn]=flByFN[fn]||[]).push(f); });
+        rateCo=Object.keys(flByFN).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(flByFN[c]):null]; }).filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,14);
+      } else {
+        var flByCo={}; flt.forEach(function(f){ if(f.company){ (flByCo[f.company]=flByCo[f.company]||[]).push(f); } });
+        rateCo=Object.keys(flByCo).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(flByCo[c]):null]; }).filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+      }
+      if(document.getElementById('chartRateComp') && rateCo.length){
         charts['rateC']=new Chart(document.getElementById('chartRateComp'),{
             type:'bar',data:{labels:rateCo.map(function(e){return e[0].length>16?e[0].slice(0,16)+'…':e[0];}),
                 datasets:[{label:'Taux %',data:rateCo.map(function(e){return +(e[1]*100).toFixed(1);}),
                     backgroundColor:rateCo.map(function(_,i){return PALETTE[i%PALETTE.length]+'cc';}),
                     borderColor:rateCo.map(function(_,i){return PALETTE[i%PALETTE.length];}),borderWidth:2,borderRadius:5}]},
             options:darkOpts({indexAxis:'y'})});
-    }
-    // Taux par destination (barres)
-    kill('rateD');
-    var flByDest={};
-    flt.forEach(function(f){ _troncons(f).forEach(function(t){ var city=t.city; if(!city||city==='Nouakchott'||city===''||city==='undefined')return; (flByDest[city]=flByDest[city]||new Set()).add(f); }); });
-    var rateDest=Object.keys(flByDest).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(Array.from(flByDest[c])):null]; })
-        .filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
-    if(document.getElementById('chartRateDest') && rateDest.length){
+      }
+      // Taux par destination (barres)
+      var flByDest={};
+      flt.forEach(function(f){ _troncons(f).forEach(function(t){ var city=t.city; if(!city||city==='Nouakchott'||city===''||city==='undefined')return; (flByDest[city]=flByDest[city]||new Set()).add(f); }); });
+      var rateDest=Object.keys(flByDest).map(function(c){ return [c, (typeof window._fillRate==='function')?window._fillRate(Array.from(flByDest[c])):null]; }).filter(function(e){return e[1]!=null;}).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+      if(document.getElementById('chartRateDest') && rateDest.length){
         charts['rateD']=new Chart(document.getElementById('chartRateDest'),{
             type:'bar',data:{labels:rateDest.map(function(e){return e[0];}),
                 datasets:[{label:'Taux %',data:rateDest.map(function(e){return +(e[1]*100).toFixed(1);}),
                     backgroundColor:rateDest.map(function(_,i){return PALETTE[(i+3)%PALETTE.length]+'cc';}),
                     borderColor:rateDest.map(function(_,i){return PALETTE[(i+3)%PALETTE.length];}),borderWidth:2,borderRadius:5}]},
             options:darkOpts({indexAxis:'y'})});
-    }
-    // Camemberts dupliqués dans la section Taux
-    kill('rs2');
-    if(document.getElementById('chartRotShare2')){
+      }
+      // Camemberts (par compagnie, ou par destination si 1 compagnie MAI)
+      if(document.getElementById('chartRotShare2')){
         charts['rs2']=new Chart(document.getElementById('chartRotShare2'),{
             type:'doughnut',data:{labels:srt.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
                 datasets:[{data:srt.map(([,v])=>v),backgroundColor:srt.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),borderColor:srt.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2}]},
             options:doughOpts});
-    }
-    kill('ps2');
-    if(document.getElementById('chartPaxShare2')){
+      }
+      if(document.getElementById('chartPaxShare2')){
         charts['ps2']=new Chart(document.getElementById('chartPaxShare2'),{
             type:'doughnut',data:{labels:spc.map(([k])=>k.length>18?k.slice(0,18)+'…':k),
                 datasets:[{data:spc.map(([,v])=>v),backgroundColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]+'cc'),borderColor:spc.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2}]},
             options:doughOpts});
+      }
     }
 
     renderDestCards(flt);
