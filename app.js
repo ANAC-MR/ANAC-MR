@@ -1859,9 +1859,11 @@ function filterFlights(dateOverride) {
     // que le(s) segment(s) demandé(s), avec LEURS propres PAX/bébés (pas ceux du vol
     // complet). generateFlightLines fournit le découpage par segment (vols MAI à
     // escale) ; pour un vol direct, le segment = le vol lui-même.
-    // EXCEPTION : une recherche par NUMÉRO DE VOL montre toujours le vol COMPLET
-    // (le total), même si un filtre De/Vers est encore actif → pas de découpage.
-    if (!volFilter && (fromFilter !== 'ALL' || toFilter !== 'ALL') && typeof generateFlightLines === 'function') {
+    // Le filtre N° de vol (volFilter) reste appliqué en amont (dans _filtered) : on
+    // peut donc voir un tronçon SUR UN NUMÉRO DE VOL précis (ex. DSS-NKC sur L6213
+    // seulement, alors qu'il existe aussi sur L6105). Une recherche par vol SEUL
+    // (sans De/Vers) montre toujours le vol complet (cette branche n'est pas prise).
+    if ((fromFilter !== 'ALL' || toFilter !== 'ALL') && typeof generateFlightLines === 'function') {
         const _seg = (l) =>
             (fromFilter === 'ALL' || l.from === fromFilter) &&
             (toFilter   === 'ALL' || l.to   === toFilter);
@@ -2177,7 +2179,9 @@ function render() {
     // on apparie sur une fenêtre élargie de ±2 jours puis on n'affiche que les
     // rotations ANCRÉES dans la plage (arrivée pour les étrangères, départ pour MAI).
     const _range = _homeDateRange();
-    const _tronc = (elements.fromSelect.value!=='ALL' || elements.toSelect.value!=='ALL') && !elements.searchVol.value.trim();
+    // Mode tronçon dès qu'un De/Vers est choisi — même avec un filtre N° de vol
+    // (pour voir un tronçon sur un vol précis, ex. DSS-NKC sur L6213 seulement).
+    const _tronc = (elements.fromSelect.value!=='ALL' || elements.toSelect.value!=='ALL');
     let rotations;
     if (_range && !_tronc) {
         let buffered = filterFlights({ from: _hAddDays(_range.from,-2), to: _hAddDays(_range.to,2) });
