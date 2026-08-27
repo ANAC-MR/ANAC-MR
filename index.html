@@ -4468,9 +4468,22 @@ function fctTroncons(f) {
     const from = f.from, to = f.to, stop = f.stopover;
     const total = +f.passengers || 0, stopPax = +f.stopoverPax || 0, midPax = +f.midLegPax || 0;
     const thru = Math.max(0, total - stopPax);   // passagers directs from→to (l'escale est déjà dans stopPax)
-    const segs = (f.hasStopover && stop)
-        ? [ {a:from,b:to,pax:thru}, {a:from,b:stop,pax:stopPax}, {a:stop,b:to,pax:midPax} ]
-        : [ {a:from,b:to,pax:total} ];
+    // Décomposition identique à _expSegments (source de vérité des exports) :
+    let segs;
+    if (f.hasStopover && stop) {
+        if (fctIsMR(stop)) {
+            // Escale mauritanienne (ex. NDB) → 3 tronçons réels.
+            segs = [ {a:from,b:stop,pax:stopPax}, {a:from,b:to,pax:thru}, {a:stop,b:to,pax:midPax} ];
+        } else {
+            // Escale étrangère (ex. DSS) : le tronçon d'escale est du CÔTÉ Mauritanie
+            // (départ NKC→escale ; arrivée escale→NKC) — jamais étranger↔étranger.
+            const isArr = (f.type || '').toUpperCase().charAt(0) === 'A';
+            const sub = isArr ? {a:stop,b:to,pax:stopPax} : {a:from,b:stop,pax:stopPax};
+            segs = [ {a:from,b:to,pax:thru}, sub ];
+        }
+    } else {
+        segs = [ {a:from,b:to,pax:total} ];
+    }
     return segs.map(s => {
         const ma = fctIsMR(s.a), mb = fctIsMR(s.b);
         if (!ma && !mb) return null;             // étranger↔étranger : non facturé
