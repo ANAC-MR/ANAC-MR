@@ -4410,9 +4410,10 @@ function runRouteComparison() {
 }
 
 function fctInit() {
-    // Années depuis les données Firebase
+    // Années depuis les données Firebase — extraites de la chaîne 'YYYY-MM-DD'
+    // (exact, indépendant du fuseau horaire du navigateur).
     const all = getFlights();
-    const years = [...new Set(all.map(f => f.date ? new Date(f.date).getFullYear() : null).filter(Boolean))].sort().reverse();
+    const years = [...new Set(all.map(f => (f.date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
     const sel = document.getElementById('fctAnnee');
     sel.innerHTML = (years.length ? years : [new Date().getFullYear()])
         .map(y => `<option value="${y}">${y}</option>`).join('');
@@ -4512,11 +4513,11 @@ function fctGetFlights() {
     const annee = +document.getElementById('fctAnnee').value;
     if (periode === 'mois') {
         const mois = +document.getElementById('fctMois').value;
-        return all.filter(f => {
-            if (!f.date) return false;
-            const d = new Date(f.date);
-            return d.getFullYear() === annee && (d.getMonth() + 1) === mois;
-        });
+        // Comparaison sur la chaîne 'YYYY-MM' (exacte, indépendante du fuseau horaire).
+        // new Date('2026-02-01') interprète en UTC → un vol du 1er du mois pouvait
+        // basculer sur le mois précédent selon le fuseau du navigateur.
+        const ym = String(annee) + '-' + String(mois).padStart(2, '0');
+        return all.filter(f => (f.date || '').slice(0, 7) === ym);
     } else {
         const deb = document.getElementById('fctDeb').value;
         const fin = document.getElementById('fctFin').value;
