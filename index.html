@@ -4457,18 +4457,44 @@ function fctIsMR(code) {
     return ['NKC','NDB','OUZ','ATR','KFA','SEY','TIY','AJJ','KED','EMN','AEO','LEG','BGH','MOM','THT','TMD','OTL'].indexOf(c) !== -1;
 }
 
+// ── Classification PAR TRONÇON ───────────────────────────────────
+// Un vol peut mélanger tronçons internationaux et domestiques
+// (ex. L6221 LPA→NDB→NKC : LPA-NKC intl, LPA-NDB intl, NDB-NKC domestique).
+// On découpe donc chaque vol en tronçons et on classe chacun :
+//   • domestique          = les deux bouts en Mauritanie (GQ…)
+//   • international        = un seul bout en Mauritanie
+//   • étranger↔étranger   = ne touche pas la Mauritanie → NON facturé (ignoré)
+function fctTroncons(f) {
+    const from = f.from, to = f.to, stop = f.stopover;
+    const total = +f.passengers || 0, stopPax = +f.stopoverPax || 0, midPax = +f.midLegPax || 0;
+    const thru = Math.max(0, total - stopPax);   // passagers directs from→to (l'escale est déjà dans stopPax)
+    const segs = (f.hasStopover && stop)
+        ? [ {a:from,b:to,pax:thru}, {a:from,b:stop,pax:stopPax}, {a:stop,b:to,pax:midPax} ]
+        : [ {a:from,b:to,pax:total} ];
+    return segs.map(s => {
+        const ma = fctIsMR(s.a), mb = fctIsMR(s.b);
+        if (!ma && !mb) return null;             // étranger↔étranger : non facturé
+        return { pax: s.pax, dom: (ma && mb) };
+    }).filter(Boolean);
+}
+// Passagers d'un vol comptés selon le mode (intl / dom / tous).
+function fctPaxByType(f, tv) {
+    return fctTroncons(f).reduce((s, t) => {
+        if (tv === 'dom'  && !t.dom) return s;   // mode domestique : garde les tronçons domestiques
+        if (tv === 'intl' &&  t.dom) return s;   // mode international : garde les tronçons internationaux
+        return s + (t.pax || 0);                 // 'tous' : tout ce qui touche la Mauritanie
+    }, 0);
+}
+// Le vol a-t-il au moins un tronçon du type choisi ? (pour le comptage des vols)
+function fctHasType(f, tv) {
+    return fctTroncons(f).some(t => tv === 'tous' || (tv === 'dom') === t.dom);
+}
+
 function fctGetFlights() {
     // Les Charter Flights ne sont JAMAIS comptés dans la facturation.
+    // Le filtre intl/dom n'est PLUS appliqué au niveau du vol : il est traité
+    // par tronçon (fctPaxByType / fctHasType) car un même vol peut mélanger les deux.
     let all = getFlights().filter(f => !(f && f.isCharter));
-    // Type de vols : intl = internationaux seuls (défaut) ;
-    // tous = internationaux + domestiques ; dom = domestiques seuls.
-    // Domestique = départ ET arrivée en Mauritanie.
-    const tv = (document.getElementById('fctTypeVols') && document.getElementById('fctTypeVols').value) || 'intl';
-    if (tv === 'intl') {
-        all = all.filter(f => !(fctIsMR(f.from) && fctIsMR(f.to)));
-    } else if (tv === 'dom') {
-        all = all.filter(f => fctIsMR(f.from) && fctIsMR(f.to));
-    } // 'tous' : aucun filtre
     const periode = document.getElementById('fctPeriode').value;
     const annee = +document.getElementById('fctAnnee').value;
     if (periode === 'mois') {
@@ -4493,14 +4519,19 @@ function fctBuildRows() {
     const flt      = fctGetFlights();
     const cols     = fctActiveCols();
     const airlines = fctActiveAirlines();
+    const tv = (document.getElementById('fctTypeVols') && document.getElementById('fctTypeVols').value) || 'intl';
     const rows = [];
     airlines.forEach(airline => {
         const af   = flt.filter(f => f.company === airline);
         const dep  = af.filter(f => f.type === 'DEP');
         const arr  = af.filter(f => f.type === 'ARR');
-        const paxDep = dep.reduce((s, f) => s + (+f.passengers || 0), 0);
-        const paxArr = arr.reduce((s, f) => s + (+f.passengers || 0), 0);
-        const volsDep = dep.length, volsArr = arr.length, vols = af.length;
+        // Passagers comptés PAR TRONÇON selon le mode (intl/dom/tous).
+        const paxDep = dep.reduce((s, f) => s + fctPaxByType(f, tv), 0);
+        const paxArr = arr.reduce((s, f) => s + fctPaxByType(f, tv), 0);
+        // Un vol est compté s'il a au moins un tronçon du type choisi.
+        const volsDep = dep.filter(f => fctHasType(f, tv)).length;
+        const volsArr = arr.filter(f => fctHasType(f, tv)).length;
+        const vols = volsDep + volsArr;
         // N'inclure que si au moins une valeur > 0
         if (paxDep + paxArr + vols === 0) return;
         rows.push({ name: airline, pax_dep: paxDep, pax_arr: paxArr, vols_dep: volsDep, vols_arr: volsArr, vols });
