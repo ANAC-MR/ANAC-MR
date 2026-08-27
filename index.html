@@ -4779,7 +4779,7 @@ window.fctTelecharger = async function() {
     const a    = document.createElement('a');
     a.href = url;
     const label = document.getElementById('fctPeriode').value === 'mois'
-        ? FCT_MOIS[+document.getElementById('fctMois').value] + '_' + document.getElementById('fctAnnee').value
+        ? FCT_MOIS[+document.getElementById('fctMois').value - 1] + '_' + document.getElementById('fctAnnee').value
         : 'periode_' + document.getElementById('fctAnnee').value;
     a.download = 'OEF_ANAC_' + label + '.docx';
     a.click();
