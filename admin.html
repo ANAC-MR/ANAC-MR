@@ -6462,7 +6462,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // Lecture/écriture du seul champ `fret` sur des vols existants.
 // Aucun nouveau document de vol n'est créé ici (intégrité des stats).
 // ════════════════════════════════════════════════════════════
-let _fretFlights = [];   // vols du mois porteurs d'un champ fret
+let _fretFlights = [];   // vols de la période AVEC fret > 0 (seuls affichés)
+let _fretAllInPeriod = [];   // TOUS les vols enregistrés sur la période (pour "X sur Y")
 let _fretAirlines = [], _fretAirports = [];   // configs chargées localement (module isolé)
 
 function esc(s){
@@ -6514,7 +6515,7 @@ function _fretSelectedMonths(){
 }
 
 async function _fretLoad(){
-  _fretFlights=[];
+  _fretFlights=[]; _fretAllInPeriod=[];
   const months=_fretSelectedMonths();
   if(!months.length) return;
   const set=new Set(months);
@@ -6523,8 +6524,20 @@ async function _fretLoad(){
   const snap=await getDocs(query(collection(window._db,'flights'),
       where('date','>=',start), where('date','<=',end)));
   // Une seule requête (plage min→max), puis filtre sur les mois réellement cochés.
-  _fretFlights=snap.docs.map(d=>({id:d.id,...d.data()}))
-      .filter(f=>f.fret!=null && f.fret!=='' && set.has(String(f.date||'').slice(0,7)));
+  // _fretAllInPeriod = TOUS les vols enregistrés (pour le total Y de "X sur Y").
+  // _fretFlights = seulement ceux qui ont du fret RÉEL (> 0) → seuls affichés.
+  _fretAllInPeriod=snap.docs.map(d=>({id:d.id,...d.data()}))
+      .filter(f=>set.has(String(f.date||'').slice(0,7)));
+  _fretFlights=_fretAllInPeriod.filter(f=>(Number(f.fret)||0) > 0);
+}
+
+// Libellé de la période courante (relié au filtre mois / plusieurs mois).
+function _fretPeriodLabel(){
+  const months=_fretSelectedMonths();
+  if(!months.length) return '';
+  if(months.length===1){ const [y,m]=months[0].split('-'); return _FRET_MOIS[+m-1]+' '+y; }
+  const y=months[0].slice(0,4);
+  return months.length+' mois ('+y+')';
 }
 
 function _fretFillCompanies(){
@@ -6618,7 +6631,7 @@ window._fretShowSummary = function(){
   });
   const cos=Object.keys(map).sort((a,b)=>a.localeCompare(b));
   const cnt=document.getElementById('fretCount');
-  if(cnt) cnt.textContent=_fretFlights.length+' vol(s) avec fret';
+  if(cnt) cnt.textContent=_fretFlights.length+' vol(s) sur '+_fretAllInPeriod.length+' enregistré(s) ('+_fretPeriodLabel()+') ont du fret';
   if(!cos.length){
     body.innerHTML='<tr><td colspan="4" style="text-align:center;padding:40px;color:#5a6572;">Aucune donnée de fret pour ce mois</td></tr>';
     return;
@@ -6650,8 +6663,9 @@ window._fretShowDetail = function(co){
   const list=_fretFlights.filter(f=>(f.company||'—')===co)
       .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')) ||
                    _fretCanon(a.flightNumber).localeCompare(_fretCanon(b.flightNumber)));
+  const totalCo=_fretAllInPeriod.filter(f=>(f.company||'—')===co).length;
   const cnt=document.getElementById('fretCount');
-  if(cnt) cnt.textContent=list.length+' vol(s) avec fret';
+  if(cnt) cnt.textContent=list.length+' vol(s) sur '+totalCo+' de '+co+' ('+_fretPeriodLabel()+') ont du fret';
   const body=document.getElementById('fretDetailBody');
   if(!list.length){
     body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:#5a6572;">Aucun vol avec fret pour cette compagnie</td></tr>';
