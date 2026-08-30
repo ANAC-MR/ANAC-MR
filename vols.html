@@ -950,6 +950,13 @@ function parseRouting(r){
   if(!m)return null;
   return{dep:m[1],hdep:fH(m[2]),arr:m[4],harr:fH(m[3]),offset:(m[5]||'').trim(),stop:null};
 }
+// Tronçons d'un routing, ESCALES INCLUSES : dep→escale, escale→arr, et dep→arr (direct).
+// Permet de rechercher/filtrer par tronçon (ex. NKC-DSS, DSS-ABJ) et pas seulement
+// par les extrémités globales du vol.
+function _routeLegs(pr){
+  if(!pr) return [];
+  return pr.stop ? [[pr.dep,pr.stop],[pr.stop,pr.arr],[pr.dep,pr.arr]] : [[pr.dep,pr.arr]];
+}
 function fH(h){return h?h.slice(0,2)+':'+h.slice(2):'';}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -1044,6 +1051,7 @@ window._renderCal=function(type){
         </div>
         <div class="cf-r" style="display:block;">${esc(dep.city)}→${esc(arr.city)}</div>
         ${pr?`<div class="cf-t" style="display:block;">${pr.hdep}→${pr.harr}</div>`:''}
+        ${pr&&pr.stop?`<div class="cf-t" style="display:block;color:var(--gold);">via ${esc(getAP(pr.stop).city)}</div>`:''}
         `:
         `<div class="cf-n">${esc(s.vol||'—')}</div>
         <div class="cf-r">${esc(dep.city)}→${esc(arr.city)}</div>
@@ -1316,9 +1324,13 @@ function _fillSearchFilters(){
   allSchedules.forEach(s=>{
     const pr=parseRouting(s.routing);
     if(!pr)return;
-    const da=getAP(pr.dep), aa=getAP(pr.arr);
-    depSet.add(JSON.stringify({icao:pr.dep,city:da.city,iata:da.iata}));
-    arrSet.add(JSON.stringify({icao:pr.arr,city:aa.city,iata:aa.iata}));
+    // Escales incluses : chaque tronçon apporte son départ et son arrivée
+    // (ex. une escale DSS apparaît en Départ ET en Arrivée).
+    _routeLegs(pr).forEach(([a,b])=>{
+      const aa=getAP(a), bb=getAP(b);
+      depSet.add(JSON.stringify({icao:a,city:aa.city,iata:aa.iata}));
+      arrSet.add(JSON.stringify({icao:b,city:bb.city,iata:bb.iata}));
+    });
   });
   const makeOpts=set=>'<option value="">—</option>'+
     [...set].map(j=>JSON.parse(j)).sort((a,b)=>a.city.localeCompare(b.city))
@@ -1348,11 +1360,12 @@ window._runSearch=function(){
     list=list.filter(s=>{
       const pr=parseRouting(s.routing);
       if(!pr)return false;
-      // DEP = aéroport de départ RÉEL du vol
-      // ARR = aéroport d'arrivée RÉEL du vol (destination finale)
-      const matchDep=!dep||(pr.dep===dep);
-      const matchArr=!arr||(pr.arr===arr);
-      return matchDep&&matchArr;
+      // Recherche PAR TRONÇON (escales incluses) : on teste chaque segment
+      // dep→escale, escale→arr, dep→arr. Ainsi DSS-NKC, NKC-DSS, DSS-ABJ… sont trouvés.
+      const legs=_routeLegs(pr);
+      if(dep&&arr) return legs.some(l=>l[0]===dep && l[1]===arr);   // tronçon exact
+      if(dep)      return legs.some(l=>l[0]===dep);                 // départ d'un tronçon
+      return legs.some(l=>l[1]===arr);                             // arrivée d'un tronçon
     });
   }
 
