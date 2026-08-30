@@ -1091,9 +1091,9 @@ function _rotationRowsHtml(rotations){
   const rotRows=r=>_rotLegs(r).reduce((s,x)=>s+_rotLegLines(x.f).length,0);
   const rots=rotations.slice().sort(_rotSort);
   const SUB='background:#f4c430;color:#3a2c00;font-weight:700;';
-  let html='', i=0;
+  let html='', i=0, dayNo=0;
   while(i<rots.length){
-    const day=rots[i].anchor;
+    const day=rots[i].anchor; dayNo++;
     const group=[]; while(i<rots.length && rots[i].anchor===day){ group.push(rots[i]); i++; }
     const dayRows=group.reduce((s,r)=>s+rotRows(r),0);
     const fr=_rotLegs(group[0])[0].f;
@@ -1122,7 +1122,9 @@ function _rotationRowsHtml(rotations){
             const fnCell   = (li===0) ? `<td class="fn-cell" rowspan="${lines.length}">${esc(f.flightNumber||'')}</td>` : '';
             const typeCap  = rotFirst ? (`<td class="type-cell" rowspan="${span}">${esc(f.typeDisp||'')}</td><td rowspan="${span}">${f.capacity!=null?f.capacity:'—'}</td>`) : '';
             const taux     = rotFirst ? `<td rowspan="${span}">${rateCell}</td>` : '';
-            html+=`<tr>${jourCell}${coCell}${fnCell}<td class="route-cell"${st}>${esc(ln.routeTxt)}${jbadge}</td>${typeCap}<td${st}>${ln.pax}</td>${taux}<td>${esc(f.obs||'')}</td></tr>`;
+            // Trait de séparation en haut de la première ligne de chaque nouveau jour.
+            const trCls    = (!dayEmitted && dayNo>1) ? ' class="day-start"' : '';
+            html+=`<tr${trCls}>${jourCell}${coCell}${fnCell}<td class="route-cell"${st}>${esc(ln.routeTxt)}${jbadge}</td>${typeCap}<td${st}>${ln.pax}</td>${taux}<td>${esc(f.obs||'')}</td></tr>`;
             dayEmitted=true; coEmitted=true; rotFirst=false;
           });
         });
