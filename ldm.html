@@ -2020,7 +2020,21 @@ function parseLDM(em) {
 
 function extractFields(text, dateReceived) {
   const p = {};
-  const lines = text.replace(/\r/g,'').split('\n').map(l => l.trim()).filter(Boolean);
+  let lines = text.replace(/\r/g,'').split('\n').map(l => l.trim()).filter(Boolean);
+  // ── Robustesse : email « aplati » (retours à la ligne perdus en transit) ──
+  // Le parseur est basé sur des lignes (ligne vol/-STATION en début de ligne).
+  // Si aucune ligne ne contient la ligne vol, on réinsère les délimiteurs télex.
+  // Ne s'active QUE dans ce cas → aucun impact sur les messages bien formés.
+  const _flRx = /^([A-Z0-9]{2}\d{2,4})\/[0-9]{1,2}\.[A-Z0-9]{4,6}\./;
+  if (!lines.some(l => _flRx.test(l))) {
+    const t = text.replace(/\r/g,'')
+      .replace(/([A-Z0-9]{2}\d{2,4}\/\d{1,2}\.[A-Z0-9]{4,6}\.)/g, '\n$1')  // ligne vol
+      .replace(/\s(-[A-Z]{2,4}[.\/])/g, '\n$1')                              // stations -XXX
+      .replace(/\s(SI\b)/g, '\n$1')                                          // lignes SI
+      .replace(/\s*\/\s*/g, '/');                                            // espaces parasites autour des "/"
+    const relines = t.split('\n').map(l => l.trim()).filter(Boolean);
+    if (relines.some(l => _flRx.test(l))) lines = relines;
+  }
   const upper = text.toUpperCase();
 
   // Détecter si c'est un MVT ou LDM
